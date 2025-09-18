@@ -64,17 +64,19 @@ services:
       timeout: 5s
       retries: 5
 
-  # Vector DB placeholder
+  # Vector DB service
   vector-index:
-    image: node:18-alpine
-    working_dir: /app
-    command: sh -c "npm install express && node server.js"
+    build:
+      context: ../apps/vector-index
+      dockerfile: Dockerfile
     ports:
-      - "8080:8080"
-    volumes:
-      - ./vector-index:/app
+      - "3006:3006"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - PORT=3006
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3006/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -97,7 +99,7 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - JWT_SECRET=dev-secret-key
-      - VECTOR_DB_URL=http://vector-index:8080
+      - VECTOR_DB_URL=http://vector-index:3006
     depends_on:
       postgres:
         condition: service_healthy
@@ -174,7 +176,7 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - JWT_SECRET=dev-secret-key
-      - VECTOR_DB_URL=http://vector-index:8080
+      - VECTOR_DB_URL=http://vector-index:3006
     depends_on:
       postgres:
         condition: service_healthy
@@ -204,7 +206,7 @@ services:
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
-      - VECTOR_DB_URL=http://vector-index:8080
+      - VECTOR_DB_URL=http://vector-index:3006
       - JWT_SECRET=dev-secret-key
     depends_on:
       postgres:
@@ -219,12 +221,32 @@ services:
         condition: service_healthy
     command: python worker.py
 
+  search-api:
+    build:
+      context: ../apps/search-api
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - PORT=3005
+      - VECTOR_INDEX_URL=http://vector-index:3006
+    depends_on:
+      vector-index:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3005/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   admin-console:
     build:
       context: ../apps/admin-console
       dockerfile: Dockerfile
     ports:
-      - "3005:80"
+      - "3007:80"
     depends_on:
       api-gateway:
         condition: service_healthy

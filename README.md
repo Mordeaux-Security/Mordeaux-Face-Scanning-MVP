@@ -47,10 +47,12 @@ make up
 | Auth Service | http://localhost:3001 | Authentication |
 | Upload Service | http://localhost:3002 | File uploads |
 | Orchestrator | http://localhost:3003 | Event publishing & processing |
-| Admin Console | http://localhost:3005 | Web admin interface |
+| Search API | http://localhost:3005 | Vector similarity search |
+| Search Documentation | http://localhost:3005/docs | Search API Swagger UI |
+| Vector Index | http://localhost:3006 | In-memory vector storage |
+| Admin Console | http://localhost:3007 | Web admin interface |
 | MinIO Console | http://localhost:9001 | Object storage UI |
 | RabbitMQ Management | http://localhost:15672 | Message queue UI |
-| Vector Index | http://localhost:8080 | Vector search API |
 
 ### Health Checks
 
@@ -117,8 +119,8 @@ make urls          # Show service URLs
 - `POST /v1/auth/verify` - Verify JWT token
 
 ### Search
-- `POST /v1/search/by-image` - Search by image (TODO)
-- `POST /v1/search/by-vector` - Search by vector (TODO)
+- `POST /v1/search/by-image` - Search by image (TODO: requires face detection)
+- `POST /v1/search/by-vector` - Search by vector similarity
 
 ### Policy
 - `GET /v1/policies/resolve?tenant_id=...` - Resolve tenant policy
@@ -153,6 +155,45 @@ curl -X POST http://localhost:3002/v1/upload/commit \
     "source_id": "456e7890-e89b-12d3-a456-426614174001",
     "s3_key_raw": "00000000-0000-0000-0000-000000000001/1705312200000-123e4567-e89b-12d3-a456-426614174000-image.jpg",
     "url": "https://example.com/image.jpg"
+  }'
+```
+
+#### Example: Vector Search
+```bash
+# Search by vector similarity
+curl -X POST http://localhost:3005/v1/search/by-vector \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vector": [0.1, 0.2, 0.3, 0.4, 0.5],
+    "filters": {
+      "tenant_id": "00000000-0000-0000-0000-000000000001"
+    },
+    "topK": 10
+  }'
+```
+
+#### Example: Vector Index Operations
+```bash
+# Upsert a vector
+curl -X POST http://localhost:3006/upsert \
+  -H "Content-Type: application/json" \
+  -d '{
+    "embedding_id": "123e4567-e89b-12d3-a456-426614174000",
+    "index_ns": "00000000-0000-0000-0000-000000000001",
+    "vector": [0.1, 0.2, 0.3, 0.4, 0.5],
+    "meta": {
+      "content_id": "456e7890-e89b-12d3-a456-426614174001",
+      "face_id": "789e0123-e89b-12d3-a456-426614174002"
+    }
+  }'
+
+# Query vectors
+curl -X POST http://localhost:3006/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "index_ns": "00000000-0000-0000-0000-000000000001",
+    "vector": [0.1, 0.2, 0.3, 0.4, 0.5],
+    "topK": 5
   }'
 ```
 

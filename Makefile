@@ -32,6 +32,12 @@ logs-orchestrator: ## Show logs for Orchestrator
 logs-worker: ## Show logs for Face Worker
 	docker-compose -f infra/docker-compose.yml logs -f face-worker
 
+logs-vector-index: ## Show logs for Vector Index
+	docker-compose -f infra/docker-compose.yml logs -f vector-index
+
+logs-search-api: ## Show logs for Search API
+	docker-compose -f infra/docker-compose.yml logs -f search-api
+
 ps: ## Show running services
 	docker-compose -f infra/docker-compose.yml ps
 
@@ -107,7 +113,9 @@ urls: ## Show service URLs
 	@echo "Auth Service:    http://localhost:3001"
 	@echo "Upload Service:  http://localhost:3002"
 	@echo "Orchestrator:    http://localhost:3003"
-	@echo "Admin Console:   http://localhost:3005"
+	@echo "Search API:      http://localhost:3005"
+	@echo "Search Docs:     http://localhost:3005/docs"
+	@echo "Vector Index:    http://localhost:3006"
+	@echo "Admin Console:   http://localhost:3007"
 	@echo "MinIO Console:   http://localhost:9001"
 	@echo "RabbitMQ Mgmt:   http://localhost:15672"
-	@echo "Vector Index:    http://localhost:8080"
