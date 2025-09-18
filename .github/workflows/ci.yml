@@ -1,0 +1,189 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  lint-and-typecheck:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        cd packages/contracts && npm ci
+        cd ../common && npm ci
+        cd ../../apps/api-gateway && npm ci
+        cd ../auth && npm ci
+        cd ../ingest-upload && npm ci
+        
+    - name: Lint TypeScript
+      run: |
+        cd packages/contracts && npm run lint
+        cd ../common && npm run lint
+        cd ../../apps/api-gateway && npm run lint
+        cd ../auth && npm run lint
+        cd ../ingest-upload && npm run lint
+        
+    - name: Type check
+      run: |
+        cd packages/contracts && npm run build
+        cd ../common && npm run build
+        cd ../../apps/api-gateway && npm run build
+        cd ../auth && npm run build
+        cd ../ingest-upload && npm run build
+
+  python-lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install Python dependencies
+      run: |
+        cd packages/py-common
+        pip install -e .
+        pip install black ruff mypy
+        
+    - name: Lint Python code
+      run: |
+        cd packages/py-common
+        black --check .
+        ruff check .
+        mypy .
+
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, python-lint]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build API Gateway
+      run: |
+        cd apps/api-gateway
+        docker build -t mordeaux/api-gateway:latest .
+        
+    - name: Build Auth Service
+      run: |
+        cd apps/auth
+        docker build -t mordeaux/auth:latest .
+        
+    - name: Build Upload Service
+      run: |
+        cd apps/ingest-upload
+        docker build -t mordeaux/upload:latest .
+        
+    - name: Build Face Workers
+      run: |
+        cd apps/face-workers
+        docker build -t mordeaux/face-workers:latest .
+
+  test-services:
+    name: Test Services
+    runs-on: ubuntu-latest
+    needs: [build-docker]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Start infrastructure
+      run: |
+        docker-compose -f infra/docker-compose.yml up -d postgres redis rabbitmq minio vector-index
+        
+    - name: Wait for services
+      run: |
+        sleep 30
+        
+    - name: Run database migrations
+      run: |
+        docker-compose -f infra/docker-compose.yml exec -T postgres psql -U postgres -d mordeaux -f /docker-entrypoint-initdb.d/001_initial_schema.sql
+        
+    - name: Test API Gateway health
+      run: |
+        docker-compose -f infra/docker-compose.yml up -d api-gateway
+        sleep 10
+        curl -f http://localhost:3000/healthz || exit 1
+        
+    - name: Test Auth service health
+      run: |
+        docker-compose -f infra/docker-compose.yml up -d auth
+        sleep 10
+        curl -f http://localhost:3001/healthz || exit 1
+        
+    - name: Test Upload service health
+      run: |
+        docker-compose -f infra/docker-compose.yml up -d ingest-upload
+        sleep 10
+        curl -f http://localhost:3002/healthz || exit 1
+        
+    - name: Test Vector Index
+      run: |
+        curl -f http://localhost:8080/health || exit 1
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        docker-compose -f infra/docker-compose.yml down -v
+
+  validate-compose:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate docker-compose.yml
+      run: |
+        docker-compose -f infra/docker-compose.yml config
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
