@@ -6,7 +6,7 @@ help: ## Show this help message
 	@echo "================================"
 	@echo ""
 	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 up: ## Start all services
 	@echo "Starting Mordeaux services..."
@@ -34,7 +34,36 @@ ps: ## Show running services
 
 migrate: ## Run database migrations
 	@echo "Running database migrations..."
-	docker-compose -f infra/docker-compose.yml exec postgres psql -U postgres -d mordeaux -f /docker-entrypoint-initdb.d/001_initial_schema.sql
+	@if [ -f "infra/migrations/migrate.sh" ]; then \
+		./infra/migrations/migrate.sh migrate; \
+	elif [ -f "infra/migrations/migrate.ps1" ]; then \
+		powershell -ExecutionPolicy Bypass -File infra/migrations/migrate.ps1 migrate; \
+	else \
+		echo "Migration script not found. Using fallback method..."; \
+		docker-compose -f infra/docker-compose.yml exec postgres psql -U postgres -d mordeaux -c "SELECT 'No migrations found' as status;"; \
+	fi
+
+migrate-status: ## Show migration status
+	@echo "Checking migration status..."
+	@if [ -f "infra/migrations/migrate.sh" ]; then \
+		./infra/migrations/migrate.sh status; \
+	elif [ -f "infra/migrations/migrate.ps1" ]; then \
+		powershell -ExecutionPolicy Bypass -File infra/migrations/migrate.ps1 status; \
+	else \
+		echo "Migration script not found. Using fallback method..."; \
+		docker-compose -f infra/docker-compose.yml exec postgres psql -U postgres -d mordeaux -c "\dt"; \
+	fi
+
+migrate-reset: ## Reset database (WARNING: drops all data)
+	@echo "WARNING: This will drop all data in the database!"
+	@if [ -f "infra/migrations/migrate.sh" ]; then \
+		./infra/migrations/migrate.sh reset; \
+	elif [ -f "infra/migrations/migrate.ps1" ]; then \
+		powershell -ExecutionPolicy Bypass -File infra/migrations/migrate.ps1 reset; \
+	else \
+		echo "Migration script not found. Using fallback method..."; \
+		docker-compose -f infra/docker-compose.yml exec postgres psql -U postgres -d mordeaux -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"; \
+	fi
 
 seed: ## Seed database with initial data
 	@echo "Seeding database..."
