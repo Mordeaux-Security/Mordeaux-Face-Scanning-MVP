@@ -46,6 +46,8 @@ make up
 | API Documentation | http://localhost:3000/docs | Swagger UI |
 | Auth Service | http://localhost:3001 | Authentication |
 | Upload Service | http://localhost:3002 | File uploads |
+| Orchestrator | http://localhost:3003 | Event publishing & processing |
+| Admin Console | http://localhost:3005 | Web admin interface |
 | MinIO Console | http://localhost:9001 | Object storage UI |
 | RabbitMQ Management | http://localhost:15672 | Message queue UI |
 | Vector Index | http://localhost:8080 | Vector search API |
@@ -123,6 +125,26 @@ make urls          # Show service URLs
 
 ### Upload
 - `POST /v1/upload/presigned-url` - Generate presigned upload URL
+
+### Event Publishing (Development)
+- `POST /dev/publish` - Publish events to RabbitMQ for testing
+
+#### Example: Publish NEW_CONTENT Event
+```bash
+curl -X POST http://localhost:3003/dev/publish \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "NEW_CONTENT",
+    "payload": {
+      "content_id": "123e4567-e89b-12d3-a456-426614174000",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "source_id": "456e7890-e89b-12d3-a456-426614174001",
+      "s3_key_raw": "raw/tenant1/2024-01-15/image.jpg",
+      "url": "https://example.com/image.jpg",
+      "fetch_ts": "2024-01-15T10:30:00Z"
+    }
+  }'
+```
 
 ## 🔧 Configuration
 

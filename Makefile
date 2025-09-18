@@ -26,6 +26,9 @@ logs-api: ## Show logs for API Gateway
 logs-auth: ## Show logs for Auth service
 	docker-compose -f infra/docker-compose.yml logs -f auth
 
+logs-orchestrator: ## Show logs for Orchestrator
+	docker-compose -f infra/docker-compose.yml logs -f orchestrator
+
 logs-worker: ## Show logs for Face Worker
 	docker-compose -f infra/docker-compose.yml logs -f face-worker
 
@@ -103,6 +106,7 @@ urls: ## Show service URLs
 	@echo "API Docs:        http://localhost:3000/docs"
 	@echo "Auth Service:    http://localhost:3001"
 	@echo "Upload Service:  http://localhost:3002"
+	@echo "Orchestrator:    http://localhost:3003"
 	@echo "Admin Console:   http://localhost:3005"
 	@echo "MinIO Console:   http://localhost:9001"
 	@echo "RabbitMQ Mgmt:   http://localhost:15672"
