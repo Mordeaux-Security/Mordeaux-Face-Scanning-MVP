@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { createLogger, env, validateEnv } from '@mordeaux/common';
 import { HealthCheckSchema, ReadyCheckSchema, SearchByVectorRequest, SearchResult } from '@mordeaux/contracts';
+import { PolicyClient } from './policy-client';
 
 validateEnv();
 
@@ -19,6 +20,9 @@ const fastify = Fastify({
 
 // Vector index client
 const VECTOR_INDEX_URL = process.env.VECTOR_INDEX_URL || 'http://vector-index:3006';
+
+// Policy client
+const policyClient = new PolicyClient();
 
 interface VectorIndexQueryResult {
   embedding_id: string;
@@ -216,6 +220,22 @@ fastify.post('/search/by-vector', {
   try {
     // Determine index namespace from filters
     const index_ns = filters?.tenant_id || 'default';
+    
+    // Check policy before running search
+    if (filters?.tenant_id) {
+      const isSearchAllowed = await policyClient.isSearchAllowed(filters.tenant_id);
+      logger.info('Policy check result', { 
+        tenant_id: filters.tenant_id, 
+        search_allowed: isSearchAllowed 
+      });
+      
+      // TODO: Block search if not allowed (currently just logging)
+      if (!isSearchAllowed) {
+        logger.warn('Search blocked by policy', { tenant_id: filters.tenant_id });
+        // For now, we'll continue but log the violation
+        // In production, you would return an error here
+      }
+    }
     
     // Call vector-index service
     const vectorIndexResponse = await fetch(`${VECTOR_INDEX_URL}/query`, {

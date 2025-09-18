@@ -1,7 +1,7 @@
 {
-  "name": "search-api",
+  "name": "policy-engine",
   "version": "1.0.0",
-  "description": "Search API service for face protection system",
+  "description": "Policy engine service for face protection system",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -17,8 +17,6 @@
     "@mordeaux/contracts": "workspace:*",
     "@mordeaux/common": "workspace:*",
     "fastify": "^4.24.3",
-    "@fastify/swagger": "^8.12.0",
-    "@fastify/swagger-ui": "^2.0.0",
     "pino": "^8.17.0"
   },
   "devDependencies": {

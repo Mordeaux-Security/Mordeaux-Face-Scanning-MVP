@@ -82,6 +82,22 @@ services:
       retries: 5
 
   # Services
+  policy-engine:
+    build:
+      context: ../apps/policy-engine
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - PORT=3004
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3004/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api-gateway:
     build:
       context: ../apps/api-gateway
@@ -232,8 +248,11 @@ services:
       - LOG_LEVEL=info
       - PORT=3005
       - VECTOR_INDEX_URL=http://vector-index:3006
+      - POLICY_ENGINE_URL=http://policy-engine:3004
     depends_on:
       vector-index:
+        condition: service_healthy
+      policy-engine:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3005/healthz"]

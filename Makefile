@@ -38,6 +38,9 @@ logs-vector-index: ## Show logs for Vector Index
 logs-search-api: ## Show logs for Search API
 	docker-compose -f infra/docker-compose.yml logs -f search-api
 
+logs-policy-engine: ## Show logs for Policy Engine
+	docker-compose -f infra/docker-compose.yml logs -f policy-engine
+
 ps: ## Show running services
 	docker-compose -f infra/docker-compose.yml ps
 
@@ -113,6 +116,7 @@ urls: ## Show service URLs
 	@echo "Auth Service:    http://localhost:3001"
 	@echo "Upload Service:  http://localhost:3002"
 	@echo "Orchestrator:    http://localhost:3003"
+	@echo "Policy Engine:   http://localhost:3004"
 	@echo "Search API:      http://localhost:3005"
 	@echo "Search Docs:     http://localhost:3005/docs"
 	@echo "Vector Index:    http://localhost:3006"

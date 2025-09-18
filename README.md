@@ -47,6 +47,7 @@ make up
 | Auth Service | http://localhost:3001 | Authentication |
 | Upload Service | http://localhost:3002 | File uploads |
 | Orchestrator | http://localhost:3003 | Event publishing & processing |
+| Policy Engine | http://localhost:3004 | Policy resolution service |
 | Search API | http://localhost:3005 | Vector similarity search |
 | Search Documentation | http://localhost:3005/docs | Search API Swagger UI |
 | Vector Index | http://localhost:3006 | In-memory vector storage |
@@ -124,6 +125,7 @@ make urls          # Show service URLs
 
 ### Policy
 - `GET /v1/policies/resolve?tenant_id=...` - Resolve tenant policy
+- `GET /v1/policies` - List all available policies
 
 ### Upload
 - `POST /v1/upload/presign` - Generate presigned URL for upload to MinIO
@@ -195,6 +197,15 @@ curl -X POST http://localhost:3006/query \
     "vector": [0.1, 0.2, 0.3, 0.4, 0.5],
     "topK": 5
   }'
+```
+
+#### Example: Policy Resolution
+```bash
+# Resolve policy for a tenant
+curl -X GET "http://localhost:3004/v1/policies/resolve?tenant_id=00000000-0000-0000-0000-000000000001"
+
+# List all available policies
+curl -X GET http://localhost:3004/v1/policies
 ```
 
 #### Example: Direct Event Publishing
