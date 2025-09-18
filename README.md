@@ -124,12 +124,39 @@ make urls          # Show service URLs
 - `GET /v1/policies/resolve?tenant_id=...` - Resolve tenant policy
 
 ### Upload
-- `POST /v1/upload/presigned-url` - Generate presigned upload URL
+- `POST /v1/upload/presign` - Generate presigned URL for upload to MinIO
+- `POST /v1/upload/commit` - Commit upload and publish NEW_CONTENT event
 
 ### Event Publishing (Development)
 - `POST /dev/publish` - Publish events to RabbitMQ for testing
 
-#### Example: Publish NEW_CONTENT Event
+#### Example: Upload Flow
+```bash
+# 1. Get presigned URL for upload
+curl -X POST http://localhost:3002/v1/upload/presign \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filename": "image.jpg",
+    "content_type": "image/jpeg",
+    "tenant_id": "00000000-0000-0000-0000-000000000001"
+  }'
+
+# 2. Upload file to the presigned URL (using the returned presigned_url)
+# curl -X PUT [presigned_url] -H "Content-Type: image/jpeg" --data-binary @image.jpg
+
+# 3. Commit upload and publish NEW_CONTENT event
+curl -X POST http://localhost:3002/v1/upload/commit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content_id": "123e4567-e89b-12d3-a456-426614174000",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "source_id": "456e7890-e89b-12d3-a456-426614174001",
+    "s3_key_raw": "00000000-0000-0000-0000-000000000001/1705312200000-123e4567-e89b-12d3-a456-426614174000-image.jpg",
+    "url": "https://example.com/image.jpg"
+  }'
+```
+
+#### Example: Direct Event Publishing
 ```bash
 curl -X POST http://localhost:3003/dev/publish \
   -H "Content-Type: application/json" \
