@@ -74,6 +74,7 @@ urls: ## Show service URLs
 	@echo "API Docs:        http://localhost:3000/docs"
 	@echo "Auth Service:    http://localhost:3001"
 	@echo "Upload Service:  http://localhost:3002"
+	@echo "Admin Console:   http://localhost:3005"
 	@echo "MinIO Console:   http://localhost:9001"
 	@echo "RabbitMQ Mgmt:   http://localhost:15672"
 	@echo "Vector Index:    http://localhost:8080"
