@@ -1,0 +1,141 @@
+version: "3.9"
+
+x-common-env: &common-env
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  TZ: ${TZ:-America/Los_Angeles}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_BUCKET_RAW: ${S3_BUCKET_RAW:-raw-images}
+  S3_BUCKET_THUMBS: ${S3_BUCKET_THUMBS:-thumbnails}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+  S3_SECRET_KEY: ${S3_SECRET_KEY}
+  S3_USE_SSL: ${S3_USE_SSL:-false}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: ${POSTGRES_DB:-mordeaux}
+  POSTGRES_USER: ${POSTGRES_USER:-mordeaux}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  QDRANT_URL: http://qdrant:6333
+  VECTOR_INDEX: ${VECTOR_INDEX:-faces}
+  PINECONE_API_KEY: ${PINECONE_API_KEY:-}
+  PINECONE_INDEX: ${PINECONE_INDEX:-faces}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mordeaux}
+      POSTGRES_USER: ${POSTGRES_USER:-mordeaux}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/00_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mordeaux} -d ${POSTGRES_DB:-mordeaux}"]
+      start_period: 10s
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrantdata:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+
+  backend-cpu:
+    build:
+      context: ./backend
+      args:
+        ENABLE_GPU: 0
+    env_file: [.env]
+    environment:
+      <<: *common-env
+      ASGI_WORKERS: ${ASGI_WORKERS:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    command: ["/bin/sh", "-c", "python -m app.prestart || true && gunicorn -k uvicorn.workers.UvicornWorker -c uvicorn_gunicorn_config.py app.main:app"]
+    volumes:
+      - ./backend:/app
+      - insightface_models:/root/.insightface
+    ports:
+      - "8000:8000"
+
+  worker-cpu:
+    build:
+      context: ./worker
+      args:
+        ENABLE_GPU: 0
+    env_file: [.env]
+    environment:
+      <<: *common-env
+    depends_on:
+      backend-cpu:
+        condition: service_started
+      redis:
+        condition: service_started
+    command: ["celery", "-A", "worker.worker", "worker", "--loglevel=INFO", "-Q", "faces,ingest"]
+    volumes:
+      - insightface_models:/root/.insightface
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-/api}
+    depends_on:
+      - backend-cpu
+    ports:
+      - "3000:80"
+
+  nginx:
+    build: ./nginx
+    depends_on:
+      - frontend
+      - backend-cpu
+    ports:
+      - "80:80"
+    environment:
+      NGINX_MAX_BODY: ${NGINX_MAX_BODY:-50m}
+
+volumes:
+  pgdata:
+  qdrantdata:
+  miniodata:
+  redisdata:
+  insightface_models:
