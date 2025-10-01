@@ -51,11 +51,6 @@ services:
     image: qdrant/qdrant:latest
     volumes:
       - qdrantdata:/qdrant/storage
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:6333/healthz"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
 
   minio:
     image: minio/minio:latest
@@ -86,7 +81,7 @@ services:
       postgres:
         condition: service_healthy
       qdrant:
-        condition: service_healthy
+        condition: service_started
       minio:
         condition: service_started
     command: ["/bin/sh", "-c", "python -m app.prestart || true && gunicorn -k uvicorn.workers.UvicornWorker -c uvicorn_gunicorn_config.py app.main:app"]

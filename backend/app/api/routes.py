@@ -4,9 +4,9 @@ from ..services.storage import save_raw_and_thumb
 from ..services.vector import get_vector_client
 import uuid
 
-router = APIRouter()
+api_router = APIRouter()
 
-@router.post("/search_face")
+@api_router.post("/search_face")
 async def search_face(file: UploadFile = File(...)):
     content = await file.read()
     if not content or (file.content_type or "").lower() not in {"image/jpeg", "image/jpg", "image/png"}:
