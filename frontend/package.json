@@ -1,10 +1,15 @@
 {
   "name": "mordeaux-frontend",
-  "version": "1.0.0",
+  "private": true,
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "echo 'Frontend build placeholder' && mkdir -p dist && echo '<html><body><h1>Mordeaux Face Scanning</h1><p>Frontend coming soon</p></body></html>' > dist/index.html"
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview --port 5173"
   },
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
 }

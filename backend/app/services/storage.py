@@ -80,11 +80,13 @@ def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: int =
     """Return a signed URL (GET/PUT) if supported."""
     if S3_ENDPOINT:
         # MinIO signed URL
+        from datetime import timedelta
         cli = _minio()
+        expires_td = timedelta(seconds=expires)
         if method.upper() == "GET":
-            return cli.presigned_get_object(bucket, key, expires=expires)
+            return cli.presigned_get_object(bucket, key, expires=expires_td)
         if method.upper() == "PUT":
-            return cli.presigned_put_object(bucket, key, expires=expires)
+            return cli.presigned_put_object(bucket, key, expires=expires_td)
         return None
     else:
         # AWS S3 signed URL
