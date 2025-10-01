@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mordeaux Face Scanning</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+        }
+        .upload-area.dragover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .upload-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .upload-button:hover {
+            background: #0056b3;
+        }
+        .upload-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .file-input {
+            display: none;
+        }
+        .preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .loading {
+            text-align: center;
+            color: #007bff;
+            margin: 20px 0;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Mordeaux Face Scanning</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <p>📸 Drag and drop an image here, or click to select</p>
+            <input type="file" id="fileInput" class="file-input" accept="image/*">
+        </div>
+        
+        <div class="preview" id="preview"></div>
+        
+        <div style="text-align: center;">
+            <button class="upload-button" id="uploadButton" disabled>Upload & Scan Face</button>
+            <br><br>
+            <button class="upload-button" onclick="testFileInput()" style="background: #28a745;">Test File Input</button>
+        </div>
+        
+        <div class="loading" id="loading" style="display: none;">
+            🔄 Processing image and scanning for faces...
+        </div>
+        
+        <div class="results" id="results">
+            <h3>Scan Results:</h3>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        console.log('Frontend JavaScript loaded');
+        
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const preview = document.getElementById('preview');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const resultContent = document.getElementById('resultContent');
+
+        console.log('Elements found:', {
+            uploadArea: !!uploadArea,
+            fileInput: !!fileInput,
+            uploadButton: !!uploadButton
+        });
+
+        let selectedFile = null;
+
+        // Click to select file - consolidated to single handler
+        uploadArea.addEventListener('click', () => {
+            console.log('Upload area clicked');
+            fileInput.click();
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            console.log('File input changed, files:', e.target.files);
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        // Additional debugging - check if file input is working
+        fileInput.addEventListener('click', () => {
+            console.log('File input clicked');
+        });
+
+        // Test if we can access the file input
+        console.log('File input element:', fileInput);
+        console.log('File input type:', fileInput.type);
+        console.log('File input accept:', fileInput.accept);
+
+        // Make test function available globally for debugging
+        window.testFileInput = function() {
+            console.log('Testing file input...');
+            fileInput.click();
+        };
+
+        window.testFileSelection = function() {
+            console.log('Current file input files:', fileInput.files);
+            if (fileInput.files.length > 0) {
+                console.log('File found:', fileInput.files[0]);
+                handleFile(fileInput.files[0]);
+            } else {
+                console.log('No files selected');
+            }
+        };
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            console.log('File selected:', file.name, file.type, file.size);
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file.');
+                return;
+            }
+
+            // Validate file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                showError('File size must be less than 10MB.');
+                return;
+            }
+
+            selectedFile = file;
+            console.log('File validated, showing preview...');
+            showPreview(file);
+            uploadButton.disabled = false;
+            hideResults();
+        }
+
+        function showPreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showError(message) {
+            resultContent.innerHTML = `<div class="error">${message}</div>`;
+            results.style.display = 'block';
+        }
+
+        function showSuccess(message) {
+            resultContent.innerHTML = `<div class="success">${message}</div>`;
+            results.style.display = 'block';
+        }
+
+        function hideResults() {
+            results.style.display = 'none';
+        }
+
+        // Upload button click
+        uploadButton.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            // Show loading state
+            loading.style.display = 'block';
+            uploadButton.disabled = true;
+            hideResults();
+
+            try {
+                const response = await fetch('http://localhost/api/search_face', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    showError(`Error: ${data.detail || 'Upload failed'}`);
+                }
+            } catch (error) {
+                showError(`Network error: ${error.message}`);
+            } finally {
+                loading.style.display = 'none';
+                uploadButton.disabled = false;
+            }
+        });
+
+        function displayResults(data) {
+            let html = `
+                <div class="success">✅ Image processed successfully!</div>
+                <p><strong>Faces found:</strong> ${data.faces_found}</p>
+                <p><strong>Perceptual hash:</strong> ${data.phash}</p>
+                <p><strong>Vector backend:</strong> ${data.vector_backend}</p>
+            `;
+
+            if (data.raw_url) {
+                html += `<p><strong>Original image:</strong> <a href="${data.raw_url}" target="_blank">View</a></p>`;
+            }
+
+            if (data.thumb_url) {
+                html += `<p><strong>Thumbnail:</strong> <a href="${data.thumb_url}" target="_blank">View</a></p>`;
+            }
+
+            if (data.results && data.results.length > 0) {
+                html += `<h4>Similar faces found:</h4><ul>`;
+                data.results.forEach((result, index) => {
+                    html += `<li>Match ${index + 1}: Score ${result.score?.toFixed(3) || 'N/A'}</li>`;
+                });
+                html += `</ul>`;
+            } else {
+                html += `<p>No similar faces found in the database.</p>`;
+            }
+
+            resultContent.innerHTML = html;
+            results.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "echo 'Frontend build placeholder' && mkdir -p dist && echo '<html><body><h1>Mordeaux Face Scanning</h1><p>Frontend coming soon</p></body></html>' > dist/index.html"
+    "build": "mkdir -p dist && cp index.html dist/"
   },
   "dependencies": {},
   "devDependencies": {}
