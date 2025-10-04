@@ -1,7 +1,7 @@
 import io
 import os
 import uuid
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 from PIL import Image
 
@@ -80,11 +80,13 @@ def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: int =
     """Return a signed URL (GET/PUT) if supported."""
     if S3_ENDPOINT:
         # MinIO signed URL
+        from datetime import timedelta
         cli = _minio()
+        expires_delta = timedelta(seconds=expires)
         if method.upper() == "GET":
-            return cli.presigned_get_object(bucket, key, expires=expires)
+            return cli.presigned_get_object(bucket, key, expires=expires_delta)
         if method.upper() == "PUT":
-            return cli.presigned_put_object(bucket, key, expires=expires)
+            return cli.presigned_put_object(bucket, key, expires=expires_delta)
         return None
     else:
         # AWS S3 signed URL
@@ -95,6 +97,20 @@ def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: int =
             Params={"Bucket": bucket, "Key": key},
             ExpiresIn=expires,
         )
+
+
+def list_objects(bucket: str, prefix: str = "") -> List[str]:
+    """List objects in a bucket."""
+    if S3_ENDPOINT:
+        # MinIO list objects
+        cli = _minio()
+        objects = cli.list_objects(bucket, prefix=prefix, recursive=True)
+        return [obj.object_name for obj in objects]
+    else:
+        # AWS S3 list objects
+        s3 = _boto3_s3()
+        response = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+        return [obj['Key'] for obj in response.get('Contents', [])]
 
 
 def _make_thumbnail(jpeg_bytes: bytes, max_w: int = 256) -> bytes:
@@ -108,15 +124,44 @@ def _make_thumbnail(jpeg_bytes: bytes, max_w: int = 256) -> bytes:
     return out.getvalue()
 
 
-def save_raw_and_thumb(image_bytes: bytes) -> Tuple[str, str, str, str]:
+def save_raw_image_only(image_bytes: bytes, key_prefix: str = "") -> Tuple[str, str]:
     """
-    Store raw JPG to BUCKET_RAW/<uuid>.jpg and a thumbnail to BUCKET_THUMBS/<uuid>.jpg
+    Store raw image to BUCKET_RAW/<prefix><uuid>.jpg only
+    Returns (raw_key, raw_url)
+    """
+    img_id = str(uuid.uuid4()).replace("-", "")
+    raw_key = f"{key_prefix}{img_id}.jpg"
+
+    put_object(BUCKET_RAW, raw_key, image_bytes, "image/jpeg")
+
+    raw_url = get_presigned_url(BUCKET_RAW, raw_key, "GET", 3600) or ""
+    return raw_key, raw_url
+
+
+def save_thumbnail_only(image_bytes: bytes, key_prefix: str = "") -> Tuple[str, str]:
+    """
+    Store thumbnail to BUCKET_THUMBS/<prefix><uuid>.jpg only
+    Returns (thumb_key, thumb_url)
+    """
+    img_id = str(uuid.uuid4()).replace("-", "")
+    thumb_jpg = _make_thumbnail(image_bytes)
+    thumb_key = f"{key_prefix}{img_id}_thumb.jpg"
+
+    put_object(BUCKET_THUMBS, thumb_key, thumb_jpg, "image/jpeg")
+
+    thumb_url = get_presigned_url(BUCKET_THUMBS, thumb_key, "GET", 3600) or ""
+    return thumb_key, thumb_url
+
+
+def save_raw_and_thumb(image_bytes: bytes, key_prefix: str = "") -> Tuple[str, str, str, str]:
+    """
+    Store raw JPG to BUCKET_RAW/<prefix><uuid>.jpg and a thumbnail to BUCKET_THUMBS/<prefix><uuid>.jpg
     Returns (raw_key, raw_url, thumb_key, thumb_url)
     """
     img_id = str(uuid.uuid4()).replace("-", "")
-    raw_key = f"{img_id}.jpg"
+    raw_key = f"{key_prefix}{img_id}.jpg"
     thumb_jpg = _make_thumbnail(image_bytes)
-    thumb_key = f"{img_id}_thumb.jpg"
+    thumb_key = f"{key_prefix}{img_id}_thumb.jpg"
 
     put_object(BUCKET_RAW, raw_key, image_bytes, "image/jpeg")
     put_object(BUCKET_THUMBS, thumb_key, thumb_jpg, "image/jpeg")
