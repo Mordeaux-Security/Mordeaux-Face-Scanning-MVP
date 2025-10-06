@@ -1,4 +1,3 @@
-version: "3.9"
 
 x-common-env: &common-env
   ENVIRONMENT: ${ENVIRONMENT:-development}
@@ -8,6 +7,7 @@ x-common-env: &common-env
   S3_REGION: ${S3_REGION:-us-east-1}
   S3_BUCKET_RAW: ${S3_BUCKET_RAW:-raw-images}
   S3_BUCKET_THUMBS: ${S3_BUCKET_THUMBS:-thumbnails}
+  S3_BUCKET_AUDIT: ${S3_BUCKET_AUDIT:-audit-logs}
   S3_ACCESS_KEY: ${S3_ACCESS_KEY}
   S3_SECRET_KEY: ${S3_SECRET_KEY}
   S3_USE_SSL: ${S3_USE_SSL:-false}
@@ -17,9 +17,9 @@ x-common-env: &common-env
   POSTGRES_USER: ${POSTGRES_USER:-mordeaux}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   QDRANT_URL: http://qdrant:6333
-  VECTOR_INDEX: ${VECTOR_INDEX:-faces}
+  VECTOR_INDEX: ${VECTOR_INDEX:-faces_v1}
   PINECONE_API_KEY: ${PINECONE_API_KEY:-}
-  PINECONE_INDEX: ${PINECONE_INDEX:-faces}
+  PINECONE_INDEX: ${PINECONE_INDEX:-faces_v1}
   REDIS_URL: redis://redis:6379/0
   CELERY_BROKER_URL: redis://redis:6379/1
   CELERY_RESULT_BACKEND: redis://redis:6379/2
@@ -116,7 +116,7 @@ services:
     build:
       context: ./frontend
     environment:
-      VITE_API_BASE: ${VITE_API_BASE:-/api}
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
     depends_on:
       - backend-cpu
     ports:

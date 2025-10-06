@@ -5,8 +5,21 @@ import numpy as np
 from PIL import Image
 import imagehash
 from insightface.app import FaceAnalysis
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import logging
+
+logger = logging.getLogger(__name__)
 
 _face_app = None
+_thread_pool = None
+
+def _get_thread_pool() -> ThreadPoolExecutor:
+    """Get thread pool for CPU-intensive operations."""
+    global _thread_pool
+    if _thread_pool is None:
+        _thread_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="face_processing")
+    return _thread_pool
 
 def _load_app() -> FaceAnalysis:
     global _face_app
@@ -48,6 +61,31 @@ def detect_and_embed(content: bytes):
             "det_score": float(getattr(f, "det_score", 0.0)),
         })
     return out
+
+async def detect_and_embed_async(content: bytes):
+    """Async wrapper for face detection and embedding."""
+    loop = asyncio.get_event_loop()
+    thread_pool = _get_thread_pool()
+    
+    try:
+        # Run CPU-intensive face detection in thread pool
+        result = await loop.run_in_executor(thread_pool, detect_and_embed, content)
+        return result
+    except Exception as e:
+        logger.error(f"Error in async face detection: {e}")
+        raise
+
+async def compute_phash_async(content: bytes):
+    """Async wrapper for perceptual hash computation."""
+    loop = asyncio.get_event_loop()
+    thread_pool = _get_thread_pool()
+    
+    try:
+        result = await loop.run_in_executor(thread_pool, compute_phash, content)
+        return result
+    except Exception as e:
+        logger.error(f"Error in async phash computation: {e}")
+        raise
 
 def crop_face_from_image(image_bytes: bytes, bbox: list, margin: float = 0.2) -> bytes:
     """
@@ -97,6 +135,8 @@ def get_face_service():
     # simple accessor; in real app you might have a class
     class _FaceSvc:
         detect_and_embed = staticmethod(detect_and_embed)
+        detect_and_embed_async = staticmethod(detect_and_embed_async)
         compute_phash = staticmethod(compute_phash)
+        compute_phash_async = staticmethod(compute_phash_async)
         crop_face_from_image = staticmethod(crop_face_from_image)
     return _FaceSvc()

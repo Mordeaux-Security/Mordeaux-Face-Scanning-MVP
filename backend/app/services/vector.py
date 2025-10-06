@@ -1,10 +1,6 @@
-import os
 import uuid
 from typing import List, Dict, Any
-
-VECTOR_INDEX = os.getenv("VECTOR_INDEX", "faces")
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "").strip()
+from ..core.config import get_settings
 
 # Lazy singletons
 _qdrant_client = None
@@ -17,11 +13,11 @@ def _qdrant():
     from qdrant_client.http import models as qm
     global _qdrant_client
     if _qdrant_client is None:
-        url = os.getenv("QDRANT_URL", "http://qdrant:6333")
-        _qdrant_client = QdrantClient(url=url)
+        settings = get_settings()
+        _qdrant_client = QdrantClient(url=settings.qdrant_url)
         try:
             _qdrant_client.create_collection(
-                collection_name=VECTOR_INDEX,
+                collection_name=settings.vector_index,
                 vectors_config=qm.VectorParams(size=512, distance=qm.Distance.COSINE),
             )
         except Exception:
@@ -32,6 +28,7 @@ def _qdrant():
 def _qdrant_upsert(items: List[Dict[str, Any]]) -> None:
     from qdrant_client.http import models as qm
     cli = _qdrant()
+    settings = get_settings()
     points = []
     for it in items:
         pid = it.get("id") or str(uuid.uuid4())
@@ -42,12 +39,29 @@ def _qdrant_upsert(items: List[Dict[str, Any]]) -> None:
                 payload=it.get("metadata", {}),
             )
         )
-    cli.upsert(collection_name=VECTOR_INDEX, points=points)
+    cli.upsert(collection_name=settings.vector_index, points=points)
 
 
-def _qdrant_search(vector: List[float], topk: int = 10) -> List[Dict[str, Any]]:
+def _qdrant_search(vector: List[float], tenant_id: str, topk: int = 10) -> List[Dict[str, Any]]:
     cli = _qdrant()
-    res = cli.search(collection_name=VECTOR_INDEX, query_vector=vector, limit=topk, with_payload=True)
+    settings = get_settings()
+    # Filter by tenant_id using Qdrant filter
+    from qdrant_client.http import models as qm
+    filter_condition = qm.Filter(
+        must=[
+            qm.FieldCondition(
+                key="tenant_id",
+                match=qm.MatchValue(value=tenant_id)
+            )
+        ]
+    )
+    res = cli.search(
+        collection_name=settings.vector_index, 
+        query_vector=vector, 
+        limit=topk, 
+        with_payload=True,
+        query_filter=filter_condition
+    )
     return [
         {"id": str(r.id), "score": float(r.score), "metadata": dict(r.payload or {})}
         for r in res
@@ -59,9 +73,10 @@ def _pinecone_index():
     from pinecone import Pinecone
     global _pinecone_index
     if _pinecone_index is None:
-        pc = Pinecone(api_key=PINECONE_API_KEY)
+        settings = get_settings()
+        pc = Pinecone(api_key=settings.pinecone_api_key)
         # Assume index already created in console as 512-d cosine
-        _pinecone_index = pc.Index(VECTOR_INDEX)
+        _pinecone_index = pc.Index(settings.pinecone_index)
     return _pinecone_index
 
 
@@ -79,9 +94,16 @@ def _pinecone_upsert(items: List[Dict[str, Any]]) -> None:
     idx.upsert(vectors=vectors)
 
 
-def _pinecone_search(vector: List[float], topk: int = 10) -> List[Dict[str, Any]]:
+def _pinecone_search(vector: List[float], tenant_id: str, topk: int = 10) -> List[Dict[str, Any]]:
     idx = _pinecone_index()
-    res = idx.query(vector=vector, top_k=topk, include_metadata=True)
+    # Filter by tenant_id using Pinecone metadata filter
+    filter_condition = {"tenant_id": {"$eq": tenant_id}}
+    res = idx.query(
+        vector=vector, 
+        top_k=topk, 
+        include_metadata=True,
+        filter=filter_condition
+    )
     return [
         {"id": m.id, "score": float(m.score), "metadata": dict(m.metadata or {})}
         for m in res.matches or []
@@ -90,24 +112,32 @@ def _pinecone_search(vector: List[float], topk: int = 10) -> List[Dict[str, Any]
 
 # ---------- Public API ----------
 def using_pinecone() -> bool:
-    return bool(PINECONE_API_KEY) and ENVIRONMENT.lower() == "production"
+    settings = get_settings()
+    return settings.using_pinecone
 
 
-def upsert_embeddings(items: List[Dict[str, Any]]) -> None:
+def upsert_embeddings(items: List[Dict[str, Any]], tenant_id: str) -> None:
     """
     items: [{id?, embedding: List[float], metadata: {...}}]
+    tenant_id: Tenant identifier for scoping
     """
+    # Add tenant_id to metadata for all items
+    for item in items:
+        if "metadata" not in item:
+            item["metadata"] = {}
+        item["metadata"]["tenant_id"] = tenant_id
+    
     if using_pinecone():
         _pinecone_upsert(items)
     else:
         _qdrant_upsert(items)
 
 
-def search_similar(embedding: List[float], topk: int = 10) -> List[Dict[str, Any]]:
+def search_similar(embedding: List[float], tenant_id: str, topk: int = 10) -> List[Dict[str, Any]]:
     if using_pinecone():
-        return _pinecone_search(embedding, topk)
+        return _pinecone_search(embedding, tenant_id, topk)
     else:
-        return _qdrant_search(embedding, topk)
+        return _qdrant_search(embedding, tenant_id, topk)
 
 
 def get_vector_client():

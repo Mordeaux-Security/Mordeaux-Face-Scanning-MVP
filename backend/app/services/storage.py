@@ -1,21 +1,24 @@
 import io
-import os
 import uuid
+import time
 from typing import Tuple, Optional, List
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image
-
-S3_ENDPOINT = os.getenv("S3_ENDPOINT", "").strip()
-S3_REGION = os.getenv("S3_REGION", "us-east-1")
-S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
-S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
-S3_USE_SSL = os.getenv("S3_USE_SSL", "false").lower() == "true"
-BUCKET_RAW = os.getenv("S3_BUCKET_RAW", "raw-images")
-BUCKET_THUMBS = os.getenv("S3_BUCKET_THUMBS", "thumbnails")
+from ..core.config import get_settings
 
 # Lazy singletons
 _minio_client = None
 _boto3_client = None
+_thread_pool = None
+
+def _get_thread_pool() -> ThreadPoolExecutor:
+    """Get thread pool for CPU-intensive operations."""
+    global _thread_pool
+    if _thread_pool is None:
+        _thread_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="storage_processing")
+    return _thread_pool
 
 
 def _minio():
@@ -23,12 +26,13 @@ def _minio():
     from minio import Minio  # lazy import for prod lightness
     global _minio_client
     if _minio_client is None:
-        endpoint = S3_ENDPOINT.replace("https://", "").replace("http://", "")
+        settings = get_settings()
+        endpoint = settings.s3_endpoint.replace("https://", "").replace("http://", "")
         _minio_client = Minio(
             endpoint,
-            access_key=S3_ACCESS_KEY,
-            secret_key=S3_SECRET_KEY,
-            secure=S3_USE_SSL,
+            access_key=settings.s3_access_key,
+            secret_key=settings.s3_secret_key,
+            secure=settings.s3_use_ssl,
         )
     return _minio_client
 
@@ -36,15 +40,16 @@ def _minio():
 def _minio_for_urls():
     """Return a MinIO client configured for generating URLs accessible from frontend."""
     from minio import Minio  # lazy import for prod lightness
-    if S3_ENDPOINT:
+    settings = get_settings()
+    if settings.s3_endpoint:
         # For local development, use localhost instead of internal container name
-        endpoint = S3_ENDPOINT.replace("https://", "").replace("http://", "")
+        endpoint = settings.s3_endpoint.replace("https://", "").replace("http://", "")
         endpoint = endpoint.replace("minio:9000", "localhost:9000")
         return Minio(
             endpoint,
-            access_key=S3_ACCESS_KEY,
-            secret_key=S3_SECRET_KEY,
-            secure=S3_USE_SSL,
+            access_key=settings.s3_access_key,
+            secret_key=settings.s3_secret_key,
+            secure=settings.s3_use_ssl,
         )
     return _minio()
 
@@ -54,22 +59,24 @@ def _boto3_s3():
     import boto3  # lazy import
     global _boto3_client
     if _boto3_client is None:
+        settings = get_settings()
         # Prefer role/instance profile; fall back to explicit keys only if provided
-        if S3_ACCESS_KEY and S3_SECRET_KEY:
+        if settings.s3_access_key and settings.s3_secret_key:
             _boto3_client = boto3.client(
                 "s3",
-                region_name=S3_REGION,
-                aws_access_key_id=S3_ACCESS_KEY,
-                aws_secret_access_key=S3_SECRET_KEY,
+                region_name=settings.s3_region,
+                aws_access_key_id=settings.s3_access_key,
+                aws_secret_access_key=settings.s3_secret_key,
             )
         else:
-            _boto3_client = boto3.client("s3", region_name=S3_REGION)
+            _boto3_client = boto3.client("s3", region_name=settings.s3_region)
     return _boto3_client
 
 
 def put_object(bucket: str, key: str, data: bytes, content_type: str) -> None:
     """Upload bytes to object storage."""
-    if S3_ENDPOINT:
+    settings = get_settings()
+    if settings.using_minio:
         # MinIO path
         cli = _minio()
         # Ensure bucket exists on local dev
@@ -92,9 +99,13 @@ def put_object(bucket: str, key: str, data: bytes, content_type: str) -> None:
         s3.put_object(Bucket=bucket, Key=key, Body=data, ContentType=content_type)
 
 
-def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: int = 3600) -> Optional[str]:
+def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: Optional[int] = None) -> Optional[str]:
     """Return a signed URL (GET/PUT) if supported."""
-    if S3_ENDPOINT:
+    settings = get_settings()
+    if expires is None:
+        expires = settings.presigned_url_ttl
+    
+    if settings.using_minio:
         # For local development, return a URL that goes through our backend
         # This avoids the localhost connection issue from inside containers
         if method.upper() == "GET":
@@ -119,7 +130,8 @@ def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: int =
 
 def get_object_from_storage(bucket: str, key: str) -> bytes:
     """Get object data from storage."""
-    if S3_ENDPOINT:
+    settings = get_settings()
+    if settings.using_minio:
         # MinIO get object
         cli = _minio()
         response = cli.get_object(bucket, key)
@@ -133,7 +145,8 @@ def get_object_from_storage(bucket: str, key: str) -> bytes:
 
 def list_objects(bucket: str, prefix: str = "") -> List[str]:
     """List objects in a bucket."""
-    if S3_ENDPOINT:
+    settings = get_settings()
+    if settings.using_minio:
         # MinIO list objects
         cli = _minio()
         objects = cli.list_objects(bucket, prefix=prefix, recursive=True)
@@ -156,48 +169,80 @@ def _make_thumbnail(jpeg_bytes: bytes, max_w: int = 256) -> bytes:
     return out.getvalue()
 
 
-def save_raw_image_only(image_bytes: bytes, key_prefix: str = "") -> Tuple[str, str]:
+def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str]:
     """
-    Store raw image to BUCKET_RAW/<prefix><uuid>.jpg only
+    Store raw image to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg only
     Returns (raw_key, raw_url)
     """
+    settings = get_settings()
     img_id = str(uuid.uuid4()).replace("-", "")
-    raw_key = f"{key_prefix}{img_id}.jpg"
+    raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
 
-    put_object(BUCKET_RAW, raw_key, image_bytes, "image/jpeg")
+    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
 
-    raw_url = get_presigned_url(BUCKET_RAW, raw_key, "GET", 3600) or ""
+    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
     return raw_key, raw_url
 
 
-def save_thumbnail_only(image_bytes: bytes, key_prefix: str = "") -> Tuple[str, str]:
+def save_thumbnail_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str]:
     """
-    Store thumbnail to BUCKET_THUMBS/<prefix><uuid>.jpg only
+    Store thumbnail to BUCKET_THUMBS/<tenant_id>/<prefix><uuid>.jpg only
     Returns (thumb_key, thumb_url)
     """
+    settings = get_settings()
     img_id = str(uuid.uuid4()).replace("-", "")
     thumb_jpg = _make_thumbnail(image_bytes)
-    thumb_key = f"{key_prefix}{img_id}_thumb.jpg"
+    thumb_key = f"{tenant_id}/{key_prefix}{img_id}_thumb.jpg"
 
-    put_object(BUCKET_THUMBS, thumb_key, thumb_jpg, "image/jpeg")
+    put_object(settings.s3_bucket_thumbs, thumb_key, thumb_jpg, "image/jpeg")
 
-    thumb_url = get_presigned_url(BUCKET_THUMBS, thumb_key, "GET", 3600) or ""
+    thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
     return thumb_key, thumb_url
 
-
-def save_raw_and_thumb(image_bytes: bytes, key_prefix: str = "") -> Tuple[str, str, str, str]:
+def save_audit_log(audit_data: bytes, tenant_id: str, log_type: str = "audit") -> Tuple[str, str]:
     """
-    Store raw JPG to BUCKET_RAW/<prefix><uuid>.jpg and a thumbnail to BUCKET_THUMBS/<prefix><uuid>.jpg
+    Store audit log to BUCKET_AUDIT/<tenant_id>/<log_type>/<timestamp>.json
+    Returns (audit_key, audit_url)
+    """
+    settings = get_settings()
+    timestamp = int(time.time())
+    log_id = str(uuid.uuid4()).replace("-", "")
+    audit_key = f"{tenant_id}/{log_type}/{timestamp}_{log_id}.json"
+
+    put_object(settings.s3_bucket_audit, audit_key, audit_data, "application/json")
+
+    audit_url = get_presigned_url(settings.s3_bucket_audit, audit_key, "GET") or ""
+    return audit_key, audit_url
+
+
+def save_raw_and_thumb(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
+    """
+    Store raw JPG to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg and a thumbnail to BUCKET_THUMBS/<tenant_id>/<prefix><uuid>.jpg
     Returns (raw_key, raw_url, thumb_key, thumb_url)
     """
+    settings = get_settings()
     img_id = str(uuid.uuid4()).replace("-", "")
-    raw_key = f"{key_prefix}{img_id}.jpg"
+    raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
     thumb_jpg = _make_thumbnail(image_bytes)
-    thumb_key = f"{key_prefix}{img_id}_thumb.jpg"
+    thumb_key = f"{tenant_id}/{key_prefix}{img_id}_thumb.jpg"
 
-    put_object(BUCKET_RAW, raw_key, image_bytes, "image/jpeg")
-    put_object(BUCKET_THUMBS, thumb_key, thumb_jpg, "image/jpeg")
+    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
+    put_object(settings.s3_bucket_thumbs, thumb_key, thumb_jpg, "image/jpeg")
 
-    raw_url = get_presigned_url(BUCKET_RAW, raw_key, "GET", 3600) or ""
-    thumb_url = get_presigned_url(BUCKET_THUMBS, thumb_key, "GET", 3600) or ""
+    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
+    thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
     return raw_key, raw_url, thumb_key, thumb_url
+
+async def save_raw_and_thumb_async(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
+    """
+    Async version of save_raw_and_thumb for better performance.
+    """
+    loop = asyncio.get_event_loop()
+    thread_pool = _get_thread_pool()
+    
+    try:
+        result = await loop.run_in_executor(thread_pool, save_raw_and_thumb, image_bytes, tenant_id, key_prefix)
+        return result
+    except Exception as e:
+        # Fallback to sync version if async fails
+        return save_raw_and_thumb(image_bytes, tenant_id, key_prefix)
