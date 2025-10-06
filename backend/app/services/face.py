@@ -49,9 +49,54 @@ def detect_and_embed(content: bytes):
         })
     return out
 
+def crop_face_from_image(image_bytes: bytes, bbox: list, margin: float = 0.2) -> bytes:
+    """
+    Crop face region from image with margin around the face.
+    
+    Args:
+        image_bytes: Original image data
+        bbox: Bounding box [x1, y1, x2, y2] in pixels
+        margin: Margin around face as fraction of face size (default: 0.2 = 20%)
+        
+    Returns:
+        Cropped face image as bytes
+    """
+    import io
+    
+    # Load image
+    pil_image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+    img_width, img_height = pil_image.size
+    
+    # Extract bounding box coordinates
+    x1, y1, x2, y2 = bbox
+    
+    # Calculate face dimensions
+    face_width = x2 - x1
+    face_height = y2 - y1
+    
+    # Calculate margin in pixels
+    margin_x = int(face_width * margin)
+    margin_y = int(face_height * margin)
+    
+    # Calculate crop coordinates with margin
+    crop_x1 = max(0, int(x1 - margin_x))
+    crop_y1 = max(0, int(y1 - margin_y))
+    crop_x2 = min(img_width, int(x2 + margin_x))
+    crop_y2 = min(img_height, int(y2 + margin_y))
+    
+    # Crop the image
+    cropped_image = pil_image.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+    
+    # Convert back to bytes
+    output = io.BytesIO()
+    cropped_image.save(output, format='JPEG', quality=95)
+    return output.getvalue()
+
+
 def get_face_service():
     # simple accessor; in real app you might have a class
     class _FaceSvc:
         detect_and_embed = staticmethod(detect_and_embed)
         compute_phash = staticmethod(compute_phash)
+        crop_face_from_image = staticmethod(crop_face_from_image)
     return _FaceSvc()

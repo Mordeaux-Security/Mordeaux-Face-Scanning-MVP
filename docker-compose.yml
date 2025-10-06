@@ -62,6 +62,7 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
     command: ["server", "/data", "--console-address", ":9001"]
     ports:
+      - "9000:9000"
       - "9001:9001"
     volumes:
       - miniodata:/data
@@ -107,7 +108,7 @@ services:
         condition: service_started
       redis:
         condition: service_started
-    command: ["celery", "-A", "worker.worker", "worker", "--loglevel=INFO", "-Q", "faces,ingest"]
+    command: ["celery", "-A", "worker", "worker", "--loglevel=INFO", "-Q", "faces,ingest"]
     volumes:
       - insightface_models:/root/.insightface
 
