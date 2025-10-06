@@ -33,6 +33,22 @@ def _minio():
     return _minio_client
 
 
+def _minio_for_urls():
+    """Return a MinIO client configured for generating URLs accessible from frontend."""
+    from minio import Minio  # lazy import for prod lightness
+    if S3_ENDPOINT:
+        # For local development, use localhost instead of internal container name
+        endpoint = S3_ENDPOINT.replace("https://", "").replace("http://", "")
+        endpoint = endpoint.replace("minio:9000", "localhost:9000")
+        return Minio(
+            endpoint,
+            access_key=S3_ACCESS_KEY,
+            secret_key=S3_SECRET_KEY,
+            secure=S3_USE_SSL,
+        )
+    return _minio()
+
+
 def _boto3_s3():
     """Return a boto3 S3 client (no endpoint = real AWS)."""
     import boto3  # lazy import
@@ -79,15 +95,17 @@ def put_object(bucket: str, key: str, data: bytes, content_type: str) -> None:
 def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: int = 3600) -> Optional[str]:
     """Return a signed URL (GET/PUT) if supported."""
     if S3_ENDPOINT:
-        # MinIO signed URL
-        from datetime import timedelta
-        cli = _minio()
-        expires_delta = timedelta(seconds=expires)
+        # For local development, return a URL that goes through our backend
+        # This avoids the localhost connection issue from inside containers
         if method.upper() == "GET":
-            return cli.presigned_get_object(bucket, key, expires=expires_delta)
-        if method.upper() == "PUT":
+            # Return a URL that will be handled by our backend proxy endpoint
+            return f"/api/images/{bucket}/{key}"
+        else:
+            # For PUT operations, still use presigned URLs but with internal endpoint
+            from datetime import timedelta
+            cli = _minio()
+            expires_delta = timedelta(seconds=expires)
             return cli.presigned_put_object(bucket, key, expires=expires_delta)
-        return None
     else:
         # AWS S3 signed URL
         s3 = _boto3_s3()
@@ -97,6 +115,20 @@ def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: int =
             Params={"Bucket": bucket, "Key": key},
             ExpiresIn=expires,
         )
+
+
+def get_object_from_storage(bucket: str, key: str) -> bytes:
+    """Get object data from storage."""
+    if S3_ENDPOINT:
+        # MinIO get object
+        cli = _minio()
+        response = cli.get_object(bucket, key)
+        return response.read()
+    else:
+        # AWS S3 get object
+        s3 = _boto3_s3()
+        response = s3.get_object(Bucket=bucket, Key=key)
+        return response['Body'].read()
 
 
 def list_objects(bucket: str, prefix: str = "") -> List[str]:

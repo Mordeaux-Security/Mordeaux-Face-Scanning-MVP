@@ -1,8 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
 from ..services.face import get_face_service
-from ..services.storage import save_raw_and_thumb
+from ..services.storage import save_raw_and_thumb, get_object_from_storage
 from ..services.vector import get_vector_client
 import uuid
+import io
 
 api_router = APIRouter()
 
@@ -87,3 +89,13 @@ async def compare_face(file: UploadFile = File(...)):
         "vector_backend": "pinecone" if vec.using_pinecone() else "qdrant",
         "message": f"Found {len(faces)} face(s) and {len(results)} similar matches"
     }
+
+
+@api_router.get("/images/{bucket}/{key:path}")
+async def serve_image(bucket: str, key: str):
+    """Proxy endpoint to serve images from storage."""
+    try:
+        image_data = get_object_from_storage(bucket, key)
+        return StreamingResponse(io.BytesIO(image_data), media_type="image/jpeg")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Image not found: {str(e)}")

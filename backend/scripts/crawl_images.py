@@ -33,16 +33,16 @@ async def main():
         epilog="""
 Examples:
   # Smart crawl (automatically picks best method)
-  python scripts/crawl_images.py https://www.pornhub.com --max-images 5
+  python scripts/crawl_images.py https://example.com --max-images 5
 
   # Target video thumbnails specifically
-  python scripts/crawl_images.py https://www.pornhub.com --method data-mediumthumb --max-images 10
+  python scripts/crawl_images.py https://example.com --method data-mediumthumb --max-images 10
 
   # Target by JavaScript class
-  python scripts/crawl_images.py https://www.pornhub.com --method js-videoThumb --max-images 5
+  python scripts/crawl_images.py https://example.com --method js-videoThumb --max-images 5
 
   # Target by size (320x180 thumbnails)
-  python scripts/crawl_images.py https://www.pornhub.com --method size --max-images 5
+  python scripts/crawl_images.py https://example.com --method size --max-images 5
 
 Available targeting methods:
   smart           - Automatically picks the best method (default)
@@ -74,7 +74,7 @@ Available targeting methods:
     parser.add_argument('--no-crop-faces', dest='crop_faces', action='store_false',
                        help='Save full images instead of cropping faces')
     parser.add_argument('--face-margin', type=float, default=0.2,
-                       help='Margin around face as fraction of face size (default: 0.2 = 20%)')
+                       help='Margin around face as fraction of face size (default: 0.2 = 20 percent)')
     parser.add_argument('--max-total-images', type=int, default=50,
                        help='Maximum total images to collect across all pages (default: 50)')
     parser.add_argument('--max-pages', type=int, default=20,
