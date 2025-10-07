@@ -406,7 +406,7 @@
                 
                 // Build URL with query parameters
                 const apiBase = window.location.origin + '/api';
-                const url = new URL(apiBase + '/compare_face');
+                const url = new URL(apiBase + '/search_face');
                 url.searchParams.append('top_k', topK);
                 url.searchParams.append('threshold', threshold);
                 

@@ -20,7 +20,6 @@ from bs4 import BeautifulSoup
 
 from .storage import save_raw_and_thumb, save_raw_image_only, save_thumbnail_only, BUCKET_RAW, BUCKET_THUMBS
 from .face import get_face_service
-from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
 
