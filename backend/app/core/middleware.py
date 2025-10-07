@@ -12,6 +12,25 @@ logger = logging.getLogger(__name__)
 # Tenant scoping middleware
 async def tenant_middleware(request: Request, call_next):
     """Middleware to validate X-Tenant-ID header and add to request state."""
+    # Exempt health check endpoints and docs from tenant validation
+    exempt_paths = [
+        "/healthz",
+        "/healthz/detailed",
+        "/healthz/database",
+        "/healthz/redis",
+        "/healthz/storage",
+        "/healthz/vector",
+        "/healthz/face",
+        "/docs",
+        "/redoc",
+        "/openapi.json"
+    ]
+    
+    # Check if the current path is exempt
+    if request.url.path in exempt_paths:
+        response = await call_next(request)
+        return response
+    
     tenant_id = request.headers.get("X-Tenant-ID")
     
     if not tenant_id:
