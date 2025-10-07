@@ -15,7 +15,7 @@ from pathlib import Path
 # Add the app directory to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.services.crawler import EnhancedImageCrawler, crawl_images_from_url
+from app.services.crawler import EnhancedImageCrawler
 
 # Configure logging
 logging.basicConfig(
@@ -42,16 +42,19 @@ Examples:
   python scripts/crawl_images.py https://example.com --method js-videoThumb --max-images 5
 
   # Target by size (320x180 thumbnails)
-  python scripts/crawl_images.py https://example.com --method size --max-images 5
+  python scripts/crawl_images.py https://example.com --method size-320x180 --max-images 5
 
 Available targeting methods:
   smart           - Automatically picks the best method (default)
   data-mediumthumb - Target images with data-mediumthumb attribute
   js-videoThumb   - Target images with js-videoThumb class
-  size            - Target images with 320x180 dimensions
   phimage         - Target images inside .phimage divs
   latestThumb     - Target images inside links with latestThumb class
-  all             - Target all images on the page
+  video-thumb     - Target common video thumbnail patterns
+  size-320x180    - Target images with 320x180 dimensions
+  size-640x360    - Target images with 640x360 dimensions
+  size-1280x720   - Target images with 1280x720 dimensions
+  all-images      - Target all images on the page
         """
     )
     
@@ -59,7 +62,7 @@ Available targeting methods:
     parser.add_argument('--max-size', type=int, default=10485760, 
                        help='Maximum file size in bytes (default: 10MB)')
     parser.add_argument('--method', default='smart', 
-                       choices=['smart', 'data-mediumthumb', 'js-videoThumb', 'size', 'phimage', 'latestThumb', 'all'],
+                       choices=['smart', 'data-mediumthumb', 'js-videoThumb', 'phimage', 'latestThumb', 'video-thumb', 'size-320x180', 'size-640x360', 'size-1280x720', 'all-images'],
                        help='Targeting method (default: smart)')
     parser.add_argument('--timeout', type=int, default=30,
                        help='Request timeout in seconds (default: 30)')
@@ -83,8 +86,12 @@ Available targeting methods:
                        help='Crawling mode: single page or multi-page site crawling (default: single)')
     parser.add_argument('--cross-domain', action='store_true', default=False,
                        help='Allow crawling across different domains (default: same domain only)')
-    parser.add_argument('--save-both', action='store_true', default=False,
-                       help='Save both original and cropped images for comparison (default: False)')
+    parser.add_argument('--similarity-threshold', type=int, default=5,
+                       help='Hamming distance threshold for content similarity (0-64, default: 5)')
+    parser.add_argument('--max-concurrent-images', type=int, default=10,
+                       help='Maximum number of images to process concurrently (default: 10)')
+    parser.add_argument('--batch-size', type=int, default=50,
+                       help='Batch size for operations (default: 50)')
     
     args = parser.parse_args()
     
@@ -107,7 +114,9 @@ Available targeting methods:
             'max_total_images': args.max_total_images,
             'max_pages': args.max_pages,
             'same_domain_only': not args.cross_domain,
-            'save_both': args.save_both
+            'similarity_threshold': args.similarity_threshold,
+            'max_concurrent_images': args.max_concurrent_images,
+            'batch_size': args.batch_size,
         }
         
         async with EnhancedImageCrawler(**crawler_config) as crawler:
@@ -134,19 +143,26 @@ Available targeting methods:
             print(f"Max total images: {args.max_total_images}")
             print(f"Max pages: {args.max_pages}")
             print(f"Same domain only: {not args.cross_domain}")
-            print(f"Save both original and cropped: {args.save_both}")
-            print(f"Storage: MinIO (raw-images & thumbnails buckets)")
-            print(f"Saved raw image keys:")
-            for key in result.saved_raw_keys:
-                print(f"  - {key}")
-            print(f"Saved thumbnail keys:")
-            for key in result.saved_thumbnail_keys:
-                print(f"  - {key}")
-            
-            if result.errors:
-                print(f"\nErrors encountered:")
-                for error in result.errors:
-                    print(f"  - {error}")
+        print(f"Similarity threshold: {args.similarity_threshold}")
+        print(f"Max concurrent images: {args.max_concurrent_images}")
+        print(f"Batch size: {args.batch_size}")
+        print(f"Storage: MinIO (raw-images & thumbnails buckets)")
+        print(f"Cache hits: {result.cache_hits}")
+        print(f"Cache misses: {result.cache_misses}")
+        if result.cache_hits + result.cache_misses > 0:
+            hit_rate = (result.cache_hits / (result.cache_hits + result.cache_misses)) * 100
+            print(f"Cache hit rate: {hit_rate:.1f}%")
+        print(f"Saved raw image keys:")
+        for key in result.saved_raw_keys:
+            print(f"  - {key}")
+        print(f"Saved thumbnail keys:")
+        for key in result.saved_thumbnail_keys:
+            print(f"  - {key}")
+        
+        if result.errors:
+            print(f"\nErrors encountered:")
+            for error in result.errors:
+                print(f"  - {error}")
             
             print("="*70)
             

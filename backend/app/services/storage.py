@@ -1,7 +1,7 @@
 import io
 import uuid
 import time
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict, Any
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
@@ -246,3 +246,20 @@ async def save_raw_and_thumb_async(image_bytes: bytes, tenant_id: str, key_prefi
     except Exception as e:
         # Fallback to sync version if async fails
         return save_raw_and_thumb(image_bytes, tenant_id, key_prefix)
+
+
+def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, key_prefix: str = "") -> Tuple[str, str, str, str]:
+    """
+    Store raw JPG to BUCKET_RAW/<prefix><uuid>.jpg and pre-created thumbnail to BUCKET_THUMBS/<prefix><uuid>.jpg
+    Returns (raw_key, raw_url, thumb_key, thumb_url)
+    """
+    img_id = str(uuid.uuid4()).replace("-", "")
+    raw_key = f"{key_prefix}{img_id}.jpg"
+    thumb_key = f"{key_prefix}{img_id}_thumb.jpg"
+
+    put_object("raw-images", raw_key, image_bytes, "image/jpeg")
+    put_object("thumbnails", thumb_key, thumbnail_bytes, "image/jpeg")
+
+    raw_url = get_presigned_url("raw-images", raw_key, "GET", 3600) or ""
+    thumb_url = get_presigned_url("thumbnails", thumb_key, "GET", 3600) or ""
+    return raw_key, raw_url, thumb_key, thumb_url

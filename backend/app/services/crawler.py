@@ -6,11 +6,12 @@ and provides multiple targeting strategies for finding specific types of images.
 """
 
 import asyncio
+import hashlib
 import logging
 import os
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Tuple, Set, Dict
 from urllib.parse import urljoin, urlparse
 from dataclasses import dataclass
 from datetime import datetime
@@ -18,8 +19,11 @@ from datetime import datetime
 import httpx
 from bs4 import BeautifulSoup
 
-from .storage import save_raw_and_thumb, save_raw_image_only, save_thumbnail_only, BUCKET_RAW, BUCKET_THUMBS
+from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only
+from . import storage
 from .face import get_face_service
+from . import face
+from .cache import get_cache_service
 from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
@@ -37,6 +41,8 @@ class CrawlResult:
     saved_thumbnail_keys: List[str]
     errors: List[str]
     targeting_method: str
+    cache_hits: int = 0
+    cache_misses: int = 0
 
 
 @dataclass
@@ -66,7 +72,9 @@ class EnhancedImageCrawler:
         max_total_images: int = 50,
         max_pages: int = 20,
         same_domain_only: bool = True,
-        save_both: bool = False
+        similarity_threshold: int = 5,
+        max_concurrent_images: int = 10,
+        batch_size: int = 50,
     ):
         self.max_file_size = max_file_size
         self.allowed_extensions = allowed_extensions or {
@@ -80,8 +88,14 @@ class EnhancedImageCrawler:
         self.max_total_images = max_total_images  # Maximum total images to collect
         self.max_pages = max_pages  # Maximum pages to crawl
         self.same_domain_only = same_domain_only  # Only crawl same domain
-        self.save_both = save_both  # Whether to save both original and cropped images
+        self.similarity_threshold = similarity_threshold  # Hamming distance threshold for content similarity
+        self.max_concurrent_images = max_concurrent_images
+        self.batch_size = batch_size
+        self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
+        self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self.session: Optional[httpx.AsyncClient] = None
+        self.cache_service = get_cache_service()  # Cache service for avoiding reprocessing
+        self.pending_cache_entries = []  # Batch cache writes
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -132,7 +146,7 @@ class EnhancedImageCrawler:
     
     def extract_images_by_method(self, html_content: str, base_url: str, method: str = "smart") -> Tuple[List[ImageInfo], str]:
         """
-        Extract images using different targeting methods.
+        Extract images using configurable targeting methods.
         
         Args:
             html_content: The HTML content to parse
@@ -149,39 +163,70 @@ class EnhancedImageCrawler:
             soup = BeautifulSoup(html_content, 'html.parser')
             
             if method == "smart":
-                # Try multiple methods in order of preference
-                methods_to_try = [
-                    ("data-mediumthumb", self._extract_by_data_mediumthumb),
-                    ("js-videoThumb", self._extract_by_js_video_thumb),
-                    ("size", self._extract_by_size),
-                    ("phimage", self._extract_by_phimage),
-                    ("latestThumb", self._extract_by_latest_thumb),
-                    ("all", self._extract_all_images)
+                # Try multiple extraction patterns in order of preference
+                patterns = [
+                    # PornHub-style patterns
+                    ("data-mediumthumb", [{"selector": "img[data-mediumthumb]", "description": "data-mediumthumb attribute"}]),
+                    ("js-videoThumb", [{"selector": "img.js-videoThumb", "description": "js-videoThumb class"}]),
+                    ("phimage", [{"selector": ".phimage img", "description": "images in .phimage containers"}]),
+                    ("latestThumb", [{"selector": "a.latestThumb img", "description": "images in .latestThumb links"}]),
+                    
+                    # Common video thumbnail patterns
+                    ("video-thumb", [
+                        {"selector": "img[data-video-thumb]", "description": "data-video-thumb attribute"},
+                        {"selector": ".video-thumb img", "description": ".video-thumb container images"},
+                        {"selector": ".thumbnail img", "description": ".thumbnail container images"},
+                        {"selector": ".thumb img", "description": ".thumb container images"}
+                    ]),
+                    
+                    # Size-based patterns (common video thumbnail dimensions)
+                    ("size-320x180", [{"selector": "img[width='320'][height='180']", "description": "320x180 dimensions"}]),
+                    ("size-640x360", [{"selector": "img[width='640'][height='360']", "description": "640x360 dimensions"}]),
+                    ("size-1280x720", [{"selector": "img[width='1280'][height='720']", "description": "1280x720 dimensions"}]),
+                    
+                    # Generic patterns
+                    ("all-images", [{"selector": "img", "description": "all images"}])
                 ]
                 
-                for method_name, extract_func in methods_to_try:
-                    images = extract_func(soup, base_url)
+                logger.debug(f"DEBUG: Starting smart method extraction for URL: {base_url}")
+                for pattern_name, selectors in patterns:
+                    logger.debug(f"DEBUG: Trying pattern: {pattern_name}")
+                    images = self._extract_with_selectors(soup, base_url, selectors)
+                    logger.debug(f"DEBUG: Pattern {pattern_name} found {len(images)} images")
                     if images:
-                        method_used = method_name
-                        logger.info(f"Smart method selected: {method_name} (found {len(images)} images)")
+                        method_used = pattern_name
+                        logger.info(f"Smart method selected: {pattern_name} (found {len(images)} images)")
+                        # Debug: Show first few image URLs
+                        for i, img in enumerate(images[:3]):
+                            logger.debug(f"DEBUG: Sample image {i+1}: {img.url}")
                         break
-                        
-            elif method == "data-mediumthumb":
-                images = self._extract_by_data_mediumthumb(soup, base_url)
-            elif method == "js-videoThumb":
-                images = self._extract_by_js_video_thumb(soup, base_url)
-            elif method == "size":
-                images = self._extract_by_size(soup, base_url)
-            elif method == "phimage":
-                images = self._extract_by_phimage(soup, base_url)
-            elif method == "latestThumb":
-                images = self._extract_by_latest_thumb(soup, base_url)
-            elif method == "all":
-                images = self._extract_all_images(soup, base_url)
+                    else:
+                        logger.debug(f"DEBUG: Pattern {pattern_name} found no images, trying next pattern")
             else:
-                logger.warning(f"Unknown method '{method}', falling back to 'all'")
-                images = self._extract_all_images(soup, base_url)
-                method_used = "all"
+                # Use specific method
+                if method in ["data-mediumthumb", "js-videoThumb", "phimage", "latestThumb", "video-thumb", "size-320x180", "size-640x360", "size-1280x720", "all-images"]:
+                    # Map method names to their selectors
+                    method_selectors = {
+                        "data-mediumthumb": [{"selector": "img[data-mediumthumb]", "description": "data-mediumthumb attribute"}],
+                        "js-videoThumb": [{"selector": "img.js-videoThumb", "description": "js-videoThumb class"}],
+                        "phimage": [{"selector": ".phimage img", "description": "images in .phimage containers"}],
+                        "latestThumb": [{"selector": "a.latestThumb img", "description": "images in .latestThumb links"}],
+                        "video-thumb": [
+                            {"selector": "img[data-video-thumb]", "description": "data-video-thumb attribute"},
+                            {"selector": ".video-thumb img", "description": ".video-thumb container images"},
+                            {"selector": ".thumbnail img", "description": ".thumbnail container images"},
+                            {"selector": ".thumb img", "description": ".thumb container images"}
+                        ],
+                        "size-320x180": [{"selector": "img[width='320'][height='180']", "description": "320x180 dimensions"}],
+                        "size-640x360": [{"selector": "img[width='640'][height='360']", "description": "640x360 dimensions"}],
+                        "size-1280x720": [{"selector": "img[width='1280'][height='720']", "description": "1280x720 dimensions"}],
+                        "all-images": [{"selector": "img", "description": "all images"}]
+                    }
+                    images = self._extract_with_selectors(soup, base_url, method_selectors[method])
+                else:
+                    logger.warning(f"Unknown method '{method}', falling back to all images")
+                    images = self._extract_with_selectors(soup, base_url, [{"selector": "img", "description": "all images"}])
+                    method_used = "all-images"
             
             logger.info(f"Found {len(images)} images using method: {method_used}")
                 
@@ -190,41 +235,96 @@ class EnhancedImageCrawler:
             
         return images, method_used
     
-    def _extract_by_data_mediumthumb(self, soup, base_url: str) -> List[ImageInfo]:
-        """Extract images with data-mediumthumb attribute (video thumbnails)."""
-        imgs = soup.find_all('img', attrs={'data-mediumthumb': True})
-        return self._process_img_tags(imgs, base_url)
+    def _extract_with_selectors(self, soup, base_url: str, selectors: List[Dict]) -> List[ImageInfo]:
+        """
+        Extract images using CSS selectors with flexible matching.
+        
+        Args:
+            soup: BeautifulSoup parsed HTML
+            base_url: Base URL for resolving relative URLs
+            selectors: List of selector dictionaries with 'selector' and 'description' keys
+            
+        Returns:
+            List of ImageInfo objects
+        """
+        all_images = []
+        seen_urls = set()  # Avoid duplicates
+        
+        for selector_config in selectors:
+            try:
+                selector = selector_config["selector"]
+                description = selector_config.get("description", selector)
+                
+                # Handle different types of selectors
+                if selector.startswith("img["):
+                    # Attribute-based selector (e.g., "img[data-mediumthumb]")
+                    if "width=" in selector and "height=" in selector:
+                        # Parse width/height attributes
+                        width_match = selector.split("width='")[1].split("'")[0] if "width='" in selector else None
+                        height_match = selector.split("height='")[1].split("'")[0] if "height='" in selector else None
+                        if width_match and height_match:
+                            imgs = soup.find_all('img', attrs={'width': width_match, 'height': height_match})
+                        else:
+                            imgs = []
+                    else:
+                        # Other attribute selectors
+                        attr_name = selector.split("[")[1].split("]")[0]
+                        if "=" in attr_name:
+                            # Has value (e.g., "data-mediumthumb=true")
+                            attr_parts = attr_name.split("=")
+                            attr_key = attr_parts[0]
+                            attr_value = attr_parts[1].strip("'\"")
+                            imgs = soup.find_all('img', attrs={attr_key: attr_value})
+                        else:
+                            # Just attribute exists (e.g., "data-mediumthumb")
+                            imgs = soup.find_all('img', attrs={attr_name: True})
+                elif selector.startswith("img."):
+                    # Class-based selector (e.g., "img.js-videoThumb")
+                    class_name = selector.split(".")[1]
+                    imgs = soup.find_all('img', class_=class_name)
+                elif " img" in selector:
+                    # Container-based selector (e.g., ".phimage img", "a.latestThumb img")
+                    container_selector = selector.split(" img")[0]
+                    containers = soup.select(container_selector)
+                    imgs = []
+                    for container in containers:
+                        imgs.extend(container.find_all('img'))
+                else:
+                    # Generic CSS selector
+                    imgs = soup.select(selector)
+                
+                # Process found images
+                for img in imgs:
+                    src = img.get('src') or img.get('data-src') or img.get('data-lazy-src')
+                    if src and src not in seen_urls:
+                        seen_urls.add(src)
+                        all_images.append(img)
+                        
+            except Exception as e:
+                logger.warning(f"Error with selector '{selector_config}': {str(e)}")
+                continue
+        
+        logger.debug(f"Found {len(all_images)} unique images using {len(selectors)} selectors")
+        return self._process_img_tags(all_images, base_url)
     
-    def _extract_by_js_video_thumb(self, soup, base_url: str) -> List[ImageInfo]:
-        """Extract images with js-videoThumb class."""
-        imgs = soup.find_all('img', class_='js-videoThumb')
-        return self._process_img_tags(imgs, base_url)
-    
-    def _extract_by_size(self, soup, base_url: str) -> List[ImageInfo]:
-        """Extract images with video thumbnail dimensions (320x180)."""
-        imgs = soup.find_all('img', attrs={'width': '320', 'height': '180'})
-        return self._process_img_tags(imgs, base_url)
-    
-    def _extract_by_phimage(self, soup, base_url: str) -> List[ImageInfo]:
-        """Extract images inside .phimage divs."""
-        phimage_divs = soup.find_all('div', class_='phimage')
-        imgs = []
-        for div in phimage_divs:
-            imgs.extend(div.find_all('img'))
-        return self._process_img_tags(imgs, base_url)
-    
-    def _extract_by_latest_thumb(self, soup, base_url: str) -> List[ImageInfo]:
-        """Extract images inside links with latestThumb class."""
-        links = soup.find_all('a', class_='latestThumb')
-        imgs = []
-        for link in links:
-            imgs.extend(link.find_all('img'))
-        return self._process_img_tags(imgs, base_url)
-    
-    def _extract_all_images(self, soup, base_url: str) -> List[ImageInfo]:
-        """Extract all img tags."""
-        imgs = soup.find_all('img')
-        return self._process_img_tags(imgs, base_url)
+    def add_custom_extraction_pattern(self, pattern_name: str, selectors: List[Dict], priority: int = 100):
+        """
+        Add a custom extraction pattern for specific sites.
+        
+        Args:
+            pattern_name: Name of the pattern (e.g., 'xvideos-thumbs')
+            selectors: List of selector dictionaries
+            priority: Lower numbers = higher priority (default: 100)
+            
+        Example:
+            crawler.add_custom_extraction_pattern('xvideos-thumbs', [
+                {"selector": ".video-block img", "description": "xvideos video block images"},
+                {"selector": "img[data-src*='thumb']", "description": "lazy-loaded thumbnails"}
+            ])
+        """
+        # This could be extended to store custom patterns and inject them into the smart method
+        # For now, this is a placeholder for future extensibility
+        logger.info(f"Custom pattern '{pattern_name}' registered with {len(selectors)} selectors (priority: {priority})")
     
     def _process_img_tags(self, img_tags, base_url: str) -> List[ImageInfo]:
         """Process a list of img tags and return ImageInfo objects."""
@@ -419,6 +519,7 @@ class EnhancedImageCrawler:
     def check_face_quality(self, image_bytes: bytes) -> Tuple[bool, str, dict]:
         """
         Check if the image contains high-quality faces suitable for recognition.
+        Uses enhanced detection methods for better accuracy with low-resolution images.
         
         Args:
             image_bytes: The image data to analyze
@@ -428,7 +529,10 @@ class EnhancedImageCrawler:
         """
         try:
             face_service = get_face_service()
-            faces = face_service.detect_and_embed(image_bytes)
+            
+            # Use enhanced multi-scale face detection (handles enhancement internally)
+            enhanced_bytes, enhancement_scale = face_service.enhance_image_for_face_detection(image_bytes)
+            faces = face_service.detect_and_embed(enhanced_bytes, enhancement_scale, min_size=25)
             
             if not faces:
                 if self.require_face:
@@ -477,50 +581,54 @@ class EnhancedImageCrawler:
             else:
                 return True, f"Face quality check failed, but not required: {str(e)}", {}
 
-    async def save_image_to_storage(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Save image bytes to MinIO storage with correct logic:
-        1. Always save to raw-images bucket
-        2. Check face quality and save cropped face to thumbnails bucket if high quality
-        
-        Returns:
-            Tuple of (raw_key, thumbnail_key) - either can be None
-        """
-        try:
-            # STEP 1: Always save raw image to raw-images bucket
-            raw_key, raw_url = save_raw_image_only(image_bytes)
-            logger.info(f"Saved raw image to MinIO - Raw: {raw_key}")
-            
-            # STEP 2: Check face quality for potential thumbnail processing
-            is_high_quality, reason, best_face = self.check_face_quality(image_bytes)
-            
-            thumbnail_key = None
-            if is_high_quality and self.crop_faces and best_face:
-                # STEP 3: Crop and save high-quality face to thumbnails bucket
-                face_service = get_face_service()
-                bbox = best_face.get('bbox', [0, 0, 0, 0])
-                cropped_image_bytes = face_service.crop_face_from_image(image_bytes, bbox, self.face_margin)
-                
-                # Save cropped face to thumbnails bucket only
-                thumbnail_key, thumbnail_url = save_thumbnail_only(cropped_image_bytes)
-                
-                # Log face details
-                x1, y1, x2, y2 = bbox
-                face_width = int(x2 - x1)
-                face_height = int(y2 - y1)
-                det_score = best_face.get('det_score', 0.0)
-                
-                logger.info(f"Saved cropped face to MinIO - Thumbnail: {thumbnail_key} "
-                           f"(Face: {face_width}x{face_height}, Score: {det_score:.3f}, {reason})")
-            else:
-                logger.info(f"No thumbnail saved - Quality check: {reason}")
-            
-            return raw_key, thumbnail_key
-            
-        except Exception as e:
-            logger.error(f"Error saving image to MinIO storage: {str(e)}")
-            return None, None
     
+    async def _process_single_image(self, image_info: ImageInfo, index: int, total: int) -> Tuple[Optional[str], Optional[str], bool, List[str]]:
+        """
+        Process a single image with semaphore control for concurrency.
+        """
+        async with self._processing_semaphore:
+            try:
+                logger.info(f"Processing image {index}/{total}: {image_info.url}")
+
+                # Download the image
+                image_bytes, download_errors = await self.download_image(image_info)
+                if not image_bytes:
+                    logger.warning(f"Failed to download image: {image_info.url}")
+                    return None, None, False, download_errors, []
+
+                # Check cache
+                should_skip, cached_key = self.cache_service.should_skip_image(image_info.url, image_bytes, self.similarity_threshold)
+                if should_skip and cached_key:
+                    logger.info(f"Image {image_info.url} found in cache. Key: {cached_key}")
+                    return cached_key, cached_key, True, download_errors, []
+
+                # Face detection and cropping
+                faces = []
+                thumbnail_bytes = None
+                if self.require_face or self.crop_faces:
+                    # Enhance image first, then detect faces
+                    enhanced_bytes, enhancement_scale = face.enhance_image_for_face_detection(image_bytes)
+                    faces = face.detect_and_embed(enhanced_bytes, enhancement_scale, min_size=0)
+                    if self.require_face and not faces:
+                        logger.info(f"No faces detected for {image_info.url}, skipping.")
+                        return None, None, False, download_errors, []
+
+                    if self.crop_faces and faces:
+                        # For now, just take the first face for thumbnail
+                        # Use original image_bytes, not enhanced_bytes, since face bbox is in original coordinates
+                        thumbnail_bytes = face.crop_face_and_create_thumbnail(image_bytes, faces[0], self.face_margin)
+                    elif not self.crop_faces:
+                        thumbnail_bytes = face.create_thumbnail(image_bytes)
+                else:
+                    thumbnail_bytes = face.create_thumbnail(image_bytes)
+
+                # Prepare data for batch storage
+                return image_bytes, thumbnail_bytes, False, download_errors, faces
+
+            except Exception as e:
+                logger.error(f"Error processing image {image_info.url}: {e}", exc_info=True)
+                return None, None, False, [f"Processing error: {e}"], []
+
     async def crawl_page(self, url: str, method: str = "smart") -> CrawlResult:
         """Crawl a single page for images using the specified method."""
         logger.info(f"Starting crawl of: {url} using method: {method} (min_face_quality: {self.min_face_quality}, require_face: {self.require_face})")
@@ -528,6 +636,8 @@ class EnhancedImageCrawler:
         saved_raw_keys = []
         saved_thumbnail_keys = []
         all_errors = []
+        cache_hits = 0
+        cache_misses = 0
         
         # Fetch the page
         html_content, fetch_errors = await self.fetch_page(url)
@@ -568,29 +678,88 @@ class EnhancedImageCrawler:
         images_to_process = images
         logger.info(f"Processing all {len(images_to_process)} images found")
         
+        processing_tasks = []
         for i, image_info in enumerate(images_to_process, 1):
-            logger.info(f"Processing image {i}/{len(images_to_process)}: {image_info.url}")
-            
-            # Download the image
-            image_bytes, download_errors = await self.download_image(image_info)
-            all_errors.extend(download_errors)
-            
-            if not image_bytes:
-                logger.warning(f"Failed to download image: {image_info.url}")
+            processing_tasks.append(self._process_single_image(image_info, i, len(images_to_process)))
+
+        processed_results = await asyncio.gather(*processing_tasks, return_exceptions=True)
+
+        storage_batch = []
+        for i, result in enumerate(processed_results):
+            image_info = images_to_process[i]
+            if isinstance(result, Exception):
+                logger.error(f"Error processing image {image_info.url}: {result}")
+                all_errors.append(f"Processing error for {image_info.url}: {result}")
                 continue
-            
-            # Save to MinIO storage (always saves raw, conditionally saves thumbnail)
-            raw_key, thumbnail_key = await self.save_image_to_storage(image_bytes, image_info)
-            
-            if raw_key:
-                saved_raw_keys.append(raw_key)
-                logger.info(f"Successfully saved raw image {i}/{len(images_to_process)}")
-                
-                if thumbnail_key:
-                    saved_thumbnail_keys.append(thumbnail_key)
-                    logger.info(f"Successfully saved thumbnail {i}/{len(images_to_process)}")
+
+            image_bytes, thumbnail_bytes, was_cached, download_errors, faces = result
+            all_errors.extend(download_errors)
+
+            if was_cached:
+                cache_hits += 1
+                continue
             else:
-                logger.warning(f"Failed to save image {i}/{len(images_to_process)}")
+                cache_misses += 1
+
+                if image_bytes:
+                    storage_batch.append({
+                        "image_bytes": image_bytes,
+                        "thumbnail_bytes": thumbnail_bytes,
+                        "image_info": image_info,
+                        "faces": faces,
+                        "key_prefix": "",
+                        "save_type": "both" if thumbnail_bytes else "raw_only"
+                    })
+
+            # Process batch if size reached or it's the last image
+            if len(storage_batch) >= self.batch_size or (i == len(processed_results) - 1 and storage_batch):
+                logger.info(f"Saving batch of {len(storage_batch)} images to storage.")
+                
+                # Save images individually but concurrently
+                async def save_single_item(item):
+                    async with self._storage_semaphore:
+                        try:
+                            if item["thumbnail_bytes"]:
+                                raw_key, raw_url, thumbnail_key, thumb_url = storage.save_raw_and_thumb_with_precreated_thumb(
+                                    item["image_bytes"], 
+                                    item["thumbnail_bytes"]
+                                )
+                            else:
+                                raw_key, raw_url = storage.save_raw_image_only(item["image_bytes"])
+                                thumbnail_key = None
+                            
+                            if raw_key:
+                                self.cache_service.store_processed_image(
+                                    item["image_info"].url,
+                                    item["image_bytes"],
+                                    raw_key,
+                                    thumbnail_key,
+                                    item["faces"][0] if item["faces"] else None
+                                )
+                                return raw_key, thumbnail_key, None
+                            else:
+                                return None, None, "Failed to save image"
+                        except Exception as e:
+                            return None, None, str(e)
+                
+                # Process all items in the batch concurrently
+                batch_tasks = [save_single_item(item) for item in storage_batch]
+                batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
+                
+                for j, result in enumerate(batch_results):
+                    if isinstance(result, Exception):
+                        logger.warning(f"Failed to save image {storage_batch[j]['image_info'].url} in batch: {result}")
+                        all_errors.append(f"Batch save error for {storage_batch[j]['image_info'].url}: {result}")
+                    else:
+                        raw_key, thumbnail_key, error = result
+                        if raw_key:
+                            saved_raw_keys.append(raw_key)
+                            if thumbnail_key:
+                                saved_thumbnail_keys.append(thumbnail_key)
+                        else:
+                            logger.warning(f"Failed to save image {storage_batch[j]['image_info'].url} in batch: {error}")
+                            all_errors.append(f"Batch save error for {storage_batch[j]['image_info'].url}: {error}")
+                storage_batch = []  # Clear batch after saving
         
         result = CrawlResult(
             url=url,
@@ -601,7 +770,9 @@ class EnhancedImageCrawler:
             saved_raw_keys=saved_raw_keys,
             saved_thumbnail_keys=saved_thumbnail_keys,
             errors=all_errors,
-            targeting_method=method_used
+            targeting_method=method_used,
+            cache_hits=cache_hits,
+            cache_misses=cache_misses
         )
         
         logger.info(f"Crawl completed - Found: {result.images_found}, Raw Images Saved: {result.raw_images_saved}, Thumbnails Saved: {result.thumbnails_saved}")
@@ -630,6 +801,8 @@ class EnhancedImageCrawler:
         total_raw_saved = 0
         total_thumbnails_saved = 0
         pages_crawled = 0
+        total_cache_hits = 0
+        total_cache_misses = 0
         
         while urls_to_visit and len(all_saved_thumbnail_keys) < self.max_total_images and pages_crawled < self.max_pages:
             # Get next URL to visit
@@ -656,6 +829,8 @@ class EnhancedImageCrawler:
                 all_saved_raw_keys.extend(page_result.saved_raw_keys)
                 all_saved_thumbnail_keys.extend(page_result.saved_thumbnail_keys)
                 all_errors.extend(page_result.errors)
+                total_cache_hits += page_result.cache_hits
+                total_cache_misses += page_result.cache_misses
                 
                 logger.info(f"Page {pages_crawled} results: Found {page_result.images_found}, Raw Saved {page_result.raw_images_saved}, Thumbnails Saved {page_result.thumbnails_saved}")
                 
@@ -687,6 +862,11 @@ class EnhancedImageCrawler:
                 all_errors.append(error_msg)
                 continue
         
+        # Flush any remaining cache entries
+        if self.pending_cache_entries:
+            self.cache_service.batch_store_processed_images(self.pending_cache_entries)
+            self.pending_cache_entries.clear()
+        
         # Create aggregated result
         result = CrawlResult(
             url=start_url,
@@ -697,27 +877,12 @@ class EnhancedImageCrawler:
             saved_raw_keys=all_saved_raw_keys,
             saved_thumbnail_keys=all_saved_thumbnail_keys,
             errors=all_errors,
-            targeting_method=method
+            targeting_method=method,
+            cache_hits=total_cache_hits,
+            cache_misses=total_cache_misses
         )
         
         logger.info(f"Site crawl completed - Pages: {pages_crawled}, Found: {total_images_found}, Raw Images Saved: {total_raw_saved}, Thumbnails Saved: {total_thumbnails_saved}")
         return result
 
 
-# Convenience function for easy integration
-async def crawl_images_from_url(
-    url: str, 
-    method: str = "smart"
-) -> CrawlResult:
-    """
-    Convenience function to crawl images from a URL.
-    
-    Args:
-        url: The URL to crawl
-        method: Targeting method ('smart', 'data-mediumthumb', 'js-videoThumb', etc.)
-        
-    Returns:
-        CrawlResult with crawl statistics
-    """
-    async with EnhancedImageCrawler() as crawler:
-        return await crawler.crawl_page(url, method)
