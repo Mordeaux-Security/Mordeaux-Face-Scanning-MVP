@@ -1,7 +1,9 @@
 import io
 import os
 import uuid
-from typing import Tuple, Optional, List
+import asyncio
+from typing import Tuple, Optional, List, Dict, Any
+from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image
 
@@ -169,3 +171,24 @@ def save_raw_and_thumb(image_bytes: bytes, key_prefix: str = "") -> Tuple[str, s
     raw_url = get_presigned_url(BUCKET_RAW, raw_key, "GET", 3600) or ""
     thumb_url = get_presigned_url(BUCKET_THUMBS, thumb_key, "GET", 3600) or ""
     return raw_key, raw_url, thumb_key, thumb_url
+
+
+def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, key_prefix: str = "") -> Tuple[str, str, str, str]:
+    """
+    Store raw JPG to BUCKET_RAW/<prefix><uuid>.jpg and pre-created thumbnail to BUCKET_THUMBS/<prefix><uuid>.jpg
+    Returns (raw_key, raw_url, thumb_key, thumb_url)
+    """
+    img_id = str(uuid.uuid4()).replace("-", "")
+    raw_key = f"{key_prefix}{img_id}.jpg"
+    thumb_key = f"{key_prefix}{img_id}_thumb.jpg"
+
+    put_object(BUCKET_RAW, raw_key, image_bytes, "image/jpeg")
+    put_object(BUCKET_THUMBS, thumb_key, thumbnail_bytes, "image/jpeg")
+
+    raw_url = get_presigned_url(BUCKET_RAW, raw_key, "GET", 3600) or ""
+    thumb_url = get_presigned_url(BUCKET_THUMBS, thumb_key, "GET", 3600) or ""
+    return raw_key, raw_url, thumb_key, thumb_url
+
+
+
+
