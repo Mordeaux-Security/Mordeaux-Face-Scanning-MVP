@@ -299,66 +299,7 @@ def compute_phash(b: bytes) -> str:
     pil = Image.open(io.BytesIO(b)).convert("RGB")
     return str(imagehash.phash(pil))
 
-def compute_tolerant_phash(b: bytes) -> tuple:
-    """
-    Compute multiple perceptual hashes for robust duplicate detection.
-    
-    Returns:
-        Tuple of (phash, dhash, whash, ahash) - different hash types for tolerance
-    """
-    try:
-        pil = Image.open(io.BytesIO(b)).convert("RGB")
-        
-        # Compute multiple hash types for better duplicate detection
-        phash = str(imagehash.phash(pil))           # Perceptual hash (most robust)
-        dhash = str(imagehash.dhash(pil))           # Difference hash (good for minor changes)
-        whash = str(imagehash.whash(pil))           # Wavelet hash (good for compression artifacts)
-        ahash = str(imagehash.average_hash(pil))    # Average hash (simple, fast)
-        
-        return phash, dhash, whash, ahash
-    except Exception as e:
-        logger.warning(f"Failed to compute tolerant phash: {str(e)}")
-        return "", "", "", ""
 
-def compute_phash_similarity(hash1: tuple, hash2: tuple, threshold: int = 5) -> bool:
-    """
-    Check if two tolerant hash tuples are similar enough to be considered duplicates.
-    
-    Args:
-        hash1: First hash tuple (phash, dhash, whash, ahash)
-        hash2: Second hash tuple (phash, dhash, whash, ahash)
-        threshold: Maximum Hamming distance for similarity (default: 5)
-        
-    Returns:
-        True if any hash type is similar enough
-    """
-    if not hash1 or not hash2 or len(hash1) != 4 or len(hash2) != 4:
-        return False
-    
-    try:
-        # Check similarity for each hash type
-        hash_types = [hash1, hash2]
-        
-        for i in range(4):  # Check all 4 hash types
-            if not hash_types[0][i] or not hash_types[1][i]:
-                continue
-                
-            # Convert to imagehash objects for comparison
-            hash_obj1 = imagehash.hex_to_hash(hash_types[0][i])
-            hash_obj2 = imagehash.hex_to_hash(hash_types[1][i])
-            
-            # Calculate Hamming distance
-            distance = hash_obj1 - hash_obj2
-            
-            if distance <= threshold:
-                logger.debug(f"Hash similarity found: type {i}, distance {distance}")
-                return True
-                
-        return False
-        
-    except Exception as e:
-        logger.warning(f"Failed to compare hashes: {str(e)}")
-        return False
 
 
 async def detect_and_embed_async(content: bytes):
@@ -512,8 +453,6 @@ def get_face_service():
         detect_and_embed_async = staticmethod(detect_and_embed_async)
         compute_phash = staticmethod(compute_phash)
         compute_phash_async = staticmethod(compute_phash_async)
-        compute_tolerant_phash = staticmethod(compute_tolerant_phash)
-        compute_phash_similarity = staticmethod(compute_phash_similarity)
         crop_face_from_image = staticmethod(crop_face_from_image)
         enhance_image_for_face_detection = staticmethod(enhance_image_for_face_detection)
         crop_face_and_create_thumbnail = staticmethod(crop_face_and_create_thumbnail)

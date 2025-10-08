@@ -50,21 +50,6 @@ def _minio():
     return _minio_client
 
 
-def _minio_for_urls():
-    """Return a MinIO client configured for generating URLs accessible from frontend."""
-    from minio import Minio  # lazy import for prod lightness
-    settings = get_settings()
-    if settings.s3_endpoint:
-        # For local development, use localhost instead of internal container name
-        endpoint = settings.s3_endpoint.replace("https://", "").replace("http://", "")
-        endpoint = endpoint.replace("minio:9000", "localhost:9000")
-        return Minio(
-            endpoint,
-            access_key=settings.s3_access_key,
-            secret_key=settings.s3_secret_key,
-            secure=settings.s3_use_ssl,
-        )
-    return _minio()
 
 
 def _boto3_s3():
@@ -197,68 +182,27 @@ def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = ""
     return raw_key, raw_url
 
 
-def save_thumbnail_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str]:
-    """
-    Store thumbnail to BUCKET_THUMBS/<tenant_id>/<prefix><uuid>.jpg only
-    Returns (thumb_key, thumb_url)
-    """
-    settings = get_settings()
-    img_id = str(uuid.uuid4()).replace("-", "")
-    thumb_jpg = _make_thumbnail(image_bytes)
-    thumb_key = f"{tenant_id}/{key_prefix}{img_id}_thumb.jpg"
-
-    put_object(settings.s3_bucket_thumbs, thumb_key, thumb_jpg, "image/jpeg")
-
-    thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
-    return thumb_key, thumb_url
-
-def save_audit_log(audit_data: bytes, tenant_id: str, log_type: str = "audit") -> Tuple[str, str]:
-    """
-    Store audit log to BUCKET_AUDIT/<tenant_id>/<log_type>/<timestamp>.json
-    Returns (audit_key, audit_url)
-    """
-    settings = get_settings()
-    timestamp = int(time.time())
-    log_id = str(uuid.uuid4()).replace("-", "")
-    audit_key = f"{tenant_id}/{log_type}/{timestamp}_{log_id}.json"
-
-    put_object(settings.s3_bucket_audit, audit_key, audit_data, "application/json")
-
-    audit_url = get_presigned_url(settings.s3_bucket_audit, audit_key, "GET") or ""
-    return audit_key, audit_url
 
 
-def save_raw_and_thumb(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
-    """
-    Store raw JPG to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg and a thumbnail to BUCKET_THUMBS/<tenant_id>/<prefix><uuid>.jpg
-    Returns (raw_key, raw_url, thumb_key, thumb_url)
-    """
-    settings = get_settings()
-    img_id = str(uuid.uuid4()).replace("-", "")
-    raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
-    thumb_jpg = _make_thumbnail(image_bytes)
-    thumb_key = f"{tenant_id}/{key_prefix}{img_id}_thumb.jpg"
 
-    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
-    put_object(settings.s3_bucket_thumbs, thumb_key, thumb_jpg, "image/jpeg")
-
-    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-    thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
-    return raw_key, raw_url, thumb_key, thumb_url
 
 async def save_raw_and_thumb_async(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
     """
-    Async version of save_raw_and_thumb for better performance.
+    Async version of save_raw_and_thumb_with_precreated_thumb for better performance.
+    Creates a thumbnail from the raw image.
     """
     loop = asyncio.get_event_loop()
     thread_pool = _get_thread_pool()
     
     try:
-        result = await loop.run_in_executor(thread_pool, save_raw_and_thumb, image_bytes, tenant_id, key_prefix)
+        # Create thumbnail from raw image
+        thumbnail_bytes = _make_thumbnail(image_bytes)
+        result = await loop.run_in_executor(thread_pool, save_raw_and_thumb_with_precreated_thumb, image_bytes, thumbnail_bytes, tenant_id, key_prefix)
         return result
     except Exception as e:
         # Fallback to sync version if async fails
-        return save_raw_and_thumb(image_bytes, tenant_id, key_prefix)
+        thumbnail_bytes = _make_thumbnail(image_bytes)
+        return save_raw_and_thumb_with_precreated_thumb(image_bytes, thumbnail_bytes, tenant_id, key_prefix)
 
 
 def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
@@ -282,16 +226,3 @@ def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes
     return raw_key, raw_url, thumb_key, thumb_url
 
 
-async def save_raw_and_thumb_with_precreated_thumb_async(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
-    """
-    Async version of save_raw_and_thumb_with_precreated_thumb for better performance.
-    """
-    loop = asyncio.get_event_loop()
-    thread_pool = _get_thread_pool()
-    
-    try:
-        result = await loop.run_in_executor(thread_pool, save_raw_and_thumb_with_precreated_thumb, image_bytes, thumbnail_bytes, tenant_id, key_prefix)
-        return result
-    except Exception as e:
-        # Fallback to sync version if async fails
-        return save_raw_and_thumb_with_precreated_thumb(image_bytes, thumbnail_bytes, tenant_id, key_prefix)

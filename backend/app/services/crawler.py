@@ -1,16 +1,8 @@
 """
-Enhanced Image Crawler Service v2
+Image Crawler Service
 
-Integrated crawler service that combines the advanced features from basic_crawler1.1
-with the commercial readiness features from main branch.
-
-Key improvements:
-- Advanced caching with similarity detection (from basic_crawler1.1)
-- Multi-tenancy support (from main)
-- Enhanced face detection with image enhancement (from basic_crawler1.1)
-- Flexible CSS selector patterns (from basic_crawler1.1)
-- Concurrent processing with semaphores (from basic_crawler1.1)
-- Audit logging and compliance features (from main)
+A comprehensive web crawler service for extracting and processing images from websites.
+Features include intelligent image detection, face recognition, caching, and multi-tenant support.
 """
 
 import asyncio
@@ -31,15 +23,19 @@ from datetime import datetime
 import httpx
 from bs4 import BeautifulSoup
 
-from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only, save_audit_log
+from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only
 from . import storage
 from .face import get_face_service
 from . import face
 from .cache import get_hybrid_cache_service
 from urllib.parse import urljoin, urlparse
 
+# ============================================================================
+# MEMORY MANAGEMENT
+# ============================================================================
+
 class MemoryMonitor:
-    """Enhanced memory monitoring with adaptive thresholds."""
+    """Memory monitoring with adaptive thresholds for system resource management."""
     
     def __init__(self):
         self.initial_memory = psutil.virtual_memory().percent
@@ -103,6 +99,9 @@ class MemoryMonitor:
 
 logger = logging.getLogger(__name__)
 
+# ============================================================================
+# DATA CLASSES
+# ============================================================================
 
 @dataclass
 class CrawlResult:
@@ -134,10 +133,14 @@ class ImageInfo:
     height: Optional[int]
 
 
-class EnhancedImageCrawlerV2:
+# ============================================================================
+# MAIN CRAWLER CLASS
+# ============================================================================
+
+class ImageCrawler:
     """
-    Enhanced image crawler v2 that combines advanced features from basic_crawler1.1
-    with commercial readiness features from main branch.
+    Image crawler service with intelligent detection, face recognition, and caching capabilities.
+    Supports multi-tenant operations and concurrent processing.
     """
     
     def __init__(
@@ -154,11 +157,11 @@ class EnhancedImageCrawlerV2:
         max_pages: int = 20,
         same_domain_only: bool = True,
         similarity_threshold: int = 5,
-        max_concurrent_images: int = 20,  # Increased from 10 based on test results
+        max_concurrent_images: int = 20,  # Maximum concurrent image processing
         batch_size: int = 50,
         enable_audit_logging: bool = True,
     ):
-        self.tenant_id = tenant_id  # Multi-tenancy support from main
+        self.tenant_id = tenant_id  # Multi-tenancy support
         self.max_file_size = max_file_size
         self.allowed_extensions = allowed_extensions or {
             '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'
@@ -174,10 +177,10 @@ class EnhancedImageCrawlerV2:
         self.similarity_threshold = similarity_threshold  # Hamming distance threshold for content similarity
         self.max_concurrent_images = max_concurrent_images
         self.batch_size = batch_size
-        self.enable_audit_logging = enable_audit_logging  # Audit logging support from main
+        self.enable_audit_logging = enable_audit_logging  # Audit logging support
         self._early_exit_count = 0
         
-        # PHASE 2 OPTIMIZATION: Enhanced concurrency control
+        # Concurrency control with semaphores
         self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, 50))  # Allow more downloads
@@ -194,15 +197,15 @@ class EnhancedImageCrawlerV2:
             thread_name_prefix="storage"
         )
         
-        # MEMORY MANAGEMENT: Enhanced memory monitoring
+        # Memory monitoring and management
         self._memory_monitor = MemoryMonitor()
         self._active_tasks = weakref.WeakSet()  # Track active tasks for memory cleanup
-        self._memory_pressure_threshold = 75  # Conservative threshold
+        self._memory_pressure_threshold = 75  # Memory pressure threshold
         self._gc_frequency = 10  # Force GC every N operations
         self._operation_count = 0
         
         self.session: Optional[httpx.AsyncClient] = None
-        self.cache_service = get_hybrid_cache_service()  # Advanced caching from basic_crawler1.1
+        self.cache_service = get_hybrid_cache_service()  # Hybrid caching service
         self.pending_cache_entries = []  # Batch cache writes
         
     async def __aenter__(self):
@@ -225,9 +228,121 @@ class EnhancedImageCrawlerV2:
         if self.session:
             await self.session.aclose()
         
-        # PHASE 2 OPTIMIZATION: Clean up thread pools
+        # Clean up thread pools
         self._face_detection_thread_pool.shutdown(wait=True)
         self._storage_thread_pool.shutdown(wait=True)
+    
+    # ============================================================================
+    # MEMORY MANAGEMENT METHODS
+    # ============================================================================
+    
+    def _adjust_concurrency_dynamically(self):
+        """
+        Adjust concurrency based on memory pressure and system resources.
+        """
+        try:
+            # Get comprehensive system metrics
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            memory_status = self._memory_monitor.get_memory_status()
+            
+            # Trigger garbage collection if needed
+            if self._memory_monitor.should_trigger_gc():
+                logger.info(f"Triggering garbage collection due to memory pressure: {memory_status['pressure_level']}")
+                gc.collect()
+            
+            # Calculate base concurrency from CPU and memory
+            cpu_factor = 1.0
+            if cpu_percent > 80:
+                cpu_factor = 0.5  # Reduce by half if CPU is high
+            elif cpu_percent < 30:
+                cpu_factor = 1.5  # Increase by 50% if CPU is low
+            
+            # Get memory-safe concurrency limit
+            base_concurrency = int(self.max_concurrent_images * cpu_factor)
+            new_concurrency = self._memory_monitor.get_safe_concurrency_limit(base_concurrency)
+            
+            # Ensure minimum concurrency for progress
+            new_concurrency = max(1, new_concurrency)
+            
+            # Update semaphores if concurrency changed
+            if new_concurrency != self.max_concurrent_images:
+                old_concurrency = self.max_concurrent_images
+                self.max_concurrent_images = new_concurrency
+                self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
+                self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
+                self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, 50))
+                
+                logger.info(f"Dynamic concurrency adjustment: {old_concurrency} → {new_concurrency} "
+                           f"(CPU: {cpu_percent:.1f}%, Memory: {memory_status['pressure_level']}, "
+                           f"Available: {memory_status['available_gb']:.1f}GB)")
+                
+        except Exception as e:
+            logger.warning(f"Failed to adjust concurrency dynamically: {e}")
+    
+    def _manage_memory_pressure(self):
+        """Proactive memory management during operations."""
+        self._operation_count += 1
+        
+        # Periodic garbage collection
+        if self._operation_count % self._gc_frequency == 0:
+            gc.collect()
+        
+        # Check for memory pressure and adjust if needed
+        memory_status = self._memory_monitor.get_memory_status()
+        if memory_status['pressure_level'] in ['high', 'critical']:
+            # Force cleanup of completed tasks
+            self._cleanup_completed_tasks()
+            
+            # Trigger immediate GC
+            gc.collect()
+            
+            logger.debug(f"Memory pressure management: {memory_status['pressure_level']} "
+                        f"({memory_status['percent']:.1f}% used)")
+    
+    def _cleanup_completed_tasks(self):
+        """Clean up references to completed tasks."""
+        # The WeakSet automatically removes completed tasks
+        # Track active tasks for logging and monitoring
+        active_count = len(self._active_tasks)
+        if active_count > 0:
+            logger.debug(f"Active tasks: {active_count}")
+    
+    async def _async_storage_operation(self, storage_func, *args, **kwargs):
+        """
+        Run storage operations with memory management.
+        """
+        # Track this operation for memory management
+        task = asyncio.current_task()
+        if task:
+            self._active_tasks.add(task)
+        
+        try:
+            # Check memory before storage operation
+            self._manage_memory_pressure()
+            
+            # Run storage operation in thread pool
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                self._storage_thread_pool, storage_func, *args, **kwargs
+            )
+            
+            # Clean up memory after operation
+            del args, kwargs  # Free memory
+            gc.collect()
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Storage operation failed: {e}")
+            raise
+        finally:
+            # Remove task from tracking when complete
+            if task and task in self._active_tasks:
+                self._active_tasks.discard(task)
+    
+    # ============================================================================
+    # IMAGE PROCESSING METHODS
+    # ============================================================================
     
     async def _process_images_batch(self, images: List[ImageInfo], all_errors: List[str], cache_hits: int, cache_misses: int, method_used: str, url: str) -> 'CrawlResult':
         """Process images using batch approach for small workloads."""
@@ -405,7 +520,7 @@ class EnhancedImageCrawlerV2:
                 download_queue.task_done()
     
     async def _streaming_processing_worker(self, processing_queue: asyncio.Queue, storage_queue: asyncio.Queue, results: dict):
-        """Memory-efficient processing worker (mainly for face detection)."""
+        """Memory-efficient processing worker for face detection."""
         while True:
             item = await processing_queue.get()
             if item is None:  # Sentinel value
@@ -533,42 +648,15 @@ class EnhancedImageCrawlerV2:
             logger.error(f"Storage error for {image_info.url}: {e}")
             results['errors'].append(f"Storage error for {image_info.url}: {e}")
     
-    async def fetch_page(self, url: str) -> Tuple[Optional[str], List[str]]:
-        """Fetch a web page and return its content and any errors."""
-        if not self.session:
-            raise RuntimeError("Crawler not initialized. Use 'async with' context manager.")
-            
-        errors = []
-        
-        try:
-            logger.info(f"Fetching page: {url}")
-            response = await self.session.get(url)
-            response.raise_for_status()
-            
-            # Check content type
-            content_type = response.headers.get('content-type', '').lower()
-            if 'text/html' not in content_type:
-                errors.append(f"Content type '{content_type}' is not HTML")
-                return None, errors
-                
-            return response.text, errors
-            
-        except httpx.HTTPError as e:
-            error_msg = f"HTTP error fetching {url}: {str(e)}"
-            logger.error(error_msg)
-            errors.append(error_msg)
-            return None, errors
-        except Exception as e:
-            error_msg = f"Unexpected error fetching {url}: {str(e)}"
-            logger.error(error_msg)
-            errors.append(error_msg)
-            return None, errors
+    # ============================================================================
+    # IMAGE EXTRACTION METHODS
+    # ============================================================================
     
     def extract_images_by_method(self, html_content: str, base_url: str, method: str = "smart") -> Tuple[List[ImageInfo], str]:
         """
         Extract images using configurable targeting methods.
         
-        Enhanced version from basic_crawler1.1 with flexible CSS selector patterns.
+        Supports flexible CSS selector patterns for different website structures.
         
         Args:
             html_content: The HTML content to parse
@@ -661,7 +749,7 @@ class EnhancedImageCrawlerV2:
         """
         Extract images using CSS selectors with flexible matching.
         
-        Enhanced version from basic_crawler1.1 with robust selector handling.
+        Provides robust selector handling for various HTML structures.
         
         Args:
             soup: BeautifulSoup parsed HTML
@@ -700,7 +788,7 @@ class EnhancedImageCrawlerV2:
                             attr_value = attr_parts[1].strip("'\"")
                             imgs = soup.find_all('img', attrs={attr_key: attr_value})
                         else:
-                            # Just attribute exists (e.g., "data-mediumthumb")
+                            # Attribute exists without value (e.g., "data-mediumthumb")
                             imgs = soup.find_all('img', attrs={attr_name: True})
                 elif selector.startswith("img."):
                     # Class-based selector (e.g., "img.js-videoThumb")
@@ -731,24 +819,6 @@ class EnhancedImageCrawlerV2:
         logger.debug(f"Found {len(all_images)} unique images using {len(selectors)} selectors")
         return self._process_img_tags(all_images, base_url)
     
-    def add_custom_extraction_pattern(self, pattern_name: str, selectors: List[Dict], priority: int = 100):
-        """
-        Add a custom extraction pattern for specific sites.
-        
-        Args:
-            pattern_name: Name of the pattern (e.g., 'xvideos-thumbs')
-            selectors: List of selector dictionaries
-            priority: Lower numbers = higher priority (default: 100)
-            
-        Example:
-            crawler.add_custom_extraction_pattern('xvideos-thumbs', [
-                {"selector": ".video-block img", "description": "xvideos video block images"},
-                {"selector": "img[data-src*='thumb']", "description": "lazy-loaded thumbnails"}
-            ])
-        """
-        # This could be extended to store custom patterns and inject them into the smart method
-        # For now, this is a placeholder for future extensibility
-        logger.info(f"Custom pattern '{pattern_name}' registered with {len(selectors)} selectors (priority: {priority})")
     
     def _process_img_tags(self, img_tags, base_url: str) -> List[ImageInfo]:
         """Process a list of img tags and return ImageInfo objects."""
@@ -790,11 +860,11 @@ class EnhancedImageCrawlerV2:
         return images
     
     async def download_image(self, image_info: ImageInfo) -> Tuple[Optional[bytes], List[str]]:
-        """Download an image from its URL with enhanced concurrency control."""
+        """Download an image from its URL with concurrency control."""
         if not self.session:
             raise RuntimeError("Crawler not initialized. Use 'async with' context manager.")
         
-        # PHASE 2 OPTIMIZATION: Use separate download semaphore for better throughput
+        # Use separate download semaphore for better throughput
         async with self._download_semaphore:
             errors = []
             
@@ -857,19 +927,19 @@ class EnhancedImageCrawlerV2:
     
     async def _async_face_detection(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[List, Optional[bytes]]:
         """
-        PHASE 2 OPTIMIZATION: Run face detection in thread pool to avoid blocking async loop.
+        Run face detection in thread pool to avoid blocking async loop.
         """
         def _run_face_detection():
             """Synchronous face detection function to run in thread pool."""
             try:
                 face_service = get_face_service()
                 
-                # Enhance image first, then detect faces
+                # Enhance image for better face detection
                 enhanced_bytes, enhancement_scale = face_service.enhance_image_for_face_detection(image_bytes)
                 faces = face_service.detect_and_embed(enhanced_bytes, enhancement_scale, min_size=0)
                 
                 if self.crop_faces and faces:
-                    # For now, just take the first face for thumbnail
+                    # Use the first face for thumbnail creation
                     thumbnail_bytes = face_service.crop_face_and_create_thumbnail(
                         image_bytes, faces[0], self.face_margin
                     )
@@ -892,109 +962,104 @@ class EnhancedImageCrawlerV2:
         
         return faces, thumbnail_bytes
     
-    def _adjust_concurrency_dynamically(self):
+    async def _process_single_image(self, image_info: ImageInfo, index: int, total: int) -> Tuple[Optional[str], Optional[str], bool, List[str]]:
         """
-        MEMORY-SAFE DYNAMIC CONCURRENCY: Adjust concurrency based on memory pressure and system resources.
+        Process a single image with memory management and multi-tenancy support.
         """
-        try:
-            # Get comprehensive system metrics
-            cpu_percent = psutil.cpu_percent(interval=0.1)
-            memory_status = self._memory_monitor.get_memory_status()
-            
-            # Trigger garbage collection if needed
-            if self._memory_monitor.should_trigger_gc():
-                logger.info(f"Triggering garbage collection due to memory pressure: {memory_status['pressure_level']}")
-                gc.collect()
-            
-            # Calculate base concurrency from CPU and memory
-            cpu_factor = 1.0
-            if cpu_percent > 80:
-                cpu_factor = 0.5  # Reduce by half if CPU is high
-            elif cpu_percent < 30:
-                cpu_factor = 1.5  # Increase by 50% if CPU is low
-            
-            # Get memory-safe concurrency limit
-            base_concurrency = int(self.max_concurrent_images * cpu_factor)
-            new_concurrency = self._memory_monitor.get_safe_concurrency_limit(base_concurrency)
-            
-            # Ensure minimum concurrency for progress
-            new_concurrency = max(1, new_concurrency)
-            
-            # Update semaphores if concurrency changed
-            if new_concurrency != self.max_concurrent_images:
-                old_concurrency = self.max_concurrent_images
-                self.max_concurrent_images = new_concurrency
-                self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
-                self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
-                self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, 50))
-                
-                logger.info(f"Dynamic concurrency adjustment: {old_concurrency} → {new_concurrency} "
-                           f"(CPU: {cpu_percent:.1f}%, Memory: {memory_status['pressure_level']}, "
-                           f"Available: {memory_status['available_gb']:.1f}GB)")
-                
-        except Exception as e:
-            logger.warning(f"Failed to adjust concurrency dynamically: {e}")
-    
-    def _manage_memory_pressure(self):
-        """Proactive memory management during operations."""
-        self._operation_count += 1
-        
-        # Periodic garbage collection
-        if self._operation_count % self._gc_frequency == 0:
-            gc.collect()
-        
-        # Check for memory pressure and adjust if needed
-        memory_status = self._memory_monitor.get_memory_status()
-        if memory_status['pressure_level'] in ['high', 'critical']:
-            # Force cleanup of completed tasks
-            self._cleanup_completed_tasks()
-            
-            # Trigger immediate GC
-            gc.collect()
-            
-            logger.debug(f"Memory pressure management: {memory_status['pressure_level']} "
-                        f"({memory_status['percent']:.1f}% used)")
-    
-    def _cleanup_completed_tasks(self):
-        """Clean up references to completed tasks."""
-        # The WeakSet automatically removes completed tasks
-        # This is mainly for logging and monitoring
-        active_count = len(self._active_tasks)
-        if active_count > 0:
-            logger.debug(f"Active tasks: {active_count}")
-    
-    async def _async_storage_operation(self, storage_func, *args, **kwargs):
-        """
-        MEMORY-SAFE ASYNC STORAGE: Run storage operations with memory management.
-        """
-        # Track this operation for memory management
+        # Track this task for memory management
         task = asyncio.current_task()
         if task:
             self._active_tasks.add(task)
         
         try:
-            # Check memory before storage operation
-            self._manage_memory_pressure()
-            
-            # Run storage operation in thread pool
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                self._storage_thread_pool, storage_func, *args, **kwargs
-            )
-            
-            # Clean up memory after operation
-            del args, kwargs  # Help GC
-            gc.collect()
-            
-            return result
-            
+            async with self._processing_semaphore:
+                # Proactive memory management
+                self._manage_memory_pressure()
+                
+                logger.info(f"Processing image {index}/{total}: {image_info.url}")
+
+                # Download the image
+                image_bytes, download_errors = await self.download_image(image_info)
+                if not image_bytes:
+                    logger.warning(f"Failed to download image: {image_info.url}")
+                    return None, None, False, download_errors, []
+
+                # Check cache
+                should_skip, cached_key = await self.cache_service.should_skip_crawled_image(image_info.url, image_bytes, self.tenant_id)
+                if should_skip and cached_key:
+                    logger.info(f"Image {image_info.url} found in cache. Key: {cached_key}")
+                    return cached_key, cached_key, True, download_errors, []
+
+                # Use async face detection with thread pool
+                faces = []
+                thumbnail_bytes = None
+                if self.require_face or self.crop_faces:
+                    t_detect_start = datetime.utcnow()
+                    faces, thumbnail_bytes = await self._async_face_detection(image_bytes, image_info)
+                    t_detect_ms = (datetime.utcnow() - t_detect_start).total_seconds() * 1000.0
+                    logger.debug(f"Face detection pipeline completed in {t_detect_ms:.1f} ms for {image_info.url}")
+                    # Track early-exit usage
+                    try:
+                        early_exit_used = get_face_service().consume_early_exit_flag()
+                        if early_exit_used:
+                            setattr(self, "_early_exit_count", getattr(self, "_early_exit_count", 0) + 1)
+                    except Exception:
+                        pass
+                    
+                    if self.require_face and not faces:
+                        logger.info(f"No faces detected for {image_info.url}, skipping.")
+                        return None, None, False, download_errors, []
+                    
+                    # When crop_faces=true but no faces detected, don't create thumbnails
+                    if self.crop_faces and not faces:
+                        logger.info(f"No faces detected for {image_info.url}, no thumbnail created (crop_faces=true).")
+                # No thumbnail created when face requirements are disabled
+
+                # Prepare data for batch storage
+                return image_bytes, thumbnail_bytes, False, download_errors, faces
+
         except Exception as e:
-            logger.error(f"Storage operation failed: {e}")
-            raise
+            logger.error(f"Error processing image {image_info.url}: {e}", exc_info=True)
+            return None, None, False, [f"Processing error: {e}"], []
         finally:
             # Remove task from tracking when complete
             if task and task in self._active_tasks:
                 self._active_tasks.discard(task)
+    
+    # ============================================================================
+    # URL PROCESSING METHODS
+    # ============================================================================
+    
+    async def fetch_page(self, url: str) -> Tuple[Optional[str], List[str]]:
+        """Fetch a web page and return its content and any errors."""
+        if not self.session:
+            raise RuntimeError("Crawler not initialized. Use 'async with' context manager.")
+            
+        errors = []
+        
+        try:
+            logger.info(f"Fetching page: {url}")
+            response = await self.session.get(url)
+            response.raise_for_status()
+            
+            # Check content type
+            content_type = response.headers.get('content-type', '').lower()
+            if 'text/html' not in content_type:
+                errors.append(f"Content type '{content_type}' is not HTML")
+                return None, errors
+                
+            return response.text, errors
+            
+        except httpx.HTTPError as e:
+            error_msg = f"HTTP error fetching {url}: {str(e)}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+            return None, errors
+        except Exception as e:
+            error_msg = f"Unexpected error fetching {url}: {str(e)}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+            return None, errors
     
     def extract_page_urls(self, html_content: str, base_url: str) -> List[str]:
         """
@@ -1098,74 +1163,10 @@ class EnhancedImageCrawlerV2:
             return False
     
 
-
+    # ============================================================================
+    # MAIN CRAWLING METHODS
+    # ============================================================================
     
-    async def _process_single_image(self, image_info: ImageInfo, index: int, total: int) -> Tuple[Optional[str], Optional[str], bool, List[str]]:
-        """
-        MEMORY-SAFE IMAGE PROCESSING: Process with enhanced memory management.
-        
-        Enhanced version from basic_crawler1.1 with multi-tenancy support.
-        """
-        # Track this task for memory management
-        task = asyncio.current_task()
-        if task:
-            self._active_tasks.add(task)
-        
-        try:
-            async with self._processing_semaphore:
-                # Proactive memory management
-                self._manage_memory_pressure()
-                
-                logger.info(f"Processing image {index}/{total}: {image_info.url}")
-
-                # Download the image
-                image_bytes, download_errors = await self.download_image(image_info)
-                if not image_bytes:
-                    logger.warning(f"Failed to download image: {image_info.url}")
-                    return None, None, False, download_errors, []
-
-                # Check cache
-                should_skip, cached_key = await self.cache_service.should_skip_crawled_image(image_info.url, image_bytes, self.tenant_id)
-                if should_skip and cached_key:
-                    logger.info(f"Image {image_info.url} found in cache. Key: {cached_key}")
-                    return cached_key, cached_key, True, download_errors, []
-
-                # PHASE 2 OPTIMIZATION: Use async face detection with thread pool
-                faces = []
-                thumbnail_bytes = None
-                if self.require_face or self.crop_faces:
-                    t_detect_start = datetime.utcnow()
-                    faces, thumbnail_bytes = await self._async_face_detection(image_bytes, image_info)
-                    t_detect_ms = (datetime.utcnow() - t_detect_start).total_seconds() * 1000.0
-                    logger.debug(f"Face detection pipeline completed in {t_detect_ms:.1f} ms for {image_info.url}")
-                    # Track early-exit usage
-                    try:
-                        early_exit_used = get_face_service().consume_early_exit_flag()
-                        if early_exit_used:
-                            setattr(self, "_early_exit_count", getattr(self, "_early_exit_count", 0) + 1)
-                    except Exception:
-                        pass
-                    
-                    if self.require_face and not faces:
-                        logger.info(f"No faces detected for {image_info.url}, skipping.")
-                        return None, None, False, download_errors, []
-                    
-                    # When crop_faces=true but no faces detected, don't create thumbnails
-                    if self.crop_faces and not faces:
-                        logger.info(f"No faces detected for {image_info.url}, no thumbnail created (crop_faces=true).")
-                # Note: When REQUIRE_FACE=false and CROP_FACES=false, no thumbnail is created
-
-                # Prepare data for batch storage
-                return image_bytes, thumbnail_bytes, False, download_errors, faces
-
-        except Exception as e:
-            logger.error(f"Error processing image {image_info.url}: {e}", exc_info=True)
-            return None, None, False, [f"Processing error: {e}"], []
-        finally:
-            # Remove task from tracking when complete
-            if task and task in self._active_tasks:
-                self._active_tasks.discard(task)
-
     async def crawl_page(self, url: str, method: str = "smart") -> CrawlResult:
         """Crawl a single page for images using the specified method."""
         logger.info(f"Starting crawl of: {url} using method: {method} (tenant: {self.tenant_id}, min_face_quality: {self.min_face_quality}, require_face: {self.require_face})")
@@ -1179,7 +1180,7 @@ class EnhancedImageCrawlerV2:
         cache_hits = 0
         cache_misses = 0
         
-        # MEMORY-SAFE DYNAMIC CONCURRENCY: Enable with enhanced memory management
+        # Enable dynamic concurrency with memory management
         self._adjust_concurrency_dynamically()
         
         # Fetch the page
@@ -1227,7 +1228,7 @@ class EnhancedImageCrawlerV2:
             images_to_process = images
             logger.info(f"Processing all {len(images_to_process)} images found")
             
-        # OPTIMIZATION: Use streaming pipeline only for larger workloads to avoid overhead
+        # Use streaming pipeline only for larger workloads to avoid overhead
         if len(images_to_process) <= 10:
             logger.info(f"Using batch processing for {len(images_to_process)} images (streaming overhead not worth it)")
             return await self._process_images_batch(images_to_process, all_errors, cache_hits, cache_misses, method_used, url)
@@ -1341,22 +1342,3 @@ class EnhancedImageCrawlerV2:
         return result
 
 
-# Convenience function for easy integration
-async def crawl_images_from_url(
-    url: str, 
-    tenant_id: str = "default",
-    method: str = "smart"
-) -> CrawlResult:
-    """
-    Convenience function to crawl images from a URL.
-    
-    Args:
-        url: The URL to crawl
-        tenant_id: Tenant ID for multi-tenancy support
-        method: Targeting method ('smart', 'data-mediumthumb', 'js-videoThumb', etc.)
-        
-    Returns:
-        CrawlResult with crawl statistics
-    """
-    async with EnhancedImageCrawlerV2(tenant_id=tenant_id) as crawler:
-        return await crawler.crawl_page(url, method)
