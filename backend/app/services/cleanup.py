@@ -7,6 +7,7 @@ from ..core.config import get_settings
 from ..services.storage import list_objects, get_object_from_storage
 from ..services.vector import get_vector_client
 import psycopg
+from psycopg_pool import AsyncConnectionPool
 from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def get_cleanup_db_pool():
     if _cleanup_db_pool is None:
         settings = get_settings()
         connection_string = f"postgresql://{settings.postgres_user}:{settings.postgres_password}@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
-        _cleanup_db_pool = psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=3)
+        _cleanup_db_pool = AsyncConnectionPool(connection_string, min_size=1, max_size=3)
     return _cleanup_db_pool
 
 class CleanupService:

@@ -11,11 +11,13 @@ from typing import Tuple, Optional, List, Dict
 import logging
 import gc
 import psutil
+import threading
 
 logger = logging.getLogger(__name__)
 
 _face_app = None
 _thread_pool = None
+_model_lock = threading.Lock()  # Thread synchronization for model loading
 
 def _get_thread_pool() -> ThreadPoolExecutor:
     """Get thread pool for CPU-intensive operations."""
@@ -25,15 +27,24 @@ def _get_thread_pool() -> ThreadPoolExecutor:
     return _thread_pool
 
 def _load_app() -> FaceAnalysis:
+    """
+    Load face analysis model with thread-safe singleton pattern.
+    Prevents race condition where multiple threads load the model simultaneously.
+    """
     global _face_app
-    if _face_app is None:
-        home = os.path.expanduser("~/.insightface")
-        os.makedirs(home, exist_ok=True)
-        app = FaceAnalysis(name="buffalo_l", root=home)
-        # CPU default (onnxruntime)
-        app.prepare(ctx_id=-1, det_size=(640, 640))
-        _face_app = app
-    return _face_app
+    with _model_lock:
+        if _face_app is None:
+            logger.info("Loading face analysis model (first time)")
+            home = os.path.expanduser("~/.insightface")
+            os.makedirs(home, exist_ok=True)
+            app = FaceAnalysis(name="buffalo_l", root=home)
+            # CPU default (onnxruntime)
+            app.prepare(ctx_id=-1, det_size=(640, 640))
+            _face_app = app
+            logger.info("Face analysis model loaded successfully")
+        else:
+            logger.debug("Using existing face analysis model")
+        return _face_app
 
 def _read_image(b: bytes) -> np.ndarray:
     """Read image with memory optimization."""
@@ -119,10 +130,13 @@ def _check_memory_usage() -> bool:
     """Check if memory usage is within acceptable limits."""
     try:
         memory_percent = psutil.virtual_memory().percent
+        memory_gb = psutil.virtual_memory().used / (1024**3)
         if memory_percent > 85:  # If memory usage is above 85%
-            logger.warning(f"High memory usage detected: {memory_percent}%")
+            logger.warning(f"High memory usage detected: {memory_percent}% ({memory_gb:.1f}GB used)")
             gc.collect()  # Force garbage collection
             return False
+        else:
+            logger.debug(f"Memory usage: {memory_percent}% ({memory_gb:.1f}GB used)")
         return True
     except Exception:
         return True  # If we can't check memory, assume it's OK

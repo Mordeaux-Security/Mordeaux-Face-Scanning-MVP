@@ -45,6 +45,17 @@ def mock_redis():
         yield mock_client
 
 @pytest.fixture
+def mock_cache_service():
+    """Mock cache service for testing."""
+    with patch('app.services.cache.get_hybrid_cache_service') as mock:
+        mock_cache = MagicMock()
+        mock_cache.clear_all_cache.return_value = True
+        mock_cache.invalidate_tenant_cache.return_value = 10
+        mock_cache.reset_cache_stats.return_value = None
+        mock.return_value = mock_cache
+        yield mock_cache
+
+@pytest.fixture
 def mock_database():
     """Mock database connection for testing."""
     with patch('app.core.audit.get_audit_db_pool') as mock:
@@ -120,6 +131,34 @@ def invalid_tenant_headers():
 def admin_tenant_headers():
     """Admin tenant headers for testing."""
     return {"X-Tenant-ID": "admin-tenant"}
+
+@pytest.fixture
+async def real_cache_service():
+    """Real cache service for integration tests."""
+    from app.services.cache import HybridCacheService
+    
+    # Use test-specific Redis database
+    test_redis_url = "redis://localhost:6379/15"  # Use DB 15 for tests
+    
+    cache_service = HybridCacheService(redis_url=test_redis_url)
+    
+    # Clear cache before test
+    await cache_service.clear_all_cache()
+    
+    yield cache_service
+    
+    # Clear cache after test
+    await cache_service.clear_all_cache()
+
+@pytest.fixture
+def redis_reset_commands():
+    """Common Redis reset commands for manual testing."""
+    return {
+        "flush_all": "redis-cli FLUSHALL",
+        "flush_db": "redis-cli FLUSHDB", 
+        "clear_cache_via_api": "curl -X DELETE http://localhost:8000/cache/all",
+        "clear_tenant_cache": "curl -X DELETE http://localhost:8000/cache/tenant/test-tenant-123"
+    }
 
 # Pytest configuration
 def pytest_configure(config):

@@ -78,13 +78,34 @@ reset-cache:
 	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing cache for db: {s.postgres_db}')"
 	docker compose exec postgres psql -U mordeaux -d mordeaux -c "DELETE FROM crawl_cache;"
 
+reset-redis:
+	@echo "Clearing Redis cache..."
+	python backend/scripts/reset_redis_cache.py --all
+
+reset-redis-docker:
+	@echo "Clearing Redis cache via Docker..."
+	docker compose exec redis redis-cli FLUSHDB
+	@echo "Redis cache cleared via Docker"
+
+reset-redis-test:
+	@echo "Clearing Redis test cache (DB 15)..."
+	python backend/scripts/reset_redis_cache.py --db 15 --all
+
+reset-redis-info:
+	@echo "Redis cache information:"
+	python backend/scripts/reset_redis_cache.py --info
+
+reset-redis-all-methods:
+	@echo "Trying all Redis reset methods:"
+	bash backend/scripts/redis_reset_methods.sh
+
 reset-minio:
 	@echo "Clearing MinIO buckets..."
 	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing buckets: {s.s3_bucket_raw}, {s.s3_bucket_thumbs}')"
 	docker compose exec backend-cpu python scripts/clear_minio.py
 
-reset-both: reset-cache reset-minio
-	@echo "Cache and MinIO data cleared."
+reset-both: reset-cache reset-redis-docker reset-minio
+	@echo "Cache, Redis, and MinIO data cleared."
 
 reset-all: reset-both clean
 	@echo "All data cleared and containers stopped."
