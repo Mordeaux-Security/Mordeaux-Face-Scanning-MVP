@@ -1,38 +1,136 @@
-import json
+"""
+Hybrid Cache Service V2
+
+Combines Redis (fast, volatile) and PostgreSQL (persistent, reliable) caching.
+- Redis: Primary cache for ultra-fast lookups and hot data
+- PostgreSQL: Secondary cache for persistent storage and cold data
+
+This provides the best of both worlds:
+- Speed of Redis for frequently accessed data
+- Persistence of PostgreSQL for reliability across restarts
+- Cost efficiency for large datasets
+"""
+
+import asyncio
 import hashlib
-import time
-from typing import Any, Optional, Dict, List
+import json
 import logging
+import os
+import time
+from typing import Any, Dict, List, Optional, Tuple, Union
+from concurrent.futures import ThreadPoolExecutor
+
 import redis
-from ..core.config import get_settings
+from psycopg import connect, Connection
+from psycopg.rows import dict_row
 
 logger = logging.getLogger(__name__)
 
-class CacheService:
-    """Redis-based caching service for face embeddings and search results."""
+
+class HybridCacheService:
+    """
+    Hybrid caching service that combines Redis and PostgreSQL.
     
-    def __init__(self):
-        self.settings = get_settings()
-        self.redis_client = redis.from_url(self.settings.redis_url, decode_responses=True)
-        
-        # Cache TTL settings (in seconds)
-        self.embedding_cache_ttl = 3600  # 1 hour for embeddings
-        self.search_cache_ttl = 300      # 5 minutes for search results
-        self.phash_cache_ttl = 7200      # 2 hours for perceptual hashes
-        
-        # Cache key prefixes
-        self.embedding_prefix = "embedding:"
-        self.search_prefix = "search:"
-        self.phash_prefix = "phash:"
-        self.face_detection_prefix = "face_detection:"
+    Architecture:
+    1. Redis (Primary): Fast, volatile cache for hot data
+    2. PostgreSQL (Secondary): Persistent cache for reliable storage
+    3. Automatic backfill: PostgreSQL data → Redis when accessed
+    4. Graceful degradation: Works even if Redis is unavailable
+    """
     
-    def _generate_cache_key(self, prefix: str, content: bytes, tenant_id: str, **kwargs) -> str:
-        """Generate a cache key based on content hash and tenant."""
-        # Create a hash of the content
+    def __init__(self, redis_url: Optional[str] = None, postgres_config: Optional[Dict] = None):
+        """
+        Initialize hybrid cache service.
+        
+        Args:
+            redis_url: Redis connection URL (optional, will use env vars if not provided)
+            postgres_config: PostgreSQL configuration dict (optional, will use env vars if not provided)
+        """
+        self.redis_enabled = True
+        self.postgres_enabled = True
+        
+        # Cache hit tracking
+        self.redis_hits = 0
+        self.postgres_hits = 0
+        self.cache_misses = 0
+        
+        # Initialize Redis
+        try:
+            if redis_url:
+                self.redis_client = redis.from_url(redis_url, decode_responses=True)
+            else:
+                # Try to get Redis URL from environment
+                redis_url_env = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+                self.redis_client = redis.from_url(redis_url_env, decode_responses=True)
+            
+            # Test Redis connection
+            self.redis_client.ping()
+            logger.info("Redis cache initialized successfully")
+            
+        except Exception as e:
+            logger.warning(f"Redis cache unavailable: {e}. Falling back to PostgreSQL only.")
+            self.redis_enabled = False
+            self.redis_client = None
+        
+        # Initialize PostgreSQL
+        try:
+            if postgres_config:
+                self.postgres_config = postgres_config
+            else:
+                # Build from environment variables
+                self.postgres_config = {
+                    'host': os.getenv('POSTGRES_HOST', 'localhost'),
+                    'port': os.getenv('POSTGRES_PORT', '5432'),
+                    'db': os.getenv('POSTGRES_DB', 'mordeaux'),
+                    'user': os.getenv('POSTGRES_USER', 'mordeaux'),
+                    'password': os.getenv('POSTGRES_PASSWORD', '')
+                }
+            
+            # Test PostgreSQL connection
+            with self._get_postgres_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+            
+            logger.info("PostgreSQL cache initialized successfully")
+            
+        except Exception as e:
+            logger.warning(f"PostgreSQL cache unavailable: {e}. Using Redis only.")
+            self.postgres_enabled = False
+        
+        # Cache TTL settings (Redis only)
+        self.redis_ttl_settings = {
+            'embedding_cache': 3600,      # 1 hour
+            'search_cache': 300,          # 5 minutes  
+            'phash_cache': 7200,          # 2 hours
+            'face_detection_cache': 3600, # 1 hour
+            'crawl_cache': 86400,         # 24 hours
+        }
+        
+        # Thread pool for blocking operations
+        self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="hybrid_cache")
+    
+    def _get_postgres_connection(self) -> Connection:
+        """Get PostgreSQL connection."""
+        if not self.postgres_enabled:
+            raise RuntimeError("PostgreSQL cache is disabled")
+        
+        connection_string = (
+            f"postgresql://{self.postgres_config['user']}:{self.postgres_config['password']}"
+            f"@{self.postgres_config['host']}:{self.postgres_config['port']}"
+            f"/{self.postgres_config['db']}"
+        )
+        
+        try:
+            return connect(connection_string, row_factory=dict_row)
+        except Exception as e:
+            logger.error(f"Failed to connect to PostgreSQL: {e}")
+            raise
+    
+    def _generate_cache_key(self, prefix: str, content: bytes, tenant_id: str = "default", **kwargs) -> str:
+        """Generate a cache key based on content hash and parameters."""
         content_hash = hashlib.sha256(content).hexdigest()[:16]
-        
-        # Include additional parameters in the key
         key_parts = [prefix, tenant_id, content_hash]
+        
         if kwargs:
             for key, value in sorted(kwargs.items()):
                 key_parts.append(f"{key}:{value}")
@@ -40,466 +138,563 @@ class CacheService:
         return ":".join(key_parts)
     
     def _serialize_data(self, data: Any) -> str:
-        """Serialize data for Redis storage."""
+        """Serialize data for storage."""
         try:
             return json.dumps(data, default=str)
         except Exception as e:
-            logger.error(f"Failed to serialize data for caching: {e}")
+            logger.error(f"Failed to serialize data: {e}")
             return None
     
     def _deserialize_data(self, data: str) -> Any:
-        """Deserialize data from Redis storage."""
+        """Deserialize data from storage."""
         try:
             return json.loads(data)
         except Exception as e:
-            logger.error(f"Failed to deserialize cached data: {e}")
+            logger.error(f"Failed to deserialize data: {e}")
             return None
     
+    # ==================== FACE EMBEDDINGS CACHE ====================
+    
     async def cache_face_embeddings(self, content: bytes, tenant_id: str, embeddings: List[Dict]) -> bool:
-        """Cache face embeddings for an image."""
-        try:
-            cache_key = self._generate_cache_key(self.embedding_prefix, content, tenant_id)
-            serialized_data = self._serialize_data(embeddings)
-            
-            if serialized_data:
-                self.redis_client.setex(cache_key, self.embedding_cache_ttl, serialized_data)
-                logger.debug(f"Cached face embeddings for tenant {tenant_id}")
-                return True
-        except Exception as e:
-            logger.error(f"Failed to cache face embeddings: {e}")
-        return False
+        """Cache face embeddings in both Redis and PostgreSQL."""
+        cache_key = self._generate_cache_key("embedding", content, tenant_id)
+        serialized_data = self._serialize_data(embeddings)
+        
+        if not serialized_data:
+            return False
+        
+        success = True
+        
+        # Store in Redis (primary cache)
+        if self.redis_enabled:
+            try:
+                self.redis_client.setex(
+                    cache_key, 
+                    self.redis_ttl_settings['embedding_cache'], 
+                    serialized_data
+                )
+                logger.debug(f"Cached face embeddings in Redis for tenant {tenant_id}")
+            except Exception as e:
+                logger.warning(f"Failed to cache face embeddings in Redis: {e}")
+                success = False
+        
+        # Store in PostgreSQL (secondary cache)
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    self._thread_pool,
+                    self._store_embeddings_postgres,
+                    cache_key, content, tenant_id, embeddings
+                )
+                logger.debug(f"Cached face embeddings in PostgreSQL for tenant {tenant_id}")
+            except Exception as e:
+                logger.warning(f"Failed to cache face embeddings in PostgreSQL: {e}")
+                success = False
+        
+        return success
+    
+    def _store_embeddings_postgres(self, cache_key: str, content: bytes, tenant_id: str, embeddings: List[Dict]):
+        """Store face embeddings in PostgreSQL."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO face_embeddings_cache 
+                    (cache_key, tenant_id, content_hash, embeddings_data, created_at)
+                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (cache_key) DO UPDATE SET
+                        embeddings_data = EXCLUDED.embeddings_data,
+                        created_at = CURRENT_TIMESTAMP
+                """, (
+                    cache_key,
+                    tenant_id,
+                    hashlib.sha256(content).hexdigest(),
+                    json.dumps(embeddings)
+                ))
+                conn.commit()
     
     async def get_cached_face_embeddings(self, content: bytes, tenant_id: str) -> Optional[List[Dict]]:
-        """Get cached face embeddings for an image."""
-        try:
-            cache_key = self._generate_cache_key(self.embedding_prefix, content, tenant_id)
-            cached_data = self.redis_client.get(cache_key)
-            
-            if cached_data:
-                embeddings = self._deserialize_data(cached_data)
-                logger.debug(f"Retrieved cached face embeddings for tenant {tenant_id}")
-                return embeddings
-        except Exception as e:
-            logger.error(f"Failed to retrieve cached face embeddings: {e}")
+        """Get cached face embeddings from Redis (primary) or PostgreSQL (secondary)."""
+        cache_key = self._generate_cache_key("embedding", content, tenant_id)
+        
+        # Try Redis first (primary cache)
+        if self.redis_enabled:
+            try:
+                cached_data = self.redis_client.get(cache_key)
+                if cached_data:
+                    embeddings = self._deserialize_data(cached_data)
+                    if embeddings:
+                        logger.debug(f"Retrieved face embeddings from Redis for tenant {tenant_id}")
+                        return embeddings
+            except Exception as e:
+                logger.warning(f"Redis lookup failed for face embeddings: {e}")
+        
+        # Fall back to PostgreSQL (secondary cache)
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(
+                    self._thread_pool,
+                    self._get_embeddings_postgres,
+                    cache_key
+                )
+                
+                if result:
+                    # Backfill Redis for future fast access
+                    if self.redis_enabled:
+                        try:
+                            serialized_data = self._serialize_data(result)
+                            if serialized_data:
+                                self.redis_client.setex(
+                                    cache_key,
+                                    self.redis_ttl_settings['embedding_cache'],
+                                    serialized_data
+                                )
+                        except Exception as e:
+                            logger.warning(f"Failed to backfill Redis with embeddings: {e}")
+                    
+                    logger.debug(f"Retrieved face embeddings from PostgreSQL for tenant {tenant_id}")
+                    return result
+                    
+            except Exception as e:
+                logger.warning(f"PostgreSQL lookup failed for face embeddings: {e}")
+        
         return None
+    
+    def _get_embeddings_postgres(self, cache_key: str) -> Optional[List[Dict]]:
+        """Get face embeddings from PostgreSQL."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT embeddings_data FROM face_embeddings_cache 
+                    WHERE cache_key = %s
+                """, (cache_key,))
+                
+                result = cur.fetchone()
+                if result:
+                    return json.loads(result['embeddings_data'])
+        
+        return None
+    
+    # ==================== PERCEPTUAL HASH CACHE ====================
     
     async def cache_perceptual_hash(self, content: bytes, tenant_id: str, phash: str) -> bool:
-        """Cache perceptual hash for an image."""
-        try:
-            cache_key = self._generate_cache_key(self.phash_prefix, content, tenant_id)
-            self.redis_client.setex(cache_key, self.phash_cache_ttl, phash)
-            logger.debug(f"Cached perceptual hash for tenant {tenant_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to cache perceptual hash: {e}")
-        return False
+        """Cache perceptual hash in both Redis and PostgreSQL."""
+        cache_key = self._generate_cache_key("phash", content, tenant_id)
+        
+        success = True
+        
+        # Store in Redis (primary cache)
+        if self.redis_enabled:
+            try:
+                self.redis_client.setex(
+                    cache_key,
+                    self.redis_ttl_settings['phash_cache'],
+                    phash
+                )
+                logger.debug(f"Cached perceptual hash in Redis for tenant {tenant_id}")
+            except Exception as e:
+                logger.warning(f"Failed to cache perceptual hash in Redis: {e}")
+                success = False
+        
+        # Store in PostgreSQL (secondary cache)
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    self._thread_pool,
+                    self._store_phash_postgres,
+                    cache_key, content, tenant_id, phash
+                )
+                logger.debug(f"Cached perceptual hash in PostgreSQL for tenant {tenant_id}")
+            except Exception as e:
+                logger.warning(f"Failed to cache perceptual hash in PostgreSQL: {e}")
+                success = False
+        
+        return success
+    
+    def _store_phash_postgres(self, cache_key: str, content: bytes, tenant_id: str, phash: str):
+        """Store perceptual hash in PostgreSQL."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO perceptual_hash_cache 
+                    (cache_key, tenant_id, content_hash, phash, created_at)
+                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (cache_key) DO UPDATE SET
+                        phash = EXCLUDED.phash,
+                        created_at = CURRENT_TIMESTAMP
+                """, (
+                    cache_key,
+                    tenant_id,
+                    hashlib.sha256(content).hexdigest(),
+                    phash
+                ))
+                conn.commit()
     
     async def get_cached_perceptual_hash(self, content: bytes, tenant_id: str) -> Optional[str]:
-        """Get cached perceptual hash for an image."""
-        try:
-            cache_key = self._generate_cache_key(self.phash_prefix, content, tenant_id)
-            cached_phash = self.redis_client.get(cache_key)
-            
-            if cached_phash:
-                logger.debug(f"Retrieved cached perceptual hash for tenant {tenant_id}")
-                return cached_phash
-        except Exception as e:
-            logger.error(f"Failed to retrieve cached perceptual hash: {e}")
+        """Get cached perceptual hash from Redis (primary) or PostgreSQL (secondary)."""
+        cache_key = self._generate_cache_key("phash", content, tenant_id)
+        
+        # Try Redis first (primary cache)
+        if self.redis_enabled:
+            try:
+                cached_phash = self.redis_client.get(cache_key)
+                if cached_phash:
+                    logger.debug(f"Retrieved perceptual hash from Redis for tenant {tenant_id}")
+                    return cached_phash
+            except Exception as e:
+                logger.warning(f"Redis lookup failed for perceptual hash: {e}")
+        
+        # Fall back to PostgreSQL (secondary cache)
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(
+                    self._thread_pool,
+                    self._get_phash_postgres,
+                    cache_key
+                )
+                
+                if result:
+                    # Backfill Redis for future fast access
+                    if self.redis_enabled:
+                        try:
+                            self.redis_client.setex(
+                                cache_key,
+                                self.redis_ttl_settings['phash_cache'],
+                                result
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to backfill Redis with phash: {e}")
+                    
+                    logger.debug(f"Retrieved perceptual hash from PostgreSQL for tenant {tenant_id}")
+                    return result
+                    
+            except Exception as e:
+                logger.warning(f"PostgreSQL lookup failed for perceptual hash: {e}")
+        
         return None
     
-    async def cache_search_results(self, content: bytes, tenant_id: str, topk: int, results: List[Dict]) -> bool:
-        """Cache search results for an image query."""
-        try:
-            cache_key = self._generate_cache_key(self.search_prefix, content, tenant_id, topk=topk)
-            serialized_data = self._serialize_data(results)
-            
-            if serialized_data:
-                self.redis_client.setex(cache_key, self.search_cache_ttl, serialized_data)
-                logger.debug(f"Cached search results for tenant {tenant_id}")
-                return True
-        except Exception as e:
-            logger.error(f"Failed to cache search results: {e}")
-        return False
-    
-    async def get_cached_search_results(self, content: bytes, tenant_id: str, topk: int) -> Optional[List[Dict]]:
-        """Get cached search results for an image query."""
-        try:
-            cache_key = self._generate_cache_key(self.search_prefix, content, tenant_id, topk=topk)
-            cached_data = self.redis_client.get(cache_key)
-            
-            if cached_data:
-                results = self._deserialize_data(cached_data)
-                logger.debug(f"Retrieved cached search results for tenant {tenant_id}")
-                return results
-        except Exception as e:
-            logger.error(f"Failed to retrieve cached search results: {e}")
+    def _get_phash_postgres(self, cache_key: str) -> Optional[str]:
+        """Get perceptual hash from PostgreSQL."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT phash FROM perceptual_hash_cache 
+                    WHERE cache_key = %s
+                """, (cache_key,))
+                
+                result = cur.fetchone()
+                if result:
+                    return result['phash']
+        
         return None
     
-    async def cache_face_detection(self, content: bytes, tenant_id: str, faces: List[Dict]) -> bool:
-        """Cache face detection results."""
-        try:
-            cache_key = self._generate_cache_key(self.face_detection_prefix, content, tenant_id)
-            serialized_data = self._serialize_data(faces)
-            
-            if serialized_data:
-                self.redis_client.setex(cache_key, self.embedding_cache_ttl, serialized_data)
-                logger.debug(f"Cached face detection results for tenant {tenant_id}")
-                return True
-        except Exception as e:
-            logger.error(f"Failed to cache face detection results: {e}")
-        return False
+    async def get_cache_stats(self) -> Dict[str, int]:
+        """
+        Get cache hit/miss statistics.
+        
+        Returns:
+            Dict with cache statistics
+        """
+        total_hits = self.redis_hits + self.postgres_hits
+        total_requests = total_hits + self.cache_misses
+        
+        return {
+            'redis_hits': self.redis_hits,
+            'postgres_hits': self.postgres_hits,
+            'cache_misses': self.cache_misses,
+            'total_hits': total_hits,
+            'total_requests': total_requests,
+            'hit_rate': (total_hits / total_requests * 100) if total_requests > 0 else 0,
+            'redis_hit_rate': (self.redis_hits / total_requests * 100) if total_requests > 0 else 0,
+            'postgres_hit_rate': (self.postgres_hits / total_requests * 100) if total_requests > 0 else 0
+        }
     
-    async def get_cached_face_detection(self, content: bytes, tenant_id: str) -> Optional[List[Dict]]:
-        """Get cached face detection results."""
-        try:
-            cache_key = self._generate_cache_key(self.face_detection_prefix, content, tenant_id)
-            cached_data = self.redis_client.get(cache_key)
-            
-            if cached_data:
-                faces = self._deserialize_data(cached_data)
-                logger.debug(f"Retrieved cached face detection results for tenant {tenant_id}")
-                return faces
-        except Exception as e:
-            logger.error(f"Failed to retrieve cached face detection results: {e}")
+    def reset_cache_stats(self):
+        """Reset cache hit/miss counters."""
+        self.redis_hits = 0
+        self.postgres_hits = 0
+        self.cache_misses = 0
+    
+    # ==================== CRAWL CACHE (DUPLICATE PREVENTION) ====================
+    
+    async def should_skip_crawled_image(self, url: str, image_bytes: bytes, tenant_id: str = "default") -> Tuple[bool, Optional[str]]:
+        """
+        Check if image should be skipped based on crawl cache.
+        This is the main duplicate prevention for crawlers.
+        """
+        url_hash = hashlib.sha256(url.encode()).hexdigest()
+        
+        # Try Redis first (primary cache)
+        if self.redis_enabled:
+            try:
+                redis_key = f"crawl:{tenant_id}:{url_hash}"
+                cached_result = self.redis_client.get(redis_key)
+                if cached_result:
+                    result = json.loads(cached_result)
+                    self.redis_hits += 1
+                    logger.debug(f"Cache hit (Redis): {url[:100]}...")
+                    return result.get('should_skip', False), result.get('raw_key')
+            except Exception as e:
+                logger.warning(f"Redis crawl lookup failed: {e}")
+        
+        # Fall back to PostgreSQL (secondary cache)
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(
+                    self._thread_pool,
+                    self._check_crawl_cache_postgres,
+                    url_hash, image_bytes
+                )
+                
+                if result:
+                    should_skip, raw_key = result
+                    self.postgres_hits += 1
+                    
+                    # Backfill Redis for future fast access
+                    if self.redis_enabled:
+                        try:
+                            redis_key = f"crawl:{tenant_id}:{url_hash}"
+                            cache_data = json.dumps({
+                                'should_skip': should_skip,
+                                'raw_key': raw_key,
+                                'cached_at': time.time()
+                            })
+                            self.redis_client.setex(redis_key, self.redis_ttl_settings['crawl_cache'], cache_data)
+                        except Exception as e:
+                            logger.warning(f"Failed to backfill Redis with crawl data: {e}")
+                    
+                    logger.debug(f"Cache hit (PostgreSQL): {url[:100]}...")
+                    return should_skip, raw_key
+                    
+            except Exception as e:
+                logger.warning(f"PostgreSQL crawl lookup failed: {e}")
+        
+        # Cache miss - increment counter
+        self.cache_misses += 1
+        return False, None
+    
+    def _check_crawl_cache_postgres(self, url_hash: str, image_bytes: bytes) -> Optional[Tuple[bool, Optional[str]]]:
+        """Check crawl cache in PostgreSQL."""
+        content_hash = hashlib.sha256(image_bytes).hexdigest()
+        
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                # Check by URL hash first
+                cur.execute("""
+                    SELECT raw_image_key FROM crawl_cache 
+                    WHERE url_hash = %s
+                """, (url_hash,))
+                
+                result = cur.fetchone()
+                if result:
+                    return True, result['raw_image_key']
+                
+                # Check by content hash for duplicates
+                cur.execute("""
+                    SELECT raw_image_key FROM crawl_cache 
+                    WHERE content_hash = %s
+                """, (content_hash,))
+                
+                result = cur.fetchone()
+                if result:
+                    return True, result['raw_image_key']
+        
         return None
+    
+    async def store_crawled_image(self, url: str, image_bytes: bytes, raw_key: str, 
+                                thumbnail_key: Optional[str] = None, tenant_id: str = "default") -> bool:
+        """Store crawled image in both Redis and PostgreSQL."""
+        url_hash = hashlib.sha256(url.encode()).hexdigest()
+        content_hash = hashlib.sha256(image_bytes).hexdigest()
+        
+        success = True
+        
+        # Store in Redis (primary cache)
+        if self.redis_enabled:
+            try:
+                redis_key = f"crawl:{tenant_id}:{url_hash}"
+                cache_data = json.dumps({
+                    'should_skip': True,
+                    'raw_key': raw_key,
+                    'thumbnail_key': thumbnail_key,
+                    'cached_at': time.time()
+                })
+                self.redis_client.setex(redis_key, self.redis_ttl_settings['crawl_cache'], cache_data)
+                logger.debug(f"Cached crawled image in Redis: {url[:100]}...")
+            except Exception as e:
+                logger.warning(f"Failed to cache crawled image in Redis: {e}")
+                success = False
+        
+        # Store in PostgreSQL (secondary cache)
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    self._thread_pool,
+                    self._store_crawl_cache_postgres,
+                    url_hash, content_hash, raw_key, thumbnail_key
+                )
+                logger.debug(f"Cached crawled image in PostgreSQL: {url[:100]}...")
+            except Exception as e:
+                logger.warning(f"Failed to cache crawled image in PostgreSQL: {e}")
+                success = False
+        
+        return success
+    
+    def _store_crawl_cache_postgres(self, url_hash: str, content_hash: str, raw_key: str, thumbnail_key: Optional[str]):
+        """Store crawl cache in PostgreSQL."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO crawl_cache 
+                    (url_hash, content_hash, raw_image_key, thumbnail_key, processed_at)
+                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (url_hash) DO UPDATE SET
+                        content_hash = EXCLUDED.content_hash,
+                        raw_image_key = EXCLUDED.raw_image_key,
+                        thumbnail_key = EXCLUDED.thumbnail_key,
+                        processed_at = CURRENT_TIMESTAMP
+                """, (url_hash, content_hash, raw_key, thumbnail_key))
+                conn.commit()
+    
+    # ==================== CACHE MANAGEMENT ====================
     
     async def invalidate_tenant_cache(self, tenant_id: str) -> int:
         """Invalidate all cached data for a specific tenant."""
-        try:
-            # Get all keys matching the tenant pattern
-            pattern = f"*:{tenant_id}:*"
-            keys = self.redis_client.keys(pattern)
-            
-            if keys:
-                deleted_count = self.redis_client.delete(*keys)
-                logger.info(f"Invalidated {deleted_count} cache entries for tenant {tenant_id}")
-                return deleted_count
-        except Exception as e:
-            logger.error(f"Failed to invalidate cache for tenant {tenant_id}: {e}")
-        return 0
+        total_invalidated = 0
+        
+        # Invalidate Redis cache
+        if self.redis_enabled:
+            try:
+                pattern = f"*:{tenant_id}:*"
+                keys = self.redis_client.keys(pattern)
+                if keys:
+                    deleted_count = self.redis_client.delete(*keys)
+                    total_invalidated += deleted_count
+                    logger.info(f"Invalidated {deleted_count} Redis cache entries for tenant {tenant_id}")
+            except Exception as e:
+                logger.warning(f"Failed to invalidate Redis cache for tenant {tenant_id}: {e}")
+        
+        # Invalidate PostgreSQL cache
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                deleted_count = await loop.run_in_executor(
+                    self._thread_pool,
+                    self._invalidate_postgres_tenant,
+                    tenant_id
+                )
+                total_invalidated += deleted_count
+                logger.info(f"Invalidated {deleted_count} PostgreSQL cache entries for tenant {tenant_id}")
+            except Exception as e:
+                logger.warning(f"Failed to invalidate PostgreSQL cache for tenant {tenant_id}: {e}")
+        
+        return total_invalidated
     
-    async def get_cache_stats(self) -> Dict[str, Any]:
-        """Get cache statistics."""
-        try:
-            info = self.redis_client.info()
-            
-            # Count keys by prefix
-            embedding_keys = len(self.redis_client.keys(f"{self.embedding_prefix}*"))
-            search_keys = len(self.redis_client.keys(f"{self.search_prefix}*"))
-            phash_keys = len(self.redis_client.keys(f"{self.phash_prefix}*"))
-            face_detection_keys = len(self.redis_client.keys(f"{self.face_detection_prefix}*"))
-            
-            return {
-                "redis_info": {
-                    "used_memory_human": info.get("used_memory_human"),
-                    "connected_clients": info.get("connected_clients"),
-                    "total_commands_processed": info.get("total_commands_processed"),
-                    "keyspace_hits": info.get("keyspace_hits"),
-                    "keyspace_misses": info.get("keyspace_misses")
-                },
-                "cache_counts": {
-                    "embedding_cache": embedding_keys,
-                    "search_cache": search_keys,
-                    "phash_cache": phash_keys,
-                    "face_detection_cache": face_detection_keys,
-                    "total_cached_items": embedding_keys + search_keys + phash_keys + face_detection_keys
-                },
-                "cache_ttl_settings": {
-                    "embedding_cache_ttl": self.embedding_cache_ttl,
-                    "search_cache_ttl": self.search_cache_ttl,
-                    "phash_cache_ttl": self.phash_cache_ttl
-                }
-            }
-        except Exception as e:
-            logger.error(f"Failed to get cache stats: {e}")
-            return {"error": str(e)}
+    def _invalidate_postgres_tenant(self, tenant_id: str) -> int:
+        """Invalidate PostgreSQL cache for tenant."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                # Delete from all cache tables
+                tables = ['face_embeddings_cache', 'perceptual_hash_cache', 'crawl_cache']
+                total_deleted = 0
+                
+                for table in tables:
+                    cur.execute(f"DELETE FROM {table} WHERE tenant_id = %s", (tenant_id,))
+                    total_deleted += cur.rowcount
+                
+                conn.commit()
+                return total_deleted
+    
+    def _calculate_redis_hit_rate(self, redis_info: Dict) -> Optional[float]:
+        """Calculate Redis cache hit rate."""
+        hits = redis_info.get('keyspace_hits', 0)
+        misses = redis_info.get('keyspace_misses', 0)
+        
+        if hits + misses > 0:
+            return (hits / (hits + misses)) * 100
+        return None
+    
+    def _get_postgres_stats(self) -> Dict[str, Any]:
+        """Get PostgreSQL cache statistics."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                stats = {}
+                
+                # Count entries in each cache table
+                tables = ['face_embeddings_cache', 'perceptual_hash_cache', 'crawl_cache']
+                for table in tables:
+                    cur.execute(f"SELECT COUNT(*) as count FROM {table}")
+                    result = cur.fetchone()
+                    stats[f'{table}_count'] = result['count'] if result else 0
+                
+                # Get total size (approximate)
+                cur.execute("""
+                    SELECT pg_size_pretty(pg_total_relation_size('face_embeddings_cache')) as embeddings_size,
+                           pg_size_pretty(pg_total_relation_size('perceptual_hash_cache')) as phash_size,
+                           pg_size_pretty(pg_total_relation_size('crawl_cache')) as crawl_size
+                """)
+                size_result = cur.fetchone()
+                if size_result:
+                    stats.update(size_result)
+                
+                return stats
     
     async def clear_all_cache(self) -> bool:
-        """Clear all cache data (use with caution)."""
-        try:
-            self.redis_client.flushdb()
-            logger.warning("Cleared all cache data")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to clear cache: {e}")
-            return False
+        """Clear all cache data from both Redis and PostgreSQL."""
+        success = True
+        
+        # Clear Redis
+        if self.redis_enabled:
+            try:
+                self.redis_client.flushdb()
+                logger.warning("Cleared all Redis cache data")
+            except Exception as e:
+                logger.error(f"Failed to clear Redis cache: {e}")
+                success = False
+        
+        # Clear PostgreSQL
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    self._thread_pool,
+                    self._clear_postgres_cache
+                )
+                logger.warning("Cleared all PostgreSQL cache data")
+            except Exception as e:
+                logger.error(f"Failed to clear PostgreSQL cache: {e}")
+                success = False
+        
+        return success
+    
+    def _clear_postgres_cache(self):
+        """Clear all PostgreSQL cache data."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                tables = ['face_embeddings_cache', 'perceptual_hash_cache', 'crawl_cache']
+                for table in tables:
+                    cur.execute(f"TRUNCATE TABLE {table}")
+                conn.commit()
+
 
 # Global cache service instance
-_cache_service = None
-
-def get_cache_service() -> CacheService:
-    """Get cache service instance."""
-    global _cache_service
-    if _cache_service is None:
-        _cache_service = CacheService()
-    return _cache_service
-
-"""
-Crawl cache service for avoiding reprocessing of already-stored images.
-Phase 1: Basic URL caching with minimal fields.
-"""
-
-import hashlib
-import logging
-import os
-from typing import Optional, Tuple, List, Dict, Any
-from psycopg import connect, Connection
-from psycopg.rows import dict_row
-
-logger = logging.getLogger(__name__)
+_hybrid_cache_service = None
 
 
-class CrawlCacheDB:
-    """Simple cache service for crawler state persistence."""
-    
-    def __init__(self):
-        self.connection_string = self._build_connection_string()
-        self.cache_enabled = os.getenv('CACHE_ENABLED', 'true').lower() == 'true'
-        
-    def _build_connection_string(self) -> str:
-        """Build PostgreSQL connection string from environment variables."""
-        host = os.getenv('POSTGRES_HOST', 'localhost')
-        port = os.getenv('POSTGRES_PORT', '5432')
-        db = os.getenv('POSTGRES_DB', 'mordeaux')
-        user = os.getenv('POSTGRES_USER', 'mordeaux')
-        password = os.getenv('POSTGRES_PASSWORD', '')
-        
-        return f"postgresql://{user}:{password}@{host}:{port}/{db}"
-    
-    def _get_connection(self) -> Connection:
-        """Get database connection."""
-        try:
-            return connect(self.connection_string, row_factory=dict_row)
-        except Exception as e:
-            logger.error(f"Failed to connect to database: {str(e)}")
-            raise
-    
-    def should_skip_image(self, url: str, image_bytes: bytes, similarity_threshold: int = 5) -> Tuple[bool, Optional[str]]:
-        """
-        Check if image should be skipped based on cache with tolerant duplicate detection.
-        
-        Args:
-            url: Image URL
-            image_bytes: Image content bytes
-            similarity_threshold: Hamming distance threshold for similarity (default: 5)
-            
-        Returns:
-            Tuple of (should_skip, existing_raw_key)
-        """
-        if not self.cache_enabled:
-            return False, None
-            
-        try:
-            # Stage 1: URL hash lookup (fastest - single query)
-            url_hash = hashlib.sha256(url.encode()).hexdigest()
-            
-            with self._get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        "SELECT raw_image_key FROM crawl_cache WHERE url_hash = %s",
-                        (url_hash,)
-                    )
-                    result = cur.fetchone()
-                    
-                    if result:
-                        logger.info(f"Cache hit (URL): {url[:100]}...")
-                        return True, result['raw_image_key']
-                    
-                    # Stage 2: Enhanced content hash lookup with tolerance (only if Stage 1 fails)
-                    from .face import compute_tolerant_phash, compute_phash_similarity
-                    new_hashes = compute_tolerant_phash(image_bytes)
-                    
-                    if any(new_hashes):  # If we have at least one hash
-                        # Optimized query with indexed lookup for each hash type
-                        phash, dhash, whash, ahash = new_hashes
-                        
-                        # Check phash first (most reliable)
-                        if phash:
-                            cur.execute("""
-                                SELECT raw_image_key, phash, dhash, whash, ahash 
-                                FROM crawl_cache 
-                                WHERE phash = %s
-                            """, (phash,))
-                            row = cur.fetchone()
-                            if row:
-                                logger.info(f"Cache hit (exact phash): {url[:100]}...")
-                                return True, row['raw_image_key']
-                        
-                        # Check dhash if phash didn't match
-                        if dhash:
-                            cur.execute("""
-                                SELECT raw_image_key, phash, dhash, whash, ahash 
-                                FROM crawl_cache 
-                                WHERE dhash = %s
-                            """, (dhash,))
-                            row = cur.fetchone()
-                            if row:
-                                logger.info(f"Cache hit (exact dhash): {url[:100]}...")
-                                return True, row['raw_image_key']
-                        
-                        # Fallback to similarity check for whash and ahash (less reliable)
-                        if whash or ahash:
-                            cur.execute("""
-                                SELECT raw_image_key, phash, dhash, whash, ahash 
-                                FROM crawl_cache 
-                                WHERE (whash IS NOT NULL AND whash != '') OR (ahash IS NOT NULL AND ahash != '')
-                                LIMIT 1000
-                            """)
-                            
-                            for row in cur.fetchall():
-                                existing_hashes = (row['phash'] or "", row['dhash'] or "", row['whash'] or "", row['ahash'] or "")
-                                
-                                if compute_phash_similarity(new_hashes, existing_hashes, similarity_threshold):
-                                    logger.info(f"Cache hit (content similarity): {url[:100]}... (threshold: {similarity_threshold})")
-                                    return True, row['raw_image_key']
-                    
-                    return False, None
-                    
-        except Exception as e:
-            logger.warning(f"Cache lookup failed for {url[:100]}...: {str(e)}")
-            return False, None
-    
-    def store_processed_image(self, url: str, image_bytes: bytes, 
-                            raw_key: str, thumbnail_key: Optional[str] = None,
-                            face_data: Optional[Dict] = None) -> bool:
-        """
-        Store processed image in cache.
-        
-        Args:
-            url: Image URL
-            image_bytes: Image content bytes
-            raw_key: MinIO key for raw image
-            thumbnail_key: MinIO key for thumbnail (if exists)
-            face_data: Face detection results (if any)
-            
-        Returns:
-            True if stored successfully, False otherwise
-        """
-        if not self.cache_enabled:
-            return False
-            
-        try:
-            url_hash = hashlib.sha256(url.encode()).hexdigest()
-            
-            # Compute multiple hash types for tolerant duplicate detection
-            from .face import compute_tolerant_phash
-            phash, dhash, whash, ahash = compute_tolerant_phash(image_bytes)
-            face_detected = thumbnail_key is not None
-            
-            with self._get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        INSERT INTO crawl_cache 
-                        (url_hash, phash, dhash, whash, ahash, raw_image_key, thumbnail_key, face_detected)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (url_hash) DO UPDATE SET
-                            phash = EXCLUDED.phash,
-                            dhash = EXCLUDED.dhash,
-                            whash = EXCLUDED.whash,
-                            ahash = EXCLUDED.ahash,
-                            raw_image_key = EXCLUDED.raw_image_key,
-                            thumbnail_key = EXCLUDED.thumbnail_key,
-                            face_detected = EXCLUDED.face_detected,
-                            processed_at = CURRENT_TIMESTAMP
-                    """, (url_hash, phash, dhash, whash, ahash, raw_key, thumbnail_key, face_detected))
-                    
-                    conn.commit()
-                    logger.debug(f"Cached image: {url[:100]}... -> {raw_key}")
-                    return True
-                    
-        except Exception as e:
-            logger.warning(f"Failed to cache image {url[:100]}...: {str(e)}")
-            return False
-    
-    def batch_store_processed_images(self, entries: List[Dict[str, Any]]) -> int:
-        """
-        Batch store multiple processed images in cache.
-        
-        Args:
-            entries: List of cache entry dictionaries
-            
-        Returns:
-            Number of successfully stored entries
-        """
-        if not self.cache_enabled or not entries:
-            return 0
-            
-        try:
-            with self._get_connection() as conn:
-                with conn.cursor() as cur:
-                    # Prepare batch data
-                    batch_data = []
-                    for entry in entries:
-                        batch_data.append((
-                            entry['url_hash'],
-                            entry['phash'],
-                            entry.get('dhash', ''),
-                            entry.get('whash', ''),
-                            entry.get('ahash', ''),
-                            entry['raw_image_key'],
-                            entry['thumbnail_key'],
-                            entry['face_detected']
-                        ))
-                    
-                    # Execute batch insert
-                    cur.executemany("""
-                        INSERT INTO crawl_cache 
-                        (url_hash, phash, dhash, whash, ahash, raw_image_key, thumbnail_key, face_detected)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (url_hash) DO UPDATE SET
-                            phash = EXCLUDED.phash,
-                            dhash = EXCLUDED.dhash,
-                            whash = EXCLUDED.whash,
-                            ahash = EXCLUDED.ahash,
-                            raw_image_key = EXCLUDED.raw_image_key,
-                            thumbnail_key = EXCLUDED.thumbnail_key,
-                            face_detected = EXCLUDED.face_detected,
-                            processed_at = CURRENT_TIMESTAMP
-                    """, batch_data)
-                    
-                    conn.commit()
-                    logger.info(f"Batch cached {len(entries)} images")
-                    return len(entries)
-                    
-        except Exception as e:
-            logger.warning(f"Failed to batch cache {len(entries)} images: {str(e)}")
-            return 0
-    
-    def get_cache_stats(self) -> Dict[str, int]:
-        """Get basic cache statistics."""
-        if not self.cache_enabled:
-            return {'enabled': False}
-            
-        try:
-            with self._get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT COUNT(*) as total FROM crawl_cache")
-                    total = cur.fetchone()['total']
-                    
-                    cur.execute("SELECT COUNT(*) as faces FROM crawl_cache WHERE face_detected = true")
-                    faces = cur.fetchone()['faces']
-                    
-                    return {
-                        'enabled': True,
-                        'total_cached': total,
-                        'faces_found': faces,
-                        'cache_hit_rate': 'N/A'  # Will be calculated by crawler
-                    }
-                    
-        except Exception as e:
-            logger.warning(f"Failed to get cache stats: {str(e)}")
-            return {'enabled': False, 'error': str(e)}
-    
-    def _compute_phash(self, image_bytes: bytes) -> str:
-        """Compute perceptual hash for image content."""
-        try:
-            from .face import compute_phash
-            return compute_phash(image_bytes)
-        except Exception as e:
-            logger.warning(f"Failed to compute phash: {str(e)}")
-            return ""
+def get_hybrid_cache_service() -> HybridCacheService:
+    """Get hybrid cache service instance."""
+    global _hybrid_cache_service
+    if _hybrid_cache_service is None:
+        _hybrid_cache_service = HybridCacheService()
+    return _hybrid_cache_service
 
 
-def get_crawl_cache_service() -> CrawlCacheDB:
-    """Get crawl cache service instance."""
-    return CrawlCacheDB()
+# Convenience functions for easy migration from existing cache services
+def get_cache_service():
+    """Compatibility function - returns hybrid cache service."""
+    return get_hybrid_cache_service()

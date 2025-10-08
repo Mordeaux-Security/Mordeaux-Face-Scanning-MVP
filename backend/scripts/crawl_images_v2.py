@@ -16,16 +16,16 @@ Key improvements:
 
 Usage examples:
   # Basic crawl with default tenant
-  python scripts/crawl_images.py https://www.pornhub.com
+  python scripts/crawl_images_v2.py https://www.pornhub.com
 
   # Crawl with specific tenant and method
-  python scripts/crawl_images.py https://www.pornhub.com --tenant-id tenant_123 --method js-videoThumb
+  python scripts/crawl_images_v2.py https://www.pornhub.com --tenant-id tenant_123 --method js-videoThumb
 
   # Multi-page crawl with custom settings
-  python scripts/crawl_images.py https://www.pornhub.com --tenant-id tenant_123 --mode site --max-images 100 --max-pages 10
+  python scripts/crawl_images_v2.py https://www.pornhub.com --tenant-id tenant_123 --mode site --max-images 100 --max-pages 10
 
   # Target by size with enhanced face detection
-  python scripts/crawl_images.py https://www.pornhub.com --tenant-id tenant_123 --method size-320x180 --max-images 50
+  python scripts/crawl_images_v2.py https://www.pornhub.com --tenant-id tenant_123 --method size-320x180 --max-images 50
 
 Available targeting methods:
   smart           - Automatically picks the best method (default)
@@ -67,16 +67,16 @@ def main():
         epilog="""
 Examples:
   # Basic crawl with default tenant
-  python scripts/crawl_images.py https://www.pornhub.com
+  python scripts/crawl_images_v2.py https://www.pornhub.com
 
   # Crawl with specific tenant and method
-  python scripts/crawl_images.py https://www.pornhub.com --tenant-id tenant_123 --method js-videoThumb
+  python scripts/crawl_images_v2.py https://www.pornhub.com --tenant-id tenant_123 --method js-videoThumb
 
   # Multi-page crawl with custom settings
-  python scripts/crawl_images.py https://www.pornhub.com --tenant-id tenant_123 --mode site --max-images 100 --max-pages 10
+  python scripts/crawl_images_v2.py https://www.pornhub.com --tenant-id tenant_123 --mode site --max-images 100 --max-pages 10
 
   # Target by size with enhanced face detection
-  python scripts/crawl_images.py https://www.pornhub.com --tenant-id tenant_123 --method size-320x180 --max-images 50
+  python scripts/crawl_images_v2.py https://www.pornhub.com --tenant-id tenant_123 --method size-320x180 --max-images 50
 
 Available targeting methods:
   smart           - Automatically picks the best method (default)
@@ -185,16 +185,10 @@ Available targeting methods:
         print(f"Audit logging: {'Enabled' if args.enable_audit_logging else 'Disabled'}")
         print(f"Storage: MinIO (raw-images & thumbnails buckets)")
         print(f"Cache hits: {result.cache_hits}")
-        print(f"  - Redis hits: {result.redis_hits}")
-        print(f"  - PostgreSQL hits: {result.postgres_hits}")
         print(f"Cache misses: {result.cache_misses}")
         if result.cache_hits + result.cache_misses > 0:
             hit_rate = (result.cache_hits / (result.cache_hits + result.cache_misses)) * 100
-            redis_hit_rate = (result.redis_hits / (result.cache_hits + result.cache_misses)) * 100
-            postgres_hit_rate = (result.postgres_hits / (result.cache_hits + result.cache_misses)) * 100
             print(f"Cache hit rate: {hit_rate:.1f}%")
-            print(f"  - Redis hit rate: {redis_hit_rate:.1f}%")
-            print(f"  - PostgreSQL hit rate: {postgres_hit_rate:.1f}%")
         print(f"Saved raw image keys:")
         for key in result.saved_raw_keys:
             print(f"  - {key}")

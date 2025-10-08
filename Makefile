@@ -16,8 +16,8 @@ bash-backend:
 seed:
 	docker compose exec backend-cpu python scripts/seed_demo.py || true
 crawl:
-	@echo "Usage: make crawl URL=<url> [METHOD=<method>] [MIN_FACE_QUALITY=<score>] [REQUIRE_FACE=<true/false>] [CROP_FACES=<true/false>] [FACE_MARGIN=<margin>] [CRAWL_MODE=<single/site>] [MAX_TOTAL_IMAGES=<number>] [MAX_PAGES=<number>] [MAX_CONCURRENT_IMAGES=<number>] [BATCH_SIZE=<number>]"
-	@echo "Example: make crawl URL=https://example.com METHOD=smart MIN_FACE_QUALITY=0.7 CROP_FACES=true FACE_MARGIN=0.2 CRAWL_MODE=site MAX_TOTAL_IMAGES=50 MAX_PAGES=20 MAX_CONCURRENT_IMAGES=10 BATCH_SIZE=25"
+	@echo "Usage: make crawl URL=<url> [METHOD=<method>] [MIN_FACE_QUALITY=<score>] [REQUIRE_FACE=<true/false>] [CROP_FACES=<true/false>] [FACE_MARGIN=<margin>] [CRAWL_MODE=<single/site>] [MAX_TOTAL_IMAGES=<number>] [MAX_PAGES=<number>] [MAX_CONCURRENT_IMAGES=<number>] [BATCH_SIZE=<number>] [TENANT_ID=<tenant_id>]"
+	@echo "Example: make crawl URL=https://example.com METHOD=smart MIN_FACE_QUALITY=0.7 CROP_FACES=true FACE_MARGIN=0.2 CRAWL_MODE=site MAX_TOTAL_IMAGES=50 MAX_PAGES=20 MAX_CONCURRENT_IMAGES=10 BATCH_SIZE=25 TENANT_ID=tenant_123"
 	@if [ -z "$(URL)" ]; then echo "Error: URL is required"; exit 1; fi
 	@METHOD=$${METHOD:-smart}; \
 	MIN_FACE_QUALITY=$${MIN_FACE_QUALITY:-0.5}; \
@@ -27,11 +27,12 @@ crawl:
 	CRAWL_MODE=$${CRAWL_MODE:-single}; \
 	MAX_CONCURRENT_IMAGES=$${MAX_CONCURRENT_IMAGES:-10}; \
 	BATCH_SIZE=$${BATCH_SIZE:-25}; \
+	TENANT_ID=$${TENANT_ID:-default}; \
 	REQUIRE_FACE_FLAG=""; \
 	if [ "$${REQUIRE_FACE:-true}" = "false" ]; then REQUIRE_FACE_FLAG="--no-require-face"; fi; \
 	CROP_FACES_FLAG=""; \
 	if [ "$${CROP_FACES:-true}" = "false" ]; then CROP_FACES_FLAG="--no-crop-faces"; fi; \
-	docker compose exec backend-cpu python scripts/crawl_images.py $(URL) --method $$METHOD --min-face-quality $$MIN_FACE_QUALITY --face-margin $$FACE_MARGIN --max-total-images $$MAX_TOTAL_IMAGES --max-pages $$MAX_PAGES --crawl-mode $$CRAWL_MODE --max-concurrent-images $$MAX_CONCURRENT_IMAGES --batch-size $$BATCH_SIZE $$REQUIRE_FACE_FLAG $$CROP_FACES_FLAG
+	docker compose exec backend-cpu python scripts/crawl_images.py $(URL) --method $$METHOD --min-face-quality $$MIN_FACE_QUALITY --face-margin $$FACE_MARGIN --max-images $$MAX_TOTAL_IMAGES --max-pages $$MAX_PAGES --mode $$CRAWL_MODE --max-concurrent-images $$MAX_CONCURRENT_IMAGES --batch-size $$BATCH_SIZE --tenant-id $$TENANT_ID $$REQUIRE_FACE_FLAG $$CROP_FACES_FLAG
 
 crawl2:
 	@echo "V2 Crawler - Simplified image crawling with face detection and upscaling"
@@ -74,10 +75,12 @@ restart:
 
 reset-cache:
 	@echo "Clearing crawl cache database..."
+	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing cache for db: {s.postgres_db}')"
 	docker compose exec postgres psql -U mordeaux -d mordeaux -c "DELETE FROM crawl_cache;"
 
 reset-minio:
 	@echo "Clearing MinIO buckets..."
+	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing buckets: {s.s3_bucket_raw}, {s.s3_bucket_thumbs}')"
 	docker compose exec backend-cpu python scripts/clear_minio.py
 
 reset-both: reset-cache reset-minio

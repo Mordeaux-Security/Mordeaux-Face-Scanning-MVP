@@ -1,16 +1,8 @@
 """
-Enhanced Image Crawler Service v2
+Enhanced Image Crawler Service
 
-Integrated crawler service that combines the advanced features from basic_crawler1.1
-with the commercial readiness features from main branch.
-
-Key improvements:
-- Advanced caching with similarity detection (from basic_crawler1.1)
-- Multi-tenancy support (from main)
-- Enhanced face detection with image enhancement (from basic_crawler1.1)
-- Flexible CSS selector patterns (from basic_crawler1.1)
-- Concurrent processing with semaphores (from basic_crawler1.1)
-- Audit logging and compliance features (from main)
+Integrated crawler service that uses the existing MinIO storage service
+and provides multiple targeting strategies for finding specific types of images.
 """
 
 import asyncio
@@ -27,7 +19,7 @@ from datetime import datetime
 import httpx
 from bs4 import BeautifulSoup
 
-from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only, save_audit_log
+from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only
 from . import storage
 from .face import get_face_service
 from . import face
@@ -51,9 +43,6 @@ class CrawlResult:
     targeting_method: str
     cache_hits: int = 0
     cache_misses: int = 0
-    redis_hits: int = 0
-    postgres_hits: int = 0
-    tenant_id: str = "default"
 
 
 @dataclass
@@ -66,15 +55,13 @@ class ImageInfo:
     height: Optional[int]
 
 
-class EnhancedImageCrawlerV2:
+class EnhancedImageCrawler:
     """
-    Enhanced image crawler v2 that combines advanced features from basic_crawler1.1
-    with commercial readiness features from main branch.
+    Enhanced image crawler integrated with MinIO storage service.
     """
     
     def __init__(
         self,
-        tenant_id: str = "default",
         max_file_size: int = 10 * 1024 * 1024,  # 10MB
         allowed_extensions: Optional[Set[str]] = None,
         timeout: int = 30,
@@ -88,9 +75,7 @@ class EnhancedImageCrawlerV2:
         similarity_threshold: int = 5,
         max_concurrent_images: int = 10,
         batch_size: int = 50,
-        enable_audit_logging: bool = True,
     ):
-        self.tenant_id = tenant_id  # Multi-tenancy support from main
         self.max_file_size = max_file_size
         self.allowed_extensions = allowed_extensions or {
             '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'
@@ -106,11 +91,10 @@ class EnhancedImageCrawlerV2:
         self.similarity_threshold = similarity_threshold  # Hamming distance threshold for content similarity
         self.max_concurrent_images = max_concurrent_images
         self.batch_size = batch_size
-        self.enable_audit_logging = enable_audit_logging  # Audit logging support from main
         self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self.session: Optional[httpx.AsyncClient] = None
-        self.cache_service = get_hybrid_cache_service()  # Advanced caching from basic_crawler1.1
+        self.cache_service = get_hybrid_cache_service()  # Hybrid cache service for avoiding reprocessing
         self.pending_cache_entries = []  # Batch cache writes
         
     async def __aenter__(self):
@@ -164,12 +148,10 @@ class EnhancedImageCrawlerV2:
         """
         Extract images using configurable targeting methods.
         
-        Enhanced version from basic_crawler1.1 with flexible CSS selector patterns.
-        
         Args:
             html_content: The HTML content to parse
             base_url: Base URL for resolving relative URLs
-            method: Targeting method ('smart', 'data-mediumthumb', 'js-videoThumb', etc.)
+            method: Targeting method ('smart', 'data-mediumthumb', 'js-videoThumb', 'size', 'phimage', 'latestThumb', 'all')
             
         Returns:
             Tuple of (images_list, method_used)
@@ -256,8 +238,6 @@ class EnhancedImageCrawlerV2:
     def _extract_with_selectors(self, soup, base_url: str, selectors: List[Dict]) -> List[ImageInfo]:
         """
         Extract images using CSS selectors with flexible matching.
-        
-        Enhanced version from basic_crawler1.1 with robust selector handling.
         
         Args:
             soup: BeautifulSoup parsed HTML
@@ -605,8 +585,6 @@ class EnhancedImageCrawlerV2:
     async def _process_single_image(self, image_info: ImageInfo, index: int, total: int) -> Tuple[Optional[str], Optional[str], bool, List[str]]:
         """
         Process a single image with semaphore control for concurrency.
-        
-        Enhanced version from basic_crawler1.1 with multi-tenancy support.
         """
         async with self._processing_semaphore:
             try:
@@ -619,7 +597,7 @@ class EnhancedImageCrawlerV2:
                     return None, None, False, download_errors, []
 
                 # Check cache
-                should_skip, cached_key = await self.cache_service.should_skip_crawled_image(image_info.url, image_bytes, self.tenant_id)
+                should_skip, cached_key = await self.cache_service.should_skip_crawled_image(image_info.url, image_bytes, "default")
                 if should_skip and cached_key:
                     logger.info(f"Image {image_info.url} found in cache. Key: {cached_key}")
                     return cached_key, cached_key, True, download_errors, []
@@ -653,10 +631,7 @@ class EnhancedImageCrawlerV2:
 
     async def crawl_page(self, url: str, method: str = "smart") -> CrawlResult:
         """Crawl a single page for images using the specified method."""
-        logger.info(f"Starting crawl of: {url} using method: {method} (tenant: {self.tenant_id}, min_face_quality: {self.min_face_quality}, require_face: {self.require_face})")
-        
-        # Reset cache statistics for this crawl
-        self.cache_service.reset_cache_stats()
+        logger.info(f"Starting crawl of: {url} using method: {method} (min_face_quality: {self.min_face_quality}, require_face: {self.require_face})")
         
         saved_raw_keys = []
         saved_thumbnail_keys = []
@@ -679,8 +654,7 @@ class EnhancedImageCrawlerV2:
                 saved_raw_keys=[],
                 saved_thumbnail_keys=[],
                 errors=all_errors,
-                targeting_method="failed",
-                tenant_id=self.tenant_id
+                targeting_method="failed"
             )
         
         # Extract images using specified method
@@ -697,8 +671,7 @@ class EnhancedImageCrawlerV2:
                 saved_raw_keys=[],
                 saved_thumbnail_keys=[],
                 errors=all_errors,
-                targeting_method=method_used,
-                tenant_id=self.tenant_id
+                targeting_method=method_used
             )
         
         # Process ALL images found (no artificial per-page limits)
@@ -749,11 +722,10 @@ class EnhancedImageCrawlerV2:
                             if item["thumbnail_bytes"]:
                                 raw_key, raw_url, thumbnail_key, thumb_url = storage.save_raw_and_thumb_with_precreated_thumb(
                                     item["image_bytes"], 
-                                    item["thumbnail_bytes"],
-                                    self.tenant_id  # Multi-tenancy support
+                                    item["thumbnail_bytes"]
                                 )
                             else:
-                                raw_key, raw_url = storage.save_raw_image_only(item["image_bytes"], self.tenant_id)
+                                raw_key, raw_url = storage.save_raw_image_only(item["image_bytes"])
                                 thumbnail_key = None
                             
                             if raw_key:
@@ -762,7 +734,7 @@ class EnhancedImageCrawlerV2:
                                     item["image_bytes"],
                                     raw_key,
                                     thumbnail_key,
-                                    self.tenant_id
+                                    "default"
                                 )
                                 return raw_key, thumbnail_key, None
                             else:
@@ -789,31 +761,6 @@ class EnhancedImageCrawlerV2:
                             all_errors.append(f"Batch save error for {storage_batch[j]['image_info'].url}: {error}")
                 storage_batch = []  # Clear batch after saving
         
-        # Create audit log entry if enabled
-        if self.enable_audit_logging:
-            try:
-                audit_data = {
-                    "tenant_id": self.tenant_id,
-                    "url": url,
-                    "method": method_used,
-                    "images_found": len(images),
-                    "raw_images_saved": len(saved_raw_keys),
-                    "thumbnails_saved": len(saved_thumbnail_keys),
-                    "cache_hits": cache_hits,
-                    "cache_misses": cache_misses,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "errors": all_errors
-                }
-                import json
-                audit_bytes = json.dumps(audit_data, indent=2).encode('utf-8')
-                audit_key, audit_url = save_audit_log(audit_bytes, self.tenant_id, "crawl")
-                logger.info(f"Audit log saved: {audit_key}")
-            except Exception as e:
-                logger.warning(f"Failed to save audit log: {e}")
-        
-        # Get detailed cache statistics
-        cache_stats = await self.cache_service.get_cache_stats()
-        
         result = CrawlResult(
             url=url,
             images_found=len(images),
@@ -824,11 +771,8 @@ class EnhancedImageCrawlerV2:
             saved_thumbnail_keys=saved_thumbnail_keys,
             errors=all_errors,
             targeting_method=method_used,
-            cache_hits=cache_stats['total_hits'],
-            cache_misses=cache_stats['cache_misses'],
-            redis_hits=cache_stats['redis_hits'],
-            postgres_hits=cache_stats['postgres_hits'],
-            tenant_id=self.tenant_id
+            cache_hits=cache_hits,
+            cache_misses=cache_misses
         )
         
         logger.info(f"Crawl completed - Found: {result.images_found}, Raw Images Saved: {result.raw_images_saved}, Thumbnails Saved: {result.thumbnails_saved}")
@@ -845,7 +789,7 @@ class EnhancedImageCrawlerV2:
         Returns:
             CrawlResult with aggregated statistics
         """
-        logger.info(f"Starting site crawl from: {start_url} (tenant: {self.tenant_id}, max_images: {self.max_total_images}, max_pages: {self.max_pages})")
+        logger.info(f"Starting site crawl from: {start_url} (max_images: {self.max_total_images}, max_pages: {self.max_pages})")
         
         # Initialize crawling state
         visited_urls = set()
@@ -918,6 +862,8 @@ class EnhancedImageCrawlerV2:
                 all_errors.append(error_msg)
                 continue
         
+        # Cache entries are now stored individually, no batch flushing needed
+        
         # Create aggregated result
         result = CrawlResult(
             url=start_url,
@@ -930,30 +876,10 @@ class EnhancedImageCrawlerV2:
             errors=all_errors,
             targeting_method=method,
             cache_hits=total_cache_hits,
-            cache_misses=total_cache_misses,
-            tenant_id=self.tenant_id
+            cache_misses=total_cache_misses
         )
         
         logger.info(f"Site crawl completed - Pages: {pages_crawled}, Found: {total_images_found}, Raw Images Saved: {total_raw_saved}, Thumbnails Saved: {total_thumbnails_saved}")
         return result
 
 
-# Convenience function for easy integration
-async def crawl_images_from_url(
-    url: str, 
-    tenant_id: str = "default",
-    method: str = "smart"
-) -> CrawlResult:
-    """
-    Convenience function to crawl images from a URL.
-    
-    Args:
-        url: The URL to crawl
-        tenant_id: Tenant ID for multi-tenancy support
-        method: Targeting method ('smart', 'data-mediumthumb', 'js-videoThumb', etc.)
-        
-    Returns:
-        CrawlResult with crawl statistics
-    """
-    async with EnhancedImageCrawlerV2(tenant_id=tenant_id) as crawler:
-        return await crawler.crawl_page(url, method)

@@ -1,5 +1,4 @@
 import io
-import os
 import uuid
 import time
 from typing import Tuple, Optional, List, Dict, Any
@@ -249,37 +248,18 @@ async def save_raw_and_thumb_async(image_bytes: bytes, tenant_id: str, key_prefi
         return save_raw_and_thumb(image_bytes, tenant_id, key_prefix)
 
 
-def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
+def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, key_prefix: str = "") -> Tuple[str, str, str, str]:
     """
-    Store raw JPG to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg and pre-created thumbnail to BUCKET_THUMBS/<tenant_id>/<prefix><uuid>.jpg
+    Store raw JPG to BUCKET_RAW/<prefix><uuid>.jpg and pre-created thumbnail to BUCKET_THUMBS/<prefix><uuid>.jpg
     Returns (raw_key, raw_url, thumb_key, thumb_url)
-    
-    This function combines the efficiency of basic_crawler1.1 (pre-created thumbnails) 
-    with the multi-tenancy support of main branch.
     """
-    settings = get_settings()
     img_id = str(uuid.uuid4()).replace("-", "")
-    raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
-    thumb_key = f"{tenant_id}/{key_prefix}{img_id}_thumb.jpg"
+    raw_key = f"{key_prefix}{img_id}.jpg"
+    thumb_key = f"{key_prefix}{img_id}_thumb.jpg"
 
-    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
-    put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg")
+    put_object("raw-images", raw_key, image_bytes, "image/jpeg")
+    put_object("thumbnails", thumb_key, thumbnail_bytes, "image/jpeg")
 
-    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-    thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
+    raw_url = get_presigned_url("raw-images", raw_key, "GET", 3600) or ""
+    thumb_url = get_presigned_url("thumbnails", thumb_key, "GET", 3600) or ""
     return raw_key, raw_url, thumb_key, thumb_url
-
-
-async def save_raw_and_thumb_with_precreated_thumb_async(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
-    """
-    Async version of save_raw_and_thumb_with_precreated_thumb for better performance.
-    """
-    loop = asyncio.get_event_loop()
-    thread_pool = _get_thread_pool()
-    
-    try:
-        result = await loop.run_in_executor(thread_pool, save_raw_and_thumb_with_precreated_thumb, image_bytes, thumbnail_bytes, tenant_id, key_prefix)
-        return result
-    except Exception as e:
-        # Fallback to sync version if async fails
-        return save_raw_and_thumb_with_precreated_thumb(image_bytes, thumbnail_bytes, tenant_id, key_prefix)

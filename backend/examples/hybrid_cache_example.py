@@ -14,7 +14,7 @@ from pathlib import Path
 # Add the app directory to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.services.cache_v2 import get_hybrid_cache_service
+from app.services.cache import get_hybrid_cache_service
 
 # Configure logging
 logging.basicConfig(

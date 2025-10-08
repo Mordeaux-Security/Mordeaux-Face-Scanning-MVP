@@ -73,7 +73,7 @@ psql -h localhost -U mordeaux -d mordeaux -f migrations/004_hybrid_cache_tables.
 ### 3. Basic Usage
 
 ```python
-from app.services.cache_v2 import get_hybrid_cache_service
+from app.services.cache import get_hybrid_cache_service
 
 # Get cache service
 cache = get_hybrid_cache_service()
@@ -232,7 +232,7 @@ from app.services.cache import get_cache_service
 cache = get_cache_service()
 
 # New code (compatible interface)
-from app.services.cache_v2 import get_hybrid_cache_service
+from app.services.cache import get_hybrid_cache_service
 cache = get_hybrid_cache_service()  # Drop-in replacement
 ```
 
@@ -244,7 +244,7 @@ from app.services.cache import get_cache_service
 cache = get_cache_service()
 
 # New code (enhanced with Redis)
-from app.services.cache_v2 import get_hybrid_cache_service
+from app.services.cache import get_hybrid_cache_service
 cache = get_hybrid_cache_service()  # Same interface, better performance
 ```
 

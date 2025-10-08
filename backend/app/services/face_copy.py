@@ -55,9 +55,6 @@ def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
     """
     Enhance image quality for better face detection, especially for low-resolution images.
     
-    This function combines the advanced image enhancement from basic_crawler1.1
-    with robust error handling for production use.
-    
     Args:
         image_bytes: Original image data
         
@@ -130,9 +127,6 @@ def _check_memory_usage() -> bool:
 def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_size: int = 0) -> List[Dict]:
     """
     Detect faces using multiple scales for better small face detection.
-    
-    This function combines the advanced multi-scale detection from basic_crawler1.1
-    with memory management and error handling for production use.
     
     Args:
         image_bytes: Image data (already enhanced)
@@ -466,14 +460,12 @@ def create_thumbnail(image_bytes: bytes, size: tuple = (150, 150)) -> bytes:
     return output.getvalue()
 
 def get_face_service():
-    """Get face service instance with all available methods."""
+    # simple accessor; in real app you might have a class
     class _FaceSvc:
         detect_and_embed = staticmethod(detect_and_embed)
         detect_and_embed_async = staticmethod(detect_and_embed_async)
         compute_phash = staticmethod(compute_phash)
         compute_phash_async = staticmethod(compute_phash_async)
-        compute_tolerant_phash = staticmethod(compute_tolerant_phash)
-        compute_phash_similarity = staticmethod(compute_phash_similarity)
         crop_face_from_image = staticmethod(crop_face_from_image)
         enhance_image_for_face_detection = staticmethod(enhance_image_for_face_detection)
         crop_face_and_create_thumbnail = staticmethod(crop_face_and_create_thumbnail)
