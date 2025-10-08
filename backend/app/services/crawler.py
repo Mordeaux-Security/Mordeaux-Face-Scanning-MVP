@@ -121,6 +121,7 @@ class CrawlResult:
     redis_hits: int = 0
     postgres_hits: int = 0
     tenant_id: str = "default"
+    early_exit_count: int = 0
 
 
 @dataclass
@@ -174,6 +175,7 @@ class EnhancedImageCrawlerV2:
         self.max_concurrent_images = max_concurrent_images
         self.batch_size = batch_size
         self.enable_audit_logging = enable_audit_logging  # Audit logging support from main
+        self._early_exit_count = 0
         
         # PHASE 2 OPTIMIZATION: Enhanced concurrency control
         self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
@@ -205,9 +207,13 @@ class EnhancedImageCrawlerV2:
         
     async def __aenter__(self):
         """Async context manager entry."""
+        # Enable HTTP/2, connection pooling, and keep-alive for network efficiency
+        limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
         self.session = httpx.AsyncClient(
             timeout=self.timeout,
             follow_redirects=True,
+            http2=True,
+            limits=limits,
             headers={
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
@@ -222,6 +228,310 @@ class EnhancedImageCrawlerV2:
         # PHASE 2 OPTIMIZATION: Clean up thread pools
         self._face_detection_thread_pool.shutdown(wait=True)
         self._storage_thread_pool.shutdown(wait=True)
+    
+    async def _process_images_batch(self, images: List[ImageInfo], all_errors: List[str], cache_hits: int, cache_misses: int, method_used: str, url: str) -> 'CrawlResult':
+        """Process images using batch approach for small workloads."""
+        saved_raw_keys = []
+        saved_thumbnail_keys = []
+        
+        processing_tasks = []
+        for i, image_info in enumerate(images, 1):
+            processing_tasks.append(self._process_single_image(image_info, i, len(images)))
+
+        processed_results = await asyncio.gather(*processing_tasks, return_exceptions=True)
+
+        # Process results and store to MinIO
+        for i, result in enumerate(processed_results):
+            image_info = images[i]
+            if isinstance(result, Exception):
+                logger.error(f"Error processing image {image_info.url}: {result}")
+                all_errors.append(f"Processing error for {image_info.url}: {result}")
+                continue
+
+            image_bytes, thumbnail_bytes, was_cached, download_errors, faces = result
+            all_errors.extend(download_errors)
+
+            if was_cached:
+                cache_hits += 1
+                continue
+            else:
+                cache_misses += 1
+
+                if image_bytes:
+                    # Store to MinIO
+                    if thumbnail_bytes is not None:
+                        raw_key, raw_url, thumbnail_key, thumb_url = await self._async_storage_operation(
+                            storage.save_raw_and_thumb_with_precreated_thumb,
+                            image_bytes, 
+                            thumbnail_bytes,
+                            self.tenant_id
+                        )
+                        
+                        if raw_key:
+                            saved_raw_keys.append(raw_key)
+                            saved_thumbnail_keys.append(thumbnail_key)
+                            # Update cache
+                            await self.cache_service.store_crawled_image(
+                                image_info.url,
+                                image_bytes,
+                                raw_key,
+                                thumbnail_key,
+                                self.tenant_id
+                            )
+                    else:
+                        raw_key, raw_url = await self._async_storage_operation(
+                            storage.save_raw_image_only,
+                            image_bytes, 
+                            self.tenant_id
+                        )
+                        
+                        if raw_key:
+                            saved_raw_keys.append(raw_key)
+                            # Update cache
+                            await self.cache_service.store_crawled_image(
+                                image_info.url,
+                                image_bytes,
+                                raw_key,
+                                None,
+                                self.tenant_id
+                            )
+        
+        # Get detailed cache statistics
+        cache_stats = await self.cache_service.get_cache_stats()
+        
+        result = CrawlResult(
+            url=url,
+            images_found=len(images),
+            raw_images_saved=len(saved_raw_keys),
+            thumbnails_saved=len(saved_thumbnail_keys),
+            pages_crawled=1,
+            saved_raw_keys=saved_raw_keys,
+            saved_thumbnail_keys=saved_thumbnail_keys,
+            errors=all_errors,
+            targeting_method=method_used,
+            cache_hits=cache_hits,
+            cache_misses=cache_misses,
+            redis_hits=cache_stats['redis_hits'],
+            postgres_hits=cache_stats['postgres_hits'],
+            tenant_id=self.tenant_id,
+            early_exit_count=int(getattr(self, "_early_exit_count", 0))
+        )
+        
+        logger.info(f"Crawl completed - Found: {result.images_found}, Raw Images Saved: {result.raw_images_saved}, Thumbnails Saved: {result.thumbnails_saved}")
+        return result
+    
+    async def _process_images_streaming(self, images: List[ImageInfo], all_errors: List[str], cache_hits: int, cache_misses: int, method_used: str, url: str) -> 'CrawlResult':
+        """Process images using memory-efficient streaming pipeline for large workloads."""
+        # Memory-efficient streaming pipeline with bounded queues
+        download_queue = asyncio.Queue(maxsize=20)      # Small queue for backpressure
+        processing_queue = asyncio.Queue(maxsize=10)    # Even smaller processing queue
+        storage_queue = asyncio.Queue(maxsize=10)       # Small storage queue
+        
+        # Results tracking
+        streaming_results = {
+            'saved_raw_keys': [],
+            'saved_thumbnail_keys': [],
+            'errors': all_errors.copy(),
+            'cache_hits': cache_hits,
+            'cache_misses': cache_misses
+        }
+        
+        # Create workers (only 3 workers total to minimize overhead)
+        workers = [
+            asyncio.create_task(self._streaming_download_worker(download_queue, processing_queue, streaming_results)),
+            asyncio.create_task(self._streaming_processing_worker(processing_queue, storage_queue, streaming_results)),
+            asyncio.create_task(self._streaming_storage_worker(storage_queue, streaming_results))
+        ]
+        
+        # Feed images into download queue
+        for i, image_info in enumerate(images, 1):
+            await download_queue.put((image_info, i, len(images)))
+        
+        # Signal completion to all queues
+        await download_queue.put(None)  # Sentinel value
+        
+        # Wait for all workers to complete
+        await asyncio.gather(*workers, return_exceptions=True)
+        
+        # Get detailed cache statistics
+        cache_stats = await self.cache_service.get_cache_stats()
+        
+        result = CrawlResult(
+            url=url,
+            images_found=len(images),
+            raw_images_saved=len(streaming_results['saved_raw_keys']),
+            thumbnails_saved=len(streaming_results['saved_thumbnail_keys']),
+            pages_crawled=1,
+            saved_raw_keys=streaming_results['saved_raw_keys'],
+            saved_thumbnail_keys=streaming_results['saved_thumbnail_keys'],
+            errors=streaming_results['errors'],
+            targeting_method=method_used,
+            cache_hits=streaming_results['cache_hits'],
+            cache_misses=streaming_results['cache_misses'],
+            redis_hits=cache_stats['redis_hits'],
+            postgres_hits=cache_stats['postgres_hits'],
+            tenant_id=self.tenant_id,
+            early_exit_count=int(getattr(self, "_early_exit_count", 0))
+        )
+        
+        logger.info(f"Crawl completed - Found: {result.images_found}, Raw Images Saved: {result.raw_images_saved}, Thumbnails Saved: {result.thumbnails_saved}")
+        return result
+    
+    async def _streaming_download_worker(self, download_queue: asyncio.Queue, processing_queue: asyncio.Queue, results: dict):
+        """Memory-efficient download worker."""
+        while True:
+            item = await download_queue.get()
+            if item is None:  # Sentinel value
+                await processing_queue.put(None)  # Pass sentinel to next stage
+                break
+            
+            image_info, index, total = item
+            try:
+                # Download image (this includes cache check)
+                image_bytes, thumbnail_bytes, was_cached, download_errors, faces = await self._process_single_image(image_info, index, total)
+                results['errors'].extend(download_errors)
+                
+                if was_cached:
+                    results['cache_hits'] += 1
+                else:
+                    results['cache_misses'] += 1
+                    if image_bytes:
+                        await processing_queue.put((image_bytes, thumbnail_bytes, image_info, faces))
+                        
+            except Exception as e:
+                logger.error(f"Download worker error for {image_info.url}: {e}")
+                results['errors'].append(f"Download error for {image_info.url}: {e}")
+            finally:
+                download_queue.task_done()
+    
+    async def _streaming_processing_worker(self, processing_queue: asyncio.Queue, storage_queue: asyncio.Queue, results: dict):
+        """Memory-efficient processing worker (mainly for face detection)."""
+        while True:
+            item = await processing_queue.get()
+            if item is None:  # Sentinel value
+                await storage_queue.put(None)  # Pass sentinel to next stage
+                break
+            
+            image_bytes, thumbnail_bytes, image_info, faces = item
+            try:
+                # Face detection if needed (reuse existing logic)
+                if self.require_face or self.crop_faces:
+                    if not faces:  # Only detect if not already detected
+                        faces, thumbnail_bytes = await self._async_face_detection(image_bytes, image_info)
+                    
+                    if self.require_face and not faces:
+                        logger.info(f"No faces detected for {image_info.url}, skipping.")
+                        continue
+                    
+                    if self.crop_faces and not faces:
+                        logger.info(f"No faces detected for {image_info.url}, no thumbnail created.")
+                        thumbnail_bytes = None
+                
+                # Queue for storage
+                await storage_queue.put((image_bytes, thumbnail_bytes, image_info))
+                        
+            except Exception as e:
+                logger.error(f"Processing worker error for {image_info.url}: {e}")
+                results['errors'].append(f"Processing error for {image_info.url}: {e}")
+            finally:
+                processing_queue.task_done()
+    
+    async def _streaming_storage_worker(self, storage_queue: asyncio.Queue, results: dict):
+        """Memory-efficient storage worker with micro-batching."""
+        storage_batch = []
+        batch_size = 5  # Small batch size for memory efficiency
+        
+        while True:
+            try:
+                # Wait for item with timeout for micro-batching
+                item = await asyncio.wait_for(storage_queue.get(), timeout=0.5)
+                
+                if item is None:  # Sentinel value
+                    # Process any remaining items
+                    if storage_batch:
+                        await self._process_storage_batch(storage_batch, results)
+                    break
+                
+                storage_batch.append(item)
+                
+                # Process batch when full
+                if len(storage_batch) >= batch_size:
+                    await self._process_storage_batch(storage_batch, results)
+                    storage_batch = []
+                    
+            except asyncio.TimeoutError:
+                # Process any pending items on timeout
+                if storage_batch:
+                    await self._process_storage_batch(storage_batch, results)
+                    storage_batch = []
+                continue
+            except Exception as e:
+                logger.error(f"Storage worker error: {e}")
+                results['errors'].append(f"Storage worker error: {e}")
+            finally:
+                if 'item' in locals() and item is not None:
+                    try:
+                        storage_queue.task_done()
+                    except ValueError:
+                        pass
+    
+    async def _process_storage_batch(self, batch: List, results: dict):
+        """Process a batch of items for storage."""
+        if not batch:
+            return
+        
+        # Process batch concurrently
+        batch_tasks = []
+        for image_bytes, thumbnail_bytes, image_info in batch:
+            batch_tasks.append(self._store_single_item(image_bytes, thumbnail_bytes, image_info, results))
+        
+        await asyncio.gather(*batch_tasks, return_exceptions=True)
+    
+    async def _store_single_item(self, image_bytes: bytes, thumbnail_bytes: Optional[bytes], image_info: 'ImageInfo', results: dict):
+        """Store a single item and update cache."""
+        try:
+            async with self._storage_semaphore:
+                # Store to MinIO
+                if thumbnail_bytes is not None:
+                    raw_key, raw_url, thumbnail_key, thumb_url = await self._async_storage_operation(
+                        storage.save_raw_and_thumb_with_precreated_thumb,
+                        image_bytes, 
+                        thumbnail_bytes,
+                        self.tenant_id
+                    )
+                    
+                    if raw_key:
+                        results['saved_raw_keys'].append(raw_key)
+                        results['saved_thumbnail_keys'].append(thumbnail_key)
+                        # Update cache
+                        await self.cache_service.store_crawled_image(
+                            image_info.url,
+                            image_bytes,
+                            raw_key,
+                            thumbnail_key,
+                            self.tenant_id
+                        )
+                else:
+                    raw_key, raw_url = await self._async_storage_operation(
+                        storage.save_raw_image_only,
+                        image_bytes, 
+                        self.tenant_id
+                    )
+                    
+                    if raw_key:
+                        results['saved_raw_keys'].append(raw_key)
+                        # Update cache
+                        await self.cache_service.store_crawled_image(
+                            image_info.url,
+                            image_bytes,
+                            raw_key,
+                            None,
+                            self.tenant_id
+                        )
+                        
+        except Exception as e:
+            logger.error(f"Storage error for {image_info.url}: {e}")
+            results['errors'].append(f"Storage error for {image_info.url}: {e}")
     
     async def fetch_page(self, url: str) -> Tuple[Optional[str], List[str]]:
         """Fetch a web page and return its content and any errors."""
@@ -490,6 +800,7 @@ class EnhancedImageCrawlerV2:
             
             try:
                 logger.info(f"Downloading image: {image_info.url}")
+                t_download_start = datetime.utcnow()
             
                 # Check file extension
                 parsed_url = urlparse(image_info.url)
@@ -502,9 +813,19 @@ class EnhancedImageCrawlerV2:
                         errors.append(f"File extension not in allowed list: {path}")
                         return None, errors
                 
-                # Download the image
-                response = await self.session.get(image_info.url)
-                response.raise_for_status()
+                # Download with simple retry/backoff for transient HTTP/2 errors
+                last_exc = None
+                for attempt in range(3):
+                    try:
+                        response = await self.session.get(image_info.url)
+                        response.raise_for_status()
+                        break
+                    except httpx.HTTPError as e:
+                        last_exc = e
+                        if attempt < 2:
+                            await asyncio.sleep(0.5 * (2 ** attempt))
+                            continue
+                        raise
                 
                 # Check file size
                 content_length = response.headers.get('content-length')
@@ -518,7 +839,10 @@ class EnhancedImageCrawlerV2:
                     errors.append(f"Content type not an image: {content_type}")
                     return None, errors
                 
-                return response.content, errors
+                content = response.content
+                t_download_ms = (datetime.utcnow() - t_download_start).total_seconds() * 1000.0
+                logger.debug(f"Downloaded image in {t_download_ms:.1f} ms: {image_info.url}")
+                return content, errors
                 
             except httpx.HTTPError as e:
                 error_msg = f"HTTP error downloading {image_info.url}: {str(e)}"
@@ -773,70 +1097,7 @@ class EnhancedImageCrawlerV2:
             logger.error(f"Error validating URL {url}: {str(e)}")
             return False
     
-    def check_face_quality(self, image_bytes: bytes) -> Tuple[bool, str, dict]:
-        """
-        Check if the image contains high-quality faces suitable for recognition.
-        Uses enhanced detection methods for better accuracy with low-resolution images.
-        
-        Args:
-            image_bytes: The image data to analyze
-            
-        Returns:
-            Tuple of (is_high_quality, reason, best_face)
-        """
-        try:
-            face_service = get_face_service()
-            
-            # Use enhanced multi-scale face detection (handles enhancement internally)
-            enhanced_bytes, enhancement_scale = face_service.enhance_image_for_face_detection(image_bytes)
-            faces = face_service.detect_and_embed(enhanced_bytes, enhancement_scale, min_size=25)
-            
-            if not faces:
-                if self.require_face:
-                    return False, "No faces detected", {}
-                else:
-                    return True, "No faces required", {}
-            
-            # Check each face for quality
-            high_quality_faces = []
-            for face in faces:
-                det_score = face.get('det_score', 0.0)
-                if det_score >= self.min_face_quality:
-                    high_quality_faces.append(face)
-            
-            if not high_quality_faces:
-                return False, f"No faces meet quality threshold (min: {self.min_face_quality})", {}
-            
-            # Find the best face (highest quality score and largest size)
-            best_face = None
-            best_score = 0
-            for face in high_quality_faces:
-                bbox = face.get('bbox', [0, 0, 0, 0])
-                x1, y1, x2, y2 = bbox
-                face_width = x2 - x1
-                face_height = y2 - y1
-                
-                # Skip faces that are too small (less than 50x50 pixels)
-                if face_width < 50 or face_height < 50:
-                    continue
-                
-                # Score based on detection confidence and face size
-                face_score = face.get('det_score', 0.0) + (face_width * face_height) / 100000.0
-                if face_score > best_score:
-                    best_score = face_score
-                    best_face = face
-            
-            if best_face:
-                return True, f"Found {len(high_quality_faces)} high-quality faces", best_face
-            else:
-                return False, "All faces are too small for reliable recognition", {}
-            
-        except Exception as e:
-            logger.error(f"Error checking face quality: {str(e)}")
-            if self.require_face:
-                return False, f"Face quality check failed: {str(e)}", {}
-            else:
-                return True, f"Face quality check failed, but not required: {str(e)}", {}
+
 
     
     async def _process_single_image(self, image_info: ImageInfo, index: int, total: int) -> Tuple[Optional[str], Optional[str], bool, List[str]]:
@@ -873,7 +1134,17 @@ class EnhancedImageCrawlerV2:
                 faces = []
                 thumbnail_bytes = None
                 if self.require_face or self.crop_faces:
+                    t_detect_start = datetime.utcnow()
                     faces, thumbnail_bytes = await self._async_face_detection(image_bytes, image_info)
+                    t_detect_ms = (datetime.utcnow() - t_detect_start).total_seconds() * 1000.0
+                    logger.debug(f"Face detection pipeline completed in {t_detect_ms:.1f} ms for {image_info.url}")
+                    # Track early-exit usage
+                    try:
+                        early_exit_used = get_face_service().consume_early_exit_flag()
+                        if early_exit_used:
+                            setattr(self, "_early_exit_count", getattr(self, "_early_exit_count", 0) + 1)
+                    except Exception:
+                        pass
                     
                     if self.require_face and not faces:
                         logger.info(f"No faces detected for {image_info.url}, skipping.")
@@ -948,144 +1219,22 @@ class EnhancedImageCrawlerV2:
                 tenant_id=self.tenant_id
             )
         
-        # Process ALL images found (no artificial per-page limits)
-        images_to_process = images
-        logger.info(f"Processing all {len(images_to_process)} images found")
-        
-        processing_tasks = []
-        for i, image_info in enumerate(images_to_process, 1):
-            processing_tasks.append(self._process_single_image(image_info, i, len(images_to_process)))
+        # Apply image limit if specified
+        if hasattr(self, 'max_total_images') and self.max_total_images > 0:
+            images_to_process = images[:self.max_total_images]
+            logger.info(f"Processing {len(images_to_process)} images (limited by max_total_images={self.max_total_images})")
+        else:
+            images_to_process = images
+            logger.info(f"Processing all {len(images_to_process)} images found")
+            
+        # OPTIMIZATION: Use streaming pipeline only for larger workloads to avoid overhead
+        if len(images_to_process) <= 10:
+            logger.info(f"Using batch processing for {len(images_to_process)} images (streaming overhead not worth it)")
+            return await self._process_images_batch(images_to_process, all_errors, cache_hits, cache_misses, method_used, url)
+        else:
+            logger.info(f"Using streaming pipeline for {len(images_to_process)} images")
+            return await self._process_images_streaming(images_to_process, all_errors, cache_hits, cache_misses, method_used, url)
 
-        processed_results = await asyncio.gather(*processing_tasks, return_exceptions=True)
-
-        storage_batch = []
-        for i, result in enumerate(processed_results):
-            image_info = images_to_process[i]
-            if isinstance(result, Exception):
-                logger.error(f"Error processing image {image_info.url}: {result}")
-                all_errors.append(f"Processing error for {image_info.url}: {result}")
-                continue
-
-            image_bytes, thumbnail_bytes, was_cached, download_errors, faces = result
-            all_errors.extend(download_errors)
-
-            if was_cached:
-                cache_hits += 1
-                continue
-            else:
-                cache_misses += 1
-
-                if image_bytes:
-                    storage_batch.append({
-                        "image_bytes": image_bytes,
-                        "thumbnail_bytes": thumbnail_bytes,
-                        "image_info": image_info,
-                        "faces": faces,
-                        "key_prefix": "",
-                        "save_type": "both" if thumbnail_bytes is not None else "raw_only"
-                    })
-
-            # Process batch if size reached or it's the last image
-            if len(storage_batch) >= self.batch_size or (i == len(processed_results) - 1 and storage_batch):
-                logger.info(f"Saving batch of {len(storage_batch)} images to storage.")
-                
-                # Save images individually but concurrently
-                # PHASE 2 OPTIMIZATION: Use async storage operations with thread pool
-                async def save_single_item(item):
-                    async with self._storage_semaphore:
-                        try:
-                            if item["thumbnail_bytes"] is not None:
-                                raw_key, raw_url, thumbnail_key, thumb_url = await self._async_storage_operation(
-                                    storage.save_raw_and_thumb_with_precreated_thumb,
-                                    item["image_bytes"], 
-                                    item["thumbnail_bytes"],
-                                    self.tenant_id  # Multi-tenancy support
-                                )
-                            else:
-                                raw_key, raw_url = await self._async_storage_operation(
-                                    storage.save_raw_image_only,
-                                    item["image_bytes"], 
-                                    self.tenant_id
-                                )
-                                thumbnail_key = None
-                            
-                            if raw_key:
-                                await self.cache_service.store_crawled_image(
-                                    item["image_info"].url,
-                                    item["image_bytes"],
-                                    raw_key,
-                                    thumbnail_key,
-                                    self.tenant_id
-                                )
-                                return raw_key, thumbnail_key, None
-                            else:
-                                return None, None, "Failed to save image"
-                        except Exception as e:
-                            return None, None, str(e)
-                
-                # Process all items in the batch concurrently
-                batch_tasks = [save_single_item(item) for item in storage_batch]
-                batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
-                
-                for j, result in enumerate(batch_results):
-                    if isinstance(result, Exception):
-                        logger.warning(f"Failed to save image {storage_batch[j]['image_info'].url} in batch: {result}")
-                        all_errors.append(f"Batch save error for {storage_batch[j]['image_info'].url}: {result}")
-                    else:
-                        raw_key, thumbnail_key, error = result
-                        if raw_key:
-                            saved_raw_keys.append(raw_key)
-                            if thumbnail_key:
-                                saved_thumbnail_keys.append(thumbnail_key)
-                        else:
-                            logger.warning(f"Failed to save image {storage_batch[j]['image_info'].url} in batch: {error}")
-                            all_errors.append(f"Batch save error for {storage_batch[j]['image_info'].url}: {error}")
-                storage_batch = []  # Clear batch after saving
-        
-        # Create audit log entry if enabled
-        if self.enable_audit_logging:
-            try:
-                audit_data = {
-                    "tenant_id": self.tenant_id,
-                    "url": url,
-                    "method": method_used,
-                    "images_found": len(images),
-                    "raw_images_saved": len(saved_raw_keys),
-                    "thumbnails_saved": len(saved_thumbnail_keys),
-                    "cache_hits": cache_hits,
-                    "cache_misses": cache_misses,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "errors": all_errors
-                }
-                import json
-                audit_bytes = json.dumps(audit_data, indent=2).encode('utf-8')
-                audit_key, audit_url = save_audit_log(audit_bytes, self.tenant_id, "crawl")
-                logger.info(f"Audit log saved: {audit_key}")
-            except Exception as e:
-                logger.warning(f"Failed to save audit log: {e}")
-        
-        # Get detailed cache statistics
-        cache_stats = await self.cache_service.get_cache_stats()
-        
-        result = CrawlResult(
-            url=url,
-            images_found=len(images),
-            raw_images_saved=len(saved_raw_keys),
-            thumbnails_saved=len(saved_thumbnail_keys),
-            pages_crawled=1,
-            saved_raw_keys=saved_raw_keys,
-            saved_thumbnail_keys=saved_thumbnail_keys,
-            errors=all_errors,
-            targeting_method=method_used,
-            cache_hits=cache_stats['total_hits'],
-            cache_misses=cache_stats['cache_misses'],
-            redis_hits=cache_stats['redis_hits'],
-            postgres_hits=cache_stats['postgres_hits'],
-            tenant_id=self.tenant_id
-        )
-        
-        logger.info(f"Crawl completed - Found: {result.images_found}, Raw Images Saved: {result.raw_images_saved}, Thumbnails Saved: {result.thumbnails_saved}")
-        return result
 
     async def crawl_site(self, start_url: str, method: str = "smart") -> CrawlResult:
         """
@@ -1184,7 +1333,8 @@ class EnhancedImageCrawlerV2:
             targeting_method=method,
             cache_hits=total_cache_hits,
             cache_misses=total_cache_misses,
-            tenant_id=self.tenant_id
+            tenant_id=self.tenant_id,
+            early_exit_count=int(getattr(self, "_early_exit_count", 0))
         )
         
         logger.info(f"Site crawl completed - Pages: {pages_crawled}, Found: {total_images_found}, Raw Images Saved: {total_raw_saved}, Thumbnails Saved: {total_thumbnails_saved}")

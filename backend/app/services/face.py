@@ -1,4 +1,5 @@
 import io
+import time
 import os
 import cv2
 import numpy as np
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 _face_app = None
 _thread_pool = None
 _model_lock = threading.Lock()  # Thread synchronization for model loading
+_early_exit_flag = False  # Tracks whether last detection used early exit
 
 def _get_thread_pool() -> ThreadPoolExecutor:
     """Get thread pool for CPU-intensive operations."""
@@ -77,49 +79,36 @@ def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
         scale_factor is 1.0 if no enhancement was applied
     """
     try:
+        t_start = time.perf_counter()
         # Load image
         pil_image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
         width, height = pil_image.size
         
-        # Determine if this is a low-resolution image that needs enhancement
+        # Determine if this is a low-resolution image; avoid heavy upscaling here.
         is_low_res = width < 500 or height < 400
         
         if is_low_res:
-            logger.info(f"Enhancing low-resolution image ({width}x{height}) for better face detection")
+            logger.info(f"Enhancing low-resolution image ({width}x{height}) for better face detection (no resize)")
             
-            # Apply enhancement techniques
-            # 1. Upscale using LANCZOS resampling (better than default)
-            scale_factor = max(2.0, 800 / min(width, height))  # Scale to at least 800px on smallest side
-            new_width = int(width * scale_factor)
-            new_height = int(height * scale_factor)
-            
-            # Use LANCZOS for better quality upscaling - use PIL version compatible constant
-            try:
-                # Try new PIL constant first (PIL 9.0+)
-                enhanced = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            except AttributeError:
-                # Fall back to old PIL constant (PIL < 9.0)
-                enhanced = pil_image.resize((new_width, new_height), Image.LANCZOS)
-            
-            # 2. Enhance contrast
+            # Apply light enhancement only (no resizing). Multi-scale detection handles scaling.
+            enhanced = pil_image
             enhancer = ImageEnhance.Contrast(enhanced)
-            enhanced = enhancer.enhance(1.2)  # 20% more contrast
-            
-            # 3. Enhance sharpness slightly
+            enhanced = enhancer.enhance(1.15)
             enhancer = ImageEnhance.Sharpness(enhanced)
-            enhanced = enhancer.enhance(1.1)  # 10% more sharpness
+            enhanced = enhancer.enhance(1.1)
+            enhanced = enhanced.filter(ImageFilter.UnsharpMask(radius=1, percent=120, threshold=3))
             
-            # 4. Apply slight unsharp mask for better detail
-            enhanced = enhanced.filter(ImageFilter.UnsharpMask(radius=1, percent=150, threshold=3))
-            
-            # Convert back to bytes
             output = io.BytesIO()
             enhanced.save(output, format='JPEG', quality=95, optimize=True)
-            return output.getvalue(), scale_factor
+            elapsed_ms = (time.perf_counter() - t_start) * 1000.0
+            logger.debug(f"Image enhancement completed in {elapsed_ms:.1f} ms (scale=1.0, no resize)")
+            return output.getvalue(), 1.0
         else:
             # For high-resolution images, just ensure good quality
             output = io.BytesIO()
             pil_image.save(output, format='JPEG', quality=95, optimize=True)
+            elapsed_ms = (time.perf_counter() - t_start) * 1000.0
+            logger.debug(f"Image enhancement (hi-res passthrough) completed in {elapsed_ms:.1f} ms (scale=1.0)")
             return output.getvalue(), 1.0
             
     except Exception as e:
@@ -160,6 +149,7 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
     _check_memory_usage()
     
     app = _load_app()
+    t_total_start = time.perf_counter()
     img = _read_image(image_bytes)
     
     if img is None:
@@ -175,21 +165,38 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
     all_faces = []
     
     # Try detection at multiple scales
-    scales = [1.0, 2.0]  # Original and 2x
+    scales = [1.0, 2.0, 4.0]  # Original and 2x and 4x
     
     for scale in scales:
         try:
+            t_scale_start = time.perf_counter()
             if scale != 1.0:
                 # Scale image for detection
                 new_width = int(width * scale)
                 new_height = int(height * scale)
                 scaled_img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+                # Apply enhancement after upscaling to maximize effect on resized data
+                try:
+                    success, encoded = cv2.imencode('.jpg', scaled_img)
+                    if success:
+                        enhanced_bytes, _local_enh_scale = enhance_image_for_face_detection(encoded.tobytes())
+                        # Read enhanced image back into ndarray
+                        arr = np.frombuffer(enhanced_bytes, dtype=np.uint8)
+                        enhanced_img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+                        if enhanced_img is not None:
+                            scaled_img = enhanced_img
+                except Exception as _:
+                    # If enhancement fails, proceed with the resized image
+                    pass
             else:
                 scaled_img = img
             
             # Detect faces at this scale
             faces = app.get(scaled_img)
+            t_scale_ms = (time.perf_counter() - t_scale_start) * 1000.0
+            logger.debug(f"Face detection at scale {scale:.1f} completed in {t_scale_ms:.1f} ms (found {len(faces) if faces is not None else 0} raw detections)")
             
+            strong_face_found = False
             for face in faces:
                 if not hasattr(face, "embedding") or face.embedding is None:
                     continue
@@ -253,6 +260,17 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
                 
                 if not is_duplicate:
                     all_faces.append(face_data)
+                    # Early exit condition: if a strong detection is found, stop further scaling
+                    # Threshold chosen to balance precision/recall; adjust via config later if needed
+                    if face_data["det_score"] >= 0.85:
+                        strong_face_found = True
+                        break
+            if strong_face_found:
+                logger.debug(f"Strong face found at scale {scale:.1f} (det_score>=0.9); early-exiting multi-scale loop")
+                # Mark early-exit flag for external consumers (e.g., crawler audit)
+                global _early_exit_flag
+                _early_exit_flag = True
+                break
                     
         except Exception as e:
             logger.warning(f"Failed face detection at scale {scale}: {str(e)}")
@@ -265,8 +283,16 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
     del img
     gc.collect()
     
-    logger.info(f"Multi-scale detection found {len(all_faces)} faces (scales: {scales}, enhancement_scale: {enhancement_scale})")
+    t_total_ms = (time.perf_counter() - t_total_start) * 1000.0
+    logger.info(f"Multi-scale detection found {len(all_faces)} faces in {t_total_ms:.1f} ms (scales: {scales}, enhancement_scale: {enhancement_scale})")
     return all_faces
+
+def consume_early_exit_flag() -> bool:
+    """Return and reset the early-exit flag set during the last detection call."""
+    global _early_exit_flag
+    value = _early_exit_flag
+    _early_exit_flag = False
+    return value
 
 def compute_phash(b: bytes) -> str:
     """Compute perceptual hash for image content."""
@@ -492,4 +518,5 @@ def get_face_service():
         enhance_image_for_face_detection = staticmethod(enhance_image_for_face_detection)
         crop_face_and_create_thumbnail = staticmethod(crop_face_and_create_thumbnail)
         create_thumbnail = staticmethod(create_thumbnail)
+        consume_early_exit_flag = staticmethod(consume_early_exit_flag)
     return _FaceSvc()

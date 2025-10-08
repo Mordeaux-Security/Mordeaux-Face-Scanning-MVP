@@ -195,6 +195,11 @@ Available targeting methods:
             print(f"Cache hit rate: {hit_rate:.1f}%")
             print(f"  - Redis hit rate: {redis_hit_rate:.1f}%")
             print(f"  - PostgreSQL hit rate: {postgres_hit_rate:.1f}%")
+        # Detector early-exit metric
+        try:
+            print(f"Detector early-exit count: {getattr(result, 'early_exit_count', 0)}")
+        except Exception:
+            pass
         print(f"Saved raw image keys:")
         for key in result.saved_raw_keys:
             print(f"  - {key}")

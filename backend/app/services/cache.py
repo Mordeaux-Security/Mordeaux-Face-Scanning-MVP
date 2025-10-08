@@ -260,6 +260,112 @@ class HybridCacheService:
                 logger.warning(f"PostgreSQL lookup failed for face embeddings: {e}")
         
         return None
+
+    # ==================== FACE DETECTION CACHE ====================
+    async def cache_face_detection(self, content: bytes, tenant_id: str, faces: List[Dict]) -> bool:
+        """Cache face detection results (bboxes, embeddings, scores)."""
+        cache_key = self._generate_cache_key("face_detect", content, tenant_id)
+        serialized_data = self._serialize_data(faces)
+        if not serialized_data:
+            return False
+
+        success = True
+        if self.redis_enabled:
+            try:
+                self.redis_client.setex(
+                    cache_key,
+                    self.redis_ttl_settings['face_detection_cache'],
+                    serialized_data
+                )
+            except Exception as e:
+                logger.warning(f"Failed to cache face detection in Redis: {e}")
+                success = False
+
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    self._thread_pool,
+                    self._store_face_detection_postgres,
+                    cache_key, content, tenant_id, faces
+                )
+            except Exception as e:
+                logger.warning(f"Failed to cache face detection in PostgreSQL: {e}")
+                success = False
+        return success
+
+    def _store_face_detection_postgres(self, cache_key: str, content: bytes, tenant_id: str, faces: List[Dict]):
+        """Store face detection results in PostgreSQL."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO face_embeddings_cache 
+                    (cache_key, tenant_id, content_hash, embeddings_data, created_at)
+                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (cache_key) DO UPDATE SET
+                        embeddings_data = EXCLUDED.embeddings_data,
+                        created_at = CURRENT_TIMESTAMP
+                """, (
+                    cache_key,
+                    tenant_id,
+                    hashlib.sha256(content).hexdigest(),
+                    json.dumps(faces)
+                ))
+                conn.commit()
+
+    async def get_cached_face_detection(self, content: bytes, tenant_id: str) -> Optional[List[Dict]]:
+        """Get cached face detection results from Redis or PostgreSQL."""
+        cache_key = self._generate_cache_key("face_detect", content, tenant_id)
+
+        if self.redis_enabled:
+            try:
+                cached = self.redis_client.get(cache_key)
+                if cached:
+                    data = self._deserialize_data(cached)
+                    if data is not None:
+                        return data
+            except Exception as e:
+                logger.warning(f"Redis lookup failed for face detection: {e}")
+
+        if self.postgres_enabled:
+            try:
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(
+                    self._thread_pool,
+                    self._get_face_detection_postgres,
+                    cache_key
+                )
+                if result is not None:
+                    if self.redis_enabled:
+                        try:
+                            serialized = self._serialize_data(result)
+                            if serialized:
+                                self.redis_client.setex(
+                                    cache_key,
+                                    self.redis_ttl_settings['face_detection_cache'],
+                                    serialized
+                                )
+                        except Exception as e:
+                            logger.warning(f"Failed to backfill Redis face detection: {e}")
+                    return result
+            except Exception as e:
+                logger.warning(f"PostgreSQL lookup failed for face detection: {e}")
+        return None
+
+    def _get_face_detection_postgres(self, cache_key: str) -> Optional[List[Dict]]:
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT embeddings_data FROM face_embeddings_cache 
+                    WHERE cache_key = %s
+                """, (cache_key,))
+                row = cur.fetchone()
+                if row:
+                    try:
+                        return json.loads(row['embeddings_data'])
+                    except Exception:
+                        return None
+        return None
     
     def _get_embeddings_postgres(self, cache_key: str) -> Optional[List[Dict]]:
         """Get face embeddings from PostgreSQL."""

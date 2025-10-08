@@ -7,10 +7,12 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image
+import urllib3
 from ..core.config import get_settings
 
 # Lazy singletons
 _minio_client = None
+_minio_http = None
 _boto3_client = None
 _thread_pool = None
 
@@ -26,14 +28,24 @@ def _minio():
     """Return a MinIO client if S3_ENDPOINT is defined (local dev)."""
     from minio import Minio  # lazy import for prod lightness
     global _minio_client
+    global _minio_http
     if _minio_client is None:
         settings = get_settings()
         endpoint = settings.s3_endpoint.replace("https://", "").replace("http://", "")
+        # Increase underlying HTTP connection pool size to reduce 'pool is full' warnings
+        if _minio_http is None:
+            # Tune pool sizes; retries kept default/minimal since MinIO ops are retried upstream
+            _minio_http = urllib3.PoolManager(
+                num_pools=64,
+                maxsize=64,
+                timeout=urllib3.util.Timeout(connect=5.0, read=30.0),
+            )
         _minio_client = Minio(
             endpoint,
             access_key=settings.s3_access_key,
             secret_key=settings.s3_secret_key,
             secure=settings.s3_use_ssl,
+            http_client=_minio_http,
         )
     return _minio_client
 
