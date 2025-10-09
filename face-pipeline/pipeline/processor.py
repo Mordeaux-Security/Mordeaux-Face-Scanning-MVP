@@ -13,7 +13,91 @@ import logging
 from typing import List, Dict, Any, Optional, Callable
 import asyncio
 
+from pydantic import BaseModel, HttpUrl
+
 logger = logging.getLogger(__name__)
+
+
+class PipelineInput(BaseModel):
+    """
+    Input data contract for the face processing pipeline.
+    
+    Represents an image that has been uploaded to object storage and is ready
+    for face detection, quality assessment, embedding generation, and vector indexing.
+    """
+    
+    image_sha256: str
+    """SHA-256 hash of the image content for deduplication and integrity verification."""
+    
+    bucket: str
+    """MinIO bucket name where the raw image is stored."""
+    
+    key: str
+    """Object key/path within the bucket for the raw image."""
+    
+    tenant_id: str
+    """Multi-tenant identifier for data isolation and access control."""
+    
+    site: str
+    """Site identifier (e.g., domain or source) where the image originated."""
+    
+    url: HttpUrl
+    """Original HTTP(S) URL where the image was sourced from."""
+    
+    image_phash: str
+    """Perceptual hash (pHash) of the image for near-duplicate detection."""
+    
+    face_hints: Optional[List[Dict]]
+    """
+    Optional hints about face locations/attributes from upstream processing.
+    Can be used to optimize detection or validate results.
+    Examples: [{"bbox": [x, y, w, h], "confidence": 0.95}]
+    """
+
+
+def process_image(message: dict) -> dict:
+    """
+    Process a single image through the face detection and embedding pipeline.
+    
+    This is the main entrypoint for processing images. It orchestrates face detection,
+    quality assessment, cropping, embedding generation, storage, and vector indexing.
+    
+    Args:
+        message: Raw dictionary containing pipeline input data (validated via PipelineInput)
+    
+    Returns:
+        Dictionary with processing results containing:
+        - image_sha256: Image hash identifier
+        - counts: Face processing statistics
+        - artifacts: Generated storage artifacts (crops, thumbnails, metadata)
+        - timings_ms: Performance timings for each pipeline stage
+    
+    TODO: Implement face detection
+    TODO: Implement quality assessment
+    TODO: Implement face cropping
+    TODO: Implement embedding generation
+    TODO: Implement storage operations
+    TODO: Implement vector indexing
+    """
+    # Validate input message against schema
+    msg = PipelineInput.model_validate(message)
+    
+    # Return skeleton response
+    return {
+        "image_sha256": msg.image_sha256,
+        "counts": {
+            "faces_total": 0,
+            "accepted": 0,
+            "rejected": 0,
+            "dup_skipped": 0,
+        },
+        "artifacts": {
+            "crops": [],
+            "thumbs": [],
+            "metadata": [],
+        },
+        "timings_ms": {},
+    }
 
 
 class PipelineResult:
