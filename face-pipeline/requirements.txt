@@ -1,0 +1,64 @@
+# Face Pipeline Requirements
+# Version-pinned for production stability
+# Synced with backend/requirements.txt where applicable to avoid conflicts
+
+# ============================================================================
+# Core Web Framework
+# ============================================================================
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+python-multipart==0.0.9
+
+# ============================================================================
+# Image Processing
+# ============================================================================
+Pillow==10.4.0
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+imagehash==4.3.1
+
+# ============================================================================
+# Storage
+# ============================================================================
+minio==7.2.9
+
+# ============================================================================
+# Vector Database
+# ============================================================================
+qdrant-client==1.10.1
+
+# ============================================================================
+# Logging
+# ============================================================================
+loguru==0.7.2
+
+# ============================================================================
+# Testing & Development
+# ============================================================================
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov==5.0.0
+black==24.8.0
+ruff==0.6.8
+
+# ============================================================================
+# Optional: Face Processing (if face-pipeline needs to run independently)
+# ============================================================================
+# Uncomment if you want face-pipeline to be standalone
+# Otherwise, it will use the backend's InsightFace installation
+# insightface==0.7.3
+# onnxruntime==1.19.2
+
+# ============================================================================
+# Notes on Shared Dependencies
+# ============================================================================
+# This face-pipeline is designed to be run alongside the main backend.
+# Many dependencies (especially heavy ones like InsightFace) are already
+# installed in the backend container.
+#
+# If you want to run face-pipeline completely standalone:
+# 1. Uncomment the InsightFace dependencies above
+# 2. Consider copying backend/requirements.txt face processing section
+# 3. Update the Dockerfile to install all dependencies
