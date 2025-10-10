@@ -14,10 +14,102 @@ PARTIAL DUPLICATE: backend/app/services/crawler.py has basic quality checks
 """
 
 import logging
-from typing import Dict, Any, Optional, Tuple
-import numpy as np
+from typing import Dict, Any, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    import PIL.Image
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Quality Assessment Functions
+# ============================================================================
+
+def laplacian_variance(img_np: "np.ndarray") -> float:
+    """
+    Calculate Laplacian variance to measure image sharpness/blur.
+    
+    The Laplacian operator computes the second derivative of the image intensity.
+    Higher variance indicates sharper edges (less blur), while lower variance
+    indicates smoother regions (more blur).
+    
+    Args:
+        img_np: Input image as numpy array (grayscale or BGR/RGB)
+                Shape: (height, width) or (height, width, channels)
+    
+    Returns:
+        Laplacian variance score. Higher values = sharper image.
+        Typical ranges:
+        - < 100: Very blurry
+        - 100-200: Moderately blurry
+        - > 200: Sharp
+    
+    TODO: Convert to grayscale if needed (cv2.cvtColor)
+    TODO: Apply Laplacian operator (cv2.Laplacian with CV_64F)
+    TODO: Calculate variance (np.var)
+    TODO: Add error handling for empty/invalid images
+    TODO: Consider alternative blur metrics (FFT-based, gradient magnitude)
+    """
+    return 0.0
+
+
+def evaluate(
+    img_pil: "PIL.Image.Image",
+    min_size: int,
+    min_blur_var: float
+) -> dict:
+    """
+    Evaluate face crop quality against minimum thresholds.
+    
+    Performs quick quality checks to filter out low-quality face crops
+    before expensive embedding generation.
+    
+    Args:
+        img_pil: Face crop as PIL Image
+        min_size: Minimum acceptable size (width or height in pixels)
+        min_blur_var: Minimum acceptable Laplacian variance (blur threshold)
+    
+    Returns:
+        Dictionary with quality assessment results:
+        - pass: bool - True if all checks pass, False otherwise
+        - reason: str - Failure reason if pass=False, empty string if pass=True
+        - blur: float - Laplacian variance score
+        - size: tuple[int, int] - Image dimensions (width, height)
+        
+        Example:
+        {
+            "pass": True,
+            "reason": "",
+            "blur": 234.5,
+            "size": (112, 112)
+        }
+        
+        Or on failure:
+        {
+            "pass": False,
+            "reason": "Image too small: 48x48 < 80",
+            "blur": 125.3,
+            "size": (48, 48)
+        }
+    
+    TODO: Get image size (img_pil.size)
+    TODO: Check if width or height < min_size
+    TODO: Convert PIL to numpy for blur check (np.array)
+    TODO: Call laplacian_variance() for blur score
+    TODO: Check if blur < min_blur_var
+    TODO: Set pass=False and appropriate reason if any check fails
+    TODO: Add brightness check (optional)
+    TODO: Add aspect ratio validation (optional)
+    """
+    # Placeholder: always pass for now
+    return {
+        "pass": True,
+        "reason": "",
+        "blur": 0.0,
+        "size": (0, 0),
+    }
 
 
 class QualityMetrics:
@@ -76,7 +168,7 @@ class QualityChecker:
         self.min_sharpness = min_sharpness
         self.max_pose_angle = max_pose_angle
     
-    def check_blur(self, image: np.ndarray) -> float:
+    def check_blur(self, image: "np.ndarray") -> float:
         """
         Compute blur score using Laplacian variance.
         
@@ -91,7 +183,7 @@ class QualityChecker:
         """
         pass
     
-    def check_brightness(self, image: np.ndarray) -> float:
+    def check_brightness(self, image: "np.ndarray") -> float:
         """
         Compute average brightness.
         
@@ -100,7 +192,7 @@ class QualityChecker:
         """
         pass
     
-    def check_contrast(self, image: np.ndarray) -> float:
+    def check_contrast(self, image: "np.ndarray") -> float:
         """
         Compute contrast ratio.
         
@@ -109,7 +201,7 @@ class QualityChecker:
         """
         pass
     
-    def check_sharpness(self, image: np.ndarray) -> float:
+    def check_sharpness(self, image: "np.ndarray") -> float:
         """
         Compute sharpness score.
         
@@ -118,7 +210,7 @@ class QualityChecker:
         """
         pass
     
-    def check_pose(self, landmarks: np.ndarray) -> Dict[str, float]:
+    def check_pose(self, landmarks: "np.ndarray") -> Dict[str, float]:
         """
         Estimate head pose angles.
         
@@ -133,7 +225,7 @@ class QualityChecker:
         """
         pass
     
-    def check_occlusion(self, image: np.ndarray, landmarks: np.ndarray) -> float:
+    def check_occlusion(self, image: "np.ndarray", landmarks: "np.ndarray") -> float:
         """
         Detect facial occlusions.
         
@@ -144,9 +236,9 @@ class QualityChecker:
     
     def assess_quality(
         self, 
-        image: np.ndarray, 
-        bbox: Optional[List[float]] = None,
-        landmarks: Optional[np.ndarray] = None
+        image: "np.ndarray", 
+        bbox: Optional[list[float]] = None,
+        landmarks: Optional["np.ndarray"] = None
     ) -> QualityMetrics:
         """
         Comprehensive quality assessment.
@@ -167,9 +259,9 @@ class QualityChecker:
     
     async def assess_quality_async(
         self,
-        image: np.ndarray,
-        bbox: Optional[List[float]] = None,
-        landmarks: Optional[np.ndarray] = None
+        image: "np.ndarray",
+        bbox: Optional[list[float]] = None,
+        landmarks: Optional["np.ndarray"] = None
     ) -> QualityMetrics:
         """
         Async wrapper for quality assessment.
