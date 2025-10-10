@@ -1,0 +1,281 @@
+"""
+Site Recipes Configuration Module
+
+Provides functionality to load and manage site-specific crawling recipes from YAML files.
+Site recipes allow per-domain customization of image extraction selectors, attributes,
+and crawling behavior while maintaining fallback to default behavior.
+"""
+
+import os
+import logging
+from pathlib import Path
+from typing import Dict, Any, Optional, List
+from urllib.parse import urlparse
+import yaml
+
+logger = logging.getLogger(__name__)
+
+# Default recipe configuration
+DEFAULT_RECIPE = {
+    "selectors": [
+        {"selector": "img[data-mediumthumb]", "description": "data-mediumthumb attribute"},
+        {"selector": "img.js-videoThumb", "description": "js-videoThumb class"},
+        {"selector": ".phimage img", "description": "images in .phimage containers"},
+        {"selector": "a.latestThumb img", "description": "images in .latestThumb links"},
+        {"selector": "img[data-video-thumb]", "description": "data-video-thumb attribute"},
+        {"selector": ".video-thumb img", "description": ".video-thumb container images"},
+        {"selector": ".thumbnail img", "description": ".thumbnail container images"},
+        {"selector": ".thumb img", "description": ".thumb container images"},
+        {"selector": "img[width='320'][height='180']", "description": "320x180 dimensions"},
+        {"selector": "img[width='640'][height='360']", "description": "640x360 dimensions"},
+        {"selector": "img[width='1280'][height='720']", "description": "1280x720 dimensions"},
+        {"selector": "img", "description": "all images"}
+    ],
+    "extra_sources": [],
+    "attributes_priority": ["alt", "title", "data-title", "data-alt"],
+    "method": "smart"
+}
+
+# Global cache for loaded recipes
+_recipe_cache: Optional[Dict[str, Any]] = None
+_recipe_cache_file: Optional[str] = None
+
+
+def load_site_recipes(path: str = "site_recipes.yaml") -> Dict[str, Any]:
+    """
+    Load site recipes from YAML file with caching.
+    
+    Args:
+        path: Path to the YAML file containing site recipes
+        
+    Returns:
+        Dictionary containing all site recipes and defaults
+        
+    Raises:
+        FileNotFoundError: If the recipe file doesn't exist
+        yaml.YAMLError: If the YAML file is malformed
+    """
+    global _recipe_cache, _recipe_cache_file
+    
+    # Normalize path to absolute path
+    abs_path = os.path.abspath(path)
+    
+    # Check if we already have this file cached
+    if _recipe_cache is not None and _recipe_cache_file == abs_path:
+        logger.debug(f"Using cached recipes from {abs_path}")
+        return _recipe_cache
+    
+    # Check if file exists
+    if not os.path.exists(abs_path):
+        logger.warning(f"Recipe file not found: {abs_path}, using default recipe only")
+        _recipe_cache = {"defaults": DEFAULT_RECIPE, "sites": {}}
+        _recipe_cache_file = abs_path
+        return _recipe_cache
+    
+    try:
+        with open(abs_path, 'r', encoding='utf-8') as file:
+            recipes = yaml.safe_load(file) or {}
+        
+        # Ensure we have defaults section
+        if "defaults" not in recipes:
+            logger.info("No defaults section found in recipe file, using built-in defaults")
+            recipes["defaults"] = DEFAULT_RECIPE
+        
+        # Ensure we have sites section
+        if "sites" not in recipes:
+            recipes["sites"] = {}
+        
+        # Validate recipe structure
+        _validate_recipe_structure(recipes)
+        
+        # Cache the loaded recipes
+        _recipe_cache = recipes
+        _recipe_cache_file = abs_path
+        
+        logger.info(f"Loaded {len(recipes.get('sites', {}))} site recipes from {abs_path}")
+        return _recipe_cache
+        
+    except yaml.YAMLError as e:
+        logger.error(f"Error parsing YAML file {abs_path}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error loading recipe file {abs_path}: {e}")
+        raise
+
+
+def get_recipe_for_host(host: str, path: str = "site_recipes.yaml") -> Dict[str, Any]:
+    """
+    Get the recipe configuration for a specific host.
+    
+    Args:
+        host: Hostname to get recipe for (e.g., "example.com")
+        path: Path to the YAML file containing site recipes
+        
+    Returns:
+        Dictionary containing the recipe for the host, merged with defaults
+        
+    Example:
+        recipe = get_recipe_for_host("pornhub.com")
+        selectors = recipe.get("selectors", [])
+        method = recipe.get("method", "smart")
+    """
+    try:
+        # Load all recipes
+        all_recipes = load_site_recipes(path)
+        
+        # Get defaults
+        defaults = all_recipes.get("defaults", DEFAULT_RECIPE).copy()
+        
+        # Get site-specific recipe if it exists
+        sites = all_recipes.get("sites", {})
+        site_recipe = sites.get(host, {})
+        
+        # Merge site recipe with defaults (site recipe takes precedence)
+        merged_recipe = _merge_recipes(defaults, site_recipe)
+        
+        logger.debug(f"Recipe for host '{host}': {len(merged_recipe.get('selectors', []))} selectors, method='{merged_recipe.get('method', 'smart')}'")
+        return merged_recipe
+        
+    except Exception as e:
+        logger.warning(f"Error getting recipe for host '{host}': {e}, using defaults")
+        return DEFAULT_RECIPE.copy()
+
+
+def get_recipe_for_url(url: str, path: str = "site_recipes.yaml") -> Dict[str, Any]:
+    """
+    Get the recipe configuration for a specific URL by extracting the host.
+    
+    Args:
+        url: Full URL to get recipe for
+        path: Path to the YAML file containing site recipes
+        
+    Returns:
+        Dictionary containing the recipe for the host, merged with defaults
+    """
+    try:
+        parsed_url = urlparse(url)
+        host = parsed_url.netloc.lower()
+        
+        # Remove port if present
+        if ':' in host:
+            host = host.split(':')[0]
+        
+        return get_recipe_for_host(host, path)
+        
+    except Exception as e:
+        logger.warning(f"Error extracting host from URL '{url}': {e}, using defaults")
+        return DEFAULT_RECIPE.copy()
+
+
+def _validate_recipe_structure(recipes: Dict[str, Any]) -> None:
+    """
+    Validate the structure of loaded recipes.
+    
+    Args:
+        recipes: Dictionary containing recipe data
+        
+    Raises:
+        ValueError: If recipe structure is invalid
+    """
+    # Validate defaults
+    if "defaults" in recipes:
+        defaults = recipes["defaults"]
+        if not isinstance(defaults, dict):
+            raise ValueError("defaults must be a dictionary")
+        
+        # Validate selectors if present
+        if "selectors" in defaults:
+            if not isinstance(defaults["selectors"], list):
+                raise ValueError("defaults.selectors must be a list")
+            for i, selector in enumerate(defaults["selectors"]):
+                if not isinstance(selector, dict):
+                    raise ValueError(f"defaults.selectors[{i}] must be a dictionary")
+                if "selector" not in selector:
+                    raise ValueError(f"defaults.selectors[{i}] must have 'selector' key")
+    
+    # Validate sites
+    if "sites" in recipes:
+        sites = recipes["sites"]
+        if not isinstance(sites, dict):
+            raise ValueError("sites must be a dictionary")
+        
+        for host, site_config in sites.items():
+            if not isinstance(site_config, dict):
+                raise ValueError(f"sites.{host} must be a dictionary")
+            
+            # Validate selectors if present
+            if "selectors" in site_config:
+                if not isinstance(site_config["selectors"], list):
+                    raise ValueError(f"sites.{host}.selectors must be a list")
+                for i, selector in enumerate(site_config["selectors"]):
+                    if not isinstance(selector, dict):
+                        raise ValueError(f"sites.{host}.selectors[{i}] must be a dictionary")
+                    if "selector" not in selector:
+                        raise ValueError(f"sites.{host}.selectors[{i}] must have 'selector' key")
+
+
+def _merge_recipes(defaults: Dict[str, Any], site_recipe: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Merge site-specific recipe with defaults.
+    
+    Args:
+        defaults: Default recipe configuration
+        site_recipe: Site-specific recipe configuration
+        
+    Returns:
+        Merged recipe with site settings taking precedence
+    """
+    merged = defaults.copy()
+    
+    # Merge simple fields (site recipe overwrites defaults)
+    for key in ["method", "extra_sources", "attributes_priority"]:
+        if key in site_recipe:
+            merged[key] = site_recipe[key]
+    
+    # Merge selectors (site recipe replaces defaults entirely if present)
+    if "selectors" in site_recipe:
+        merged["selectors"] = site_recipe["selectors"]
+    
+    return merged
+
+
+def clear_recipe_cache() -> None:
+    """Clear the recipe cache to force reload on next access."""
+    global _recipe_cache, _recipe_cache_file
+    _recipe_cache = None
+    _recipe_cache_file = None
+    logger.debug("Recipe cache cleared")
+
+
+def get_recipe_info(path: str = "site_recipes.yaml") -> Dict[str, Any]:
+    """
+    Get information about loaded recipes without loading them.
+    
+    Args:
+        path: Path to the YAML file containing site recipes
+        
+    Returns:
+        Dictionary containing recipe file information
+    """
+    abs_path = os.path.abspath(path)
+    
+    info = {
+        "file_path": abs_path,
+        "exists": os.path.exists(abs_path),
+        "cached": _recipe_cache is not None and _recipe_cache_file == abs_path,
+        "site_count": 0,
+        "has_defaults": False
+    }
+    
+    if info["exists"]:
+        try:
+            with open(abs_path, 'r', encoding='utf-8') as file:
+                recipes = yaml.safe_load(file) or {}
+            
+            info["site_count"] = len(recipes.get("sites", {}))
+            info["has_defaults"] = "defaults" in recipes
+            
+        except Exception as e:
+            info["error"] = str(e)
+    
+    return info

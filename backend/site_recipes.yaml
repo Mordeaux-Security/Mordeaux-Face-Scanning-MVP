@@ -1,0 +1,151 @@
+# Site Recipes Configuration
+# 
+# This file contains per-domain crawling recipes that customize image extraction
+# behavior for specific websites. Each site can override default selectors,
+# attributes, and crawling methods.
+#
+# Structure:
+# - defaults: Default configuration used for all sites unless overridden
+# - sites: Per-domain configurations that override or extend defaults
+
+defaults:
+  # Default CSS selectors for image extraction (tried in order)
+  selectors:
+    - selector: "img[data-mediumthumb]"
+      description: "data-mediumthumb attribute"
+    - selector: "img.js-videoThumb"
+      description: "js-videoThumb class"
+    - selector: ".phimage img"
+      description: "images in .phimage containers"
+    - selector: "a.latestThumb img"
+      description: "images in .latestThumb links"
+    - selector: "img[data-video-thumb]"
+      description: "data-video-thumb attribute"
+    - selector: ".video-thumb img"
+      description: ".video-thumb container images"
+    - selector: ".thumbnail img"
+      description: ".thumbnail container images"
+    - selector: ".thumb img"
+      description: ".thumb container images"
+    - selector: "img[width='320'][height='180']"
+      description: "320x180 dimensions"
+    - selector: "img[width='640'][height='360']"
+      description: "640x360 dimensions"
+    - selector: "img[width='1280'][height='720']"
+      description: "1280x720 dimensions"
+    - selector: "img"
+      description: "all images"
+
+  # Additional image sources to check (beyond CSS selectors)
+  extra_sources:
+    - "data-src"
+    - "data-lazy-src"
+    - "data-original"
+    - "data-large"
+    - "data-medium"
+    - "data-thumb"
+
+  # Priority order for extracting image metadata attributes
+  attributes_priority:
+    - "alt"
+    - "title"
+    - "data-title"
+    - "data-alt"
+
+  # Default extraction method
+  method: "smart"
+
+# Per-domain site configurations
+# These override or extend the defaults for specific hosts
+sites:
+  # PornHub-specific configuration
+  www.pornhub.com:
+    # PornHub-specific selectors (optimized for their layout)
+    selectors:
+      - selector: "img[data-mediumthumb]"
+        description: "PornHub data-mediumthumb attribute"
+      - selector: "img.js-videoThumb"
+        description: "PornHub js-videoThumb class"
+      - selector: ".phimage img"
+        description: "PornHub .phimage container images"
+      - selector: "a.latestThumb img"
+        description: "PornHub .latestThumb link images"
+      - selector: "img[data-video-thumb]"
+        description: "PornHub data-video-thumb attribute"
+      - selector: ".video-thumb img"
+        description: "PornHub .video-thumb container images"
+      - selector: ".thumbnail img"
+        description: "PornHub .thumbnail container images"
+      - selector: ".thumb img"
+        description: "PornHub .thumb container images"
+      - selector: "img[width='320'][height='180']"
+        description: "PornHub 320x180 thumbnail dimensions"
+      - selector: "img[width='640'][height='360']"
+        description: "PornHub 640x360 thumbnail dimensions"
+      - selector: "img[width='1280'][height='720']"
+        description: "PornHub 1280x720 thumbnail dimensions"
+      - selector: "img"
+        description: "All images as fallback"
+
+    # PornHub-specific attributes priority
+    attributes_priority:
+      - "alt"
+      - "title"
+      - "data-title"
+      - "data-alt"
+
+    # PornHub extraction method
+    method: "smart"
+
+    # PornHub-specific extra sources
+    extra_sources:
+      - "data-src"
+      - "data-lazy-src"
+      - "data-original"
+      - "data-large"
+      - "data-medium"
+      - "data-thumb"
+
+  # Example site configuration (replace with actual domains)
+  example.com:
+    # Custom selectors for this specific site
+    selectors:
+      - selector: ".custom-thumbnail img"
+        description: "Custom thumbnail images"
+      - selector: "img[data-custom-attr]"
+        description: "Images with custom attribute"
+      - selector: ".gallery img"
+        description: "Gallery images"
+      - selector: "img"
+        description: "All images as fallback"
+
+    # Custom attributes to prioritize for this site
+    attributes_priority:
+      - "data-title"
+      - "alt"
+      - "title"
+
+    # Custom extraction method for this site
+    method: "custom-gallery"
+
+    # Additional sources specific to this site
+    extra_sources:
+      - "data-src"
+      - "data-lazy-src"
+
+  # Another example site
+  demo-site.net:
+    selectors:
+      - selector: ".demo-content img"
+        description: "Demo content images"
+    method: "demo-specific"
+    attributes_priority:
+      - "data-demo-title"
+      - "alt"
+
+# Notes:
+# - Host names are case-insensitive and should not include protocols or paths
+# - Site configurations completely override defaults when present
+# - The "smart" method tries selectors in order until images are found
+# - Custom methods can be defined in the crawler code
+# - Attributes are checked in priority order for metadata extraction

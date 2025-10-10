@@ -14,14 +14,21 @@ import concurrent.futures
 import psutil
 import gc
 import weakref
+import re
+import random
+import time
+import json
 from pathlib import Path
 from typing import List, Optional, Tuple, Set, Dict
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, parse_qs
 from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
 from bs4 import BeautifulSoup
+
+# Import site recipes functionality
+from ..config.site_recipes import get_recipe_for_url, get_recipe_for_host
 
 # Image safety configuration - set once on import
 from PIL import Image, ImageFile
@@ -34,6 +41,321 @@ from .face import get_face_service, close_face_service
 from . import face
 from .cache import get_hybrid_cache_service, close_cache_service
 from urllib.parse import urljoin, urlparse
+
+# ============================================================================
+# SECURITY CONFIGURATION
+# ============================================================================
+
+# URL Security Configuration
+MALICIOUS_SCHEMES = {'javascript', 'data', 'file', 'ftp'}
+SUSPICIOUS_EXTENSIONS = {'.exe', '.scr', '.apk', '.msi', '.bat', '.cmd', '.ps1', '.php', '.cgi', '.bin'}
+BAIT_QUERY_KEYS = {'download', 'redirect', 'out', 'go'}
+
+# Host/TLD Denylist (placeholders - can be expanded)
+BLOCKED_HOSTS = {
+    'malware.example.com',
+    'phishing-site.net',
+    'suspicious-domain.org'
+}
+
+BLOCKED_TLDS = {
+    '.tk', '.ml', '.ga', '.cf'  # Free TLDs often used for malicious purposes
+}
+
+# Content Security Configuration
+ALLOWED_CONTENT_TYPES = {'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'}
+BLOCKED_CONTENT_TYPES = {'image/svg+xml'}  # SVG can contain malicious scripts
+MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8MB
+
+# Crawl Policy Configuration
+DEFAULT_MAX_DEPTH = 1
+DEFAULT_PER_HOST_CONCURRENCY = 3
+DEFAULT_JITTER_RANGE = (100, 400)  # milliseconds
+
+# ============================================================================
+# SECURITY GUARDS
+# ============================================================================
+
+def validate_url_security(url: str) -> Tuple[bool, str]:
+    """
+    Validate URL for security threats.
+    
+    Args:
+        url: URL to validate
+        
+    Returns:
+        Tuple of (is_safe, reason_code)
+    """
+    try:
+        parsed = urlparse(url)
+        
+        # Check for malicious schemes
+        if parsed.scheme.lower() in MALICIOUS_SCHEMES:
+            return False, "MALICIOUS_SCHEME"
+        
+        # Check for suspicious file extensions
+        path_lower = parsed.path.lower()
+        for ext in SUSPICIOUS_EXTENSIONS:
+            if path_lower.endswith(ext):
+                return False, "SUSPICIOUS_EXTENSION"
+        
+        # Check for bait query parameters
+        query_params = set(parse_qs(parsed.query).keys())
+        if query_params.intersection(BAIT_QUERY_KEYS):
+            return False, "BAIT_QUERY_PARAM"
+        
+        # Check blocked hosts
+        if parsed.netloc.lower() in BLOCKED_HOSTS:
+            return False, "BLOCKED_HOST"
+        
+        # Check blocked TLDs
+        for tld in BLOCKED_TLDS:
+            if parsed.netloc.lower().endswith(tld):
+                return False, "BLOCKED_TLD"
+        
+        return True, "SAFE"
+        
+    except Exception as e:
+        logger.warning(f"URL validation error for {url}: {e}")
+        return False, "VALIDATION_ERROR"
+
+def validate_content_security(content_type: str, content_length: Optional[int] = None) -> Tuple[bool, str]:
+    """
+    Validate content type and size for security.
+    
+    Args:
+        content_type: MIME type of the content
+        content_length: Size of the content in bytes
+        
+    Returns:
+        Tuple of (is_safe, reason_code)
+    """
+    if not content_type:
+        return False, "NO_CONTENT_TYPE"
+    
+    content_type_lower = content_type.lower()
+    
+    # Check for blocked content types
+    if content_type_lower in BLOCKED_CONTENT_TYPES:
+        return False, "BLOCKED_CONTENT_TYPE"
+    
+    # Check if content type is allowed
+    if not any(allowed_type in content_type_lower for allowed_type in ALLOWED_CONTENT_TYPES):
+        return False, "NOT_IMAGE_CONTENT"
+    
+    # Check content length if provided
+    if content_length is not None and content_length > MAX_CONTENT_LENGTH:
+        return False, "CONTENT_TOO_LARGE"
+    
+    return True, "SAFE"
+
+def validate_redirect_security(redirect_url: str, redirect_count: int, max_redirects: int = 3) -> Tuple[bool, str]:
+    """
+    Validate redirect URL for security and limits.
+    
+    Args:
+        redirect_url: URL being redirected to
+        redirect_count: Current redirect count
+        max_redirects: Maximum allowed redirects
+        
+    Returns:
+        Tuple of (is_safe, reason_code)
+    """
+    # Check redirect limit
+    if redirect_count >= max_redirects:
+        return False, "TOO_MANY_REDIRECTS"
+    
+    # Validate the redirect URL
+    is_safe, reason = validate_url_security(redirect_url)
+    if not is_safe:
+        return False, f"REDIRECT_{reason}"
+    
+    return True, "SAFE"
+
+# ============================================================================
+# THUMBNAIL EXTRACTION HELPERS
+# ============================================================================
+
+def pick_from_srcset(srcset: str, base_url: str, preferred_width: int = 640) -> Optional[str]:
+    """
+    Pick the best image URL from a srcset attribute.
+    
+    Args:
+        srcset: The srcset attribute value (e.g., "image1.jpg 320w, image2.jpg 640w")
+        base_url: Base URL for resolving relative URLs
+        preferred_width: Preferred width in pixels
+        
+    Returns:
+        Best matching image URL or None if no valid srcset
+    """
+    if not srcset:
+        return None
+    
+    try:
+        # Parse srcset format: "url1 width1, url2 width2, ..."
+        candidates = []
+        for entry in srcset.split(','):
+            entry = entry.strip()
+            if not entry:
+                continue
+                
+            parts = entry.split()
+            if len(parts) < 2:
+                continue
+                
+            url = parts[0].strip()
+            descriptor = parts[1].strip()
+            
+            # Parse width descriptor (e.g., "640w")
+            if descriptor.endswith('w'):
+                try:
+                    width = int(descriptor[:-1])
+                    absolute_url = urljoin(base_url, url)
+                    candidates.append((width, absolute_url))
+                except ValueError:
+                    continue
+        
+        if not candidates:
+            return None
+        
+        # Find the closest width to preferred_width
+        candidates.sort(key=lambda x: abs(x[0] - preferred_width))
+        return candidates[0][1]
+        
+    except Exception as e:
+        logger.debug(f"Error parsing srcset '{srcset}': {e}")
+        return None
+
+def extract_style_bg_url(style_attr: str, base_url: str) -> Optional[str]:
+    """
+    Extract background image URL from CSS style attribute.
+    
+    Args:
+        style_attr: The style attribute value
+        base_url: Base URL for resolving relative URLs
+        
+    Returns:
+        Extracted background image URL or None
+    """
+    if not style_attr:
+        return None
+    
+    try:
+        # Look for background-image: url(...) patterns
+        patterns = [
+            r'background-image:\s*url\(["\']?([^"\']+)["\']?\)',
+            r'background:\s*[^;]*url\(["\']?([^"\']+)["\']?\)',
+            r'background-image:\s*url\(([^)]+)\)',
+            r'background:\s*[^;]*url\(([^)]+)\)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, style_attr, re.IGNORECASE)
+            if match:
+                url = match.group(1).strip()
+                if url and not url.startswith('data:'):
+                    return urljoin(base_url, url)
+        
+        return None
+        
+    except Exception as e:
+        logger.debug(f"Error extracting background URL from style '{style_attr}': {e}")
+        return None
+
+def extract_jsonld_thumbnails(html_content: str, base_url: str) -> List[str]:
+    """
+    Extract thumbnail URLs from JSON-LD structured data.
+    
+    Args:
+        html_content: The HTML content to parse
+        base_url: Base URL for resolving relative URLs
+        
+    Returns:
+        List of extracted thumbnail URLs
+    """
+    thumbnails = []
+    
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Find all script tags with type="application/ld+json"
+        json_scripts = soup.find_all('script', type='application/ld+json')
+        
+        for script in json_scripts:
+            try:
+                # Parse JSON-LD
+                json_data = json.loads(script.string or '')
+                
+                # Handle both single objects and arrays
+                if isinstance(json_data, dict):
+                    json_data = [json_data]
+                elif not isinstance(json_data, list):
+                    continue
+                
+                for item in json_data:
+                    if not isinstance(item, dict):
+                        continue
+                    
+                    # Look for thumbnailUrl or image fields
+                    thumbnail_fields = ['thumbnailUrl', 'image', 'contentUrl']
+                    
+                    for field in thumbnail_fields:
+                        if field in item:
+                            value = item[field]
+                            
+                            # Handle different formats
+                            if isinstance(value, str):
+                                # Direct URL string
+                                if value and not value.startswith('data:'):
+                                    thumbnails.append(urljoin(base_url, value))
+                            elif isinstance(value, dict):
+                                # Object with url field
+                                if 'url' in value and isinstance(value['url'], str):
+                                    url = value['url']
+                                    if url and not url.startswith('data:'):
+                                        thumbnails.append(urljoin(base_url, url))
+                            elif isinstance(value, list):
+                                # Array of URLs or objects
+                                for item_url in value:
+                                    if isinstance(item_url, str):
+                                        if item_url and not item_url.startswith('data:'):
+                                            thumbnails.append(urljoin(base_url, item_url))
+                                    elif isinstance(item_url, dict) and 'url' in item_url:
+                                        url = item_url['url']
+                                        if url and not url.startswith('data:'):
+                                            thumbnails.append(urljoin(base_url, url))
+                    
+                    # Also check for nested objects (e.g., video.thumbnailUrl)
+                    if '@type' in item:
+                        # Check for VideoObject thumbnailUrl
+                        if item.get('@type') == 'VideoObject' and 'thumbnailUrl' in item:
+                            url = item['thumbnailUrl']
+                            if url and not url.startswith('data:'):
+                                thumbnails.append(urljoin(base_url, url))
+                        
+                        # Check for ImageObject contentUrl
+                        if item.get('@type') == 'ImageObject' and 'contentUrl' in item:
+                            url = item['contentUrl']
+                            if url and not url.startswith('data:'):
+                                thumbnails.append(urljoin(base_url, url))
+                
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.debug(f"Error parsing JSON-LD: {e}")
+                continue
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_thumbnails = []
+        for thumbnail in thumbnails:
+            if thumbnail not in seen:
+                seen.add(thumbnail)
+                unique_thumbnails.append(thumbnail)
+        
+        return unique_thumbnails
+        
+    except Exception as e:
+        logger.debug(f"Error extracting JSON-LD thumbnails: {e}")
+        return []
 
 # ============================================================================
 # MEMORY MANAGEMENT
@@ -212,10 +534,20 @@ class ImageCrawler:
         self.enable_audit_logging = enable_audit_logging  # Audit logging support
         self._early_exit_count = 0
         
-        # Concurrency control with semaphores
+        # Security and crawl policy settings
+        self.max_depth = DEFAULT_MAX_DEPTH
+        self.per_host_concurrency = DEFAULT_PER_HOST_CONCURRENCY
+        self.jitter_range = DEFAULT_JITTER_RANGE
+        self.respect_robots_txt = False  # Optional robots.txt respect flag
+        self.max_redirects = 3
+        self._redirect_counts = {}  # Track redirect counts per URL
+        
+        # Concurrency control with semaphores and per-host limits
         self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, 50))  # Allow more downloads
+        self._per_host_semaphores = {}  # Per-host concurrency control
+        self._per_host_limits = {}  # Track per-host limits
         
         # Thread pool for CPU-intensive face detection
         self._face_detection_thread_pool = concurrent.futures.ThreadPoolExecutor(
@@ -236,6 +568,7 @@ class ImageCrawler:
         self._gc_frequency = 10  # Force GC every N operations
         self._operation_count = 0
         self._cpu_sample_counter = 0  # Counter for CPU sampling frequency
+        self._jitter_applied = False  # Track if jitter has been applied
         
         self.session: Optional[httpx.AsyncClient] = None
         self.cache_service = get_hybrid_cache_service()  # Hybrid caching service
@@ -243,11 +576,17 @@ class ImageCrawler:
         
     async def __aenter__(self):
         """Async context manager entry."""
-        # Enable HTTP/2, connection pooling, and keep-alive for network efficiency
+        # Secure HTTP client with strict timeouts and TLS verification
         limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
         self.session = httpx.AsyncClient(
-            timeout=self.timeout,
-            follow_redirects=True,
+            timeout=httpx.Timeout(
+                connect=10.0,  # Connection timeout
+                read=30.0,    # Read timeout
+                write=10.0,   # Write timeout
+                pool=5.0      # Pool timeout
+            ),
+            follow_redirects=False,  # Manual redirect handling for security
+            verify=True,  # TLS verification
             http2=True,
             limits=limits,
             headers={
@@ -730,9 +1069,10 @@ class ImageCrawler:
     
     def extract_images_by_method(self, html_content: str, base_url: str, method: str = "smart") -> Tuple[List[ImageInfo], str]:
         """
-        Extract images using configurable targeting methods.
+        Extract images using configurable targeting methods with site recipe support.
         
         Supports flexible CSS selector patterns for different website structures.
+        Now integrates with site recipes for per-domain customization.
         
         Args:
             html_content: The HTML content to parse
@@ -748,71 +1088,39 @@ class ImageCrawler:
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             
-            if method == "smart":
-                # Try multiple extraction patterns in order of preference
-                patterns = [
-                    # PornHub-style patterns
-                    ("data-mediumthumb", [{"selector": "img[data-mediumthumb]", "description": "data-mediumthumb attribute"}]),
-                    ("js-videoThumb", [{"selector": "img.js-videoThumb", "description": "js-videoThumb class"}]),
-                    ("phimage", [{"selector": ".phimage img", "description": "images in .phimage containers"}]),
-                    ("latestThumb", [{"selector": "a.latestThumb img", "description": "images in .latestThumb links"}]),
-                    
-                    # Common video thumbnail patterns
-                    ("video-thumb", [
-                        {"selector": "img[data-video-thumb]", "description": "data-video-thumb attribute"},
-                        {"selector": ".video-thumb img", "description": ".video-thumb container images"},
-                        {"selector": ".thumbnail img", "description": ".thumbnail container images"},
-                        {"selector": ".thumb img", "description": ".thumb container images"}
-                    ]),
-                    
-                    # Size-based patterns (common video thumbnail dimensions)
-                    ("size-320x180", [{"selector": "img[width='320'][height='180']", "description": "320x180 dimensions"}]),
-                    ("size-640x360", [{"selector": "img[width='640'][height='360']", "description": "640x360 dimensions"}]),
-                    ("size-1280x720", [{"selector": "img[width='1280'][height='720']", "description": "1280x720 dimensions"}]),
-                    
-                    # Generic patterns
-                    ("all-images", [{"selector": "img", "description": "all images"}])
-                ]
+            # Get site recipe for this URL
+            recipe = get_recipe_for_url(base_url)
+            recipe_method = recipe.get("method", method)
+            
+            # Use recipe method if different from requested method
+            if recipe_method != method and method == "smart":
+                logger.info(f"Site recipe overrides method '{method}' with '{recipe_method}' for {base_url}")
+                method = recipe_method
+                method_used = recipe_method
+            
+            if method == "smart" or method == recipe_method:
+                # Use site recipe selectors if available, otherwise fall back to built-in patterns
+                recipe_selectors = recipe.get("selectors")
                 
-                logger.debug(f"DEBUG: Starting smart method extraction for URL: {base_url}")
-                for pattern_name, selectors in patterns:
-                    logger.debug(f"DEBUG: Trying pattern: {pattern_name}")
-                    images = self._extract_with_selectors(soup, base_url, selectors)
-                    logger.debug(f"DEBUG: Pattern {pattern_name} found {len(images)} images")
+                if recipe_selectors:
+                    logger.debug(f"Using site recipe selectors for {base_url}: {len(recipe_selectors)} selectors")
+                    images = self._extract_with_selectors(soup, base_url, recipe_selectors)
                     if images:
-                        method_used = pattern_name
-                        logger.info(f"Smart method selected: {pattern_name} (found {len(images)} images)")
+                        method_used = f"recipe-{recipe_method}"
+                        logger.info(f"Site recipe method '{recipe_method}' found {len(images)} images")
                         # Debug: Show first few image URLs
                         for i, img in enumerate(images[:3]):
-                            logger.debug(f"DEBUG: Sample image {i+1}: {img.url}")
-                        break
+                            logger.debug(f"DEBUG: Recipe image {i+1}: {img.url}")
                     else:
-                        logger.debug(f"DEBUG: Pattern {pattern_name} found no images, trying next pattern")
-            else:
-                # Use specific method
-                if method in ["data-mediumthumb", "js-videoThumb", "phimage", "latestThumb", "video-thumb", "size-320x180", "size-640x360", "size-1280x720", "all-images"]:
-                    # Map method names to their selectors
-                    method_selectors = {
-                        "data-mediumthumb": [{"selector": "img[data-mediumthumb]", "description": "data-mediumthumb attribute"}],
-                        "js-videoThumb": [{"selector": "img.js-videoThumb", "description": "js-videoThumb class"}],
-                        "phimage": [{"selector": ".phimage img", "description": "images in .phimage containers"}],
-                        "latestThumb": [{"selector": "a.latestThumb img", "description": "images in .latestThumb links"}],
-                        "video-thumb": [
-                            {"selector": "img[data-video-thumb]", "description": "data-video-thumb attribute"},
-                            {"selector": ".video-thumb img", "description": ".video-thumb container images"},
-                            {"selector": ".thumbnail img", "description": ".thumbnail container images"},
-                            {"selector": ".thumb img", "description": ".thumb container images"}
-                        ],
-                        "size-320x180": [{"selector": "img[width='320'][height='180']", "description": "320x180 dimensions"}],
-                        "size-640x360": [{"selector": "img[width='640'][height='360']", "description": "640x360 dimensions"}],
-                        "size-1280x720": [{"selector": "img[width='1280'][height='720']", "description": "1280x720 dimensions"}],
-                        "all-images": [{"selector": "img", "description": "all images"}]
-                    }
-                    images = self._extract_with_selectors(soup, base_url, method_selectors[method])
+                        logger.debug(f"Site recipe found no images, falling back to built-in patterns")
+                        # Fall back to built-in patterns
+                        images, method_used = self._extract_with_builtin_patterns(soup, base_url, "smart")
                 else:
-                    logger.warning(f"Unknown method '{method}', falling back to all images")
-                    images = self._extract_with_selectors(soup, base_url, [{"selector": "img", "description": "all images"}])
-                    method_used = "all-images"
+                    # No recipe selectors, use built-in patterns
+                    images, method_used = self._extract_with_builtin_patterns(soup, base_url, "smart")
+            else:
+                # Use specific method (either built-in or recipe-based)
+                images, method_used = self._extract_with_builtin_patterns(soup, base_url, method)
             
             logger.info(f"Found {len(images)} images using method: {method_used}")
                 
@@ -821,11 +1129,95 @@ class ImageCrawler:
             
         return images, method_used
     
+    def _extract_with_builtin_patterns(self, soup, base_url: str, method: str) -> Tuple[List[ImageInfo], str]:
+        """
+        Extract images using built-in patterns (fallback when no recipe is available).
+        
+        Args:
+            soup: BeautifulSoup parsed HTML
+            base_url: Base URL for resolving relative URLs
+            method: Targeting method
+            
+        Returns:
+            Tuple of (images_list, method_used)
+        """
+        images = []
+        method_used = method
+        
+        if method == "smart":
+            # Try multiple extraction patterns in order of preference
+            patterns = [
+                # PornHub-style patterns
+                ("data-mediumthumb", [{"selector": "img[data-mediumthumb]", "description": "data-mediumthumb attribute"}]),
+                ("js-videoThumb", [{"selector": "img.js-videoThumb", "description": "js-videoThumb class"}]),
+                ("phimage", [{"selector": ".phimage img", "description": "images in .phimage containers"}]),
+                ("latestThumb", [{"selector": "a.latestThumb img", "description": "images in .latestThumb links"}]),
+                
+                # Common video thumbnail patterns
+                ("video-thumb", [
+                    {"selector": "img[data-video-thumb]", "description": "data-video-thumb attribute"},
+                    {"selector": ".video-thumb img", "description": ".video-thumb container images"},
+                    {"selector": ".thumbnail img", "description": ".thumbnail container images"},
+                    {"selector": ".thumb img", "description": ".thumb container images"}
+                ]),
+                
+                # Size-based patterns (common video thumbnail dimensions)
+                ("size-320x180", [{"selector": "img[width='320'][height='180']", "description": "320x180 dimensions"}]),
+                ("size-640x360", [{"selector": "img[width='640'][height='360']", "description": "640x360 dimensions"}]),
+                ("size-1280x720", [{"selector": "img[width='1280'][height='720']", "description": "1280x720 dimensions"}]),
+                
+                # Generic patterns
+                ("all-images", [{"selector": "img", "description": "all images"}])
+            ]
+            
+            logger.debug(f"DEBUG: Starting built-in smart method extraction for URL: {base_url}")
+            for pattern_name, selectors in patterns:
+                logger.debug(f"DEBUG: Trying pattern: {pattern_name}")
+                images = self._extract_with_selectors(soup, base_url, selectors)
+                logger.debug(f"DEBUG: Pattern {pattern_name} found {len(images)} images")
+                if images:
+                    method_used = pattern_name
+                    logger.info(f"Built-in method selected: {pattern_name} (found {len(images)} images)")
+                    # Debug: Show first few image URLs
+                    for i, img in enumerate(images[:3]):
+                        logger.debug(f"DEBUG: Sample image {i+1}: {img.url}")
+                    break
+                else:
+                    logger.debug(f"DEBUG: Pattern {pattern_name} found no images, trying next pattern")
+        else:
+            # Use specific method
+            if method in ["data-mediumthumb", "js-videoThumb", "phimage", "latestThumb", "video-thumb", "size-320x180", "size-640x360", "size-1280x720", "all-images"]:
+                # Map method names to their selectors
+                method_selectors = {
+                    "data-mediumthumb": [{"selector": "img[data-mediumthumb]", "description": "data-mediumthumb attribute"}],
+                    "js-videoThumb": [{"selector": "img.js-videoThumb", "description": "js-videoThumb class"}],
+                    "phimage": [{"selector": ".phimage img", "description": "images in .phimage containers"}],
+                    "latestThumb": [{"selector": "a.latestThumb img", "description": "images in .latestThumb links"}],
+                    "video-thumb": [
+                        {"selector": "img[data-video-thumb]", "description": "data-video-thumb attribute"},
+                        {"selector": ".video-thumb img", "description": ".video-thumb container images"},
+                        {"selector": ".thumbnail img", "description": ".thumbnail container images"},
+                        {"selector": ".thumb img", "description": ".thumb container images"}
+                    ],
+                    "size-320x180": [{"selector": "img[width='320'][height='180']", "description": "320x180 dimensions"}],
+                    "size-640x360": [{"selector": "img[width='640'][height='360']", "description": "640x360 dimensions"}],
+                    "size-1280x720": [{"selector": "img[width='1280'][height='720']", "description": "1280x720 dimensions"}],
+                    "all-images": [{"selector": "img", "description": "all images"}]
+                }
+                images = self._extract_with_selectors(soup, base_url, method_selectors[method])
+            else:
+                logger.warning(f"Unknown method '{method}', falling back to all images")
+                images = self._extract_with_selectors(soup, base_url, [{"selector": "img", "description": "all images"}])
+                method_used = "all-images"
+        
+        return images, method_used
+    
     def _extract_with_selectors(self, soup, base_url: str, selectors: List[Dict]) -> List[ImageInfo]:
         """
-        Extract images using CSS selectors with flexible matching.
+        Extract images using CSS selectors with flexible matching and expanded sources.
         
-        Provides robust selector handling for various HTML structures.
+        Provides robust selector handling for various HTML structures and additional
+        extraction methods for comprehensive thumbnail discovery.
         
         Args:
             soup: BeautifulSoup parsed HTML
@@ -838,6 +1230,7 @@ class ImageCrawler:
         all_images = []
         seen_urls = set()  # Avoid duplicates
         
+        # First, try traditional CSS selector-based extraction
         for selector_config in selectors:
             try:
                 selector = selector_config["selector"]
@@ -881,36 +1274,252 @@ class ImageCrawler:
                     # Generic CSS selector
                     imgs = soup.select(selector)
                 
-                # Process found images
+                # Process found images with expanded source detection
                 for img in imgs:
-                    src = img.get('src') or img.get('data-src') or img.get('data-lazy-src')
-                    if src and src not in seen_urls:
-                        seen_urls.add(src)
-                        all_images.append(img)
+                    img_urls = self._extract_img_urls(img, base_url)
+                    for url in img_urls:
+                        if url and url not in seen_urls:
+                            seen_urls.add(url)
+                            # Create a mock img tag with the extracted URL
+                            class MockImg:
+                                def __init__(self, src_url):
+                                    self.src_url = src_url
+                                def get(self, attr, default=''):
+                                    return self.src_url if attr == 'src' else default
+                            mock_img = MockImg(url)
+                            all_images.append(mock_img)
                         
             except Exception as e:
                 logger.warning(f"Error with selector '{selector_config}': {str(e)}")
                 continue
         
-        logger.debug(f"Found {len(all_images)} unique images using {len(selectors)} selectors")
+        # Then, perform comprehensive extraction for additional sources
+        additional_images = self._extract_additional_sources(soup, base_url, seen_urls)
+        all_images.extend(additional_images)
+        
+        logger.debug(f"Found {len(all_images)} unique images using {len(selectors)} selectors + additional sources")
         return self._process_img_tags(all_images, base_url)
     
+    def _extract_img_urls(self, img_tag, base_url: str) -> List[str]:
+        """
+        Extract all possible image URLs from an img tag including srcset.
+        
+        Args:
+            img_tag: BeautifulSoup img tag
+            base_url: Base URL for resolving relative URLs
+            
+        Returns:
+            List of extracted image URLs
+        """
+        urls = []
+        
+        # Standard src attribute
+        src = img_tag.get('src')
+        if src:
+            urls.append(urljoin(base_url, src))
+        
+        # Data attributes (lazy loading)
+        data_src = img_tag.get('data-src')
+        if data_src:
+            urls.append(urljoin(base_url, data_src))
+        
+        data_lazy_src = img_tag.get('data-lazy-src')
+        if data_lazy_src:
+            urls.append(urljoin(base_url, data_lazy_src))
+        
+        # Srcset attribute
+        srcset = img_tag.get('srcset')
+        if srcset:
+            srcset_url = pick_from_srcset(srcset, base_url)
+            if srcset_url:
+                urls.append(srcset_url)
+        
+        # Other common data attributes
+        for attr in ['data-original', 'data-large', 'data-medium', 'data-thumb']:
+            value = img_tag.get(attr)
+            if value:
+                urls.append(urljoin(base_url, value))
+        
+        return urls
+    
+    def _extract_additional_sources(self, soup, base_url: str, seen_urls: Set[str]) -> List:
+        """
+        Extract images from additional sources beyond CSS selectors.
+        
+        Args:
+            soup: BeautifulSoup parsed HTML
+            base_url: Base URL for resolving relative URLs
+            seen_urls: Set of URLs already found to avoid duplicates
+            
+        Returns:
+            List of mock img tags for additional images found
+        """
+        additional_images = []
+        
+        try:
+            # 1. Meta tags (Open Graph, Twitter Cards, etc.)
+            meta_selectors = [
+                ('meta[property="og:image"]', 'content'),
+                ('meta[name="twitter:image"]', 'content'),
+                ('meta[name="twitter:image:src"]', 'content'),
+                ('meta[property="og:image:url"]', 'content'),
+                ('meta[name="thumbnail"]', 'content'),
+                ('meta[name="image"]', 'content'),
+                ('meta[property="image"]', 'content'),
+                ('link[rel="image_src"]', 'href'),
+                ('link[rel="apple-touch-icon"]', 'href'),
+                ('link[rel="icon"]', 'href')
+            ]
+            
+            for selector, attr in meta_selectors:
+                for element in soup.select(selector):
+                    url = element.get(attr)
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        absolute_url = urljoin(base_url, url)
+                        class MockImg:
+                            def __init__(self, src_url):
+                                self.src_url = src_url
+                            def get(self, attr, default=''):
+                                return self.src_url if attr == 'src' else default
+                        mock_img = MockImg(absolute_url)
+                        additional_images.append(mock_img)
+            
+            # 2. Video poster attributes
+            for video in soup.find_all('video', poster=True):
+                poster_url = video.get('poster')
+                if poster_url and poster_url not in seen_urls:
+                    seen_urls.add(poster_url)
+                    absolute_url = urljoin(base_url, poster_url)
+                    class MockImg:
+                        def __init__(self, src_url):
+                            self.src_url = src_url
+                        def get(self, attr, default=''):
+                            return self.src_url if attr == 'src' else default
+                    mock_img = MockImg(absolute_url)
+                    additional_images.append(mock_img)
+            
+            # 3. Source tags with srcset
+            for source in soup.find_all('source', srcset=True):
+                srcset = source.get('srcset')
+                if srcset:
+                    srcset_url = pick_from_srcset(srcset, base_url)
+                    if srcset_url and srcset_url not in seen_urls:
+                        seen_urls.add(srcset_url)
+                        class MockImg:
+                            def __init__(self, src_url):
+                                self.src_url = src_url
+                            def get(self, attr, default=''):
+                                return self.src_url if attr == 'src' else default
+                        mock_img = MockImg(srcset_url)
+                        additional_images.append(mock_img)
+                
+                # Also check src attribute on source tags
+                src = source.get('src')
+                if src and src not in seen_urls:
+                    seen_urls.add(src)
+                    absolute_url = urljoin(base_url, src)
+                    class MockImg:
+                        def __init__(self, src_url):
+                            self.src_url = src_url
+                        def get(self, attr, default=''):
+                            return self.src_url if attr == 'src' else default
+                    mock_img = MockImg(absolute_url)
+                    additional_images.append(mock_img)
+            
+            # 4. Inline background images from style attributes
+            for element in soup.find_all(style=True):
+                style_attr = element.get('style')
+                if style_attr:
+                    bg_url = extract_style_bg_url(style_attr, base_url)
+                    if bg_url and bg_url not in seen_urls:
+                        seen_urls.add(bg_url)
+                        class MockImg:
+                            def __init__(self, src_url):
+                                self.src_url = src_url
+                            def get(self, attr, default=''):
+                                return self.src_url if attr == 'src' else default
+                        mock_img = MockImg(bg_url)
+                        additional_images.append(mock_img)
+            
+            # 5. JSON-LD structured data
+            jsonld_urls = extract_jsonld_thumbnails(str(soup), base_url)
+            for url in jsonld_urls:
+                if url not in seen_urls:
+                    seen_urls.add(url)
+                    class MockImg:
+                        def __init__(self, src_url):
+                            self.src_url = src_url
+                        def get(self, attr, default=''):
+                            return self.src_url if attr == 'src' else default
+                    mock_img = MockImg(url)
+                    additional_images.append(mock_img)
+            
+        except Exception as e:
+            logger.warning(f"Error extracting additional sources: {e}")
+        
+        return additional_images
     
     def _process_img_tags(self, img_tags, base_url: str) -> List[ImageInfo]:
-        """Process a list of img tags and return ImageInfo objects."""
+        """Process a list of img tags and return ImageInfo objects with security validation and recipe-based attribute extraction."""
         images = []
         
+        # Get site recipe for attribute priority
+        recipe = get_recipe_for_url(base_url)
+        attributes_priority = recipe.get("attributes_priority", ["alt", "title", "data-title", "data-alt"])
+        extra_sources = recipe.get("extra_sources", [])
+        
         for img in img_tags:
-            src = img.get('src')
+            # Try multiple sources for image URL (including recipe-specific sources)
+            src = None
+            for source in ["src"] + extra_sources:
+                src = img.get(source)
+                if src:
+                    break
+            
             if not src:
                 continue
                 
             # Resolve relative URLs
             absolute_url = urljoin(base_url, src)
             
-            # Extract image metadata
-            alt_text = img.get('alt', '')
-            title = img.get('title', '')
+            # Validate URL security
+            is_safe, reason = validate_url_security(absolute_url)
+            if not is_safe:
+                logger.info(f"Image URL rejected: {reason} - {_truncate_log_string(absolute_url)}")
+                continue
+            
+            # Extract image metadata using recipe-based attribute priority
+            alt_text = ""
+            title = ""
+            
+            # Extract alt text using priority order
+            for attr in attributes_priority:
+                if attr in ["alt", "title"]:
+                    value = img.get(attr, '')
+                    if value:
+                        if attr == "alt":
+                            alt_text = value
+                        elif attr == "title":
+                            title = value
+                        break
+                else:
+                    # Custom attributes
+                    value = img.get(attr, '')
+                    if value:
+                        # Use first non-empty attribute for alt_text
+                        if not alt_text:
+                            alt_text = value
+                        elif not title:
+                            title = value
+                        break
+            
+            # Fallback to standard attributes if recipe attributes didn't provide values
+            if not alt_text:
+                alt_text = img.get('alt', '')
+            if not title:
+                title = img.get('title', '')
+            
             width = img.get('width')
             height = img.get('height')
             
@@ -952,28 +1561,12 @@ class ImageCrawler:
                 last_exc = None
                 for attempt in range(3):
                     try:
-                        # Use streaming GET request instead of HEAD + GET
-                        async with self.session.stream("GET", image_info.url) as response:
-                            response.raise_for_status()
-                            
-                            # Early abort: Check content type from headers
-                            content_type = response.headers.get('content-type', '').lower()
-                            if not any(img_type in content_type for img_type in ['image/', 'jpeg', 'png', 'gif', 'webp']):
-                                errors.append(f"Content type not an image: {content_type}")
-                                return None, errors
-                            
-                            # Early abort: Check file size from content-length header
-                            content_length = response.headers.get('content-length')
-                            if content_length and int(content_length) > self.max_file_size:
-                                errors.append(f"File too large: {content_length} bytes")
-                                return None, errors
-                            
-                            # Stream content with rolling buffer for MIME sniffing and early abort
-                            content = await self._stream_image_content(response, image_info, errors)
-                            if content is None:  # Early abort occurred
-                                return None, errors
-                            
-                            break
+                        # Use streaming GET request with manual redirect handling
+                        content = await self._download_with_redirect_handling(image_info.url, errors)
+                        if content is None:  # Early abort occurred
+                            return None, errors
+                        
+                        break
                     except httpx.HTTPError as e:
                         last_exc = e
                         if attempt < 2:
@@ -996,6 +1589,69 @@ class ImageCrawler:
                 logger.error(error_msg)
                 errors.append(error_msg)
                 return None, errors
+    
+    async def _download_with_redirect_handling(self, url: str, errors: List[str]) -> Optional[bytes]:
+        """Download with manual redirect handling for security."""
+        current_url = url
+        redirect_count = 0
+        
+        while redirect_count <= self.max_redirects:
+            # Validate URL security
+            is_safe, reason = validate_url_security(current_url)
+            if not is_safe:
+                logger.warning(f"URL rejected: {reason} - {_truncate_log_string(current_url)}")
+                errors.append(f"URL rejected: {reason}")
+                return None
+            
+            try:
+                async with self.session.stream("GET", current_url) as response:
+                    # Handle redirects
+                    if response.status_code in (301, 302, 303, 307, 308):
+                        redirect_url = response.headers.get('location')
+                        if not redirect_url:
+                            errors.append("Redirect without location header")
+                            return None
+                        
+                        # Resolve relative redirects
+                        redirect_url = urljoin(current_url, redirect_url)
+                        
+                        # Validate redirect security
+                        is_safe, reason = validate_redirect_security(redirect_url, redirect_count, self.max_redirects)
+                        if not is_safe:
+                            logger.warning(f"Redirect rejected: {reason} - {_truncate_log_string(redirect_url)}")
+                            errors.append(f"Redirect rejected: {reason}")
+                            return None
+                        
+                        current_url = redirect_url
+                        redirect_count += 1
+                        continue
+                    
+                    response.raise_for_status()
+                    
+                    # Validate content security
+                    content_type = response.headers.get('content-type', '')
+                    content_length = response.headers.get('content-length')
+                    content_length = int(content_length) if content_length else None
+                    
+                    is_safe, reason = validate_content_security(content_type, content_length)
+                    if not is_safe:
+                        logger.warning(f"Content rejected: {reason} - {content_type}")
+                        errors.append(f"Content rejected: {reason}")
+                        return None
+                    
+                    # Stream content with rolling buffer for MIME sniffing and early abort
+                    content = await self._stream_image_content(response, ImageInfo(url=current_url, alt_text='', title='', width=None, height=None), errors)
+                    return content
+                    
+            except httpx.HTTPError as e:
+                if redirect_count == 0:
+                    raise
+                else:
+                    errors.append(f"HTTP error after {redirect_count} redirects: {str(e)}")
+                    return None
+        
+        errors.append(f"Too many redirects: {redirect_count}")
+        return None
     
     async def _stream_image_content(self, response: httpx.Response, image_info: ImageInfo, errors: List[str]) -> Optional[bytes]:
         """
@@ -1020,9 +1676,9 @@ class ImageCrawler:
             async for chunk in response.aiter_bytes(chunk_size=64 * 1024):  # 64KB chunks
                 total_size += len(chunk)
                 
-                # Early abort: Check total size
-                if total_size > self.max_file_size:
-                    errors.append(f"File too large during streaming: {total_size} bytes")
+                # Early abort: Check total size against security limit
+                if total_size > MAX_CONTENT_LENGTH:
+                    errors.append(f"File too large during streaming: {total_size} bytes (max: {MAX_CONTENT_LENGTH})")
                     return None
                 
                 # Add to rolling buffer for header detection
@@ -1052,10 +1708,13 @@ class ImageCrawler:
             # Assemble final content
             content = b''.join(content_chunks)
             
-            # Final size check
-            if len(content) > self.max_file_size:
-                errors.append(f"Final file size too large: {len(content)} bytes")
+            # Final size check against security limit
+            if len(content) > MAX_CONTENT_LENGTH:
+                errors.append(f"Final file size too large: {len(content)} bytes (max: {MAX_CONTENT_LENGTH})")
                 return None
+            
+            # Strip EXIF data for security
+            content = self._strip_exif_data(content)
             
             return content
             
@@ -1069,6 +1728,38 @@ class ImageCrawler:
             del content_chunks
             del rolling_buffer
             gc.collect()
+    
+    def _strip_exif_data(self, image_bytes: bytes) -> bytes:
+        """
+        Strip EXIF data from image for security.
+        
+        Args:
+            image_bytes: Original image data
+            
+        Returns:
+            Image data with EXIF stripped
+        """
+        try:
+            from PIL import Image
+            import io
+            
+            # Open image and remove EXIF
+            image = Image.open(io.BytesIO(image_bytes))
+            
+            # Create new image without EXIF
+            if image.mode in ('RGBA', 'LA', 'P'):
+                # Convert to RGB for JPEG compatibility
+                image = image.convert('RGB')
+            
+            # Save without EXIF
+            output = io.BytesIO()
+            image.save(output, format='JPEG', quality=95, optimize=True)
+            
+            return output.getvalue()
+            
+        except Exception as e:
+            logger.warning(f"Failed to strip EXIF data: {e}. Using original image.")
+            return image_bytes
     
     def _is_image_header(self, data: bytes) -> bool:
         """
@@ -1218,28 +1909,84 @@ class ImageCrawler:
         errors = []
         
         try:
-            logger.info(f"Fetching page: {_truncate_log_string(url)}")
-            response = await self.session.get(url)
-            response.raise_for_status()
-            
-            # Check content type
-            content_type = response.headers.get('content-type', '').lower()
-            if 'text/html' not in content_type:
-                errors.append(f"Content type '{content_type}' is not HTML")
+            # Validate URL security first
+            is_safe, reason = validate_url_security(url)
+            if not is_safe:
+                logger.warning(f"Page URL rejected: {reason} - {_truncate_log_string(url)}")
+                errors.append(f"Page URL rejected: {reason}")
                 return None, errors
-                
-            return response.text, errors
             
-        except httpx.HTTPError as e:
-            error_msg = f"HTTP error fetching {_truncate_log_string(url)}: {str(e)}"
-            logger.error(error_msg)
-            errors.append(error_msg)
-            return None, errors
+            logger.info(f"Fetching page: {_truncate_log_string(url)}")
+            
+            # Use manual redirect handling for page fetching too
+            content = await self._fetch_with_redirect_handling(url, errors)
+            return content, errors
+            
         except Exception as e:
             error_msg = f"Unexpected error fetching {_truncate_log_string(url)}: {str(e)}"
             logger.error(error_msg)
             errors.append(error_msg)
             return None, errors
+    
+    async def _fetch_with_redirect_handling(self, url: str, errors: List[str]) -> Optional[str]:
+        """Fetch page content with manual redirect handling."""
+        current_url = url
+        redirect_count = 0
+        
+        while redirect_count <= self.max_redirects:
+            # Validate URL security
+            is_safe, reason = validate_url_security(current_url)
+            if not is_safe:
+                logger.warning(f"Page URL rejected: {reason} - {_truncate_log_string(current_url)}")
+                errors.append(f"Page URL rejected: {reason}")
+                return None
+            
+            try:
+                response = await self.session.get(current_url)
+                
+                # Handle redirects
+                if response.status_code in (301, 302, 303, 307, 308):
+                    redirect_url = response.headers.get('location')
+                    if not redirect_url:
+                        errors.append("Redirect without location header")
+                        return None
+                    
+                    # Resolve relative redirects
+                    redirect_url = urljoin(current_url, redirect_url)
+                    
+                    # Validate redirect security
+                    is_safe, reason = validate_redirect_security(redirect_url, redirect_count, self.max_redirects)
+                    if not is_safe:
+                        logger.warning(f"Page redirect rejected: {reason} - {_truncate_log_string(redirect_url)}")
+                        errors.append(f"Page redirect rejected: {reason}")
+                        return None
+                    
+                    current_url = redirect_url
+                    redirect_count += 1
+                    continue
+                
+                response.raise_for_status()
+                
+                # Check content type
+                content_type = response.headers.get('content-type', '').lower()
+                if 'text/html' not in content_type:
+                    errors.append(f"Content type '{content_type}' is not HTML")
+                    return None
+                
+                return response.text
+                
+            except httpx.HTTPError as e:
+                if redirect_count == 0:
+                    error_msg = f"HTTP error fetching {_truncate_log_string(current_url)}: {str(e)}"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+                    return None
+                else:
+                    errors.append(f"HTTP error after {redirect_count} redirects: {str(e)}")
+                    return None
+        
+        errors.append(f"Too many redirects: {redirect_count}")
+        return None
     
     def extract_page_urls(self, html_content: str, base_url: str) -> List[str]:
         """
@@ -1298,7 +2045,7 @@ class ImageCrawler:
     
     def _is_valid_page_url(self, url: str, base_url: str) -> bool:
         """
-        Check if a URL is valid for crawling.
+        Check if a URL is valid for crawling with security validation.
         
         Args:
             url: URL to check
@@ -1308,6 +2055,12 @@ class ImageCrawler:
             True if URL is valid for crawling
         """
         try:
+            # First, validate URL security
+            is_safe, reason = validate_url_security(url)
+            if not is_safe:
+                logger.info(f"URL rejected for crawling: {reason} - {_truncate_log_string(url)}")
+                return False
+            
             parsed_url = urlparse(url)
             parsed_base = urlparse(base_url)
             
@@ -1347,46 +2100,78 @@ class ImageCrawler:
     # MAIN CRAWLING METHODS
     # ============================================================================
     
+    async def _apply_jitter(self):
+        """Apply random jitter to avoid rate limiting."""
+        if not self._jitter_applied:
+            jitter_ms = random.randint(*self.jitter_range)
+            await asyncio.sleep(jitter_ms / 1000.0)
+            self._jitter_applied = True
+            logger.debug(f"Applied {jitter_ms}ms jitter")
+    
+    async def _get_host_semaphore(self, url: str) -> asyncio.Semaphore:
+        """Get or create a semaphore for per-host concurrency control."""
+        parsed_url = urlparse(url)
+        host = parsed_url.netloc.lower()
+        
+        if host not in self._per_host_semaphores:
+            # Set per-host limit based on host reputation (placeholder logic)
+            limit = self.per_host_concurrency
+            if 'cdn' in host or 'static' in host:
+                limit = min(limit * 2, 8)  # Allow more for CDNs
+            
+            self._per_host_semaphores[host] = asyncio.Semaphore(limit)
+            self._per_host_limits[host] = limit
+            logger.debug(f"Created semaphore for host {host} with limit {limit}")
+        
+        return self._per_host_semaphores[host]
+    
     async def crawl_page(self, url: str, method: str = "smart") -> CrawlResult:
         """Crawl a single page for images using the specified method."""
         start_time = datetime.utcnow()
         logger.info(f"Starting crawl of: {_truncate_log_string(url)} using method: {method} (tenant: {self.tenant_id}, min_face_quality: {self.min_face_quality}, require_face: {self.require_face})")
         
-        # Reset cache statistics for this crawl
-        self.cache_service.reset_cache_stats()
+        # Apply jitter to avoid rate limiting
+        await self._apply_jitter()
         
-        saved_raw_keys = []
-        saved_thumbnail_keys = []
-        all_errors = []
-        cache_hits = 0
-        cache_misses = 0
+        # Get per-host semaphore for concurrency control
+        host_semaphore = await self._get_host_semaphore(url)
         
-        # Enable dynamic concurrency with memory management
-        self._adjust_concurrency_dynamically()
-        
-        # Fetch the page
-        html_content, fetch_errors = await self.fetch_page(url)
-        all_errors.extend(fetch_errors)
-        
-        if not html_content:
-            end_time = datetime.utcnow()
-            total_duration = (end_time - start_time).total_seconds()
-            logger.error("Failed to fetch page content")
-            return CrawlResult(
-                url=url,
-                images_found=0,
-                raw_images_saved=0,
-                thumbnails_saved=0,
-                pages_crawled=0,
-                saved_raw_keys=[],
-                saved_thumbnail_keys=[],
-                errors=all_errors,
-                targeting_method="failed",
-                tenant_id=self.tenant_id,
-                total_duration_seconds=total_duration,
-                start_time=start_time,
-                end_time=end_time
-            )
+        async with host_semaphore:
+            # Reset cache statistics for this crawl
+            self.cache_service.reset_cache_stats()
+            
+            saved_raw_keys = []
+            saved_thumbnail_keys = []
+            all_errors = []
+            cache_hits = 0
+            cache_misses = 0
+            
+            # Enable dynamic concurrency with memory management
+            self._adjust_concurrency_dynamically()
+            
+            # Fetch the page
+            html_content, fetch_errors = await self.fetch_page(url)
+            all_errors.extend(fetch_errors)
+            
+            if not html_content:
+                end_time = datetime.utcnow()
+                total_duration = (end_time - start_time).total_seconds()
+                logger.error("Failed to fetch page content")
+                return CrawlResult(
+                    url=url,
+                    images_found=0,
+                    raw_images_saved=0,
+                    thumbnails_saved=0,
+                    pages_crawled=0,
+                    saved_raw_keys=[],
+                    saved_thumbnail_keys=[],
+                    errors=all_errors,
+                    targeting_method="failed",
+                    tenant_id=self.tenant_id,
+                    total_duration_seconds=total_duration,
+                    start_time=start_time,
+                    end_time=end_time
+                )
         
         # Extract images using specified method
         images, method_used = self.extract_images_by_method(html_content, url, method)
@@ -1450,11 +2235,11 @@ class ImageCrawler:
             CrawlResult with aggregated statistics
         """
         start_time = datetime.utcnow()
-        logger.info(f"Starting site crawl from: {_truncate_log_string(start_url)} (tenant: {self.tenant_id}, max_images: {self.max_total_images}, max_pages: {self.max_pages})")
+        logger.info(f"Starting site crawl from: {_truncate_log_string(start_url)} (tenant: {self.tenant_id}, max_images: {self.max_total_images}, max_pages: {self.max_pages}, max_depth: {self.max_depth})")
         
         # Initialize crawling state
         visited_urls = set()
-        urls_to_visit = [start_url]
+        urls_to_visit = [(start_url, 0)]  # (url, depth)
         all_saved_raw_keys = []
         all_saved_thumbnail_keys = []
         all_errors = []
@@ -1467,10 +2252,10 @@ class ImageCrawler:
         
         while urls_to_visit and len(all_saved_thumbnail_keys) < self.max_total_images and pages_crawled < self.max_pages:
             # Get next URL to visit
-            current_url = urls_to_visit.pop(0)
+            current_url, current_depth = urls_to_visit.pop(0)
             
-            # Skip if already visited
-            if current_url in visited_urls:
+            # Skip if already visited or depth limit exceeded
+            if current_url in visited_urls or current_depth > self.max_depth:
                 continue
             
             visited_urls.add(current_url)
@@ -1496,7 +2281,7 @@ class ImageCrawler:
                 logger.info(f"Page {pages_crawled} results: Found {page_result.images_found}, Raw Saved {page_result.raw_images_saved}, Thumbnails Saved {page_result.thumbnails_saved}")
                 
                 # If we haven't reached the thumbnail limit, discover new URLs
-                if len(all_saved_thumbnail_keys) < self.max_total_images and len(urls_to_visit) < self.max_pages * 2:
+                if len(all_saved_thumbnail_keys) < self.max_total_images and len(urls_to_visit) < self.max_pages * 2 and current_depth < self.max_depth:
                     # Fetch page content for URL discovery
                     html_content, fetch_errors = await self.fetch_page(current_url)
                     all_errors.extend(fetch_errors)
@@ -1505,12 +2290,12 @@ class ImageCrawler:
                         # Extract new URLs
                         new_urls = self.extract_page_urls(html_content, current_url)
                         
-                        # Add new URLs to visit queue (prioritize unseen URLs)
+                        # Add new URLs to visit queue with incremented depth
                         for url in new_urls:
-                            if url not in visited_urls and url not in urls_to_visit:
-                                urls_to_visit.append(url)
+                            if url not in visited_urls and (url, current_depth + 1) not in urls_to_visit:
+                                urls_to_visit.append((url, current_depth + 1))
                         
-                        logger.info(f"Found {len(new_urls)} new URLs to explore")
+                        logger.info(f"Found {len(new_urls)} new URLs to explore at depth {current_depth + 1}")
                 
                 # Check if we've reached our goals
                 if len(all_saved_thumbnail_keys) >= self.max_total_images:
