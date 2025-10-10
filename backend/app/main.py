@@ -334,7 +334,7 @@ def get_p95_metrics():
 @app.get("/performance/recommendations")
 async def get_performance_recommendations():
     """Get performance recommendations based on current metrics."""
-    from ..services.performance import get_performance_optimizer
+    from app.services.performance import get_performance_optimizer
     
     optimizer = get_performance_optimizer()
     recommendations = await optimizer.get_performance_recommendations()
@@ -343,7 +343,7 @@ async def get_performance_recommendations():
 @app.get("/performance/thresholds")
 async def get_performance_thresholds():
     """Monitor performance thresholds and alert if exceeded."""
-    from ..services.performance import get_performance_optimizer
+    from app.services.performance import get_performance_optimizer
     
     optimizer = get_performance_optimizer()
     thresholds = await optimizer.monitor_performance_thresholds()
@@ -352,7 +352,7 @@ async def get_performance_thresholds():
 @app.get("/cache/stats")
 async def get_cache_stats():
     """Get cache statistics and performance metrics."""
-    from ..services.cache import get_cache_service
+    from app.services.cache import get_cache_service
     
     cache_service = get_cache_service()
     stats = await cache_service.get_cache_stats()
@@ -361,7 +361,7 @@ async def get_cache_stats():
 @app.delete("/cache/tenant/{tenant_id}")
 async def clear_tenant_cache(tenant_id: str):
     """Clear all cached data for a specific tenant."""
-    from ..services.cache import get_cache_service
+    from app.services.cache import get_cache_service
     
     cache_service = get_cache_service()
     deleted_count = await cache_service.invalidate_tenant_cache(tenant_id)
@@ -373,7 +373,7 @@ async def clear_tenant_cache(tenant_id: str):
 @app.delete("/cache/all")
 async def clear_all_cache():
     """Clear all cached data (use with caution)."""
-    from ..services.cache import get_cache_service
+    from app.services.cache import get_cache_service
     
     cache_service = get_cache_service()
     success = await cache_service.clear_all_cache()
@@ -421,7 +421,7 @@ async def clear_all_cache():
 )
 async def get_system_overview():
     """Get system overview dashboard data."""
-    from ..services.dashboard import get_dashboard_service
+    from app.services.dashboard import get_dashboard_service
     
     dashboard_service = get_dashboard_service()
     overview = await dashboard_service.get_system_overview()
@@ -465,7 +465,7 @@ async def get_system_overview():
 )
 async def get_performance_metrics(time_range_hours: int = 24):
     """Get detailed performance metrics."""
-    from ..services.dashboard import get_dashboard_service
+    from app.services.dashboard import get_dashboard_service
     
     dashboard_service = get_dashboard_service()
     metrics = await dashboard_service.get_performance_metrics(time_range_hours)
@@ -504,7 +504,7 @@ async def get_performance_metrics(time_range_hours: int = 24):
 )
 async def get_usage_analytics(time_range_hours: int = 24):
     """Get usage analytics and trends."""
-    from ..services.dashboard import get_dashboard_service
+    from app.services.dashboard import get_dashboard_service
     
     dashboard_service = get_dashboard_service()
     analytics = await dashboard_service.get_usage_analytics(time_range_hours)
@@ -542,7 +542,7 @@ async def get_usage_analytics(time_range_hours: int = 24):
 )
 async def get_tenant_metrics(tenant_id: str):
     """Get metrics for a specific tenant."""
-    from ..services.dashboard import get_dashboard_service
+    from app.services.dashboard import get_dashboard_service
     
     dashboard_service = get_dashboard_service()
     metrics = await dashboard_service.get_tenant_metrics(tenant_id)
@@ -588,7 +588,7 @@ async def get_tenant_metrics(tenant_id: str):
 )
 async def get_health_dashboard():
     """Get comprehensive health dashboard data."""
-    from ..services.dashboard import get_dashboard_service
+    from app.services.dashboard import get_dashboard_service
     
     dashboard_service = get_dashboard_service()
     health_data = await dashboard_service.get_health_dashboard()
@@ -630,7 +630,7 @@ async def get_health_dashboard():
 )
 async def analyze_database_performance():
     """Analyze database query performance."""
-    from ..services.db_optimization import get_db_optimization_service
+    from app.services.db_optimization import get_db_optimization_service
     
     db_service = get_db_optimization_service()
     analysis = await db_service.analyze_query_performance()
@@ -669,7 +669,7 @@ async def analyze_database_performance():
 )
 async def get_database_health():
     """Get database health metrics."""
-    from ..services.db_optimization import get_db_optimization_service
+    from app.services.db_optimization import get_db_optimization_service
     
     db_service = get_db_optimization_service()
     health = await db_service.get_database_health_metrics()
@@ -707,7 +707,7 @@ async def get_database_health():
 )
 async def optimize_database():
     """Optimize database tables."""
-    from ..services.db_optimization import get_db_optimization_service
+    from app.services.db_optimization import get_db_optimization_service
     
     db_service = get_db_optimization_service()
     optimization = await db_service.optimize_audit_logs_table()
@@ -738,7 +738,7 @@ async def optimize_database():
 )
 async def cleanup_audit_logs(retention_days: int = 30):
     """Clean up old audit logs."""
-    from ..services.db_optimization import get_db_optimization_service
+    from app.services.db_optimization import get_db_optimization_service
     
     db_service = get_db_optimization_service()
     cleanup = await db_service.cleanup_old_audit_logs(retention_days)
@@ -778,7 +778,7 @@ async def create_tenant(
     metadata: dict = None
 ):
     """Create a new tenant."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     tenant = await tenant_service.create_tenant(name, description, metadata)
@@ -818,7 +818,7 @@ async def list_tenants(
     offset: int = 0
 ):
     """List tenants with optional filtering."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     tenants = await tenant_service.list_tenants(status, limit, offset)
@@ -855,7 +855,7 @@ async def list_tenants(
 )
 async def get_tenant(tenant_id: str):
     """Get tenant details."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     tenant = await tenant_service.get_tenant(tenant_id)
@@ -895,7 +895,7 @@ async def update_tenant(
     metadata: dict = None
 ):
     """Update tenant information."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     tenant = await tenant_service.update_tenant(tenant_id, name, description, metadata)
@@ -927,7 +927,7 @@ async def update_tenant(
 )
 async def suspend_tenant(tenant_id: str):
     """Suspend a tenant."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     success = await tenant_service.suspend_tenant(tenant_id)
@@ -962,7 +962,7 @@ async def suspend_tenant(tenant_id: str):
 )
 async def activate_tenant(tenant_id: str):
     """Activate a tenant."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     success = await tenant_service.activate_tenant(tenant_id)
@@ -998,7 +998,7 @@ async def activate_tenant(tenant_id: str):
 )
 async def delete_tenant(tenant_id: str, hard_delete: bool = False):
     """Delete a tenant."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     success = await tenant_service.delete_tenant(tenant_id, hard_delete)
@@ -1047,7 +1047,7 @@ async def delete_tenant(tenant_id: str, hard_delete: bool = False):
 )
 async def get_tenant_stats(tenant_id: str):
     """Get tenant statistics."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     stats = await tenant_service.get_tenant_stats(tenant_id)
@@ -1087,7 +1087,7 @@ async def get_tenant_stats(tenant_id: str):
 )
 async def get_tenant_usage_summary():
     """Get tenant usage summary."""
-    from ..services.tenant_management import get_tenant_management_service
+    from app.services.tenant_management import get_tenant_management_service
     
     tenant_service = get_tenant_management_service()
     summary = await tenant_service.get_tenant_usage_summary()
@@ -1122,7 +1122,7 @@ async def export_audit_logs(
     format: str = "json"
 ):
     """Export audit logs."""
-    from ..services.data_export import get_data_export_service
+    from app.services.data_export import get_data_export_service
     from datetime import datetime
     
     # Parse dates
@@ -1178,7 +1178,7 @@ async def export_search_logs(
     format: str = "json"
 ):
     """Export search audit logs."""
-    from ..services.data_export import get_data_export_service
+    from app.services.data_export import get_data_export_service
     from datetime import datetime
     
     # Parse dates
@@ -1230,7 +1230,7 @@ async def export_search_logs(
 )
 async def export_tenant_data(tenant_id: str, format: str = "json"):
     """Export all data for a specific tenant."""
-    from ..services.data_export import get_data_export_service
+    from app.services.data_export import get_data_export_service
     
     export_service = get_data_export_service()
     result = await export_service.export_tenant_data(tenant_id, format)
@@ -1271,7 +1271,7 @@ async def export_system_metrics(
     format: str = "json"
 ):
     """Export system metrics and statistics."""
-    from ..services.data_export import get_data_export_service
+    from app.services.data_export import get_data_export_service
     from datetime import datetime
     
     # Parse dates
