@@ -613,9 +613,18 @@ class HybridCacheService:
     
     async def store_crawled_image(self, url: str, image_bytes: bytes, raw_key: str, 
                                 thumbnail_key: Optional[str] = None, tenant_id: str = "default") -> bool:
-        """Store crawled image in both Redis and PostgreSQL."""
+        """Store crawled image metadata (not image bytes) in both Redis and PostgreSQL."""
         url_hash = hashlib.sha256(url.encode()).hexdigest()
         content_hash = hashlib.sha256(image_bytes).hexdigest()
+        
+        # Extract metadata only (no image bytes)
+        metadata = {
+            'hash': content_hash,
+            'length': len(image_bytes),
+            'mime': 'image/jpeg',
+            'raw_key': raw_key,
+            'thumb_key': thumbnail_key
+        }
         
         success = True
         
@@ -627,12 +636,13 @@ class HybridCacheService:
                     'should_skip': True,
                     'raw_key': raw_key,
                     'thumbnail_key': thumbnail_key,
+                    'metadata': metadata,
                     'cached_at': time.time()
                 })
                 self.redis_client.setex(redis_key, self.redis_ttl_settings['crawl_cache'], cache_data)
-                logger.debug(f"Cached crawled image in Redis: {url[:100]}...")
+                logger.debug(f"Cached crawled image metadata in Redis: {url[:100]}...")
             except Exception as e:
-                logger.warning(f"Failed to cache crawled image in Redis: {e}")
+                logger.warning(f"Failed to cache crawled image metadata in Redis: {e}")
                 success = False
         
         # Store in PostgreSQL (secondary cache)
@@ -642,29 +652,30 @@ class HybridCacheService:
                 await loop.run_in_executor(
                     self._thread_pool,
                     self._store_crawl_cache_postgres,
-                    url_hash, content_hash, raw_key, thumbnail_key
+                    url_hash, content_hash, raw_key, thumbnail_key, metadata
                 )
-                logger.debug(f"Cached crawled image in PostgreSQL: {url[:100]}...")
+                logger.debug(f"Cached crawled image metadata in PostgreSQL: {url[:100]}...")
             except Exception as e:
-                logger.warning(f"Failed to cache crawled image in PostgreSQL: {e}")
+                logger.warning(f"Failed to cache crawled image metadata in PostgreSQL: {e}")
                 success = False
         
         return success
     
-    def _store_crawl_cache_postgres(self, url_hash: str, content_hash: str, raw_key: str, thumbnail_key: Optional[str]):
-        """Store crawl cache in PostgreSQL."""
+    def _store_crawl_cache_postgres(self, url_hash: str, content_hash: str, raw_key: str, thumbnail_key: Optional[str], metadata: Dict):
+        """Store crawl cache with metadata in PostgreSQL."""
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO crawl_cache 
-                    (url_hash, content_hash, raw_image_key, thumbnail_key, processed_at)
-                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    (url_hash, content_hash, raw_image_key, thumbnail_key, metadata, processed_at)
+                    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (url_hash) DO UPDATE SET
                         content_hash = EXCLUDED.content_hash,
                         raw_image_key = EXCLUDED.raw_image_key,
                         thumbnail_key = EXCLUDED.thumbnail_key,
+                        metadata = EXCLUDED.metadata,
                         processed_at = CURRENT_TIMESTAMP
-                """, (url_hash, content_hash, raw_key, thumbnail_key))
+                """, (url_hash, content_hash, raw_key, thumbnail_key, json.dumps(metadata)))
                 conn.commit()
     
     # ==================== CACHE MANAGEMENT ====================
@@ -786,6 +797,60 @@ class HybridCacheService:
                 for table in tables:
                     cur.execute(f"TRUNCATE TABLE {table}")
                 conn.commit()
+    
+    def close_cache_resources(self):
+        """
+        Clean shutdown of cache service resources.
+        
+        This function:
+        1. Shuts down thread pools with wait=True
+        2. Closes Redis connections if needed
+        3. Resets statistics
+        4. Forces garbage collection
+        """
+        logger.info("Closing cache service resources...")
+        
+        try:
+            # Shutdown thread pool if it exists
+            if hasattr(self, '_thread_pool') and self._thread_pool is not None:
+                logger.info("Shutting down cache service thread pool...")
+                self._thread_pool.shutdown(wait=True)
+                logger.info("Cache service thread pool shutdown complete")
+        except Exception as e:
+            logger.warning(f"Error shutting down cache service thread pool: {e}")
+        
+        try:
+            # Close Redis connection if it exists
+            if self.redis_enabled and hasattr(self, 'redis_client') and self.redis_client is not None:
+                logger.info("Closing Redis connection...")
+                try:
+                    # Try to close the connection pool
+                    if hasattr(self.redis_client, 'connection_pool'):
+                        self.redis_client.connection_pool.disconnect()
+                    # Close the client
+                    self.redis_client.close()
+                except Exception as close_error:
+                    logger.warning(f"Error during Redis close: {close_error}")
+                logger.info("Redis connection closed")
+        except Exception as e:
+            logger.warning(f"Error closing Redis connection: {e}")
+        
+        try:
+            # Reset cache statistics
+            self.redis_hits = 0
+            self.postgres_hits = 0
+            self.cache_misses = 0
+            logger.info("Cache service statistics reset")
+        except Exception as e:
+            logger.warning(f"Error resetting cache statistics: {e}")
+        
+        try:
+            # Force garbage collection
+            import gc
+            gc.collect()
+            logger.info("Cache service cleanup complete - garbage collection triggered")
+        except Exception as e:
+            logger.warning(f"Error during cache service garbage collection: {e}")
 
 
 # Global cache service instance
@@ -804,3 +869,15 @@ def get_hybrid_cache_service() -> HybridCacheService:
 def get_cache_service():
     """Compatibility function - returns hybrid cache service."""
     return get_hybrid_cache_service()
+
+
+def close_cache_service():
+    """Close the global cache service instance."""
+    global _hybrid_cache_service
+    if _hybrid_cache_service is not None:
+        _hybrid_cache_service.close_cache_resources()
+        # Clear the client references to ensure proper cleanup
+        if hasattr(_hybrid_cache_service, 'redis_client'):
+            _hybrid_cache_service.redis_client = None
+        _hybrid_cache_service = None
+        logger.info("Global cache service instance closed")

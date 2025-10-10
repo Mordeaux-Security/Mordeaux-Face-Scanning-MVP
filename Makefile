@@ -109,3 +109,12 @@ reset-both: reset-cache reset-redis-docker reset-minio
 
 reset-all: reset-both clean
 	@echo "All data cleared and containers stopped."
+
+download-thumb:
+	@./scripts/download_images.sh thumbnails
+
+download-raw:
+	@./scripts/download_images.sh raw-images
+
+download-both:
+	@./scripts/download_images.sh both

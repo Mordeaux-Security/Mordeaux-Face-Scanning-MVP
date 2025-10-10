@@ -49,7 +49,7 @@ from pathlib import Path
 # Add the app directory to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.services.crawler import EnhancedImageCrawlerV2
+from app.services.crawler import ImageCrawler
 
 # Configure logging
 logging.basicConfig(
@@ -158,7 +158,7 @@ Available targeting methods:
             'enable_audit_logging': args.enable_audit_logging,
         }
         
-        async with EnhancedImageCrawlerV2(**crawler_config) as crawler:
+        async with ImageCrawler(**crawler_config) as crawler:
             if args.mode == 'single':
                 result = await crawler.crawl_page(args.url, args.method)
             else:
@@ -184,6 +184,23 @@ Available targeting methods:
         print(f"Batch size: {args.batch_size}")
         print(f"Audit logging: {'Enabled' if args.enable_audit_logging else 'Disabled'}")
         print(f"Storage: MinIO (raw-images & thumbnails buckets)")
+        
+        # Timing statistics
+        print(f"\nTIMING STATISTICS:")
+        print(f"Total duration: {result.total_duration_seconds:.2f} seconds")
+        if result.start_time and result.end_time:
+            print(f"Start time: {result.start_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            print(f"End time: {result.end_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        
+        # Performance metrics
+        if result.images_found > 0:
+            images_per_second = result.images_found / result.total_duration_seconds if result.total_duration_seconds > 0 else 0
+            print(f"Images processed per second: {images_per_second:.2f}")
+        if result.raw_images_saved > 0:
+            saved_per_second = result.raw_images_saved / result.total_duration_seconds if result.total_duration_seconds > 0 else 0
+            print(f"Images saved per second: {saved_per_second:.2f}")
+        
+        print(f"\nCACHE STATISTICS:")
         print(f"Cache hits: {result.cache_hits}")
         print(f"  - Redis hits: {result.redis_hits}")
         print(f"  - PostgreSQL hits: {result.postgres_hits}")

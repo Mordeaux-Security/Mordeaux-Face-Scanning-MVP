@@ -36,3 +36,6 @@ python-dotenv==1.1.1
 
 # System monitoring
 psutil==6.1.0
+
+# Content-addressed storage
+blake3==1.0.7

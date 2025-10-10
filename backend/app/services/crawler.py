@@ -23,11 +23,16 @@ from datetime import datetime
 import httpx
 from bs4 import BeautifulSoup
 
-from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only
+# Image safety configuration - set once on import
+from PIL import Image, ImageFile
+Image.MAX_IMAGE_PIXELS = 50_000_000
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only, save_raw_and_thumb_content_addressed_async, save_raw_image_content_addressed, get_storage_cleanup_function
 from . import storage
-from .face import get_face_service
+from .face import get_face_service, close_face_service
 from . import face
-from .cache import get_hybrid_cache_service
+from .cache import get_hybrid_cache_service, close_cache_service
 from urllib.parse import urljoin, urlparse
 
 # ============================================================================
@@ -68,6 +73,7 @@ class MemoryMonitor:
     def should_trigger_gc(self) -> bool:
         """Determine if garbage collection should be triggered."""
         status = self.get_memory_status()
+        logger.info(f"Memory status: {status}")
         
         # Always trigger GC if memory is critical
         if status['pressure_level'] == 'critical':
@@ -100,6 +106,29 @@ class MemoryMonitor:
 logger = logging.getLogger(__name__)
 
 # ============================================================================
+# LOGGING UTILITIES
+# ============================================================================
+
+def _truncate_log_string(text: str, max_length: int = 120) -> str:
+    """
+    Truncate long strings for logging with a hash suffix for identification.
+    
+    Args:
+        text: String to truncate
+        max_length: Maximum length before truncation
+        
+    Returns:
+        Truncated string with hash suffix if truncated
+    """
+    if len(text) <= max_length:
+        return text
+    
+    # Create a short hash of the original string for identification
+    hash_suffix = hashlib.md5(text.encode()).hexdigest()[:8]
+    truncated = text[:max_length - len(hash_suffix) - 3]  # Reserve space for "..." and hash
+    return f"{truncated}...{hash_suffix}"
+
+# ============================================================================
 # DATA CLASSES
 # ============================================================================
 
@@ -121,6 +150,9 @@ class CrawlResult:
     postgres_hits: int = 0
     tenant_id: str = "default"
     early_exit_count: int = 0
+    total_duration_seconds: float = 0.0
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
 
 
 @dataclass
@@ -203,6 +235,7 @@ class ImageCrawler:
         self._memory_pressure_threshold = 75  # Memory pressure threshold
         self._gc_frequency = 10  # Force GC every N operations
         self._operation_count = 0
+        self._cpu_sample_counter = 0  # Counter for CPU sampling frequency
         
         self.session: Optional[httpx.AsyncClient] = None
         self.cache_service = get_hybrid_cache_service()  # Hybrid caching service
@@ -224,13 +257,59 @@ class ImageCrawler:
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
-        if self.session:
-            await self.session.aclose()
+        """Async context manager exit with comprehensive cleanup."""
+        logger.info("Starting crawler cleanup...")
         
-        # Clean up thread pools
-        self._face_detection_thread_pool.shutdown(wait=True)
-        self._storage_thread_pool.shutdown(wait=True)
+        try:
+            # Close HTTP session
+            if self.session:
+                logger.info("Closing HTTP session...")
+                await self.session.aclose()
+                logger.info("HTTP session closed")
+        except Exception as e:
+            logger.warning(f"Error closing HTTP session: {e}")
+        
+        try:
+            # Clean up crawler thread pools
+            logger.info("Shutting down crawler thread pools...")
+            self._face_detection_thread_pool.shutdown(wait=True)
+            self._storage_thread_pool.shutdown(wait=True)
+            logger.info("Crawler thread pools shutdown complete")
+        except Exception as e:
+            logger.warning(f"Error shutting down crawler thread pools: {e}")
+        
+        try:
+            # Clean up service resources
+            logger.info("Cleaning up service resources...")
+            close_storage_resources = get_storage_cleanup_function()
+            close_storage_resources()
+            logger.info("Storage service resources cleaned up")
+        except Exception as e:
+            logger.warning(f"Error cleaning up storage resources: {e}")
+        
+        try:
+            # Clean up face service resources
+            logger.info("Cleaning up face service resources...")
+            close_face_service()
+            logger.info("Face service resources cleaned up")
+        except Exception as e:
+            logger.warning(f"Error cleaning up face service resources: {e}")
+        
+        try:
+            # Clean up cache service resources
+            logger.info("Cleaning up cache service resources...")
+            close_cache_service()
+            logger.info("Cache service resources cleaned up")
+        except Exception as e:
+            logger.warning(f"Error cleaning up cache service resources: {e}")
+        
+        try:
+            # Final memory cleanup
+            logger.info("Performing final memory cleanup...")
+            gc.collect()
+            logger.info("Crawler cleanup complete")
+        except Exception as e:
+            logger.warning(f"Error during final memory cleanup: {e}")
     
     # ============================================================================
     # MEMORY MANAGEMENT METHODS
@@ -241,8 +320,12 @@ class ImageCrawler:
         Adjust concurrency based on memory pressure and system resources.
         """
         try:
-            # Get comprehensive system metrics
-            cpu_percent = psutil.cpu_percent(interval=0.1)
+            # Get comprehensive system metrics - only sample CPU every ~20 operations to reduce overhead
+            self._cpu_sample_counter += 1
+            if self._cpu_sample_counter % 20 == 0:
+                cpu_percent = psutil.cpu_percent(interval=None)  # Non-blocking call
+            else:
+                cpu_percent = 50.0  # Default moderate CPU usage
             memory_status = self._memory_monitor.get_memory_status()
             
             # Trigger garbage collection if needed
@@ -283,17 +366,13 @@ class ImageCrawler:
         """Proactive memory management during operations."""
         self._operation_count += 1
         
-        # Periodic garbage collection
-        if self._operation_count % self._gc_frequency == 0:
-            gc.collect()
-        
         # Check for memory pressure and adjust if needed
         memory_status = self._memory_monitor.get_memory_status()
         if memory_status['pressure_level'] in ['high', 'critical']:
             # Force cleanup of completed tasks
             self._cleanup_completed_tasks()
             
-            # Trigger immediate GC
+            # Trigger immediate GC only under memory pressure
             gc.collect()
             
             logger.debug(f"Memory pressure management: {memory_status['pressure_level']} "
@@ -328,6 +407,7 @@ class ImageCrawler:
             
             # Clean up memory after operation
             del args, kwargs  # Free memory
+            # Trigger GC after memory-intensive storage operations
             gc.collect()
             
             return result
@@ -373,10 +453,9 @@ class ImageCrawler:
                 cache_misses += 1
 
                 if image_bytes:
-                    # Store to MinIO
+                    # Store using content-addressed keys
                     if thumbnail_bytes is not None:
-                        raw_key, raw_url, thumbnail_key, thumb_url = await self._async_storage_operation(
-                            storage.save_raw_and_thumb_with_precreated_thumb,
+                        raw_key, raw_url, thumbnail_key, thumb_url, metadata = await save_raw_and_thumb_content_addressed_async(
                             image_bytes, 
                             thumbnail_bytes,
                             self.tenant_id
@@ -385,7 +464,7 @@ class ImageCrawler:
                         if raw_key:
                             saved_raw_keys.append(raw_key)
                             saved_thumbnail_keys.append(thumbnail_key)
-                            # Update cache
+                            # Update cache with metadata only
                             await self.cache_service.store_crawled_image(
                                 image_info.url,
                                 image_bytes,
@@ -394,15 +473,14 @@ class ImageCrawler:
                                 self.tenant_id
                             )
                     else:
-                        raw_key, raw_url = await self._async_storage_operation(
-                            storage.save_raw_image_only,
+                        raw_key, raw_url, metadata = save_raw_image_content_addressed(
                             image_bytes, 
                             self.tenant_id
                         )
                         
                         if raw_key:
                             saved_raw_keys.append(raw_key)
-                            # Update cache
+                            # Update cache with metadata only
                             await self.cache_service.store_crawled_image(
                                 image_info.url,
                                 image_bytes,
@@ -514,8 +592,8 @@ class ImageCrawler:
                         await processing_queue.put((image_bytes, thumbnail_bytes, image_info, faces))
                         
             except Exception as e:
-                logger.error(f"Download worker error for {image_info.url}: {e}")
-                results['errors'].append(f"Download error for {image_info.url}: {e}")
+                logger.error(f"Download worker error for {_truncate_log_string(image_info.url)}: {e}")
+                results['errors'].append(f"Download error for {_truncate_log_string(image_info.url)}: {e}")
             finally:
                 download_queue.task_done()
     
@@ -535,19 +613,19 @@ class ImageCrawler:
                         faces, thumbnail_bytes = await self._async_face_detection(image_bytes, image_info)
                     
                     if self.require_face and not faces:
-                        logger.info(f"No faces detected for {image_info.url}, skipping.")
+                        logger.info(f"No faces detected for {_truncate_log_string(image_info.url)}, skipping.")
                         continue
                     
                     if self.crop_faces and not faces:
-                        logger.info(f"No faces detected for {image_info.url}, no thumbnail created.")
+                        logger.info(f"No faces detected for {_truncate_log_string(image_info.url)}, no thumbnail created.")
                         thumbnail_bytes = None
                 
                 # Queue for storage
                 await storage_queue.put((image_bytes, thumbnail_bytes, image_info))
                         
             except Exception as e:
-                logger.error(f"Processing worker error for {image_info.url}: {e}")
-                results['errors'].append(f"Processing error for {image_info.url}: {e}")
+                logger.error(f"Processing worker error for {_truncate_log_string(image_info.url)}: {e}")
+                results['errors'].append(f"Processing error for {_truncate_log_string(image_info.url)}: {e}")
             finally:
                 processing_queue.task_done()
     
@@ -606,10 +684,9 @@ class ImageCrawler:
         """Store a single item and update cache."""
         try:
             async with self._storage_semaphore:
-                # Store to MinIO
+                # Store using content-addressed keys
                 if thumbnail_bytes is not None:
-                    raw_key, raw_url, thumbnail_key, thumb_url = await self._async_storage_operation(
-                        storage.save_raw_and_thumb_with_precreated_thumb,
+                    raw_key, raw_url, thumbnail_key, thumb_url, metadata = await save_raw_and_thumb_content_addressed_async(
                         image_bytes, 
                         thumbnail_bytes,
                         self.tenant_id
@@ -618,7 +695,7 @@ class ImageCrawler:
                     if raw_key:
                         results['saved_raw_keys'].append(raw_key)
                         results['saved_thumbnail_keys'].append(thumbnail_key)
-                        # Update cache
+                        # Update cache with metadata only
                         await self.cache_service.store_crawled_image(
                             image_info.url,
                             image_bytes,
@@ -627,15 +704,14 @@ class ImageCrawler:
                             self.tenant_id
                         )
                 else:
-                    raw_key, raw_url = await self._async_storage_operation(
-                        storage.save_raw_image_only,
+                    raw_key, raw_url, metadata = save_raw_image_content_addressed(
                         image_bytes, 
                         self.tenant_id
                     )
                     
                     if raw_key:
                         results['saved_raw_keys'].append(raw_key)
-                        # Update cache
+                        # Update cache with metadata only
                         await self.cache_service.store_crawled_image(
                             image_info.url,
                             image_bytes,
@@ -645,8 +721,8 @@ class ImageCrawler:
                         )
                         
         except Exception as e:
-            logger.error(f"Storage error for {image_info.url}: {e}")
-            results['errors'].append(f"Storage error for {image_info.url}: {e}")
+            logger.error(f"Storage error for {_truncate_log_string(image_info.url)}: {e}")
+            results['errors'].append(f"Storage error for {_truncate_log_string(image_info.url)}: {e}")
     
     # ============================================================================
     # IMAGE EXTRACTION METHODS
@@ -860,7 +936,7 @@ class ImageCrawler:
         return images
     
     async def download_image(self, image_info: ImageInfo) -> Tuple[Optional[bytes], List[str]]:
-        """Download an image from its URL with concurrency control."""
+        """Download an image from its URL with streaming and early abort capabilities."""
         if not self.session:
             raise RuntimeError("Crawler not initialized. Use 'async with' context manager.")
         
@@ -869,27 +945,35 @@ class ImageCrawler:
             errors = []
             
             try:
-                logger.info(f"Downloading image: {image_info.url}")
+                logger.info(f"Downloading image: {_truncate_log_string(image_info.url)}")
                 t_download_start = datetime.utcnow()
             
-                # Check file extension
-                parsed_url = urlparse(image_info.url)
-                path = parsed_url.path.lower()
-                if not any(path.endswith(ext) for ext in self.allowed_extensions):
-                    # Try to get content type from HEAD request
-                    head_response = await self.session.head(image_info.url)
-                    content_type = head_response.headers.get('content-type', '').lower()
-                    if not any(img_type in content_type for img_type in ['image/', 'jpeg', 'png', 'gif', 'webp']):
-                        errors.append(f"File extension not in allowed list: {path}")
-                        return None, errors
-                
-                # Download with simple retry/backoff for transient HTTP/2 errors
+                # Download with streaming and early abort rules
                 last_exc = None
                 for attempt in range(3):
                     try:
-                        response = await self.session.get(image_info.url)
-                        response.raise_for_status()
-                        break
+                        # Use streaming GET request instead of HEAD + GET
+                        async with self.session.stream("GET", image_info.url) as response:
+                            response.raise_for_status()
+                            
+                            # Early abort: Check content type from headers
+                            content_type = response.headers.get('content-type', '').lower()
+                            if not any(img_type in content_type for img_type in ['image/', 'jpeg', 'png', 'gif', 'webp']):
+                                errors.append(f"Content type not an image: {content_type}")
+                                return None, errors
+                            
+                            # Early abort: Check file size from content-length header
+                            content_length = response.headers.get('content-length')
+                            if content_length and int(content_length) > self.max_file_size:
+                                errors.append(f"File too large: {content_length} bytes")
+                                return None, errors
+                            
+                            # Stream content with rolling buffer for MIME sniffing and early abort
+                            content = await self._stream_image_content(response, image_info, errors)
+                            if content is None:  # Early abort occurred
+                                return None, errors
+                            
+                            break
                     except httpx.HTTPError as e:
                         last_exc = e
                         if attempt < 2:
@@ -897,33 +981,129 @@ class ImageCrawler:
                             continue
                         raise
                 
-                # Check file size
-                content_length = response.headers.get('content-length')
-                if content_length and int(content_length) > self.max_file_size:
-                    errors.append(f"File too large: {content_length} bytes")
-                    return None, errors
-                    
-                # Check content type
-                content_type = response.headers.get('content-type', '').lower()
-                if not any(img_type in content_type for img_type in ['image/', 'jpeg', 'png', 'gif', 'webp']):
-                    errors.append(f"Content type not an image: {content_type}")
-                    return None, errors
-                
-                content = response.content
                 t_download_ms = (datetime.utcnow() - t_download_start).total_seconds() * 1000.0
-                logger.debug(f"Downloaded image in {t_download_ms:.1f} ms: {image_info.url}")
+                logger.debug(f"Downloaded image in {t_download_ms:.1f} ms: {_truncate_log_string(image_info.url)}")
+                
                 return content, errors
                 
             except httpx.HTTPError as e:
-                error_msg = f"HTTP error downloading {image_info.url}: {str(e)}"
+                error_msg = f"HTTP error downloading {_truncate_log_string(image_info.url)}: {str(e)}"
                 logger.error(error_msg)
                 errors.append(error_msg)
                 return None, errors
             except Exception as e:
-                error_msg = f"Unexpected error downloading {image_info.url}: {str(e)}"
+                error_msg = f"Unexpected error downloading {_truncate_log_string(image_info.url)}: {str(e)}"
                 logger.error(error_msg)
                 errors.append(error_msg)
                 return None, errors
+    
+    async def _stream_image_content(self, response: httpx.Response, image_info: ImageInfo, errors: List[str]) -> Optional[bytes]:
+        """
+        Stream image content with rolling buffer for MIME sniffing and early abort rules.
+        
+        Args:
+            response: HTTP response object with streaming capability
+            image_info: Image information object
+            errors: List to append any errors to
+            
+        Returns:
+            Complete image content as bytes, or None if early abort occurred
+        """
+        content_chunks = []
+        total_size = 0
+        rolling_buffer = bytearray()
+        buffer_size = 128 * 1024  # 128KB rolling buffer
+        header_check_size = 32 * 1024  # Check first 32KB for image headers
+        header_checked = False
+        
+        try:
+            async for chunk in response.aiter_bytes(chunk_size=64 * 1024):  # 64KB chunks
+                total_size += len(chunk)
+                
+                # Early abort: Check total size
+                if total_size > self.max_file_size:
+                    errors.append(f"File too large during streaming: {total_size} bytes")
+                    return None
+                
+                # Add to rolling buffer for header detection
+                rolling_buffer.extend(chunk)
+                
+                # Keep rolling buffer at desired size
+                if len(rolling_buffer) > buffer_size:
+                    # Move excess to content chunks
+                    excess = len(rolling_buffer) - buffer_size
+                    content_chunks.append(bytes(rolling_buffer[:excess]))
+                    rolling_buffer = rolling_buffer[excess:]
+                
+                # Early abort: Check image headers in first 32KB
+                if not header_checked and total_size >= header_check_size:
+                    header_checked = True
+                    if not self._is_image_header(rolling_buffer[:header_check_size]):
+                        errors.append("First 32KB does not contain recognizable image header")
+                        return None
+                
+                # Store chunk for final assembly
+                content_chunks.append(chunk)
+            
+            # Add remaining buffer content
+            if rolling_buffer:
+                content_chunks.append(bytes(rolling_buffer))
+            
+            # Assemble final content
+            content = b''.join(content_chunks)
+            
+            # Final size check
+            if len(content) > self.max_file_size:
+                errors.append(f"Final file size too large: {len(content)} bytes")
+                return None
+            
+            return content
+            
+        except Exception as e:
+            error_msg = f"Error during streaming: {str(e)}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+            return None
+        finally:
+            # Clean up references to free memory immediately
+            del content_chunks
+            del rolling_buffer
+            gc.collect()
+    
+    def _is_image_header(self, data: bytes) -> bool:
+        """
+        Check if the given bytes contain a recognizable image header.
+        
+        Args:
+            data: First portion of file data (up to 32KB)
+            
+        Returns:
+            True if the data appears to be from an image file
+        """
+        if len(data) < 4:
+            return False
+        
+        # Check for JPEG (starts with FFD8)
+        if data.startswith(b'\xFF\xD8'):
+            return True
+        
+        # Check for PNG (starts with 89504E470D0A1A0A)
+        if data.startswith(b'\x89PNG\r\n\x1a\n'):
+            return True
+        
+        # Check for GIF87a and GIF89a
+        if data.startswith(b'GIF87a') or data.startswith(b'GIF89a'):
+            return True
+        
+        # Check for WebP (RIFF container with WEBP format)
+        if data.startswith(b'RIFF') and len(data) >= 12 and b'WEBP' in data[:12]:
+            return True
+        
+        # Check for BMP (starts with BM)
+        if data.startswith(b'BM'):
+            return True
+        
+        return False
     
     async def _async_face_detection(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[List, Optional[bytes]]:
         """
@@ -976,18 +1156,18 @@ class ImageCrawler:
                 # Proactive memory management
                 self._manage_memory_pressure()
                 
-                logger.info(f"Processing image {index}/{total}: {image_info.url}")
+                logger.info(f"Processing image {index}/{total}: {_truncate_log_string(image_info.url)}")
 
                 # Download the image
                 image_bytes, download_errors = await self.download_image(image_info)
                 if not image_bytes:
-                    logger.warning(f"Failed to download image: {image_info.url}")
+                    logger.warning(f"Failed to download image: {_truncate_log_string(image_info.url)}")
                     return None, None, False, download_errors, []
 
                 # Check cache
                 should_skip, cached_key = await self.cache_service.should_skip_crawled_image(image_info.url, image_bytes, self.tenant_id)
                 if should_skip and cached_key:
-                    logger.info(f"Image {image_info.url} found in cache. Key: {cached_key}")
+                    logger.info(f"Image {_truncate_log_string(image_info.url)} found in cache. Key: {_truncate_log_string(cached_key)}")
                     return cached_key, cached_key, True, download_errors, []
 
                 # Use async face detection with thread pool
@@ -997,7 +1177,7 @@ class ImageCrawler:
                     t_detect_start = datetime.utcnow()
                     faces, thumbnail_bytes = await self._async_face_detection(image_bytes, image_info)
                     t_detect_ms = (datetime.utcnow() - t_detect_start).total_seconds() * 1000.0
-                    logger.debug(f"Face detection pipeline completed in {t_detect_ms:.1f} ms for {image_info.url}")
+                    logger.debug(f"Face detection pipeline completed in {t_detect_ms:.1f} ms for {_truncate_log_string(image_info.url)}")
                     # Track early-exit usage
                     try:
                         early_exit_used = get_face_service().consume_early_exit_flag()
@@ -1007,19 +1187,19 @@ class ImageCrawler:
                         pass
                     
                     if self.require_face and not faces:
-                        logger.info(f"No faces detected for {image_info.url}, skipping.")
+                        logger.info(f"No faces detected for {_truncate_log_string(image_info.url)}, skipping.")
                         return None, None, False, download_errors, []
                     
                     # When crop_faces=true but no faces detected, don't create thumbnails
                     if self.crop_faces and not faces:
-                        logger.info(f"No faces detected for {image_info.url}, no thumbnail created (crop_faces=true).")
+                        logger.info(f"No faces detected for {_truncate_log_string(image_info.url)}, no thumbnail created (crop_faces=true).")
                 # No thumbnail created when face requirements are disabled
 
                 # Prepare data for batch storage
                 return image_bytes, thumbnail_bytes, False, download_errors, faces
 
         except Exception as e:
-            logger.error(f"Error processing image {image_info.url}: {e}", exc_info=True)
+            logger.error(f"Error processing image {_truncate_log_string(image_info.url)}: {e}", exc_info=True)
             return None, None, False, [f"Processing error: {e}"], []
         finally:
             # Remove task from tracking when complete
@@ -1038,7 +1218,7 @@ class ImageCrawler:
         errors = []
         
         try:
-            logger.info(f"Fetching page: {url}")
+            logger.info(f"Fetching page: {_truncate_log_string(url)}")
             response = await self.session.get(url)
             response.raise_for_status()
             
@@ -1051,12 +1231,12 @@ class ImageCrawler:
             return response.text, errors
             
         except httpx.HTTPError as e:
-            error_msg = f"HTTP error fetching {url}: {str(e)}"
+            error_msg = f"HTTP error fetching {_truncate_log_string(url)}: {str(e)}"
             logger.error(error_msg)
             errors.append(error_msg)
             return None, errors
         except Exception as e:
-            error_msg = f"Unexpected error fetching {url}: {str(e)}"
+            error_msg = f"Unexpected error fetching {_truncate_log_string(url)}: {str(e)}"
             logger.error(error_msg)
             errors.append(error_msg)
             return None, errors
@@ -1159,7 +1339,7 @@ class ImageCrawler:
             return True
             
         except Exception as e:
-            logger.error(f"Error validating URL {url}: {str(e)}")
+            logger.error(f"Error validating URL {_truncate_log_string(url)}: {str(e)}")
             return False
     
 
@@ -1169,7 +1349,8 @@ class ImageCrawler:
     
     async def crawl_page(self, url: str, method: str = "smart") -> CrawlResult:
         """Crawl a single page for images using the specified method."""
-        logger.info(f"Starting crawl of: {url} using method: {method} (tenant: {self.tenant_id}, min_face_quality: {self.min_face_quality}, require_face: {self.require_face})")
+        start_time = datetime.utcnow()
+        logger.info(f"Starting crawl of: {_truncate_log_string(url)} using method: {method} (tenant: {self.tenant_id}, min_face_quality: {self.min_face_quality}, require_face: {self.require_face})")
         
         # Reset cache statistics for this crawl
         self.cache_service.reset_cache_stats()
@@ -1188,6 +1369,8 @@ class ImageCrawler:
         all_errors.extend(fetch_errors)
         
         if not html_content:
+            end_time = datetime.utcnow()
+            total_duration = (end_time - start_time).total_seconds()
             logger.error("Failed to fetch page content")
             return CrawlResult(
                 url=url,
@@ -1199,13 +1382,18 @@ class ImageCrawler:
                 saved_thumbnail_keys=[],
                 errors=all_errors,
                 targeting_method="failed",
-                tenant_id=self.tenant_id
+                tenant_id=self.tenant_id,
+                total_duration_seconds=total_duration,
+                start_time=start_time,
+                end_time=end_time
             )
         
         # Extract images using specified method
         images, method_used = self.extract_images_by_method(html_content, url, method)
         
         if not images:
+            end_time = datetime.utcnow()
+            total_duration = (end_time - start_time).total_seconds()
             logger.warning("No images found on the page")
             return CrawlResult(
                 url=url,
@@ -1217,7 +1405,10 @@ class ImageCrawler:
                 saved_thumbnail_keys=[],
                 errors=all_errors,
                 targeting_method=method_used,
-                tenant_id=self.tenant_id
+                tenant_id=self.tenant_id,
+                total_duration_seconds=total_duration,
+                start_time=start_time,
+                end_time=end_time
             )
         
         # Apply image limit if specified
@@ -1231,10 +1422,20 @@ class ImageCrawler:
         # Use streaming pipeline only for larger workloads to avoid overhead
         if len(images_to_process) <= 10:
             logger.info(f"Using batch processing for {len(images_to_process)} images (streaming overhead not worth it)")
-            return await self._process_images_batch(images_to_process, all_errors, cache_hits, cache_misses, method_used, url)
+            result = await self._process_images_batch(images_to_process, all_errors, cache_hits, cache_misses, method_used, url)
         else:
             logger.info(f"Using streaming pipeline for {len(images_to_process)} images")
-            return await self._process_images_streaming(images_to_process, all_errors, cache_hits, cache_misses, method_used, url)
+            result = await self._process_images_streaming(images_to_process, all_errors, cache_hits, cache_misses, method_used, url)
+        
+        # Add timing information to the result
+        end_time = datetime.utcnow()
+        total_duration = (end_time - start_time).total_seconds()
+        result.total_duration_seconds = total_duration
+        result.start_time = start_time
+        result.end_time = end_time
+        
+        logger.info(f"Crawl completed in {total_duration:.2f} seconds")
+        return result
 
 
     async def crawl_site(self, start_url: str, method: str = "smart") -> CrawlResult:
@@ -1248,7 +1449,8 @@ class ImageCrawler:
         Returns:
             CrawlResult with aggregated statistics
         """
-        logger.info(f"Starting site crawl from: {start_url} (tenant: {self.tenant_id}, max_images: {self.max_total_images}, max_pages: {self.max_pages})")
+        start_time = datetime.utcnow()
+        logger.info(f"Starting site crawl from: {_truncate_log_string(start_url)} (tenant: {self.tenant_id}, max_images: {self.max_total_images}, max_pages: {self.max_pages})")
         
         # Initialize crawling state
         visited_urls = set()
@@ -1274,7 +1476,7 @@ class ImageCrawler:
             visited_urls.add(current_url)
             pages_crawled += 1
             
-            logger.info(f"Crawling page {pages_crawled}/{self.max_pages}: {current_url}")
+            logger.info(f"Crawling page {pages_crawled}/{self.max_pages}: {_truncate_log_string(current_url)}")
             logger.info(f"Thumbnails collected so far: {len(all_saved_thumbnail_keys)}/{self.max_total_images}")
             
             try:
@@ -1316,12 +1518,14 @@ class ImageCrawler:
                     break
                     
             except Exception as e:
-                error_msg = f"Error crawling page {current_url}: {str(e)}"
+                error_msg = f"Error crawling page {_truncate_log_string(current_url)}: {str(e)}"
                 logger.error(error_msg)
                 all_errors.append(error_msg)
                 continue
         
         # Create aggregated result
+        end_time = datetime.utcnow()
+        total_duration = (end_time - start_time).total_seconds()
         result = CrawlResult(
             url=start_url,
             images_found=total_images_found,
@@ -1335,10 +1539,13 @@ class ImageCrawler:
             cache_hits=total_cache_hits,
             cache_misses=total_cache_misses,
             tenant_id=self.tenant_id,
-            early_exit_count=int(getattr(self, "_early_exit_count", 0))
+            early_exit_count=int(getattr(self, "_early_exit_count", 0)),
+            total_duration_seconds=total_duration,
+            start_time=start_time,
+            end_time=end_time
         )
         
-        logger.info(f"Site crawl completed - Pages: {pages_crawled}, Found: {total_images_found}, Raw Images Saved: {total_raw_saved}, Thumbnails Saved: {total_thumbnails_saved}")
+        logger.info(f"Site crawl completed in {total_duration:.2f} seconds - Pages: {pages_crawled}, Found: {total_images_found}, Raw Images Saved: {total_raw_saved}, Thumbnails Saved: {total_thumbnails_saved}")
         return result
 
 

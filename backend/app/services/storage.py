@@ -2,13 +2,23 @@ import io
 import os
 import uuid
 import time
+import hashlib
+import logging
+import gc
 from typing import Tuple, Optional, List, Dict, Any
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-from PIL import Image
+from PIL import Image, ImageFile
 import urllib3
+import blake3
 from ..core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+# Image safety configuration - set once on import
+Image.MAX_IMAGE_PIXELS = 50_000_000
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # Lazy singletons
 _minio_client = None
@@ -167,6 +177,166 @@ def _make_thumbnail(jpeg_bytes: bytes, max_w: int = 256) -> bytes:
     return out.getvalue()
 
 
+def _compute_content_hash(content: bytes) -> str:
+    """Compute content-addressed hash using blake3."""
+    return blake3.blake3(content).hexdigest()
+
+
+def _generate_content_addressed_key(content: bytes, tenant_id: str, extension: str = ".jpg") -> str:
+    """
+    Generate content-addressed storage key.
+    Format: tenant/{hash[:2]}/{hash}{extension}
+    """
+    content_hash = _compute_content_hash(content)
+    return f"{tenant_id}/{content_hash[:2]}/{content_hash}{extension}"
+
+
+def _get_content_metadata(content: bytes, raw_key: str, thumb_key: Optional[str] = None) -> Dict[str, Any]:
+    """Extract metadata from content for caching."""
+    return {
+        "hash": _compute_content_hash(content),
+        "length": len(content),
+        "mime": "image/jpeg",  # We standardize to JPEG for storage
+        "raw_key": raw_key,
+        "thumb_key": thumb_key
+    }
+
+
+def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str) -> Tuple[str, str, Dict[str, Any]]:
+    """
+    Store raw image using content-addressed keys.
+    Returns (raw_key, raw_url, metadata)
+    """
+    settings = get_settings()
+    
+    # Generate content-addressed key
+    raw_key = _generate_content_addressed_key(image_bytes, tenant_id, ".jpg")
+    
+    # Check if object already exists (deduplication)
+    try:
+        if settings.using_minio:
+            cli = _minio()
+            try:
+                # Try to get object metadata to check if it exists
+                cli.stat_object(settings.s3_bucket_raw, raw_key)
+                logger.info(f"Content-addressed object already exists: {raw_key}")
+                # Object exists, return existing key and URL
+                raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
+                metadata = _get_content_metadata(image_bytes, raw_key)
+                return raw_key, raw_url, metadata
+            except Exception:
+                # Object doesn't exist, proceed to upload
+                pass
+        else:
+            s3 = _boto3_s3()
+            try:
+                # Try to get object metadata to check if it exists
+                s3.head_object(Bucket=settings.s3_bucket_raw, Key=raw_key)
+                logger.info(f"Content-addressed object already exists: {raw_key}")
+                # Object exists, return existing key and URL
+                raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
+                metadata = _get_content_metadata(image_bytes, raw_key)
+                return raw_key, raw_url, metadata
+            except Exception:
+                # Object doesn't exist, proceed to upload
+                pass
+    except Exception as e:
+        logger.warning(f"Error checking for existing object {raw_key}: {e}")
+    
+    # Upload the object
+    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
+    
+    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
+    metadata = _get_content_metadata(image_bytes, raw_key)
+    
+    return raw_key, raw_url, metadata
+
+
+def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str) -> Tuple[str, str, str, str, Dict[str, Any]]:
+    """
+    Store raw image and thumbnail using content-addressed keys.
+    Returns (raw_key, raw_url, thumb_key, thumb_url, metadata)
+    """
+    settings = get_settings()
+    
+    # Generate content-addressed keys
+    raw_key = _generate_content_addressed_key(image_bytes, tenant_id, ".jpg")
+    thumb_key = _generate_content_addressed_key(thumbnail_bytes, tenant_id, "_thumb.jpg")
+    
+    # Check if objects already exist (deduplication)
+    raw_exists = False
+    thumb_exists = False
+    
+    try:
+        if settings.using_minio:
+            cli = _minio()
+            try:
+                cli.stat_object(settings.s3_bucket_raw, raw_key)
+                raw_exists = True
+                logger.info(f"Content-addressed raw object already exists: {raw_key}")
+            except Exception:
+                pass
+            
+            try:
+                cli.stat_object(settings.s3_bucket_thumbs, thumb_key)
+                thumb_exists = True
+                logger.info(f"Content-addressed thumb object already exists: {thumb_key}")
+            except Exception:
+                pass
+        else:
+            s3 = _boto3_s3()
+            try:
+                s3.head_object(Bucket=settings.s3_bucket_raw, Key=raw_key)
+                raw_exists = True
+                logger.info(f"Content-addressed raw object already exists: {raw_key}")
+            except Exception:
+                pass
+            
+            try:
+                s3.head_object(Bucket=settings.s3_bucket_thumbs, Key=thumb_key)
+                thumb_exists = True
+                logger.info(f"Content-addressed thumb object already exists: {thumb_key}")
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"Error checking for existing objects: {e}")
+    
+    # Upload objects only if they don't exist
+    if not raw_exists:
+        put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
+    
+    if not thumb_exists:
+        put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg")
+    
+    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
+    thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
+    metadata = _get_content_metadata(image_bytes, raw_key, thumb_key)
+    
+    return raw_key, raw_url, thumb_key, thumb_url, metadata
+
+
+async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str) -> Tuple[str, str, str, str, Dict[str, Any]]:
+    """
+    Async version of save_raw_and_thumb_content_addressed for better performance.
+    """
+    loop = asyncio.get_event_loop()
+    thread_pool = _get_thread_pool()
+    
+    try:
+        result = await loop.run_in_executor(
+            thread_pool, 
+            save_raw_and_thumb_content_addressed, 
+            image_bytes, 
+            thumbnail_bytes, 
+            tenant_id
+        )
+        return result
+    except Exception as e:
+        # Fallback to sync version if async fails
+        logger.warning(f"Async storage failed, falling back to sync: {e}")
+        return save_raw_and_thumb_content_addressed(image_bytes, thumbnail_bytes, tenant_id)
+
+
 def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str]:
     """
     Store raw image to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg only
@@ -224,5 +394,79 @@ def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
     thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
     return raw_key, raw_url, thumb_key, thumb_url
+
+
+def close_storage_resources():
+    """
+    Clean shutdown of storage service resources.
+    
+    This function:
+    1. Shuts down thread pools with wait=True
+    2. Closes HTTP connection pools
+    3. Clears client references to free memory
+    4. Resets global variables to None
+    5. Forces garbage collection
+    """
+    global _minio_client, _minio_http, _boto3_client, _thread_pool
+    
+    logger.info("Closing storage service resources...")
+    
+    try:
+        # Shutdown thread pool if it exists
+        if _thread_pool is not None:
+            logger.info("Shutting down storage service thread pool...")
+            _thread_pool.shutdown(wait=True)
+            logger.info("Storage service thread pool shutdown complete")
+    except Exception as e:
+        logger.warning(f"Error shutting down storage service thread pool: {e}")
+    
+    try:
+        # Close MinIO HTTP connection pool if it exists
+        if _minio_http is not None:
+            logger.info("Closing MinIO HTTP connection pool...")
+            _minio_http.clear()
+            logger.info("MinIO HTTP connection pool closed")
+    except Exception as e:
+        logger.warning(f"Error closing MinIO HTTP connection pool: {e}")
+    
+    try:
+        # Clear client references
+        if _minio_client is not None:
+            logger.info("Clearing MinIO client reference...")
+            del _minio_client
+            logger.info("MinIO client reference cleared")
+    except Exception as e:
+        logger.warning(f"Error clearing MinIO client: {e}")
+    
+    try:
+        if _boto3_client is not None:
+            logger.info("Clearing boto3 S3 client reference...")
+            del _boto3_client
+            logger.info("boto3 S3 client reference cleared")
+    except Exception as e:
+        logger.warning(f"Error clearing boto3 S3 client: {e}")
+    
+    try:
+        # Reset global variables
+        _minio_client = None
+        _minio_http = None
+        _boto3_client = None
+        _thread_pool = None
+        logger.info("Storage service global variables reset")
+    except Exception as e:
+        logger.warning(f"Error resetting storage service globals: {e}")
+    
+    try:
+        # Force garbage collection to free memory
+        gc.collect()
+        logger.info("Storage service cleanup complete - garbage collection triggered")
+    except Exception as e:
+        logger.warning(f"Error during storage service garbage collection: {e}")
+
+
+# Expose the cleanup function for external use
+def get_storage_cleanup_function():
+    """Get the storage cleanup function for use by other modules."""
+    return close_storage_resources
 
 

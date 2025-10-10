@@ -3,7 +3,7 @@ import time
 import os
 import cv2
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter, ImageFile
 import imagehash
 from insightface.app import FaceAnalysis
 import asyncio
@@ -13,6 +13,11 @@ import logging
 import gc
 import psutil
 import threading
+import atexit
+
+# Image safety configuration - set once on import
+Image.MAX_IMAGE_PIXELS = 50_000_000
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 logger = logging.getLogger(__name__)
 
@@ -262,7 +267,7 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
                     all_faces.append(face_data)
                     # Early exit condition: if a strong detection is found, stop further scaling
                     # Threshold chosen to balance precision/recall; adjust via config later if needed
-                    if face_data["det_score"] >= 0.85:
+                    if face_data["det_score"] >= 0.8:
                         strong_face_found = True
                         break
             if strong_face_found:
@@ -459,3 +464,57 @@ def get_face_service():
         create_thumbnail = staticmethod(create_thumbnail)
         consume_early_exit_flag = staticmethod(consume_early_exit_flag)
     return _FaceSvc()
+
+
+def close_face_service():
+    """
+    Clean shutdown of face service resources.
+    
+    This function:
+    1. Shuts down thread pools with wait=True
+    2. Clears model references to free memory
+    3. Resets global variables to None
+    4. Forces garbage collection
+    """
+    global _face_app, _thread_pool, _model_lock, _early_exit_flag
+    
+    logger.info("Closing face service resources...")
+    
+    try:
+        # Shutdown thread pool if it exists
+        if _thread_pool is not None:
+            logger.info("Shutting down face service thread pool...")
+            _thread_pool.shutdown(wait=True)
+            logger.info("Face service thread pool shutdown complete")
+    except Exception as e:
+        logger.warning(f"Error shutting down face service thread pool: {e}")
+    
+    try:
+        # Clear model reference
+        if _face_app is not None:
+            logger.info("Clearing face analysis model reference...")
+            # InsightFace models don't have explicit cleanup, but we can clear the reference
+            del _face_app
+            logger.info("Face analysis model reference cleared")
+    except Exception as e:
+        logger.warning(f"Error clearing face analysis model: {e}")
+    
+    try:
+        # Reset global variables
+        _face_app = None
+        _thread_pool = None
+        _early_exit_flag = False
+        logger.info("Face service global variables reset")
+    except Exception as e:
+        logger.warning(f"Error resetting face service globals: {e}")
+    
+    try:
+        # Force garbage collection to free memory
+        gc.collect()
+        logger.info("Face service cleanup complete - garbage collection triggered")
+    except Exception as e:
+        logger.warning(f"Error during face service garbage collection: {e}")
+
+
+# Register cleanup function with atexit
+atexit.register(close_face_service)

@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from ..services.face import get_face_service
-from ..services.storage import save_raw_and_thumb, save_raw_and_thumb_async, get_object_from_storage
+from ..services.storage import save_raw_and_thumb_async, get_object_from_storage
 from ..services.vector import get_vector_client
 from ..services.cache import get_cache_service
 from ..services.batch import get_batch_processor
