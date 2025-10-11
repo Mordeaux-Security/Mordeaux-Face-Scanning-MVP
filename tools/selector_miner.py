@@ -8,8 +8,10 @@ candidate CSS selectors for image extraction with evidence-based scoring.
 import re
 import logging
 import asyncio
+import os
 import yaml
-from typing import List, Dict, Set, Tuple, Optional, NamedTuple
+import json
+from typing import List, Dict, Set, Tuple, Optional, NamedTuple, Union
 from urllib.parse import urljoin, urlparse
 from collections import defaultdict, Counter
 from dataclasses import dataclass
@@ -18,6 +20,7 @@ from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup, Tag
 from bs4.element import NavigableString
+from .redirect_utils import create_safe_client, head_with_redirects
 
 # Optional Playwright import for JavaScript rendering
 try:
@@ -28,6 +31,9 @@ except ImportError:
     async_playwright = None
 
 logger = logging.getLogger(__name__)
+
+# Default maximum image size (10MB)
+DEFAULT_MAX_BYTES = int(os.getenv("MINER_MAX_IMAGE_BYTES", 10 * 1024 * 1024))
 
 
 @dataclass
@@ -107,15 +113,15 @@ class SelectorMiner:
         'sponsor', 'sponsored', 'advertisement', 'promo', 'promotion'
     }
     
-    def __init__(self, base_url: str = ""):
+    def __init__(self, base_url: str = "", max_bytes: Optional[int] = None):
         self.base_url = base_url
         self.image_nodes: List[ImageNode] = []
         self.candidate_selectors: List[CandidateSelector] = []
         
         # Anti-malware configuration
         self.MALICIOUS_SCHEMES = {'javascript', 'data', 'file', 'ftp'}
-        self.SAFE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'}
-        self.MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
+        self.SAFE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
+        self.MAX_CONTENT_LENGTH = max_bytes if max_bytes is not None else DEFAULT_MAX_BYTES
         
     def mine_selectors(self, html_content: str) -> List[CandidateSelector]:
         """
@@ -180,6 +186,11 @@ class SelectorMiner:
             if node_data:
                 image_nodes.append(node_data)
         
+        # Find JSON-LD script blocks with thumbnailUrl and image
+        for script in soup.find_all('script', type='application/ld+json'):
+            json_nodes = self._analyze_json_ld_node(script, self.base_url)
+            image_nodes.extend(json_nodes)
+        
         return image_nodes
     
     def _analyze_image_node(self, tag: Tag) -> Optional[ImageNode]:
@@ -207,7 +218,13 @@ class SelectorMiner:
         )
     
     def _extract_image_url(self, tag: Tag) -> Optional[str]:
-        """Extract image URL from various attributes."""
+        """Extract image URL from various attributes, including srcset parsing."""
+        # Check for srcset first (highest priority for responsive images)
+        srcset_url = self._extract_srcset_url(tag)
+        if srcset_url:
+            return srcset_url
+        
+        # Check other URL attributes
         url_attributes = ['src', 'data-src', 'data-lazy-src', 'data-original', 
                          'data-large', 'data-medium', 'data-thumb', 'poster']
         
@@ -222,6 +239,66 @@ class SelectorMiner:
         
         return None
     
+    def _extract_srcset_url(self, tag: Tag) -> Optional[str]:
+        """Extract the largest candidate URL from srcset attribute."""
+        srcset = tag.get('srcset')
+        if not srcset:
+            return None
+        
+        try:
+            # Parse srcset: "url1 1x, url2 2x, url3 320w, url4 640w"
+            candidates = []
+            for candidate in srcset.split(','):
+                candidate = candidate.strip()
+                if not candidate:
+                    continue
+                
+                parts = candidate.split()
+                if len(parts) < 2:
+                    continue
+                
+                url = parts[0]
+                descriptor = parts[1]
+                
+                # Normalize URL
+                if url.startswith('//'):
+                    url = 'https:' + url
+                elif url.startswith('/'):
+                    url = urljoin(self.base_url, url)
+                
+                # Parse descriptor (1x, 2x, 320w, etc.)
+                width = 0
+                if descriptor.endswith('x'):
+                    # Density descriptor (1x, 2x)
+                    try:
+                        density = float(descriptor[:-1])
+                        # For density descriptors, assume base width of 320px
+                        width = int(320 * density)
+                    except ValueError:
+                        continue
+                elif descriptor.endswith('w'):
+                    # Width descriptor (320w, 640w)
+                    try:
+                        width = int(descriptor[:-1])
+                    except ValueError:
+                        continue
+                else:
+                    # Default descriptor (1x)
+                    width = 320
+                
+                candidates.append((url, width))
+            
+            if not candidates:
+                return None
+            
+            # Return URL with largest width
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            return candidates[0][0]
+            
+        except Exception as e:
+            logger.debug(f"Failed to parse srcset: {e}")
+            return None
+    
     def _is_valid_image_url(self, url: str) -> bool:
         """Check if URL is a valid image URL (basic validation)."""
         if not url or len(url) < 3:
@@ -232,9 +309,13 @@ class SelectorMiner:
         if parsed.scheme in {'javascript', 'data', 'file', 'ftp'}:
             return False
             
-        # Check for image extensions or common image patterns
-        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'}
+        # Explicitly reject SVG URLs
         path_lower = parsed.path.lower()
+        if path_lower.endswith('.svg'):
+            return False
+            
+        # Check for image extensions or common image patterns
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
         
         if any(path_lower.endswith(ext) for ext in image_extensions):
             return True
@@ -425,6 +506,13 @@ class SelectorMiner:
             return None
             
         url = bg_match.group(1)
+        
+        # Normalize URL (handle relative URLs)
+        if url.startswith('//'):
+            url = 'https:' + url
+        elif url.startswith('/'):
+            url = urljoin(self.base_url, url)
+        
         if not self._is_valid_image_url(url):
             return None
             
@@ -476,6 +564,108 @@ class SelectorMiner:
             context=context
         )
     
+    def _analyze_json_ld_node(self, script_tag: Tag, base_url: str) -> List[ImageNode]:
+        """Analyze JSON-LD script blocks for thumbnailUrl and image fields."""
+        json_nodes = []
+        
+        try:
+            # Get the JSON content from the script tag
+            json_text = script_tag.string
+            if not json_text:
+                return json_nodes
+            
+            # Parse the JSON content
+            json_data = json.loads(json_text.strip())
+            
+            # Handle both single objects and arrays of objects
+            json_objects = json_data if isinstance(json_data, list) else [json_data]
+            
+            for i, obj in enumerate(json_objects):
+                if not isinstance(obj, dict):
+                    continue
+                
+                # Extract thumbnailUrl and image fields
+                image_urls = self._extract_json_ld_image_urls(obj, base_url)
+                
+                for j, (url, field_name) in enumerate(image_urls):
+                    if not self._is_valid_image_url(url):
+                        continue
+                    
+                    # Create synthetic selector path for JSON-LD
+                    selector_path = f"script[type='application/ld+json']::jsonpath($.{field_name})"
+                    
+                    # Create synthetic attributes
+                    attributes = {
+                        'type': 'application/ld+json',
+                        'field': field_name,
+                        'json_index': i
+                    }
+                    
+                    # Create context
+                    context = self._analyze_node_context(script_tag)
+                    context['json_ld_field'] = field_name
+                    context['json_ld_index'] = i
+                    
+                    # Create ImageNode
+                    node = ImageNode(
+                        tag=script_tag,
+                        url=url,
+                        selector_path=selector_path,
+                        attributes=attributes,
+                        context=context
+                    )
+                    json_nodes.append(node)
+                    
+        except (json.JSONDecodeError, TypeError, AttributeError) as e:
+            logger.debug(f"Failed to parse JSON-LD: {e}")
+        
+        return json_nodes
+    
+    def _extract_json_ld_image_urls(self, json_obj: Dict, base_url: str) -> List[Tuple[str, str]]:
+        """Extract image URLs from JSON-LD object, returning (url, field_name) tuples."""
+        image_urls = []
+        
+        # Extract thumbnailUrl
+        if 'thumbnailUrl' in json_obj:
+            thumbnail_urls = self._normalize_json_ld_url_field(json_obj['thumbnailUrl'], base_url)
+            for url in thumbnail_urls:
+                image_urls.append((url, 'thumbnailUrl'))
+        
+        # Extract image field
+        if 'image' in json_obj:
+            image_urls_found = self._normalize_json_ld_url_field(json_obj['image'], base_url)
+            for url in image_urls_found:
+                image_urls.append((url, 'image'))
+        
+        return image_urls
+    
+    def _normalize_json_ld_url_field(self, field_value: Union[str, List, Dict], base_url: str) -> List[str]:
+        """Normalize JSON-LD URL field that can be string, list, or object with url property."""
+        urls = []
+        
+        if isinstance(field_value, str):
+            # Simple string URL
+            absolute_url = urljoin(base_url, field_value)
+            urls.append(absolute_url)
+            
+        elif isinstance(field_value, list):
+            # Array of URLs or objects
+            for item in field_value:
+                if isinstance(item, str):
+                    absolute_url = urljoin(base_url, item)
+                    urls.append(absolute_url)
+                elif isinstance(item, dict) and 'url' in item:
+                    absolute_url = urljoin(base_url, item['url'])
+                    urls.append(absolute_url)
+                    
+        elif isinstance(field_value, dict):
+            # Single object with url property
+            if 'url' in field_value:
+                absolute_url = urljoin(base_url, field_value['url'])
+                urls.append(absolute_url)
+        
+        return urls
+    
     def _generate_candidate_selectors(self) -> List[CandidateSelector]:
         """Generate candidate selectors based on image node analysis."""
         candidates = []
@@ -504,8 +694,13 @@ class SelectorMiner:
         # Generate description
         description = self._generate_description(selector, nodes)
         
-        # Extract sample URLs
-        sample_urls = [node.url for node in nodes[:5]]  # Limit to 5 samples
+        # Extract sample URLs (deduplicated, max 12)
+        sample_urls = []
+        seen_urls = set()
+        for node in nodes:
+            if node.url not in seen_urls and len(sample_urls) < 12:
+                sample_urls.append(node.url)
+                seen_urls.add(node.url)
         
         return CandidateSelector(
             selector=selector,
@@ -567,7 +762,7 @@ class SelectorMiner:
         ]
         
         # Also consider image extensions as quality indicators
-        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'}
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
         
         return (any(indicator in path for indicator in quality_indicators) or
                 any(path.endswith(ext) for ext in image_extensions))
@@ -662,7 +857,7 @@ class SelectorMiner:
         validation_results = []
         sample_urls = candidate.sample_urls[:max_samples]
         
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+        async with create_safe_client(timeout=10.0) as client:
             for url in sample_urls:
                 result = await self._validate_single_url(client, url)
                 validation_results.append(result)
@@ -689,12 +884,27 @@ class SelectorMiner:
                     error="Unsafe URL scheme or suspicious pattern"
                 )
             
-            # HEAD request first (lightweight)
+            # HEAD request first (lightweight) with redirect handling
             try:
-                head_response = await client.head(url)
+                head_response, reason = await head_with_redirects(url, client, max_hops=3)
+                
+                if head_response is None:
+                    return ValidationResult(
+                        url=url,
+                        is_valid=False,
+                        error=reason
+                    )
                 
                 # Check content type
                 content_type = head_response.headers.get('content-type', '').lower()
+                if 'image/svg+xml' in content_type:
+                    return ValidationResult(
+                        url=url,
+                        is_valid=False,
+                        status_code=head_response.status_code,
+                        content_type=content_type,
+                        error="SKIP_SVG"
+                    )
                 if not self._is_valid_image_content_type(content_type):
                     return ValidationResult(
                         url=url,
@@ -712,14 +922,44 @@ class SelectorMiner:
                         is_valid=False,
                         status_code=head_response.status_code,
                         content_type=content_type,
-                        error="Content too large"
+                        error="SIZE_CAP"
                     )
                 
-                # If HEAD succeeds, try GET for first few bytes
+                # If HEAD succeeds, try GET for first few bytes with redirect handling
                 if head_response.status_code == 200:
-                    get_response = await client.get(url, headers={'Range': 'bytes=0-1023'})
+                    from .redirect_utils import fetch_with_redirects
+                    get_response, get_reason = await fetch_with_redirects(url, client, max_hops=3, method="GET")
+                    
+                    if get_response is None:
+                        return ValidationResult(
+                            url=url,
+                            is_valid=False,
+                            error=f"GET failed: {get_reason}"
+                        )
                     
                     if get_response.status_code in [200, 206]:  # 206 = Partial Content
+                        # Check actual content length if available
+                        actual_length = get_response.headers.get('content-length')
+                        if actual_length and int(actual_length) > self.MAX_CONTENT_LENGTH:
+                            return ValidationResult(
+                                url=url,
+                                is_valid=False,
+                                status_code=get_response.status_code,
+                                content_type=content_type,
+                                error="SIZE_CAP"
+                            )
+                        
+                        # Check downloaded content length
+                        content_bytes = get_response.content
+                        if len(content_bytes) > self.MAX_CONTENT_LENGTH:
+                            return ValidationResult(
+                                url=url,
+                                is_valid=False,
+                                status_code=get_response.status_code,
+                                content_type=content_type,
+                                error="SIZE_CAP"
+                            )
+                        
                         return ValidationResult(
                             url=url,
                             is_valid=True,
@@ -792,10 +1032,14 @@ class SelectorMiner:
         if not content_type:
             return False
             
+        # Explicitly reject SVG
+        if 'image/svg+xml' in content_type.lower():
+            return False
+            
         # Valid image MIME types
         valid_types = [
             'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
-            'image/webp', 'image/bmp', 'image/svg+xml'
+            'image/webp', 'image/bmp'
         ]
         
         return any(valid_type in content_type for valid_type in valid_types)
@@ -1042,6 +1286,60 @@ class SelectorMiner:
             logger.error(f"Failed to merge recipe: {e}")
             return False
 
+    def save_accepted_selectors_to_yaml(self, domain: str, accepted_selectors: List[Dict], 
+                                       yaml_file_path: str) -> bool:
+        """
+        Save accepted selectors back to YAML file.
+        
+        Args:
+            domain: Domain name
+            accepted_selectors: List of accepted selector dictionaries
+            yaml_file_path: Path to the YAML file
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Load existing recipes
+            existing_recipes = {'defaults': {}, 'sites': {}}
+            if Path(yaml_file_path).exists():
+                with open(yaml_file_path, 'r', encoding='utf-8') as file:
+                    existing_recipes = yaml.safe_load(file) or existing_recipes
+            
+            # Ensure required sections exist
+            if 'sites' not in existing_recipes:
+                existing_recipes['sites'] = {}
+            
+            # Get or create domain recipe
+            if domain not in existing_recipes['sites']:
+                existing_recipes['sites'][domain] = {
+                    'selectors': [],
+                    'attributes_priority': [],
+                    'extra_sources': [],
+                    'method': 'smart'
+                }
+            
+            # Update selectors with accepted ones
+            existing_recipes['sites'][domain]['selectors'] = accepted_selectors
+            
+            # Infer attributes_priority and extra_sources from accepted selectors if not present
+            if not existing_recipes['sites'][domain]['attributes_priority']:
+                existing_recipes['sites'][domain]['attributes_priority'] = self._infer_attributes_priority(self.image_nodes)
+            
+            if not existing_recipes['sites'][domain]['extra_sources']:
+                existing_recipes['sites'][domain]['extra_sources'] = self._extract_extra_sources(self.image_nodes)
+            
+            # Write back to file
+            with open(yaml_file_path, 'w', encoding='utf-8') as file:
+                yaml.dump(existing_recipes, file, default_flow_style=False, sort_keys=False)
+            
+            logger.info(f"Successfully saved {len(accepted_selectors)} accepted selectors for {domain} to {yaml_file_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to save accepted selectors: {e}")
+            return False
+
     async def render_with_javascript(self, url: str, timeout: int = 3000) -> Optional[str]:
         """
         Render a page with JavaScript using Playwright to capture dynamically injected content.
@@ -1160,7 +1458,7 @@ def mine_selectors_for_url(html_content: str, base_url: str = "") -> List[Candid
     return miner.mine_selectors(html_content)
 
 
-async def mine_selectors_with_js_fallback(html_content: str, url: str = None, base_url: str = "", min_candidates: int = 3) -> List[CandidateSelector]:
+async def mine_selectors_with_js_fallback(html_content: str, url: str = None, base_url: str = "", min_candidates: int = 3, max_bytes: Optional[int] = None) -> List[CandidateSelector]:
     """
     Convenience function to mine selectors with JavaScript fallback.
     
@@ -1169,15 +1467,16 @@ async def mine_selectors_with_js_fallback(html_content: str, url: str = None, ba
         url: URL to render with JavaScript if needed
         base_url: Base URL for resolving relative links
         min_candidates: Minimum number of candidates to proceed without JS fallback
+        max_bytes: Maximum image size in bytes
         
     Returns:
         List of candidate selectors (from static or JS-rendered content)
     """
-    miner = SelectorMiner(base_url)
+    miner = SelectorMiner(base_url, max_bytes=max_bytes)
     return await miner.mine_selectors_with_js_fallback(html_content, url, min_candidates)
 
 
-async def propose_recipe_for_domain(domain: str, html_content: str, base_url: str = "") -> Optional[RecipeCandidate]:
+async def propose_recipe_for_domain(domain: str, html_content: str, base_url: str = "", max_bytes: Optional[int] = None) -> Optional[RecipeCandidate]:
     """
     Convenience function to propose a recipe for a domain.
     
@@ -1185,11 +1484,12 @@ async def propose_recipe_for_domain(domain: str, html_content: str, base_url: st
         domain: Domain name for the recipe
         html_content: Raw HTML content
         base_url: Base URL for resolving relative links
+        max_bytes: Maximum image size in bytes
         
     Returns:
         Recipe candidate if validation succeeds, None otherwise
     """
-    miner = SelectorMiner(base_url)
+    miner = SelectorMiner(base_url, max_bytes=max_bytes)
     return await miner.propose_recipe(domain, html_content)
 
 

@@ -20,6 +20,7 @@ from typing import List, Optional
 sys.path.append(str(Path(__file__).parent.parent))
 
 from tools.selector_miner import SelectorMiner, propose_recipe_for_domain
+from tools.redirect_utils import create_safe_client, fetch_html_with_redirects
 import httpx
 
 
@@ -76,31 +77,25 @@ async def fetch_html_content(urls: List[str], max_urls: int = 3) -> Optional[str
     Returns:
         HTML content from the first successful fetch, or None if all fail
     """
-    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+    async with create_safe_client(timeout=30.0) as client:
         for i, url in enumerate(urls[:max_urls]):
             try:
                 logging.info(f"Fetching HTML from: {url}")
-                response = await client.get(url)
-                response.raise_for_status()
+                html_content, reason = await fetch_html_with_redirects(url, client, max_hops=3)
                 
-                content_type = response.headers.get('content-type', '').lower()
-                if 'text/html' in content_type:
-                    logging.info(f"Successfully fetched HTML from {url} ({len(response.text)} chars)")
-                    return response.text
+                if html_content is not None:
+                    logging.info(f"Successfully fetched HTML from {url} ({len(html_content)} chars)")
+                    return html_content
                 else:
-                    logging.warning(f"URL {url} returned non-HTML content: {content_type}")
+                    logging.warning(f"Failed to fetch {url}: {reason}")
                     
-            except httpx.TimeoutException:
-                logging.warning(f"Timeout fetching {url}")
-            except httpx.HTTPStatusError as e:
-                logging.warning(f"HTTP error fetching {url}: {e.response.status_code}")
             except Exception as e:
                 logging.warning(f"Error fetching {url}: {e}")
     
     return None
 
 
-async def mine_selectors_for_domain(domain: str, urls: List[str], verbose: bool = False, js_fallback: bool = False, min_candidates: int = 3) -> Optional[dict]:
+async def mine_selectors_for_domain(domain: str, urls: List[str], verbose: bool = False, js_fallback: bool = False, min_candidates: int = 3, max_bytes: Optional[int] = None) -> Optional[dict]:
     """
     Mine selectors for a domain from the provided URLs.
     
@@ -110,6 +105,7 @@ async def mine_selectors_for_domain(domain: str, urls: List[str], verbose: bool 
         verbose: Enable verbose logging
         js_fallback: Enable JavaScript fallback for dynamic content
         min_candidates: Minimum candidates before JS fallback
+        max_bytes: Maximum image size in bytes
         
     Returns:
         Recipe dictionary if successful, None otherwise
@@ -133,18 +129,22 @@ async def mine_selectors_for_domain(domain: str, urls: List[str], verbose: bool 
                 html_content, 
                 urls[0] if urls else f"https://{domain}", 
                 f"https://{domain}",
-                min_candidates
+                min_candidates,
+                max_bytes
             )
             
             if not candidates:
                 logging.error("No selectors found even with JavaScript fallback")
                 return None
             
-            # Propose recipe with the JS-mined candidates
-            recipe = await propose_recipe(domain, candidates, f"https://{domain}")
+            # Create miner instance for recipe proposal
+            from tools.selector_miner import SelectorMiner
+            miner = SelectorMiner(f"https://{domain}", max_bytes=max_bytes)
+            miner.mine_selectors(html_content)  # Set up the miner state
+            recipe = await miner.propose_recipe(domain, html_content)
         else:
             # Use standard static mining
-            recipe = await propose_recipe_for_domain(domain, html_content, f"https://{domain}")
+            recipe = await propose_recipe_for_domain(domain, html_content, f"https://{domain}", max_bytes)
         
         if not recipe:
             logging.error("No recipe could be proposed - validation failed or no suitable selectors found")
@@ -244,6 +244,7 @@ Examples:
     parser.add_argument('--append', action='store_true', help='Append to existing YAML file (default: True)')
     parser.add_argument('--js', action='store_true', help='Enable JavaScript fallback for dynamic content (requires Playwright)')
     parser.add_argument('--min-candidates', type=int, default=3, help='Minimum candidates before JS fallback (default: 3)')
+    parser.add_argument('--max-bytes', type=int, help='Maximum image size in bytes (overrides MINER_MAX_IMAGE_BYTES env var)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
     
     args = parser.parse_args()
@@ -261,7 +262,8 @@ Examples:
             urls, 
             args.verbose, 
             args.js, 
-            args.min_candidates
+            args.min_candidates,
+            args.max_bytes
         )
         
         if not recipe_dict:

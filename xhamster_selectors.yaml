@@ -1,0 +1,40 @@
+defaults: {}
+sites:
+  xhamster.com:
+    selectors:
+    - selector: div.thumb-list > div.thumb-list__item > a.video-thumb__image-container
+        > img.thumb-image-container__image
+      description: div.thumb-list > div.thumb-list__item > a.video-thumb__image-container
+        > img.thumb-image-container__image - 42 images with data-role=thumb-preview-img,
+        loading=lazy near duration text
+    - selector: div.thumbs-b7566 > div.item-74fdf > a.imageContainer-a870e > img.tnum-0
+      description: div.thumbs-b7566 > div.item-74fdf > a.imageContainer-a870e > img.tnum-0
+        - 1 images with srcset=https://ic-vt-nss.xhcdn.com/a/YzE4YWE3MGVlMjVmOGNkNGFhMzg1Zjc3NTE1NWU1MDc/s(w:350,h:620),jpeg/026/831/365/orig.4.jpg,
+        src=https://ic-vt-nss.xhcdn.com/a/M2MxMTRlNjQzZWNiOTZkMDRiYzYyOTFmNTg0ZWU5NDc/s(w:405,h:720),jpeg/026/831/365/orig.4.jpg,
+        alt=Jaw-dropping moment from "My sexy super neighbor cheats on her husband
+        with me and wants anal sex", loading=lazy
+    - selector: div.thumbs-b7566 > div.item-74fdf > a.imageContainer-a870e > img.tnum-1
+      description: div.thumbs-b7566 > div.item-74fdf > a.imageContainer-a870e > img.tnum-1
+        - 1 images with srcset=https://ic-vt-nss.xhcdn.com/a/NDM5ZWE2ZWRjMmJhZjdlYjEzMDgzZjRhMGRiNGFiNTM/s(w:350,h:620),jpeg/026/029/650/orig.4.jpg,
+        src=https://ic-vt-nss.xhcdn.com/a/YTdjNDI1MzczMGIzYjVlYjU4ZGQyNzUzYjJjNmZjNDM/s(w:405,h:720),jpeg/026/029/650/orig.4.jpg,
+        alt=Beautiful babe loves the cock in pussy in mouth...cum on tits, loading=lazy
+    - selector: div.thumbs-b7566 > div.item-74fdf > a.imageContainer-a870e > img.tnum-2
+      description: div.thumbs-b7566 > div.item-74fdf > a.imageContainer-a870e > img.tnum-2
+        - 1 images with srcset=https://ic-vt-nss.xhcdn.com/a/ZmYxNDI1OTU3ZjEyMTk5MTc0MDBkMDE0NmU0ZTRlZjc/s(w:350,h:620),jpeg/026/459/964/orig.9.jpg,
+        src=https://ic-vt-nss.xhcdn.com/a/OGFlYmRkN2Q4MTI2OWI1NjVmZDhkYzAzN2U5MDk1OGU/s(w:405,h:720),jpeg/026/459/964/orig.9.jpg,
+        alt=Big Tit, Big Ass Nun Teaches Porn Star How to Be Humble with Huge Anal,
+        loading=lazy
+    - selector: div.thumbs-b7566 > div.item-74fdf > a.imageContainer-a870e > img.tnum-3
+      description: div.thumbs-b7566 > div.item-74fdf > a.imageContainer-a870e > img.tnum-3
+        - 1 images with srcset=https://ic-vt-nss.xhcdn.com/a/YTExYzZkMzI0ZTIwZTllNGZkMWM2MjgzNDRlNDc0YmE/s(w:350,h:620),jpeg/026/414/852/orig.9.jpg,
+        src=https://ic-vt-nss.xhcdn.com/a/ZGM4ZTI0ZGM2ODYzMDA4NDdjNDM2NDhjYWIwNTBkMTE/s(w:405,h:720),jpeg/026/414/852/orig.9.jpg,
+        alt=Epic moment from "Naughty Broker Fucks Hot With New Tenant", loading=lazy
+    attributes_priority:
+    - alt
+    - src
+    - srcset
+    - class
+    - data-role
+    - loading
+    extra_sources: []
+    method: smart

@@ -27,6 +27,9 @@ from datetime import datetime
 import httpx
 from bs4 import BeautifulSoup
 
+# Import redirect utilities (local copy in services directory)
+from .redirect_utils import create_safe_client, fetch_html_with_redirects
+
 # Import site recipes functionality
 from ..config.site_recipes import get_recipe_for_url, get_recipe_for_host
 
@@ -134,6 +137,10 @@ def validate_content_security(content_type: str, content_length: Optional[int] =
         return False, "NO_CONTENT_TYPE"
     
     content_type_lower = content_type.lower()
+    
+    # Explicitly reject SVG
+    if 'image/svg+xml' in content_type_lower:
+        return False, "SKIP_SVG"
     
     # Check for blocked content types
     if content_type_lower in BLOCKED_CONTENT_TYPES:
@@ -518,7 +525,7 @@ class ImageCrawler:
         self.tenant_id = tenant_id  # Multi-tenancy support
         self.max_file_size = max_file_size
         self.allowed_extensions = allowed_extensions or {
-            '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'
+            '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'
         }
         self.timeout = timeout
         self.min_face_quality = min_face_quality  # Minimum detection score for face quality
@@ -576,16 +583,15 @@ class ImageCrawler:
         
     async def __aenter__(self):
         """Async context manager entry."""
-        # Secure HTTP client with strict timeouts and TLS verification
+        # Create secure HTTP client with redirect utilities
         limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
-        self.session = httpx.AsyncClient(
+        self.session = create_safe_client(
             timeout=httpx.Timeout(
                 connect=10.0,  # Connection timeout
                 read=30.0,    # Read timeout
                 write=10.0,   # Write timeout
                 pool=5.0      # Pool timeout
             ),
-            follow_redirects=False,  # Manual redirect handling for security
             verify=True,  # TLS verification
             http2=True,
             limits=limits,
@@ -1489,6 +1495,11 @@ class ImageCrawler:
                 logger.info(f"Image URL rejected: {reason} - {_truncate_log_string(absolute_url)}")
                 continue
             
+            # Explicitly reject SVG URLs
+            if absolute_url.lower().endswith('.svg'):
+                logger.info(f"Image URL rejected: SKIP_SVG - {_truncate_log_string(absolute_url)}")
+                continue
+            
             # Extract image metadata using recipe-based attribute priority
             alt_text = ""
             title = ""
@@ -1953,8 +1964,14 @@ class ImageCrawler:
             
             logger.info(f"Fetching page: {_truncate_log_string(url)}")
             
-            # Use manual redirect handling for page fetching too
-            content = await self._fetch_with_redirect_handling(url, errors)
+            # Use redirect utility for page fetching
+            content, fetch_reason = await fetch_html_with_redirects(url, self.session, max_hops=self.max_redirects)
+            
+            if content is None:
+                logger.warning(f"Failed to fetch page: {fetch_reason} - {_truncate_log_string(url)}")
+                errors.append(f"Fetch failed: {fetch_reason}")
+                return None, errors
+            
             return content, errors
             
         except Exception as e:
@@ -1963,65 +1980,6 @@ class ImageCrawler:
             errors.append(error_msg)
             return None, errors
     
-    async def _fetch_with_redirect_handling(self, url: str, errors: List[str]) -> Optional[str]:
-        """Fetch page content with manual redirect handling."""
-        current_url = url
-        redirect_count = 0
-        
-        while redirect_count <= self.max_redirects:
-            # Validate URL security
-            is_safe, reason = validate_url_security(current_url)
-            if not is_safe:
-                logger.warning(f"Page URL rejected: {reason} - {_truncate_log_string(current_url)}")
-                errors.append(f"Page URL rejected: {reason}")
-                return None
-            
-            try:
-                response = await self.session.get(current_url)
-                
-                # Handle redirects
-                if response.status_code in (301, 302, 303, 307, 308):
-                    redirect_url = response.headers.get('location')
-                    if not redirect_url:
-                        errors.append("Redirect without location header")
-                        return None
-                    
-                    # Resolve relative redirects
-                    redirect_url = urljoin(current_url, redirect_url)
-                    
-                    # Validate redirect security
-                    is_safe, reason = validate_redirect_security(redirect_url, redirect_count, self.max_redirects)
-                    if not is_safe:
-                        logger.warning(f"Page redirect rejected: {reason} - {_truncate_log_string(redirect_url)}")
-                        errors.append(f"Page redirect rejected: {reason}")
-                        return None
-                    
-                    current_url = redirect_url
-                    redirect_count += 1
-                    continue
-                
-                response.raise_for_status()
-                
-                # Check content type
-                content_type = response.headers.get('content-type', '').lower()
-                if 'text/html' not in content_type:
-                    errors.append(f"Content type '{content_type}' is not HTML")
-                    return None
-                
-                return response.text
-                
-            except httpx.HTTPError as e:
-                if redirect_count == 0:
-                    error_msg = f"HTTP error fetching {_truncate_log_string(current_url)}: {str(e)}"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
-                    return None
-                else:
-                    errors.append(f"HTTP error after {redirect_count} redirects: {str(e)}")
-                    return None
-        
-        errors.append(f"Too many redirects: {redirect_count}")
-        return None
     
     def extract_page_urls(self, html_content: str, base_url: str) -> List[str]:
         """
@@ -2114,7 +2072,7 @@ class ImageCrawler:
             # Skip common non-page URLs
             skip_patterns = [
                 'javascript:', 'mailto:', 'tel:', '#',
-                '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg',
+                '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp',
                 '.pdf', '.doc', '.docx', '.zip', '.rar',
                 'facebook.com', 'twitter.com', 'instagram.com', 'youtube.com'
             ]

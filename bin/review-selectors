@@ -23,8 +23,10 @@ from typing import List, Dict, Optional
 sys.path.append(str(Path(__file__).parent.parent))
 
 from tools.selector_miner import SelectorMiner
+from tools.redirect_utils import create_safe_client, fetch_with_redirects
 import httpx
 import yaml
+import hashlib
 
 
 def setup_logging(verbose: bool = False):
@@ -71,74 +73,83 @@ def load_domain_recipe(domain: str, yaml_file: str) -> Optional[Dict]:
         return None
 
 
-async def download_sample_images(selectors: List[Dict], domain: str, download_dir: str, max_per_selector: int = 6) -> Dict[str, List[str]]:
+def get_selector_hash(selector: str) -> str:
+    """Generate a hash for the selector to use in directory naming."""
+    return hashlib.md5(selector.encode('utf-8')).hexdigest()[:8]
+
+
+async def download_sample_images(selectors: List[Dict], domain: str, download_dir: str, max_per_selector: int = 12) -> Dict[str, List[str]]:
     """
-    Download sample images for each selector.
+    Download sample images for each selector using real URLs from the selector data.
     
     Args:
-        selectors: List of selector dictionaries
+        selectors: List of selector dictionaries with sample_urls
         domain: Domain name
-        download_dir: Directory to download images to
+        download_dir: Base directory to download images to
         max_per_selector: Maximum images to download per selector
         
     Returns:
         Dictionary mapping selector to list of downloaded image paths
     """
     downloaded_images = {}
-    download_path = Path(download_dir)
-    download_path.mkdir(parents=True, exist_ok=True)
     
-    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+    # Create the directory structure: tmp/mordeaux_miner/<domain>/
+    base_path = Path(download_dir)
+    domain_path = base_path / domain
+    domain_path.mkdir(parents=True, exist_ok=True)
+    
+    async with create_safe_client(timeout=30.0) as client:
         for i, selector in enumerate(selectors):
             selector_key = selector['selector']
-            logging.info(f"Downloading samples for selector {i+1}/{len(selectors)}: {selector_key}")
+            sample_urls = selector.get('sample_urls', [])
             
-            # Create a directory for this selector
-            selector_dir = download_path / f"selector_{i+1}"
+            if not sample_urls:
+                logging.warning(f"No sample URLs found for selector: {selector_key}")
+                downloaded_images[selector_key] = []
+                continue
+            
+            logging.info(f"Downloading samples for selector {i+1}/{len(selectors)}: {selector_key}")
+            logging.info(f"  Found {len(sample_urls)} sample URLs")
+            
+            # Create selector-specific directory: <domain>/<selector_hash>/
+            selector_hash = get_selector_hash(selector_key)
+            selector_dir = domain_path / selector_hash
             selector_dir.mkdir(exist_ok=True)
             
             downloaded_paths = []
             
-            # For demo purposes, we'll generate some sample image URLs
-            # In a real implementation, you would use the actual URLs from the selector
-            sample_urls = [
-                f"https://{domain}/sample1.jpg",
-                f"https://{domain}/sample2.jpg", 
-                f"https://{domain}/sample3.jpg",
-                f"https://{domain}/sample4.jpg",
-                f"https://{domain}/sample5.jpg",
-                f"https://{domain}/sample6.jpg"
-            ]
-            
+            # Download actual sample URLs (limited to max_per_selector)
             for j, url in enumerate(sample_urls[:max_per_selector]):
                 try:
-                    # Try to download the image
-                    response = await client.get(url)
+                    logging.debug(f"Downloading sample {j+1}: {url}")
                     
-                    if response.status_code == 200:
+                    # Try to download the image with redirect handling
+                    response, reason = await fetch_with_redirects(url, client, max_hops=3, method="GET")
+                    
+                    if response is not None and response.status_code == 200:
                         content_type = response.headers.get('content-type', '').lower()
-                        if 'image/' in content_type:
-                            # Save the image
+                        if 'image/' in content_type and 'svg' not in content_type:
+                            # Save the image with proper extension
                             ext = content_type.split('/')[-1]
-                            if ext not in ['jpeg', 'jpg', 'png', 'gif', 'webp']:
+                            if ext not in ['jpeg', 'jpg', 'png', 'gif', 'webp', 'bmp']:
                                 ext = 'jpg'
                             
-                            image_path = selector_dir / f"sample_{j+1}.{ext}"
+                            image_path = selector_dir / f"sample_{j+1:02d}.{ext}"
                             with open(image_path, 'wb') as f:
                                 f.write(response.content)
                             
                             downloaded_paths.append(str(image_path))
                             logging.debug(f"Downloaded: {image_path}")
                         else:
-                            logging.warning(f"Non-image content from {url}: {content_type}")
+                            logging.warning(f"Non-image or SVG content from {url}: {content_type}")
                     else:
-                        logging.warning(f"Failed to download {url}: HTTP {response.status_code}")
+                        logging.warning(f"Failed to download {url}: {reason if response is None else f'HTTP {response.status_code}'}")
                         
                 except Exception as e:
                     logging.warning(f"Error downloading {url}: {e}")
             
             downloaded_images[selector_key] = downloaded_paths
-            logging.info(f"Downloaded {len(downloaded_paths)} images for selector: {selector_key}")
+            logging.info(f"Downloaded {len(downloaded_paths)}/{len(sample_urls[:max_per_selector])} images for selector: {selector_key}")
     
     return downloaded_images
 
@@ -206,7 +217,7 @@ def display_review_interface(selectors: List[Dict], downloaded_images: Dict[str,
 
 def update_yaml_with_approvals(domain: str, selectors: List[Dict], approvals: List[bool], yaml_file: str) -> bool:
     """
-    Update YAML file based on approval decisions.
+    Update YAML file based on approval decisions using the selector miner's save functionality.
     
     Args:
         domain: Domain name
@@ -218,33 +229,26 @@ def update_yaml_with_approvals(domain: str, selectors: List[Dict], approvals: Li
         True if successful, False otherwise
     """
     try:
-        # Load existing recipes
-        yaml_path = Path(yaml_file)
-        with open(yaml_path, 'r', encoding='utf-8') as f:
-            recipes = yaml.safe_load(f) or {}
-        
         # Filter selectors based on approvals
         approved_selectors = [
             selector for selector, approved in zip(selectors, approvals)
             if approved
         ]
         
-        # Update the recipe
-        if 'sites' not in recipes:
-            recipes['sites'] = {}
+        if not approved_selectors:
+            logging.warning(f"No selectors were approved for {domain}")
+            return True  # Consider this a success (nothing to save)
         
-        if domain in recipes['sites']:
-            recipes['sites'][domain]['selectors'] = approved_selectors
-        else:
-            logging.warning(f"Domain {domain} not found in YAML file")
-            return False
+        # Create a SelectorMiner instance to use its save functionality
+        miner = SelectorMiner()
         
-        # Write back to file
-        with open(yaml_path, 'w', encoding='utf-8') as f:
-            yaml.dump(recipes, f, default_flow_style=False, sort_keys=False)
+        # Save approved selectors to YAML
+        success = miner.save_accepted_selectors_to_yaml(domain, approved_selectors, yaml_file)
         
-        logging.info(f"Updated YAML file with {len(approved_selectors)} approved selectors")
-        return True
+        if success:
+            logging.info(f"Updated YAML file with {len(approved_selectors)} approved selectors for {domain}")
+        
+        return success
         
     except Exception as e:
         logging.error(f"Failed to update YAML file: {e}")
@@ -286,12 +290,13 @@ Examples:
     # Set up logging
     setup_logging(args.verbose)
     
-    # Set up download directory
+    # Set up download directory with proper structure
     if args.download_dir:
         download_dir = args.download_dir
     else:
-        temp_dir = tempfile.mkdtemp(prefix='selector_review_')
-        download_dir = temp_dir
+        # Create tmp/mordeaux_miner directory structure
+        base_temp = tempfile.mkdtemp(prefix='mordeaux_miner_')
+        download_dir = base_temp
         logging.info(f"Using temporary directory: {download_dir}")
     
     try:
@@ -306,7 +311,16 @@ Examples:
             logging.error(f"No selectors found for domain: {args.domain}")
             sys.exit(1)
         
+        # Check if selectors have sample URLs
+        selectors_with_samples = [s for s in selectors if s.get('sample_urls')]
+        if not selectors_with_samples:
+            logging.warning(f"No selectors with sample URLs found for domain: {args.domain}")
+            logging.warning("This may indicate that the recipe was created before sample URLs were implemented.")
+            logging.warning("Consider re-running the miner to generate fresh selectors with sample URLs.")
+            sys.exit(1)
+        
         logging.info(f"Found {len(selectors)} selectors for domain: {args.domain}")
+        logging.info(f"  {len(selectors_with_samples)} selectors have sample URLs")
         
         # Download sample images
         logging.info("Downloading sample images...")
