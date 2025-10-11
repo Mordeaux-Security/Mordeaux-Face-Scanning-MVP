@@ -1761,6 +1761,36 @@ class ImageCrawler:
             logger.warning(f"Failed to strip EXIF data: {e}. Using original image.")
             return image_bytes
     
+    def _check_image_dimensions(self, image_bytes: bytes, min_dimension: int = 100) -> bool:
+        """
+        Check if image meets minimum dimension requirements.
+        
+        Args:
+            image_bytes: Image data
+            min_dimension: Minimum width or height in pixels (default: 100)
+            
+        Returns:
+            True if image meets dimension requirements, False otherwise
+        """
+        try:
+            from PIL import Image
+            import io
+            
+            # Open image to get dimensions
+            image = Image.open(io.BytesIO(image_bytes))
+            width, height = image.size
+            
+            # Check if either dimension is below minimum
+            if width < min_dimension or height < min_dimension:
+                logger.info(f"Image dimensions {width}x{height} below minimum {min_dimension}px, skipping")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"Failed to check image dimensions: {e}. Proceeding with processing.")
+            return True  # Allow processing to continue if dimension check fails
+    
     def _is_image_header(self, data: bytes) -> bool:
         """
         Check if the given bytes contain a recognizable image header.
@@ -1854,6 +1884,11 @@ class ImageCrawler:
                 if not image_bytes:
                     logger.warning(f"Failed to download image: {_truncate_log_string(image_info.url)}")
                     return None, None, False, download_errors, []
+
+                # Check image dimensions - skip if any dimension is below 100px
+                if not self._check_image_dimensions(image_bytes, min_dimension=100):
+                    logger.info(f"Image dimensions too small, skipping: {_truncate_log_string(image_info.url)}")
+                    return None, None, False, download_errors + ["Image dimensions below minimum threshold"], []
 
                 # Check cache
                 should_skip, cached_key = await self.cache_service.should_skip_crawled_image(image_info.url, image_bytes, self.tenant_id)
