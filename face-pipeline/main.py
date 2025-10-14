@@ -115,6 +115,8 @@ async def root():
         "status": "running",
         "endpoints": {
             "health": "/health",
+            "ready": "/ready",
+            "info": "/info",
             "docs": "/docs",
             "api": "/api/v1",
             "search": "/api/v1/search",
@@ -128,11 +130,88 @@ async def health():
     """
     Health check endpoint.
     
+    Basic liveness check - returns OK if the application is running.
+    Does not verify dependencies (MinIO, Qdrant, models).
+    Use /ready for readiness checks.
+    
     Returns:
         Health status
     """
     return {
         "status": "ok"
+    }
+
+
+@app.get("/ready", status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
+async def ready():
+    """
+    Readiness endpoint for Kubernetes/orchestration health checks.
+    
+    Checks if the application is ready to serve requests by verifying:
+    - ML models are loaded
+    - MinIO storage is accessible
+    - Qdrant vector database is connected
+    
+    Returns 503 (Service Unavailable) if not ready, 200 OK when ready.
+    
+    **TODO - DEV2 Implementation Steps**:
+    1. Check if ML models are loaded:
+       - Try to access pipeline.detector model
+       - Try to access pipeline.embedder model
+       - Return ready=False if models not initialized
+    
+    2. Check MinIO connectivity:
+       - Try to list buckets or check bucket exists
+       - Use pipeline.storage.exists() with a test key
+       - Return ready=False if MinIO unreachable
+    
+    3. Check Qdrant connectivity:
+       - Try to get collection info
+       - Use pipeline.indexer client health check
+       - Return ready=False if Qdrant unreachable
+    
+    4. Return ready=True only if all checks pass
+    
+    Returns:
+        Dict with:
+        - ready: bool - True if ready, False otherwise
+        - reason: str - Explanation if not ready
+        - checks: dict (optional) - Individual check statuses
+    
+    Example response (not ready):
+        {
+            "ready": false,
+            "reason": "models_not_loaded",
+            "checks": {
+                "models": false,
+                "storage": false,
+                "vector_db": false
+            }
+        }
+    
+    Example response (ready):
+        {
+            "ready": true,
+            "reason": "all_systems_operational",
+            "checks": {
+                "models": true,
+                "storage": true,
+                "vector_db": true
+            }
+        }
+    """
+    # TODO: Implement actual readiness checks
+    # For now, always return not ready until models are loaded
+    
+    # Placeholder response
+    return {
+        "ready": False,
+        "reason": "models_not_loaded",
+        "checks": {
+            "models": False,      # TODO: Check if InsightFace models loaded
+            "storage": False,     # TODO: Check MinIO connectivity
+            "vector_db": False    # TODO: Check Qdrant connectivity
+        }
     }
 
 

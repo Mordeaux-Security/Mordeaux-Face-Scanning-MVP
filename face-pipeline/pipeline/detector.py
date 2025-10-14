@@ -87,7 +87,27 @@ def validate_hint(img_shape: tuple[int, int, int], bbox: list[int]) -> bool:
     TODO: Add optional minimum size validation
     TODO: Log validation failures for debugging
     """
-    pass
+    # Validate bbox format
+    if not bbox or len(bbox) != 4:
+        logger.debug(f"Invalid bbox format: {bbox} (expected 4 elements)")
+        return False
+    
+    x, y, w, h = bbox
+    
+    # Check for non-negative values
+    if x < 0 or y < 0 or w <= 0 or h <= 0:
+        logger.debug(f"Invalid bbox values: {bbox} (negative or zero dimensions)")
+        return False
+    
+    # Check image boundaries
+    img_height, img_width = img_shape[:2]
+    
+    if x + w > img_width or y + h > img_height:
+        logger.debug(f"Bbox out of bounds: {bbox} for image shape {img_shape}")
+        return False
+    
+    # Validation passed
+    return True
 
 
 def align_and_crop(

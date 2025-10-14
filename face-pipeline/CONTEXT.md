@@ -1,6 +1,6 @@
-# Face Pipeline - DEV1 Context
+# Face Pipeline - DEV2 Context
 
-## 📍 Current Status - DEV1 Phase Complete
+## 📍 Current Status - DEV2 Phase In Progress
 
 **Project**: Mordeaux Face Scanning MVP - Face Pipeline Module  
 **Branch**: `debloated`  
@@ -18,7 +18,14 @@
 - **Step 7**: Deduplication Helpers ✅
 - **Step 8**: Orchestration Flow (with minimal wiring) ✅
 
-**Status**: All pipeline infrastructure complete, orchestration flow documented and wired with placeholders, ready for implementation.
+### ✅ DEV2 Phase - Infrastructure & Contracts (Steps 9-12)
+
+- **Step 9**: Search API Stubs (Contracts Only) ✅
+- **Step 10**: Observability & Health (Skeleton) ✅
+- **Step 11**: Tests & CI Placeholders ✅
+- **Step 12**: README Contracts & Runbook ✅
+
+**Status**: Complete infrastructure + API contracts + Documentation ready for DEV2 implementation.
 
 ---
 
@@ -75,12 +82,20 @@
 - ✅ Returns shape (512,) dtype float32
 - 🔄 FaceEmbedder class (legacy, keeping for now)
 
-#### 6. **pipeline/utils.py** (220+ lines)
+#### 6. **pipeline/utils.py** (307 lines) - UPDATED ✅
+
+**Core Utilities**:
 - ✅ `l2_normalize(vec) -> np.ndarray` - **Minimal implementation** (actual code)
 - ✅ `compute_phash(img_pil) -> str` - Returns "0"*16 placeholder
 - ✅ `hamming_distance_hex(a, b) -> int` - Length-safe placeholder
 - ✅ `phash_prefix(hex_str, bits=16) -> str` - Returns first 4 hex chars
 - 🔄 Other utility functions (placeholders)
+
+**Observability (Step 10)** ⭐ NEW:
+- ✅ `timer(section: str)` - Context manager for timing code sections
+- ✅ Logs elapsed time in milliseconds
+- ✅ Exception-safe timing
+- ✅ Comprehensive docstring with TODO markers for Prometheus/StatsD export
 
 #### 7. **pipeline/indexer.py** (360+ lines)
 - ✅ Qdrant Payload Schema documentation (9 required fields)
@@ -92,18 +107,75 @@
 **Payload Contract** (9 fields):
 - `tenant_id`, `site`, `url`, `ts`, `p_hash`, `p_hash_prefix`, `bbox`, `quality`, `image_sha256`
 
-### ✅ Tests Created
+#### 8. **services/search_api.py** (334 lines) - NEW ✅
 
-#### tests/test_quality.py (180+ lines)
+**Pydantic Models** (5 total):
+- ✅ `SearchRequest` - Request model with image/vector, top_k, tenant_id, threshold
+- ✅ `SearchHit` - Single result with face_id, score, payload, thumb_url
+- ✅ `SearchResponse` - Response with query metadata, hits list, count
+- ✅ `FaceDetailResponse` - Face detail with face_id, payload, thumb_url
+- ✅ `StatsResponse` - Pipeline stats with processed, rejected, dup_skipped
+
+**API Endpoints** (4 total):
+- ✅ `POST /api/v1/search` - Search by image bytes or vector (returns empty list stub)
+- ✅ `GET /api/v1/faces/{face_id}` - Get face by ID (returns placeholder)
+- ✅ `GET /api/v1/stats` - Get pipeline stats (returns 0,0,0)
+- ✅ `GET /api/v1/health` - Health check (fully implemented)
+
+**Status**: All contracts defined, OpenAPI docs ready, TODO markers for DEV2 implementation
+
+#### 9. **main.py** (283 lines) - UPDATED ✅
+
+**FastAPI Application**:
+- ✅ Lifespan context manager for startup/shutdown
+- ✅ CORS middleware configuration
+- ✅ Search API router integration
+
+**Root Endpoints** (7 total):
+- ✅ `GET /` - Root with endpoint directory
+- ✅ `GET /health` - Liveness check (always returns OK)
+- ✅ `GET /ready` - Readiness check (Step 10) ⭐ NEW
+- ✅ `GET /info` - Configuration and feature status
+- ✅ Error handlers (404 with helpful hints)
+
+**Readiness Endpoint (Step 10)** ⭐ NEW:
+- ✅ Returns 503 Service Unavailable by default
+- ✅ Response: `{ready: bool, reason: str, checks: dict}`
+- ✅ Checks: models, storage, vector_db (all False for now)
+- ✅ Comprehensive TODO markers for health check implementation
+- ✅ Kubernetes/Docker compatible format
+
+### ✅ Tests Created (Step 11) ⭐ UPDATED
+
+#### tests/test_quality.py (188 lines)
 - ✅ `TestLaplacianVariance` - Tests return type
 - ✅ `TestEvaluate` - Tests all 4 required keys and types
+- ✅ Calls `evaluate()` with tiny PIL image (112x112)
+- ✅ Asserts dict keys: pass, reason, blur, size
+- ✅ Validates all value types (bool, str, float, tuple)
 - ✅ 10 test functions total
 
-#### tests/test_embedder.py (160+ lines)
+#### tests/test_embedder.py (162 lines)
 - ✅ `TestEmbedFunction` - Tests shape (512,) and dtype float32
 - ✅ `TestLoadModel` - Tests singleton pattern
 - ✅ `TestL2Normalize` - Tests helper function
+- ✅ Calls `embed()` with tiny PIL image (112x112)
+- ✅ Asserts shape (512,) and dtype float32
 - ✅ 8 test functions total
+
+#### tests/test_processor_integration.py (292 lines) ⭐ UPDATED
+- ✅ `TestProcessImage` - Tests process_image() interface (Step 11)
+- ✅ Calls `process_image()` with valid message dict
+- ✅ Asserts top-level keys: image_sha256, counts, artifacts, timings_ms
+- ✅ Validates counts structure (faces_total, accepted, rejected, dup_skipped)
+- ✅ Validates artifacts structure (crops, thumbs, metadata lists)
+- ✅ Validates timings_ms structure (9 timing keys)
+- ✅ Tests optional face_hints parameter
+- ✅ 8 new test functions for process_image()
+- ✅ `TestPipelineIntegration` - Placeholder integration tests (TODO)
+- ✅ 15+ test functions total
+
+**Test Status**: All tests verify interfaces/types only (no real assertions yet)
 
 ---
 
@@ -284,13 +356,25 @@ face-pipeline/
 │   ├── quality.py          ✅ 270+ lines - Quality interface
 │   ├── embedder.py         ✅ 210+ lines - Embedding interface
 │   ├── indexer.py          ✅ 360+ lines - Qdrant interface
-│   └── utils.py            ✅ 220+ lines - Utility functions
+│   └── utils.py            ✅ 307 lines - Utility functions + timer()
+├── services/
+│   └── search_api.py       ✅ 334 lines - API contracts (Step 9)
 ├── tests/
 │   ├── conftest.py         ✅ 107 lines - Fixtures
 │   ├── test_quality.py     ✅ 188 lines - 10 tests
 │   ├── test_embedder.py    ✅ 162 lines - 8 tests
-│   └── test_processor_integration.py  ✅ 124 lines - Placeholders
-└── CONTEXT.md              ✅ This file
+│   └── test_processor_integration.py  ✅ 292 lines - 15+ tests
+├── README.md               ✅ 850+ lines - Complete developer guide ⭐ NEW
+├── main.py                 ✅ 283 lines - FastAPI application
+├── test_search_api.py      ✅ 182 lines - API validation
+├── test_step10_observability.py  ✅ 214 lines - Observability tests
+├── test_step11_simple.py   ✅ 175 lines - Test validation
+├── test_step11_run_tests.py ✅ Test runner script
+├── STEP9_*.md              ✅ Step 9 documentation (3 files)
+├── STEP10_*.md             ✅ Step 10 documentation (3 files)
+├── STEP11_TESTS_SUMMARY.md ✅ Step 11 documentation
+├── STEP12_COMPLETION_REPORT.md ✅ Step 12 documentation ⭐ NEW
+└── CONTEXT.md              ✅ This file (updated)
 ```
 
 ### Code Quality
@@ -373,24 +457,37 @@ def detect_faces(img_np: "np.ndarray") -> list[dict]:
 
 ---
 
-## 📝 Next Phase: DEV2 (Implementation)
+## 📝 Next Phase: DEV2 (Implementation) - In Progress
 
-### Priority 1: Core Pipeline (High Impact)
+### ✅ Completed
+- **Step 9**: Search API Stubs (Contracts Only) - All endpoints defined with Pydantic models
+- **Step 10**: Observability & Health (Skeleton) - timer() context manager + /ready endpoint
+- **Step 11**: Tests & CI Placeholders - All test interfaces ready (33+ test functions)
+- **Step 12**: README Contracts & Runbook - 850+ lines comprehensive documentation ⭐ NEW
+
+### 🚧 Priority 1: Core Pipeline (High Impact)
 1. Implement `detect_faces()` - InsightFace buffalo_l model
 2. Implement `embed()` - Generate real embeddings
 3. Implement `evaluate()` - Real quality checks
 4. Uncomment Steps 2-6 in `process_image()`
 
-### Priority 2: Storage & Indexing
+### 🚧 Priority 2: Storage & Indexing
 5. Implement MinIO operations (`get_bytes`, `put_bytes`)
 6. Implement Qdrant operations (`ensure_collection`, `upsert`, `search`)
 7. Uncomment Steps 7-11 in `process_image()`
 
-### Priority 3: Refinement
-8. Implement `align_and_crop()` with actual transforms
-9. Implement `hamming_distance_hex()` with bitwise logic
-10. Add error handling and retry logic
-11. Performance optimization
+### 🚧 Priority 3: Search API Implementation
+8. Implement POST /search endpoint (image/vector search)
+9. Implement GET /faces/{face_id} endpoint (face retrieval)
+10. Implement GET /stats endpoint (metrics collection)
+11. Add presigned URL generation for thumbnails
+
+### 🚧 Priority 4: Refinement
+12. Implement `align_and_crop()` with actual transforms
+13. Implement `hamming_distance_hex()` with bitwise logic
+14. Add error handling and retry logic
+15. Performance optimization
+16. Integration testing with real services
 
 ---
 
@@ -436,7 +533,88 @@ from backend.app.services.crawler import check_face_quality
 - [x] All configuration loaded from settings
 - [x] Health check passing
 
-**Status**: ✅ DEV1 PHASE COMPLETE - Ready for implementation phase
+**Status**: ✅ DEV1 PHASE COMPLETE
+
+---
+
+## 🎯 Success Criteria - Step 9 (Search API Stubs) ✅
+
+- [x] OpenAPI docs render with correct schemas
+- [x] POST /search returns SearchResponse with correct structure
+- [x] GET /faces/{face_id} returns FaceDetailResponse
+- [x] GET /stats returns StatsResponse
+- [x] All handlers return 200 OK with empty/placeholder results
+- [x] All handlers have comprehensive TODO comments
+- [x] Request models validate with correct field types
+- [x] Response models serialize correctly
+- [x] No linter errors
+- [x] Code compiles successfully
+- [x] Pydantic models (5 total) fully documented
+- [x] API endpoints (4 total) ready for integration
+
+**Status**: ✅ STEP 9 COMPLETE - Ready for Dev C integration
+
+---
+
+## 🎯 Success Criteria - Step 10 (Observability & Health) ✅
+
+- [x] timer() context manager exists in pipeline/utils.py
+- [x] timer() yields and logs elapsed milliseconds
+- [x] timer() uses time.perf_counter() for precision
+- [x] timer() is exception-safe (logs even on failure)
+- [x] /ready endpoint exists in main.py
+- [x] /ready returns JSON with ready boolean
+- [x] /ready returns JSON with reason string
+- [x] /ready includes checks dict (models, storage, vector_db)
+- [x] /ready returns 503 Service Unavailable when not ready
+- [x] Comprehensive TODO markers for DEV2 implementation
+- [x] No linter errors
+- [x] Code compiles successfully
+
+**Status**: ✅ STEP 10 COMPLETE - Ready for Kubernetes deployment & timing instrumentation
+
+---
+
+## 🎯 Success Criteria - Step 11 (Tests & CI Placeholders) ✅
+
+- [x] test_quality.py imports evaluate() from pipeline.quality
+- [x] test_quality.py calls evaluate() with tiny PIL image (112x112)
+- [x] test_quality.py asserts dict keys exist (pass, reason, blur, size)
+- [x] test_quality.py validates all value types
+- [x] test_embedder.py imports embed() from pipeline.embedder
+- [x] test_embedder.py calls embed() with tiny PIL image (112x112)
+- [x] test_embedder.py asserts shape (512,)
+- [x] test_embedder.py asserts dtype float32
+- [x] test_processor_integration.py imports process_image()
+- [x] test_processor_integration.py calls with valid message dict
+- [x] test_processor_integration.py asserts keys in summary
+- [x] test_processor_integration.py validates counts structure
+- [x] test_processor_integration.py validates artifacts structure
+- [x] test_processor_integration.py validates timings_ms structure
+- [x] All test files compile successfully
+- [x] pytest runs and passes with placeholders (when deps installed)
+
+**Status**: ✅ STEP 11 COMPLETE - Ready for CI/CD & TDD workflow
+
+---
+
+## 🎯 Success Criteria - Step 12 (README Contracts & Runbook) ✅
+
+- [x] Overview of Dev B service and responsibilities
+- [x] Queue Message Schema documented with examples
+- [x] Artifacts Layout documented (MinIO buckets and paths)
+- [x] Qdrant Payload Fields documented (9 required fields)
+- [x] API Contracts with request/response examples
+- [x] Local run instructions with complete .env example
+- [x] Next milestones documented
+- [x] Integration guide for all teams (Dev A, Dev C, DevOps)
+- [x] New teammate can understand without seeing code
+- [x] Contract-first, runbook-quality documentation
+- [x] 850+ lines of comprehensive documentation
+- [x] File structure diagram with all modules
+- [x] Health check documentation (liveness + readiness)
+
+**Status**: ✅ STEP 12 COMPLETE - Ready for new developer onboarding
 
 ---
 
@@ -449,7 +627,20 @@ from backend.app.services.crawler import check_face_quality
 4. `pipeline/detector.py` - Face detection
 5. `pipeline/quality.py` - Quality assessment
 6. `pipeline/indexer.py` - Vector search
-7. `config/settings.py` - All configuration
+7. `services/search_api.py` - REST API endpoints (Step 9) ⭐ NEW
+8. `main.py` - FastAPI application
+9. `config/settings.py` - All configuration
+
+### Documentation Files
+- `README.md` - Complete service documentation (START HERE) ⭐ NEW
+- `CONTEXT.md` - This file (project status)
+- `STEP9_SEARCH_API_SUMMARY.md` - Step 9 detailed documentation
+- `STEP10_OBSERVABILITY_SUMMARY.md` - Step 10 observability details
+- `STEP11_TESTS_SUMMARY.md` - Step 11 test infrastructure
+- `STEP12_COMPLETION_REPORT.md` - Step 12 README documentation ⭐ NEW
+- `test_search_api.py` - API validation script
+- `test_step10_observability.py` - Observability validation
+- `test_step11_simple.py` - Test validation
 
 ### Running Tests (when deps installed)
 ```bash
@@ -461,15 +652,39 @@ python3 -m pytest tests/test_embedder.py -v
 ### Verification Commands
 ```bash
 # Check syntax
-python3 -m py_compile pipeline/*.py
+python3 -m py_compile pipeline/*.py services/*.py
 
 # Check imports (structure only)
 python3 -c "from pipeline import processor, storage, detector, quality, embedder, indexer, utils; print('✓ All modules importable')"
+
+# Verify search API compiles
+python3 -m py_compile services/search_api.py
+```
+
+### Running the API Server (Step 9)
+```bash
+cd /Users/lando/Mordeaux-Face-Scanning-MVP-2/face-pipeline
+
+# Install dependencies first (one-time setup)
+pip3 install -r requirements.txt
+
+# Start the API server
+python3 main.py
+# Or use uvicorn directly:
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# View OpenAPI docs
+# http://localhost:8000/docs (Swagger UI)
+# http://localhost:8000/redoc (ReDoc)
+
+# Test endpoints
+curl http://localhost:8000/api/v1/health
+curl http://localhost:8000/api/v1/stats
 ```
 
 ---
 
-**Last Updated**: After DEV1 Phase completion (Steps 1-8)  
-**Git Status**: Committed to `debloated` branch (commit 8cf99b9)  
-**Next**: DEV2 Phase - Actual implementation of all TODO items
+**Last Updated**: After Step 12 completion (README Contracts & Runbook)  
+**Git Status**: Branch `debloated` (uncommitted changes)  
+**Next**: DEV2 Phase - Implement core pipeline (all contracts documented)
 

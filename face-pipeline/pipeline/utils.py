@@ -9,6 +9,8 @@ TODO: Add timing/profiling decorators
 """
 
 import logging
+import time
+from contextlib import contextmanager
 from typing import Tuple, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -230,8 +232,68 @@ def generate_unique_id(prefix: str = "") -> str:
     pass
 
 
+# ============================================================================
+# Timing & Observability
+# ============================================================================
+
+@contextmanager
+def timer(section: str):
+    """
+    Context manager for timing code sections with logging.
+    
+    Measures elapsed time in milliseconds and logs the duration.
+    Useful for profiling pipeline steps and identifying bottlenecks.
+    
+    Args:
+        section: Name of the section being timed (for logging)
+    
+    Yields:
+        None
+    
+    Example:
+        >>> with timer("face_detection"):
+        ...     faces = detect_faces(image)
+        # Logs: "face_detection completed in 45.23ms"
+    
+    TODO - DEV2 Enhancement:
+    - Add support for structured logging (JSON format)
+    - Add metric export to Prometheus/StatsD
+    - Add configurable log levels (debug for dev, info for prod)
+    - Add optional return value for elapsed time
+    - Add exception handling to log failures
+    
+    Usage in pipeline:
+        from pipeline.utils import timer
+        
+        with timer("download_image"):
+            image_bytes = storage.get_bytes(bucket, key)
+        
+        with timer("detect_faces"):
+            faces = detector.detect_faces(image_np)
+    """
+    start_time = time.perf_counter()
+    
+    # TODO: Add structured logging support
+    # TODO: Add metric export (Prometheus, StatsD)
+    # TODO: Make logging configurable (debug/info levels)
+    
+    try:
+        yield
+    finally:
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.debug(f"⏱️  {section} completed in {elapsed_ms:.2f}ms")
+        
+        # TODO: Export to metrics backend
+        # TODO: Track in application metrics (avg, p50, p95, p99)
+
+
 class Timer:
-    """Context manager for timing operations."""
+    """
+    Context manager for timing operations (legacy class-based approach).
+    
+    Note: Prefer using the `timer()` function above for simpler usage.
+    This class is kept for backward compatibility.
+    """
     
     def __enter__(self):
         # TODO: Record start time
