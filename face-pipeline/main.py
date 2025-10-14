@@ -68,7 +68,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Face Processing Pipeline",
-    description="Modular face detection, embedding, quality assessment, and similarity search pipeline",
+    description=(
+        "Modular face detection, embedding, quality assessment, "
+        "and similarity search pipeline"
+    ),
     version="0.1.0",
     lifespan=lifespan,
     docs_url="/docs",
@@ -81,7 +84,10 @@ app = FastAPI(
 # ============================================================================
 
 # Parse CORS origins from settings
-cors_origins = settings.cors_origins.split(",") if settings.cors_origins != "*" else ["*"]
+if settings.cors_origins != "*":
+    cors_origins = settings.cors_origins.split(",")
+else:
+    cors_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -257,7 +263,9 @@ async def not_found_handler(request, exc):
         status_code=404,
         content={
             "error": "Not Found",
-            "message": f"The requested path '{request.url.path}' was not found",
+            "message": (
+                f"The requested path '{request.url.path}' was not found"
+            ),
             "hint": "Visit /docs for API documentation"
         }
     )

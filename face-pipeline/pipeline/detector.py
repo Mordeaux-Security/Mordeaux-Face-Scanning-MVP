@@ -44,7 +44,10 @@ def detect_faces(img_np: "np.ndarray") -> list[dict]:
             {
                 "bbox": [100, 150, 200, 250],
                 "score": 0.99,
-                "landmarks": [[120, 180], [180, 180], [150, 210], [130, 240], [170, 240]]
+                "landmarks": [
+                    [120, 180], [180, 180], [150, 210],
+                    [130, 240], [170, 240]
+                ]
             },
             ...
         ]
@@ -119,7 +122,8 @@ def align_and_crop(
     Align and crop a face region using landmarks for normalization.
     
     Performs facial alignment to normalize pose and rotation before cropping.
-    This improves embedding quality and search accuracy by standardizing face orientation.
+    This improves embedding quality and search accuracy by standardizing
+    face orientation.
     
     Args:
         img_np: Input image as numpy array (BGR or RGB format)
@@ -128,7 +132,8 @@ def align_and_crop(
               - x, y: top-left corner
               - w, h: width and height
         landmarks: Facial landmarks as list of [x, y] coordinates
-                   Typically 5 points: [left_eye, right_eye, nose, left_mouth, right_mouth]
+                   Typically 5 points: [left_eye, right_eye, nose,
+                   left_mouth, right_mouth]
                    Example: [[120.5, 180.2], [180.3, 179.8], ...]
     
     Returns:
@@ -212,7 +217,9 @@ class FaceDetector:
         """
         pass
     
-    def detect_batch(self, images: List["np.ndarray"]) -> List[List[Dict[str, Any]]]:
+    def detect_batch(
+        self, images: List["np.ndarray"]
+    ) -> List[List[Dict[str, Any]]]:
         """
         Batch face detection for multiple images.
         

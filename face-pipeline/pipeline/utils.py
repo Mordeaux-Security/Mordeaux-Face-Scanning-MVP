@@ -56,8 +56,9 @@ def compute_phash(img_pil: "PIL.Image.Image") -> str:
     """
     Compute perceptual hash (pHash) of an image for near-duplicate detection.
     
-    Perceptual hashes are robust to minor modifications (resize, compression, color changes)
-    and can detect visually similar images by comparing hash Hamming distance.
+    Perceptual hashes are robust to minor modifications (resize, compression,
+    color changes) and can detect visually similar images by comparing hash
+    Hamming distance.
     
     Args:
         img_pil: Input image as PIL Image
@@ -117,7 +118,8 @@ def hamming_distance_hex(a: str, b: str) -> int:
     """
     # Placeholder: length-safe comparison
     if len(a) != len(b):
-        return max(len(a), len(b)) * 4  # Max possible distance (4 bits per hex char)
+        # Max possible distance (4 bits per hex char)
+        return max(len(a), len(b)) * 4
     
     # TODO: Implement bitwise Hamming distance
     return 0
@@ -165,7 +167,9 @@ def bytes_to_numpy(image_bytes: bytes) -> "np.ndarray":
     pass
 
 
-def numpy_to_bytes(image: "np.ndarray", format: str = "JPEG", quality: int = 95) -> bytes:
+def numpy_to_bytes(
+    image: "np.ndarray", format: str = "JPEG", quality: int = 95
+) -> bytes:
     """
     Convert numpy array to image bytes.
     
@@ -175,7 +179,9 @@ def numpy_to_bytes(image: "np.ndarray", format: str = "JPEG", quality: int = 95)
     pass
 
 
-def resize_image(image: "np.ndarray", max_size: Tuple[int, int]) -> "np.ndarray":
+def resize_image(
+    image: "np.ndarray", max_size: Tuple[int, int]
+) -> "np.ndarray":
     """
     Resize image maintaining aspect ratio.
     

@@ -153,7 +153,11 @@ class StatsResponse(BaseModel):
 # API Endpoints - DEV2 Phase Stubs
 # ============================================================================
 
-@router.post("/search", response_model=SearchResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/search",
+    response_model=SearchResponse,
+    status_code=status.HTTP_200_OK
+)
 async def search_faces(request: SearchRequest) -> SearchResponse:
     """
     Search for similar faces by image or embedding vector.
@@ -173,7 +177,9 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
        - Validate vector dimension (must be 512)
        - L2 normalize if needed
     4. Query Qdrant:
-       - Use pipeline.indexer.search(vector, top_k, filters={'tenant_id': request.tenant_id})
+       - Use pipeline.indexer.search(
+           vector, top_k, filters={'tenant_id': request.tenant_id}
+         )
        - Apply threshold filtering (score >= request.threshold)
     5. For each hit:
        - Generate presigned thumbnail URL using pipeline.storage.presign()
@@ -193,7 +199,8 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
     logger.info(
         f"[STUB] Search request: tenant_id={request.tenant_id}, "
         f"top_k={request.top_k}, threshold={request.threshold}, "
-        f"has_image={request.image is not None}, has_vector={request.vector is not None}"
+        f"has_image={request.image is not None}, "
+        f"has_vector={request.vector is not None}"
     )
     
     # TODO: Validate that exactly one of image or vector is provided
@@ -217,9 +224,15 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
     )
 
 
-@router.get("/faces/{face_id}", response_model=FaceDetailResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/faces/{face_id}",
+    response_model=FaceDetailResponse,
+    status_code=status.HTTP_200_OK
+)
 async def get_face_by_id(
-    face_id: str = Path(..., description="Unique face identifier (Qdrant point ID)")
+    face_id: str = Path(
+        ..., description="Unique face identifier (Qdrant point ID)"
+    )
 ) -> FaceDetailResponse:
     """
     Retrieve detailed information about a specific face by ID.
@@ -248,12 +261,23 @@ async def get_face_by_id(
     # TODO: Implement face retrieval (see docstring above)
     # from pipeline.indexer import get_qdrant_client
     # client = get_qdrant_client()
-    # points = client.retrieve(collection_name=settings.qdrant_collection, ids=[face_id])
+    # points = client.retrieve(
+    #     collection_name=settings.qdrant_collection,
+    #     ids=[face_id]
+    # )
     # if not points:
     #     raise HTTPException(404, f"Face not found: {face_id}")
     # point = points[0]
-    # thumb_url = pipeline.storage.presign(bucket=settings.minio_bucket_thumbs, key=point.payload.get('thumb_key'), ttl_sec=600)
-    # return FaceDetailResponse(face_id=face_id, payload=point.payload, thumb_url=thumb_url)
+    # thumb_url = pipeline.storage.presign(
+    #     bucket=settings.minio_bucket_thumbs,
+    #     key=point.payload.get('thumb_key'),
+    #     ttl_sec=600
+    # )
+    # return FaceDetailResponse(
+    #     face_id=face_id,
+    #     payload=point.payload,
+    #     thumb_url=thumb_url
+    # )
     
     # Placeholder response
     return FaceDetailResponse(
@@ -263,7 +287,11 @@ async def get_face_by_id(
     )
 
 
-@router.get("/stats", response_model=StatsResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/stats",
+    response_model=StatsResponse,
+    status_code=status.HTTP_200_OK
+)
 async def get_pipeline_stats() -> StatsResponse:
     """
     Get pipeline processing statistics.
