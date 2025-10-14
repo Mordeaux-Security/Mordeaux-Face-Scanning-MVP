@@ -14,6 +14,7 @@ import urllib3
 import blake3
 from ..core.config import get_settings
 
+
 logger = logging.getLogger(__name__)
 
 # Image safety configuration - set once on import
@@ -81,8 +82,8 @@ def _boto3_s3():
     return _boto3_client
 
 
-def put_object(bucket: str, key: str, data: bytes, content_type: str) -> None:
-    """Upload bytes to object storage."""
+def put_object(bucket: str, key: str, data: bytes, content_type: str, tags: Optional[Dict[str, str]] = None) -> None:
+    """Upload bytes to object storage with optional tags."""
     settings = get_settings()
     if settings.using_minio:
         # MinIO path
@@ -100,11 +101,12 @@ def put_object(bucket: str, key: str, data: bytes, content_type: str) -> None:
             data=io.BytesIO(data),
             length=len(data),
             content_type=content_type,
+            tags=tags,
         )
     else:
         # AWS S3 path
         s3 = _boto3_s3()
-        s3.put_object(Bucket=bucket, Key=key, Body=data, ContentType=content_type)
+        s3.put_object(Bucket=bucket, Key=key, Body=data, ContentType=content_type, Tagging=tags)
 
 
 def get_presigned_url(bucket: str, key: str, method: str = "GET", expires: Optional[int] = None) -> Optional[str]:
@@ -191,18 +193,24 @@ def _generate_content_addressed_key(content: bytes, tenant_id: str, extension: s
     return f"{tenant_id}/{content_hash[:2]}/{content_hash}{extension}"
 
 
-def _get_content_metadata(content: bytes, raw_key: str, thumb_key: Optional[str] = None) -> Dict[str, Any]:
+def _get_content_metadata(content: bytes, raw_key: str, thumb_key: Optional[str] = None, source_url: Optional[str] = None) -> Dict[str, Any]:
     """Extract metadata from content for caching."""
-    return {
+    metadata = {
         "hash": _compute_content_hash(content),
         "length": len(content),
         "mime": "image/jpeg",  # We standardize to JPEG for storage
         "raw_key": raw_key,
         "thumb_key": thumb_key
     }
+    
+    # Add source URL if provided
+    if source_url:
+        metadata["source_url"] = source_url
+        
+    return metadata
 
 
-def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str) -> Tuple[str, str, Dict[str, Any]]:
+def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str, source_url: Optional[str] = None) -> Tuple[str, str, Dict[str, Any]]:
     """
     Store raw image using content-addressed keys.
     Returns (raw_key, raw_url, metadata)
@@ -222,7 +230,7 @@ def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str) -> Tupl
                 logger.info(f"Content-addressed object already exists: {raw_key}")
                 # Object exists, return existing key and URL
                 raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-                metadata = _get_content_metadata(image_bytes, raw_key)
+                metadata = _get_content_metadata(image_bytes, raw_key, source_url=source_url)
                 return raw_key, raw_url, metadata
             except Exception:
                 # Object doesn't exist, proceed to upload
@@ -235,7 +243,7 @@ def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str) -> Tupl
                 logger.info(f"Content-addressed object already exists: {raw_key}")
                 # Object exists, return existing key and URL
                 raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-                metadata = _get_content_metadata(image_bytes, raw_key)
+                metadata = _get_content_metadata(image_bytes, raw_key, source_url=source_url)
                 return raw_key, raw_url, metadata
             except Exception:
                 # Object doesn't exist, proceed to upload
@@ -243,16 +251,17 @@ def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str) -> Tupl
     except Exception as e:
         logger.warning(f"Error checking for existing object {raw_key}: {e}")
     
-    # Upload the object
-    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
+    # Upload the object with source URL tag
+    tags = {"source_url": source_url} if source_url else None
+    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
     
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-    metadata = _get_content_metadata(image_bytes, raw_key)
+    metadata = _get_content_metadata(image_bytes, raw_key, source_url=source_url)
     
     return raw_key, raw_url, metadata
 
 
-def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str) -> Tuple[str, str, str, str, Dict[str, Any]]:
+def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, source_url: Optional[str] = None) -> Tuple[str, str, str, str, Dict[str, Any]]:
     """
     Store raw image and thumbnail using content-addressed keys.
     Returns (raw_key, raw_url, thumb_key, thumb_url, metadata)
@@ -302,20 +311,21 @@ def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: by
         logger.warning(f"Error checking for existing objects: {e}")
     
     # Upload objects only if they don't exist
+    tags = {"source_url": source_url} if source_url else None
     if not raw_exists:
-        put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
+        put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
     
     if not thumb_exists:
-        put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg")
+        put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg", tags)
     
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
     thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
-    metadata = _get_content_metadata(image_bytes, raw_key, thumb_key)
+    metadata = _get_content_metadata(image_bytes, raw_key, thumb_key, source_url=source_url)
     
     return raw_key, raw_url, thumb_key, thumb_url, metadata
 
 
-async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str) -> Tuple[str, str, str, str, Dict[str, Any]]:
+async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, source_url: Optional[str] = None) -> Tuple[str, str, str, str, Dict[str, Any]]:
     """
     Async version of save_raw_and_thumb_content_addressed for better performance.
     """
@@ -328,13 +338,14 @@ async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbna
             save_raw_and_thumb_content_addressed, 
             image_bytes, 
             thumbnail_bytes, 
-            tenant_id
+            tenant_id,
+            source_url
         )
         return result
     except Exception as e:
         # Fallback to sync version if async fails
         logger.warning(f"Async storage failed, falling back to sync: {e}")
-        return save_raw_and_thumb_content_addressed(image_bytes, thumbnail_bytes, tenant_id)
+        return save_raw_and_thumb_content_addressed(image_bytes, thumbnail_bytes, tenant_id, source_url)
 
 
 def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str]:
@@ -346,7 +357,8 @@ def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = ""
     img_id = str(uuid.uuid4()).replace("-", "")
     raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
 
-    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
+    tags = {"source_url": source_url} if source_url else None
+    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
 
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
     return raw_key, raw_url
@@ -388,8 +400,9 @@ def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes
     raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
     thumb_key = f"{tenant_id}/{key_prefix}{img_id}_thumb.jpg"
 
-    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg")
-    put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg")
+    tags = {"source_url": source_url} if source_url else None
+    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
+    put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg", tags)
 
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
     thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
