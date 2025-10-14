@@ -1,2 +1,4 @@
-# Sample URLs for testing mine-selectors CLI
-https://www.porn.com/stepsister
+# Sample URLs for XHamster
+https://www.xhamster.com
+https://www.xhamster.com/videos
+https://www.xhamster.com/new

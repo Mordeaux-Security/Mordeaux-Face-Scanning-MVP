@@ -803,7 +803,8 @@ class ImageCrawler:
                         raw_key, raw_url, thumbnail_key, thumb_url, metadata = await save_raw_and_thumb_content_addressed_async(
                             image_bytes, 
                             thumbnail_bytes,
-                            self.tenant_id
+                            self.tenant_id,
+                            image_info.url  # Pass source URL for tracking
                         )
                         
                         if raw_key:
@@ -815,12 +816,14 @@ class ImageCrawler:
                                 image_bytes,
                                 raw_key,
                                 thumbnail_key,
-                                self.tenant_id
+                                self.tenant_id,
+                                image_info.url  # Pass source URL for tracking
                             )
                     else:
                         raw_key, raw_url, metadata = save_raw_image_content_addressed(
                             image_bytes, 
-                            self.tenant_id
+                            self.tenant_id,
+                            image_info.url  # Pass source URL for tracking
                         )
                         
                         if raw_key:
@@ -831,7 +834,8 @@ class ImageCrawler:
                                 image_bytes,
                                 raw_key,
                                 None,
-                                self.tenant_id
+                                self.tenant_id,
+                                image_info.url  # Pass source URL for tracking
                             )
         
         # Get detailed cache statistics
@@ -1034,7 +1038,8 @@ class ImageCrawler:
                     raw_key, raw_url, thumbnail_key, thumb_url, metadata = await save_raw_and_thumb_content_addressed_async(
                         image_bytes, 
                         thumbnail_bytes,
-                        self.tenant_id
+                        self.tenant_id,
+                        image_info.url  # Pass source URL for tracking
                     )
                     
                     if raw_key:
@@ -1046,12 +1051,14 @@ class ImageCrawler:
                             image_bytes,
                             raw_key,
                             thumbnail_key,
-                            self.tenant_id
+                            self.tenant_id,
+                            image_info.url  # Pass source URL for tracking
                         )
                 else:
                     raw_key, raw_url, metadata = save_raw_image_content_addressed(
                         image_bytes, 
-                        self.tenant_id
+                        self.tenant_id,
+                        image_info.url  # Pass source URL for tracking
                     )
                     
                     if raw_key:
@@ -1062,7 +1069,8 @@ class ImageCrawler:
                             image_bytes,
                             raw_key,
                             None,
-                            self.tenant_id
+                            self.tenant_id,
+                            image_info.url  # Pass source URL for tracking
                         )
                         
         except Exception as e:

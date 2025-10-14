@@ -19,7 +19,7 @@ from typing import List, Optional
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from tools.selector_miner import SelectorMiner, propose_recipe_for_domain
+from tools.selector_miner import mine_page, emit_recipe_yaml_block, Limits, ATTR_PRIORITY, MAX_IMAGE_BYTES
 from tools.redirect_utils import create_safe_client, fetch_html_with_redirects
 import httpx
 
@@ -118,63 +118,47 @@ async def mine_selectors_for_domain(domain: str, urls: List[str], verbose: bool 
         logging.error("Failed to fetch HTML content from any URL")
         return None
     
-    # Propose recipe
+    # Use the new mine_page function
     try:
-        if js_fallback:
-            # Use JS fallback if enabled
-            from tools.selector_miner import mine_selectors_with_js_fallback, propose_recipe
-            
-            logging.info("Using JavaScript fallback for selector mining")
-            candidates = await mine_selectors_with_js_fallback(
-                html_content, 
-                urls[0] if urls else f"https://{domain}", 
-                f"https://{domain}",
-                min_candidates,
-                max_bytes
+        # Create limits and client
+        limits = Limits(max_candidates=10, max_samples_per_candidate=3, max_bytes=max_bytes or MAX_IMAGE_BYTES)
+        
+        # Use the new mine_page function
+        async with httpx.AsyncClient() as client:
+            result = await mine_page(
+                url=urls[0] if urls else f"https://{domain}",
+                html=html_content,  # Use the fetched HTML
+                use_js=js_fallback,
+                client=client,
+                limits=limits
             )
             
-            if not candidates:
-                logging.error("No selectors found even with JavaScript fallback")
+            if not result.candidates:
+                logging.error("No candidates found")
                 return None
             
-            # Create miner instance for recipe proposal
-            from tools.selector_miner import SelectorMiner
-            miner = SelectorMiner(f"https://{domain}", max_bytes=max_bytes)
-            miner.mine_selectors(html_content)  # Set up the miner state
-            recipe = await miner.propose_recipe(domain, html_content)
-        else:
-            # Use standard static mining
-            recipe = await propose_recipe_for_domain(domain, html_content, f"https://{domain}", max_bytes)
-        
-        if not recipe:
-            logging.error("No recipe could be proposed - validation failed or no suitable selectors found")
-            return None
-        
-        logging.info(f"Recipe proposed with confidence: {recipe.confidence:.3f}")
-        logging.info(f"Found {len(recipe.selectors)} selectors")
-        logging.info(f"Attributes priority: {recipe.attributes_priority}")
-        logging.info(f"Extra sources: {recipe.extra_sources}")
-        
-        if verbose:
-            logging.info("Top selectors:")
-            for i, selector in enumerate(recipe.selectors[:3], 1):
-                logging.info(f"  {i}. {selector['selector']} - {selector['description']}")
-        
-        # Convert to dictionary format
-        recipe_dict = {
-            'domain': recipe.domain,
-            'selectors': recipe.selectors,
-            'attributes_priority': recipe.attributes_priority,
-            'extra_sources': recipe.extra_sources,
-            'method': recipe.method,
-            'confidence': recipe.confidence,
-            'sample_urls': recipe.sample_urls
-        }
-        
-        return recipe_dict
-        
+            logging.info(f"Mining completed with status: {result.status}")
+            logging.info(f"Found {len(result.candidates)} candidates")
+            
+            if verbose:
+                logging.info("Top selectors:")
+                for i, candidate in enumerate(result.candidates[:3], 1):
+                    logging.info(f"  {i}. {candidate.selector} - {candidate.description}")
+            
+            # Extract selectors and create recipe using emit_recipe_yaml_block
+            selectors = [candidate.selector for candidate in result.candidates]
+            attr_priority = list(ATTR_PRIORITY)  # Use constant
+            extra_sources = []  # Could be populated from result if needed
+            
+            recipe_dict = emit_recipe_yaml_block(domain, selectors, attr_priority, extra_sources)
+            
+            # Add confidence from mining result
+            recipe_dict['confidence'] = result.candidates[0].score if result.candidates else 0.0
+            
+            return recipe_dict
+            
     except Exception as e:
-        logging.error(f"Error proposing recipe: {e}")
+        logging.error(f"Error mining selectors: {e}")
         return None
 
 
@@ -194,12 +178,46 @@ def merge_recipe_to_yaml(recipe_dict: dict, yaml_file: str, append: bool = True)
         import yaml
         
         # Load existing recipes if append is True and file exists
-        existing_recipes = {'defaults': {}, 'sites': {}}
+        existing_recipes = {
+            'schema_version': 1,
+            'defaults': {
+                'selectors': [
+                    {'selector': '.video-thumb img', 'description': '.video-thumb container images'},
+                    {'selector': '.thumbnail img', 'description': '.thumbnail container images'},
+                    {'selector': '.thumb img', 'description': '.thumb container images'},
+                    {'selector': 'picture img', 'description': 'picture element images'},
+                    {'selector': 'img.lazy', 'description': 'lazy-loaded images'},
+                    {'selector': 'img', 'description': 'all images'}
+                ],
+                'attributes_priority': ['data-src', 'data-srcset', 'srcset', 'src'],
+                'extra_sources': [
+                    "meta[property='og:image']::attr(content)",
+                    "link[rel='image_src']::attr(href)",
+                    "video::attr(poster)",
+                    "img::attr(srcset)",
+                    "source::attr(srcset)",
+                    "source::attr(data-srcset)",
+                    "script[type='application/ld+json']::jsonpath($.thumbnailUrl, $.image, $..thumbnailUrl, $..image, $..url)",
+                    "::style(background-image)"
+                ],
+                'method': 'smart'
+            },
+            'sites': {}
+        }
         yaml_path = Path(yaml_file)
         
         if append and yaml_path.exists():
             with open(yaml_path, 'r', encoding='utf-8') as f:
-                existing_recipes = yaml.safe_load(f) or existing_recipes
+                loaded_recipes = yaml.safe_load(f) or {}
+                # If existing file has schema v1 structure, use it
+                if 'schema_version' in loaded_recipes and loaded_recipes['schema_version'] == 1:
+                    existing_recipes = loaded_recipes
+                else:
+                    # Auto-fix old format by enforcing schema v1
+                    logging.warning(f"Auto-fixed: {yaml_file} does not conform to schema v1, enforcing compliance")
+                    # Preserve any existing sites but ensure schema_version is set
+                    if 'sites' in loaded_recipes:
+                        existing_recipes['sites'] = loaded_recipes['sites']
         
         # Ensure required sections exist
         if 'sites' not in existing_recipes:
@@ -212,6 +230,9 @@ def merge_recipe_to_yaml(recipe_dict: dict, yaml_file: str, append: bool = True)
             'extra_sources': recipe_dict['extra_sources'],
             'method': recipe_dict['method']
         }
+        
+        # Ensure schema_version is always present
+        existing_recipes['schema_version'] = 1
         
         # Write back to file
         with open(yaml_path, 'w', encoding='utf-8') as f:
