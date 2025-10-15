@@ -387,7 +387,7 @@ async def save_raw_and_thumb_async(image_bytes: bytes, tenant_id: str, key_prefi
         return save_raw_and_thumb_with_precreated_thumb(image_bytes, thumbnail_bytes, tenant_id, key_prefix)
 
 
-def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
+def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "", source_url: str = None) -> Tuple[str, str, str, str]:
     """
     Store raw JPG to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg and pre-created thumbnail to BUCKET_THUMBS/<tenant_id>/<prefix><uuid>.jpg
     Returns (raw_key, raw_url, thumb_key, thumb_url)
