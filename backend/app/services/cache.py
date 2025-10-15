@@ -612,7 +612,7 @@ class HybridCacheService:
         return None
     
     async def store_crawled_image(self, url: str, image_bytes: bytes, raw_key: str, 
-                                thumbnail_key: Optional[str] = None, tenant_id: str = "default") -> bool:
+                                thumbnail_key: Optional[str] = None, tenant_id: str = "default", source_url: Optional[str] = None) -> bool:
         """Store crawled image metadata (not image bytes) in both Redis and PostgreSQL."""
         url_hash = hashlib.sha256(url.encode()).hexdigest()
         content_hash = hashlib.sha256(image_bytes).hexdigest()
@@ -625,6 +625,10 @@ class HybridCacheService:
             'raw_key': raw_key,
             'thumb_key': thumbnail_key
         }
+        
+        # Add source URL if provided
+        if source_url:
+            metadata['source_url'] = source_url
         
         success = True
         
