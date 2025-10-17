@@ -38,7 +38,7 @@ from PIL import Image, ImageFile
 Image.MAX_IMAGE_PIXELS = 50_000_000
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only, save_raw_and_thumb_content_addressed_async, save_raw_image_content_addressed, get_storage_cleanup_function
+from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only, save_raw_and_thumb_content_addressed_async, save_raw_image_content_addressed, get_storage_cleanup_function, save_image, _minio
 from . import storage
 from .face import get_face_service, close_face_service
 from . import face
@@ -492,6 +492,7 @@ class ImageInfo:
     title: str
     width: Optional[int]
     height: Optional[int]
+    video_url: Optional[str] = None  # URL of the video this thumbnail links to
 
 
 # ============================================================================
@@ -798,45 +799,42 @@ class ImageCrawler:
                 cache_misses += 1
 
                 if image_bytes:
-                    # Store using content-addressed keys
+                    # Extract site for storage organization
+                    parsed_url = urlparse(url)
+                    site = parsed_url.netloc.replace('www.', '')  # Remove www prefix
+                    
+                    # Get MinIO client
+                    minio_client = _minio()
+                    
+                    # Debug logging for video URL
+                    logger.info(f"Processing image with video URL: {image_info.video_url}")
+                    
+                    # Store raw image with sidecar metadata
+                    await save_image(
+                        image_bytes=image_bytes,
+                        mime="image/jpeg",
+                        filename="image.jpg",
+                        bucket="raw-images",
+                        client=minio_client,
+                        site=site,
+                        page_url=url,
+                        source_video_url=image_info.video_url,
+                        source_image_url=image_info.url,
+                    )
+                    
+                    # Store thumbnail if available
                     if thumbnail_bytes is not None:
-                        raw_key, raw_url, thumbnail_key, thumb_url, metadata = await save_raw_and_thumb_content_addressed_async(
-                            image_bytes, 
-                            thumbnail_bytes,
-                            self.tenant_id,
-                            image_info.url  # Pass source URL for tracking
+                        await save_image(
+                            image_bytes=thumbnail_bytes,
+                            mime="image/jpeg", 
+                            filename="thumbnail.jpg",
+                            bucket="thumbnails",
+                            client=minio_client,
+                            site=site,
+                            page_url=url,
+                            source_video_url=image_info.video_url,
+                            source_image_url=image_info.url,
                         )
-                        
-                        if raw_key:
-                            saved_raw_keys.append(raw_key)
-                            saved_thumbnail_keys.append(thumbnail_key)
-                            # Update cache with metadata only
-                            await self.cache_service.store_crawled_image(
-                                image_info.url,
-                                image_bytes,
-                                raw_key,
-                                thumbnail_key,
-                                self.tenant_id,
-                                image_info.url  # Pass source URL for tracking
-                            )
-                    else:
-                        raw_key, raw_url, metadata = save_raw_image_content_addressed(
-                            image_bytes, 
-                            self.tenant_id,
-                            image_info.url  # Pass source URL for tracking
-                        )
-                        
-                        if raw_key:
-                            saved_raw_keys.append(raw_key)
-                            # Update cache with metadata only
-                            await self.cache_service.store_crawled_image(
-                                image_info.url,
-                                image_bytes,
-                                raw_key,
-                                None,
-                                self.tenant_id,
-                                image_info.url  # Pass source URL for tracking
-                            )
         
         # Get detailed cache statistics
         cache_stats = await self.cache_service.get_cache_stats()
@@ -882,7 +880,7 @@ class ImageCrawler:
         workers = [
             asyncio.create_task(self._streaming_download_worker(download_queue, processing_queue, streaming_results)),
             asyncio.create_task(self._streaming_processing_worker(processing_queue, storage_queue, streaming_results)),
-            asyncio.create_task(self._streaming_storage_worker(storage_queue, streaming_results))
+            asyncio.create_task(self._streaming_storage_worker(storage_queue, streaming_results, url))
         ]
         
         # Feed images into download queue
@@ -978,7 +976,7 @@ class ImageCrawler:
             finally:
                 processing_queue.task_done()
     
-    async def _streaming_storage_worker(self, storage_queue: asyncio.Queue, results: dict):
+    async def _streaming_storage_worker(self, storage_queue: asyncio.Queue, results: dict, url: str):
         """Memory-efficient storage worker with micro-batching."""
         storage_batch = []
         batch_size = 5  # Small batch size for memory efficiency
@@ -991,20 +989,20 @@ class ImageCrawler:
                 if item is None:  # Sentinel value
                     # Process any remaining items
                     if storage_batch:
-                        await self._process_storage_batch(storage_batch, results)
+                        await self._process_storage_batch(storage_batch, results, url)
                     break
                 
                 storage_batch.append(item)
                 
                 # Process batch when full
                 if len(storage_batch) >= batch_size:
-                    await self._process_storage_batch(storage_batch, results)
+                    await self._process_storage_batch(storage_batch, results, url)
                     storage_batch = []
                     
             except asyncio.TimeoutError:
                 # Process any pending items on timeout
                 if storage_batch:
-                    await self._process_storage_batch(storage_batch, results)
+                    await self._process_storage_batch(storage_batch, results, url)
                     storage_batch = []
                 continue
             except Exception as e:
@@ -1017,7 +1015,7 @@ class ImageCrawler:
                     except ValueError:
                         pass
     
-    async def _process_storage_batch(self, batch: List, results: dict):
+    async def _process_storage_batch(self, batch: List, results: dict, url: str):
         """Process a batch of items for storage."""
         if not batch:
             return
@@ -1025,53 +1023,50 @@ class ImageCrawler:
         # Process batch concurrently
         batch_tasks = []
         for image_bytes, thumbnail_bytes, image_info in batch:
-            batch_tasks.append(self._store_single_item(image_bytes, thumbnail_bytes, image_info, results))
+            batch_tasks.append(self._store_single_item(image_bytes, thumbnail_bytes, image_info, results, url))
         
         await asyncio.gather(*batch_tasks, return_exceptions=True)
     
-    async def _store_single_item(self, image_bytes: bytes, thumbnail_bytes: Optional[bytes], image_info: 'ImageInfo', results: dict):
+    async def _store_single_item(self, image_bytes: bytes, thumbnail_bytes: Optional[bytes], image_info: 'ImageInfo', results: dict, url: str):
         """Store a single item and update cache."""
         try:
             async with self._storage_semaphore:
-                # Store using content-addressed keys
+                # Extract site for storage organization
+                parsed_url = urlparse(url)
+                site = parsed_url.netloc.replace('www.', '')  # Remove www prefix
+                
+                # Get MinIO client
+                minio_client = _minio()
+                
+                # Debug logging for video URL
+                logger.info(f"Processing image with video URL: {image_info.video_url}")
+                
+                # Store raw image with sidecar metadata
+                await save_image(
+                    image_bytes=image_bytes,
+                    mime="image/jpeg",
+                    filename="image.jpg",
+                    bucket="raw-images",
+                    client=minio_client,
+                    site=site,
+                    page_url=url,
+                    source_video_url=image_info.video_url,
+                    source_image_url=image_info.url,
+                )
+                
+                # Store thumbnail if available
                 if thumbnail_bytes is not None:
-                    raw_key, raw_url, thumbnail_key, thumb_url, metadata = await save_raw_and_thumb_content_addressed_async(
-                        image_bytes, 
-                        thumbnail_bytes,
-                        self.tenant_id,
-                        image_info.url  # Pass source URL for tracking
+                    await save_image(
+                        image_bytes=thumbnail_bytes,
+                        mime="image/jpeg", 
+                        filename="thumbnail.jpg",
+                        bucket="thumbnails",
+                        client=minio_client,
+                        site=site,
+                        page_url=url,
+                        source_video_url=image_info.video_url,
+                        source_image_url=image_info.url,
                     )
-                    
-                    if raw_key:
-                        results['saved_raw_keys'].append(raw_key)
-                        results['saved_thumbnail_keys'].append(thumbnail_key)
-                        # Update cache with metadata only
-                        await self.cache_service.store_crawled_image(
-                            image_info.url,
-                            image_bytes,
-                            raw_key,
-                            thumbnail_key,
-                            self.tenant_id,
-                            image_info.url  # Pass source URL for tracking
-                        )
-                else:
-                    raw_key, raw_url, metadata = save_raw_image_content_addressed(
-                        image_bytes, 
-                        self.tenant_id,
-                        image_info.url  # Pass source URL for tracking
-                    )
-                    
-                    if raw_key:
-                        results['saved_raw_keys'].append(raw_key)
-                        # Update cache with metadata only
-                        await self.cache_service.store_crawled_image(
-                            image_info.url,
-                            image_bytes,
-                            raw_key,
-                            None,
-                            self.tenant_id,
-                            image_info.url  # Pass source URL for tracking
-                        )
                         
         except Exception as e:
             logger.error(f"Storage error for {_truncate_log_string(image_info.url)}: {e}")
@@ -1288,20 +1283,16 @@ class ImageCrawler:
                     # Generic CSS selector
                     imgs = soup.select(selector)
                 
-                # Process found images with expanded source detection
+                # Process found images - keep original img tags to preserve parent structure
                 for img in imgs:
                     img_urls = self._extract_img_urls(img, base_url)
-                    for url in img_urls:
-                        if url and url not in seen_urls:
-                            seen_urls.add(url)
-                            # Create a mock img tag with the extracted URL
-                            class MockImg:
-                                def __init__(self, src_url):
-                                    self.src_url = src_url
-                                def get(self, attr, default=''):
-                                    return self.src_url if attr == 'src' else default
-                            mock_img = MockImg(url)
-                            all_images.append(mock_img)
+                    # If img has URLs, add the original img tag (not a MockImg) so we preserve parent structure
+                    if img_urls:
+                        # Use the first URL as the primary src
+                        primary_url = img_urls[0]
+                        if primary_url and primary_url not in seen_urls:
+                            seen_urls.add(primary_url)
+                            all_images.append(img)  # Add the original BeautifulSoup img tag
                         
             except Exception as e:
                 logger.warning(f"Error with selector '{selector_config}': {str(e)}")
@@ -1553,15 +1544,139 @@ class ImageCrawler:
             except (ValueError, TypeError):
                 height = None
             
+            # Extract video URL from parent elements or data attributes
+            video_url = self._extract_video_url_from_context(img, base_url)
+            
+            # Debug logging for video URL extraction
+            if video_url:
+                logger.info(f"✅ Extracted video URL: {video_url[:100]}... for image: {absolute_url[:80]}...")
+            else:
+                logger.info(f"❌ No video URL found for image: {absolute_url[:80]}...")
+            
             images.append(ImageInfo(
                 url=absolute_url,
                 alt_text=alt_text,
                 title=title,
                 width=width,
-                height=height
+                height=height,
+                video_url=video_url
             ))
         
         return images
+    
+    def _extract_video_url_from_context(self, img_tag, base_url: str) -> Optional[str]:
+        """
+        Extract video URL from the context around an image tag.
+        Looks for video URLs in parent <a> tags, data attributes, and common patterns.
+        """
+        try:
+            # Skip video URL extraction for MockImg objects (they don't have parent structure)
+            if not hasattr(img_tag, 'find_parent'):
+                return None
+            
+            src = img_tag.get('src', '')
+            logger.info(f"🔍 Extracting video URL from context for img tag: {src[:50]}...")
+            # Method 1: Check parent <a> tag href
+            parent_link = img_tag.find_parent('a')
+            logger.info(f"DEBUG: parent_link = {parent_link is not None}")
+            if parent_link:
+                href = parent_link.get('href')
+                logger.info(f"DEBUG: href = {href[:50] if href else None}...")
+                if href:
+                    absolute_url = urljoin(base_url, href)
+                    logger.info(f"DEBUG: absolute_url = {absolute_url[:100]}...")
+                    
+                    # Validate if this looks like a video URL
+                    is_video = self._is_video_url(absolute_url)
+                    logger.info(f"DEBUG: is_video = {is_video}")
+                    if is_video:
+                        logger.info(f"✅ Found video URL in parent <a> tag: {absolute_url[:100]}...")
+                        return absolute_url
+                    else:
+                        logger.info(f"❌ Parent href is not a video URL: {absolute_url[:100]}...")
+            else:
+                logger.info(f"❌ No parent <a> tag found for img")
+            
+            # Method 2: Check data attributes on the image tag itself
+            video_attrs = ['data-video-url', 'data-video', 'data-href', 'data-link']
+            for attr in video_attrs:
+                video_url = img_tag.get(attr)
+                if video_url:
+                    absolute_url = urljoin(base_url, video_url)
+                    if self._is_video_url(absolute_url):
+                        return absolute_url
+            
+            # Method 3: Check parent container elements for video links
+            for parent in img_tag.parents:
+                # Check if parent has video-related attributes
+                if parent.name == 'div' or parent.name == 'article':
+                    for attr in video_attrs:
+                        video_url = parent.get(attr)
+                        if video_url:
+                            absolute_url = urljoin(base_url, video_url)
+                            if self._is_video_url(absolute_url):
+                                return absolute_url
+                    
+                    # Look for child <a> tags that might contain video URLs
+                    child_links = parent.find_all('a', href=True)
+                    for link in child_links:
+                        href = link.get('href')
+                        if href:
+                            absolute_url = urljoin(base_url, href)
+                            if self._is_video_url(absolute_url):
+                                return absolute_url
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error extracting video URL from context: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+    
+    def _is_video_url(self, url: str) -> bool:
+        """
+        Determine if a URL is likely a video URL based on common patterns.
+        """
+        if not url:
+            return False
+        
+        url_lower = url.lower()
+        
+        # Common video URL patterns
+        video_patterns = [
+            '/view_video.php',
+            '/videos/',
+            '/video/',
+            '/watch/',
+            '/play/',
+            'viewkey=',
+            'video_id=',
+            'v=',
+            '/embed/',
+            '.mp4',
+            '.avi',
+            '.mov',
+            '.mkv',
+            '.webm',
+            '/player/',
+            '/stream/',
+        ]
+        
+        # Check if URL contains any video patterns
+        for pattern in video_patterns:
+            if pattern in url_lower:
+                return True
+        
+        # Check if it's a pornhub-style URL
+        if 'pornhub' in url_lower and ('view_video' in url_lower or 'videos' in url_lower):
+            return True
+        
+        # Check if it's an xvideos-style URL
+        if 'xvideos' in url_lower and ('video' in url_lower):
+            return True
+        
+        return False
     
     async def download_image(self, image_info: ImageInfo) -> Tuple[Optional[bytes], List[str]]:
         """Download an image from its URL with streaming and early abort capabilities."""

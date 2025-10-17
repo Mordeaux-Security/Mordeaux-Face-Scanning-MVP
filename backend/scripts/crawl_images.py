@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Enhanced Image Crawler Script v2
+Enhanced Image Crawler Script
 
-This script combines the advanced features from basic_crawler1.1 with the commercial 
-readiness features from main branch.
+This script provides advanced image crawling capabilities with commercial 
+readiness features.
 
 Key improvements:
 - Multi-tenancy support with tenant_id parameter
@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Enhanced Image Crawler v2 - Combines advanced features with commercial readiness',
+        description='Enhanced Image Crawler - Advanced image crawling with commercial readiness',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

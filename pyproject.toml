@@ -1,0 +1,32 @@
+[tool.ruff]
+# Enable pyproject-based config
+target-version = "py311"
+line-length = 88
+extend-select = [
+  "E",   # pycodestyle (PEP8)
+  "F",   # pyflakes
+  "I",   # isort import sorting
+  "B",   # flake8-bugbear
+  "UP",  # pyupgrade
+]
+ignore = [
+  # add codes to ignore if needed
+]
+
+[tool.ruff.lint]
+# Ruff 0.5+ uses [tool.ruff.lint] for lint options; if on older ruff, keep them under [tool.ruff].
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.format]
+quote-style = "preserve" # or "double"
+indent-style = "space"
+line-ending = "auto"
+docstring-code-format = true
+
+# If you prefer classic Black + isort:
+# [tool.black]
+# line-length = 88
+# target-version = ["py311"]
+#
+# [tool.isort]
+# profile = "black"

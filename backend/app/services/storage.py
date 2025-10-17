@@ -5,17 +5,399 @@ import time
 import hashlib
 import logging
 import gc
+import base64
+import zlib
+import gzip
+import bz2
+import lzma
+import json
 from typing import Tuple, Optional, List, Dict, Any
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
 
 from PIL import Image, ImageFile
 import urllib3
 import blake3
 from ..core.config import get_settings
 
-
 logger = logging.getLogger(__name__)
+
+# --- URL metadata constants (S3/MinIO user metadata) ---
+VIDEO_URL_ENC_KEY = "video-url-enc"
+VIDEO_URL_ALG_KEY = "video-url-enc-alg"
+VIDEO_URL_SHA_KEY = "video-url-sha256"
+VIDEO_URL_PREVIEW_KEY = "video-url-head"  # optional, human preview
+
+# Keep total custom metadata under ~2KB to be safe.
+USER_META_BUDGET = 2000
+
+# --- Sidecar layout & schema ---
+SIDECAR_FILENAME = "meta.json"       # sidecar file name next to image
+SCHEMA_VERSION = 1
+
+@dataclass
+class ImageSidecar:
+    schema: int
+    doc_id: str
+    site: str | None
+    page_url: str | None
+    source_video_url: str | None
+    source_image_url: str | None
+    crawl_ts: str                    # ISO8601
+    sha256: str                      # of image bytes
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
+
+def _sha256_hex(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+def make_object_paths(image_hash: str, filename: str) -> tuple[str, str]:
+    """
+    Returns (image_key, sidecar_key).
+    Example: image_hash='a6050bd523f83e73a5f2d332dda384c79b03cc88eeca4b9a903c125bd7e2895b', filename='image.jpg'
+             => 'default/a6/a6050bd523f83e73a5f2d332dda384c79b03cc88eeca4b9a903c125bd7e2895b.jpg', 
+                'default/a6/a6050bd523f83e73a5f2d332dda384c79b03cc88eeca4b9a903c125bd7e2895b.json'
+    """
+    first2 = image_hash[:2]
+    # Use hash as filename with appropriate extension
+    if filename.endswith('.jpg') or filename.endswith('.jpeg'):
+        image_filename = f"{image_hash}.jpg"
+    elif filename.endswith('.png'):
+        image_filename = f"{image_hash}.png"
+    else:
+        image_filename = f"{image_hash}.jpg"  # default to jpg
+    
+    sidecar_filename = f"{image_hash}.json"
+    
+    return f"default/{first2}/{image_filename}", f"default/{first2}/{sidecar_filename}"
+
+
+def _b64url_encode(b: bytes) -> str:
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode("ascii")
+
+
+def _b64url_decode(s: str) -> bytes:
+    pad = "=" * (-len(s) % 4)
+    return base64.urlsafe_b64decode((s + pad).encode("ascii"))
+
+
+def compress_url(url: str) -> tuple[str, str]:
+    """Return (encoded, alg). Try multiple compression algorithms and pick the best."""
+    raw = url.encode("utf-8")
+    
+    # Try different compression algorithms and levels
+    candidates = []
+    
+    # zlib deflate with different levels
+    for level in range(1, 10):
+        try:
+            compressed = zlib.compress(raw, level=level)
+            candidates.append((compressed, f"zlib-l{level}"))
+        except:
+            continue
+    
+    # gzip compression
+    try:
+        compressed = gzip.compress(raw, compresslevel=9)
+        candidates.append((compressed, "gzip-9"))
+    except:
+        pass
+    
+    # bz2 compression
+    try:
+        compressed = bz2.compress(raw, compresslevel=9)
+        candidates.append((compressed, "bz2-9"))
+    except:
+        pass
+    
+    # lzma compression (most aggressive)
+    try:
+        compressed = lzma.compress(raw, preset=9)
+        candidates.append((compressed, "lzma-9"))
+    except:
+        pass
+    
+    # Pick the smallest result
+    if not candidates:
+        # Fallback to zlib level 9
+        compressed = zlib.compress(raw, level=9)
+        encoded = _b64url_encode(compressed)
+        return encoded, "zlib-l9"
+    
+    best_compressed, best_alg = min(candidates, key=lambda x: len(x[0]))
+    encoded = _b64url_encode(best_compressed)
+    return encoded, best_alg
+
+
+def decompress_url(encoded: str, alg: str) -> str:
+    """Decompress URL using the specified algorithm."""
+    raw = _b64url_decode(encoded)
+    
+    # Handle legacy format
+    if alg.startswith("deflate-b64url-v1"):
+        return zlib.decompress(raw).decode("utf-8")
+    
+    # Handle new algorithm formats
+    if alg.startswith("zlib-"):
+        return zlib.decompress(raw).decode("utf-8")
+    elif alg.startswith("gzip-"):
+        return gzip.decompress(raw).decode("utf-8")
+    elif alg.startswith("bz2-"):
+        return bz2.decompress(raw).decode("utf-8")
+    elif alg.startswith("lzma-"):
+        return lzma.decompress(raw).decode("utf-8")
+    else:
+        raise ValueError(f"unsupported algorithm: {alg}")
+
+
+def sha256_hex(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def fits_user_metadata(pairs: dict[str, str], budget: int = USER_META_BUDGET) -> bool:
+    size = 0
+    for k, v in pairs.items():
+        size += len(k.encode("utf-8")) + len(v.encode("utf-8"))
+    return size < budget
+
+
+def preview_head(url: str, max_chars: int = 512) -> str:
+    # ASCII-only preview for headers; strip newlines just in case
+    pv = url[:max_chars].replace("\r", " ").replace("\n", " ")
+    try:
+        pv.encode("ascii")
+        return pv
+    except UnicodeEncodeError:
+        return pv.encode("utf-8", "ignore").decode("ascii", "ignore")
+
+
+async def save_image(
+    *,
+    image_bytes: bytes,
+    mime: str,
+    filename: str,                  # e.g., 'image.jpg'
+    bucket: str,
+    client,                         # your MinIO/S3 client
+    site: str,
+    page_url: str | None = None,
+    source_video_url: str | None = None,
+    source_image_url: str | None = None,
+) -> dict:
+    """
+    Uploads the image and a JSON sidecar. Sets small user metadata:
+    - x-amz-meta-doc-id
+    - x-amz-meta-video-url-sha256
+    - x-amz-meta-video-url-head (short preview, optional)
+    Returns a dict with doc_id, keys, and hashes.
+    """
+    # 1) ids + hashes
+    doc_id = str(uuid.uuid4())
+    sha_img = _sha256_hex(image_bytes)
+    vid_sha = hashlib.sha256((source_video_url or "").encode("utf-8")).hexdigest() if source_video_url else None
+    preview = None
+    if source_video_url:
+        pv = source_video_url[:512].replace("\r"," ").replace("\n"," ")
+        try:
+            pv.encode("ascii")
+            preview = pv
+        except UnicodeEncodeError:
+            preview = pv.encode("utf-8","ignore").decode("ascii","ignore")
+
+    # 2) keys - use image hash for path structure
+    image_key, sidecar_key = make_object_paths(sha_img, filename)
+
+    # 3) user metadata (keep tiny)
+    user_meta = {"doc-id": doc_id}
+    if vid_sha:
+        user_meta["video-url-sha256"] = vid_sha
+    if preview:
+        user_meta["video-url-head"] = preview
+
+    # 4) upload image
+    settings = get_settings()
+    if settings.using_minio:
+        # MinIO path
+        # Ensure bucket exists on local dev
+        from minio.error import S3Error  # type: ignore
+        try:
+            if not client.bucket_exists(bucket):
+                client.make_bucket(bucket)
+        except S3Error:
+            pass
+        
+        try:
+            client.put_object(bucket, image_key, io.BytesIO(image_bytes), len(image_bytes),
+                              content_type=mime, metadata=user_meta)
+            logger.info(f"Successfully uploaded image to {bucket}/{image_key}")
+        except Exception as e:
+            logger.error(f"Failed to upload image to {bucket}/{image_key}: {e}")
+            raise
+    else:
+        # AWS S3 path
+        client.put_object(Bucket=bucket, Key=image_key, Body=image_bytes,
+                          ContentType=mime, Metadata=user_meta)
+
+    # 5) build sidecar and upload
+    sidecar = ImageSidecar(
+        schema=SCHEMA_VERSION,
+        doc_id=doc_id,
+        site=site,
+        page_url=page_url,
+        source_video_url=source_video_url,
+        source_image_url=source_image_url,
+        crawl_ts=_now_iso(),
+        sha256=sha_img,
+    )
+    sidecar_bytes = json.dumps(asdict(sidecar), ensure_ascii=False, separators=(",",":")).encode("utf-8")
+
+    if settings.using_minio:
+        # MinIO path
+        try:
+            client.put_object(bucket, sidecar_key, io.BytesIO(sidecar_bytes), len(sidecar_bytes),
+                              content_type="application/json")
+            logger.info(f"Successfully uploaded sidecar to {bucket}/{sidecar_key}")
+        except Exception as e:
+            logger.error(f"Failed to upload sidecar to {bucket}/{sidecar_key}: {e}")
+            raise
+    else:
+        # AWS S3 path
+        client.put_object(Bucket=bucket, Key=sidecar_key, Body=sidecar_bytes,
+                          ContentType="application/json")
+
+    # 6) Store in crawl cache for duplicate prevention
+    try:
+        from .cache import get_cache_service
+        cache_service = get_cache_service()
+        
+        # Store cache entry with the new hash-based key structure
+        await cache_service.store_crawled_image(
+            url=source_image_url or "",
+            image_bytes=image_bytes,
+            raw_key=image_key,
+            thumbnail_key=None,  # We don't store thumbnail keys in this simplified version
+            tenant_id="default",
+            source_url=page_url
+        )
+    except Exception as e:
+        # Don't fail the entire operation if cache storage fails
+        logger.warning(f"Failed to store crawl cache entry: {e}")
+
+    return {
+        "doc_id": doc_id,
+        "image_key": image_key,
+        "sidecar_key": sidecar_key,
+        "sha256": sha_img,
+        "video_url_sha256": vid_sha,
+    }
+
+
+def head_minio_metadata(client, bucket: str, key: str) -> dict[str,str]:
+    """
+    Return a normalized dict of user metadata from HEAD/stat: {'x-amz-meta-<k>': v, ...}
+    """
+    settings = get_settings()
+    if settings.using_minio:
+        # MinIO path
+        stat = client.stat_object(bucket, key)
+        md = stat.metadata or {}
+        return {f"x-amz-meta-{k}": v for k, v in md.items()}
+    else:
+        # boto3 path
+        resp = client.head_object(Bucket=bucket, Key=key)
+        return resp["ResponseMetadata"]["HTTPHeaders"]
+
+
+def get_sidecar_json(client, bucket: str, sidecar_key: str) -> dict | None:
+    """
+    Retrieve and parse sidecar JSON metadata.
+    Returns None if sidecar doesn't exist or can't be parsed.
+    """
+    try:
+        settings = get_settings()
+        if settings.using_minio:
+            # MinIO path
+            resp = client.get_object(bucket, sidecar_key)
+            data = resp.read()
+            resp.close()
+            resp.release_conn()
+        else:
+            # boto3 path
+            data = client.get_object(Bucket=bucket, Key=sidecar_key)["Body"].read()
+        return json.loads(data.decode("utf-8"))
+    except Exception:
+        return None
+
+
+def read_video_url_from_head(headers: dict[str, str]) -> tuple[str | None, str | None, str | None]:
+    """
+    Given HEAD response headers, return (full_url or None, sha256 or None, error or None).
+    Headers may provide user metadata as 'x-amz-meta-<key>' or raw '<key>' depending on client.
+    """
+    # Normalize lookup (some SDKs surface both forms)
+    def get_meta(key: str) -> str | None:
+        return headers.get(f"x-amz-meta-{key}") or headers.get(key)
+
+    enc = get_meta(VIDEO_URL_ENC_KEY)
+    alg = get_meta(VIDEO_URL_ALG_KEY)
+    sha = get_meta(VIDEO_URL_SHA_KEY)
+    metadata_key = get_meta("video-url-metadata-key")
+    
+    if enc and alg:
+        try:
+            url = decompress_url(enc, alg)
+            return url, sha, None
+        except Exception as e:
+            return None, sha, f"decode-error: {e}"
+    
+    # If URL is stored in separate metadata object, fetch it
+    if metadata_key and alg:
+        try:
+            settings = get_settings()
+            if settings.using_minio:
+                cli = _minio()
+                response = cli.get_object(settings.s3_bucket_raw, metadata_key)
+                enc = response.read().decode('utf-8')
+                url = decompress_url(enc, alg)
+                return url, sha, None
+            else:
+                s3 = _boto3_s3()
+                response = s3.get_object(Bucket=settings.s3_bucket_raw, Key=metadata_key)
+                enc = response['Body'].read().decode('utf-8')
+                url = decompress_url(enc, alg)
+                return url, sha, None
+        except Exception as e:
+            return None, sha, f"metadata-object-error: {e}"
+    
+    return None, sha, None
+
+
+def get_video_url_from_storage(bucket: str, image_key: str) -> tuple[str | None, str | None, str | None]:
+    """
+    Retrieve video URL from storage for a given image key.
+    Returns (full_url or None, sha256 or None, error or None).
+    """
+    try:
+        settings = get_settings()
+        if settings.using_minio:
+            cli = _minio()
+            response = cli.stat_object(bucket, image_key)
+            headers = {f"x-amz-meta-{k}": v for k, v in (response.metadata or {}).items()}
+        else:
+            s3 = _boto3_s3()
+            response = s3.head_object(Bucket=bucket, Key=image_key)
+            headers = response['ResponseMetadata']['HTTPHeaders']
+            # Add metadata from the metadata dict
+            if 'Metadata' in response:
+                for k, v in response['Metadata'].items():
+                    headers[f"x-amz-meta-{k}"] = v
+        
+        return read_video_url_from_head(headers)
+    except Exception as e:
+        return None, None, f"storage-error: {e}"
+
 
 # Image safety configuration - set once on import
 Image.MAX_IMAGE_PIXELS = 50_000_000
@@ -95,13 +477,33 @@ def put_object(bucket: str, key: str, data: bytes, content_type: str, tags: Opti
                 cli.make_bucket(bucket)
         except S3Error:
             pass
+        # Convert tags dict to MinIO Tags object if using MinIO
+        minio_tags = None
+        if tags:
+            from minio.commonconfig import Tags
+            minio_tags = Tags()
+            for k, v in tags.items():
+                # MinIO tags have restrictions: max 256 chars, no special characters
+                if isinstance(v, str) and len(v) > 256:
+                    # If still too long after compression, use hash + preview approach
+                    if k == VIDEO_URL_ENC_KEY:
+                        # For compressed video URLs, if they're still too long, 
+                        # we'll store just the hash and preview in separate tags
+                        continue  # Skip this tag, we'll handle it below
+                    else:
+                        v = v[:253] + "..."
+                # Remove or replace invalid characters for MinIO tags (but preserve compressed data)
+                if isinstance(v, str) and k != VIDEO_URL_ENC_KEY:
+                    v = v.replace(":", "_").replace("?", "_").replace("&", "_").replace("=", "_")
+                minio_tags[k] = v
+        
         cli.put_object(
             bucket_name=bucket,
             object_name=key,
             data=io.BytesIO(data),
             length=len(data),
             content_type=content_type,
-            tags=tags,
+            tags=minio_tags,
         )
     else:
         # AWS S3 path
@@ -210,7 +612,7 @@ def _get_content_metadata(content: bytes, raw_key: str, thumb_key: Optional[str]
     return metadata
 
 
-def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str, source_url: Optional[str] = None) -> Tuple[str, str, Dict[str, Any]]:
+def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str, source_url: Optional[str] = None, video_url: Optional[str] = None) -> Tuple[str, str, Dict[str, Any]]:
     """
     Store raw image using content-addressed keys.
     Returns (raw_key, raw_url, metadata)
@@ -251,9 +653,16 @@ def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str, source_
     except Exception as e:
         logger.warning(f"Error checking for existing object {raw_key}: {e}")
     
-    # Upload the object with source URL tag
-    tags = {"source_url": source_url} if source_url else None
-    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
+    # Upload the object with source URL and video URL metadata
+    save_image(
+        image_bytes=image_bytes,
+        mime="image/jpeg",
+        filepath=raw_key,
+        source_image_url=source_url,
+        source_video_url=video_url,
+        bucket=settings.s3_bucket_raw,
+        tenant_id=tenant_id
+    )
     
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
     metadata = _get_content_metadata(image_bytes, raw_key, source_url=source_url)
@@ -261,7 +670,7 @@ def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str, source_
     return raw_key, raw_url, metadata
 
 
-def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, source_url: Optional[str] = None) -> Tuple[str, str, str, str, Dict[str, Any]]:
+def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, source_url: Optional[str] = None, video_url: Optional[str] = None) -> Tuple[str, str, str, str, Dict[str, Any]]:
     """
     Store raw image and thumbnail using content-addressed keys.
     Returns (raw_key, raw_url, thumb_key, thumb_url, metadata)
@@ -311,12 +720,28 @@ def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: by
         logger.warning(f"Error checking for existing objects: {e}")
     
     # Upload objects only if they don't exist
-    tags = {"source_url": source_url} if source_url else None
     if not raw_exists:
-        put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
+        save_image(
+            image_bytes=image_bytes,
+            mime="image/jpeg",
+            filepath=raw_key,
+            source_image_url=source_url,
+            source_video_url=video_url,
+            bucket=settings.s3_bucket_raw,
+            tenant_id=tenant_id
+        )
     
     if not thumb_exists:
-        put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg", tags)
+        # For thumbnails, we don't store video URL metadata (it's already on the raw image)
+        save_image(
+            image_bytes=thumbnail_bytes,
+            mime="image/jpeg",
+            filepath=thumb_key,
+            source_image_url=source_url,
+            source_video_url=None,  # No video URL for thumbnails
+            bucket=settings.s3_bucket_thumbs,
+            tenant_id=tenant_id
+        )
     
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
     thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
@@ -325,7 +750,7 @@ def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: by
     return raw_key, raw_url, thumb_key, thumb_url, metadata
 
 
-async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, source_url: Optional[str] = None) -> Tuple[str, str, str, str, Dict[str, Any]]:
+async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, source_url: Optional[str] = None, video_url: Optional[str] = None) -> Tuple[str, str, str, str, Dict[str, Any]]:
     """
     Async version of save_raw_and_thumb_content_addressed for better performance.
     """
@@ -339,13 +764,14 @@ async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbna
             image_bytes, 
             thumbnail_bytes, 
             tenant_id,
-            source_url
+            source_url,
+            video_url
         )
         return result
     except Exception as e:
         # Fallback to sync version if async fails
         logger.warning(f"Async storage failed, falling back to sync: {e}")
-        return save_raw_and_thumb_content_addressed(image_bytes, thumbnail_bytes, tenant_id, source_url)
+        return save_raw_and_thumb_content_addressed(image_bytes, thumbnail_bytes, tenant_id, source_url, video_url)
 
 
 def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str]:
@@ -481,5 +907,116 @@ def close_storage_resources():
 def get_storage_cleanup_function():
     """Get the storage cleanup function for use by other modules."""
     return close_storage_resources
+
+
+if __name__ == "__main__":
+    import argparse
+    import json
+    import sys
+    
+    parser = argparse.ArgumentParser(prog="storage")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p_head = sub.add_parser("head", help="HEAD an object and print URL metadata")
+    p_head.add_argument("--bucket", required=True)
+    p_head.add_argument("--key", required=True)
+
+    p_inspect = sub.add_parser("inspect", help="Print sidecar + header metadata for an object key")
+    p_inspect.add_argument("--bucket", required=True)
+    p_inspect.add_argument("--key", required=True)
+
+    args = parser.parse_args()
+    if args.cmd == "head":
+        # Initialize storage clients using existing functions
+        settings = get_settings()
+        headers = {}
+        
+        try:
+            if settings.using_minio:
+                # MinIO path
+                cli = _minio()
+                try:
+                    stat = cli.stat_object(args.bucket, args.key)
+                    # Convert MinIO metadata to header format
+                    headers = {f"x-amz-meta-{k}": v for k, v in (stat.metadata or {}).items()}
+                except Exception as e:
+                    print(json.dumps({"error": f"MinIO stat_object failed: {e}"}, indent=2))
+                    sys.exit(1)
+            else:
+                # AWS S3 path
+                s3 = _boto3_s3()
+                try:
+                    resp = s3.head_object(Bucket=args.bucket, Key=args.key)
+                    # Extract headers from S3 response
+                    headers = resp.get('ResponseMetadata', {}).get('HTTPHeaders', {})
+                    # Also check for metadata in the response
+                    metadata = resp.get('Metadata', {})
+                    if metadata:
+                        # Add metadata with x-amz-meta prefix
+                        for k, v in metadata.items():
+                            headers[f"x-amz-meta-{k}"] = v
+                except Exception as e:
+                    print(json.dumps({"error": f"S3 head_object failed: {e}"}, indent=2))
+                    sys.exit(1)
+
+            # Decode video URL metadata
+            url, sha, err = read_video_url_from_head(headers)
+            out = {
+                "has_encoded": url is not None or err is not None,
+                "sha256": sha,
+                "error": err,
+                "decoded_preview": (url[:200] if url else None),
+                "raw_headers": headers  # Include all headers for debugging
+            }
+            print(json.dumps(out, indent=2))
+            sys.exit(0)
+        except Exception as e:
+            print(json.dumps({"error": f"Unexpected error: {e}"}, indent=2))
+            sys.exit(1)
+    
+    elif args.cmd == "inspect":
+        # Initialize storage clients using existing functions
+        settings = get_settings()
+        
+        try:
+            if settings.using_minio:
+                # MinIO path
+                client = _minio()
+            else:
+                # AWS S3 path
+                client = _boto3_s3()
+
+            # 1) HEAD the image for quick fields
+            headers = head_minio_metadata(client, args.bucket, args.key)
+
+            # 2) Derive sidecar key from image key
+            # image key format: default/<first2>/<hash>.jpg
+            parts = args.key.strip("/").split("/")
+            if len(parts) < 3:
+                print(json.dumps({"error": "key not in expected format"}, indent=2))
+                sys.exit(1)
+            
+            # Extract hash from filename (remove extension)
+            filename = parts[-1]
+            hash_without_ext = filename.rsplit('.', 1)[0]  # Remove extension
+            sidecar_filename = f"{hash_without_ext}.json"
+            sidecar_key = "/".join(parts[:-1] + [sidecar_filename])
+
+            # 3) Fetch sidecar JSON
+            sidecar = get_sidecar_json(client, args.bucket, sidecar_key)
+
+            out = {
+                "image_key": args.key,
+                "sidecar_key": sidecar_key,
+                "headers": {k: headers[k] for k in sorted(headers.keys()) if "video-url" in k or "doc-id" in k},
+                "sidecar": sidecar,
+            }
+            print(json.dumps(out, indent=2, ensure_ascii=False))
+            sys.exit(0)
+        except Exception as e:
+            print(json.dumps({"error": f"Unexpected error: {e}"}, indent=2))
+            sys.exit(1)
+    
+    parser.print_help()
 
 
