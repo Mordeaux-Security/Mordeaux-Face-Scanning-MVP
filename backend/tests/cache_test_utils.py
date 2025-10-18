@@ -10,7 +10,7 @@ import os
 import redis
 import pytest
 from typing import Optional, Dict, Any
-from app.services.cache import HybridCacheService
+from app.crawler.cache import HybridCacheService
 
 
 class RedisTestManager:
@@ -142,7 +142,7 @@ docker compose exec postgres psql -U mordeaux -d mordeaux -c "
 
 # 5. Reset cache statistics
 python -c "
-from app.services.cache import get_hybrid_cache_service
+from app.crawler.cache import get_hybrid_cache_service
 cache = get_hybrid_cache_service()
 cache.reset_cache_stats()
 print('Cache statistics reset')

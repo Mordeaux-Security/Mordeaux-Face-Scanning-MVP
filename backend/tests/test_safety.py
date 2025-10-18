@@ -10,7 +10,7 @@ import asyncio
 from unittest.mock import Mock, patch, AsyncMock
 from typing import List, Dict, Any, Tuple
 
-from app.services.crawler import (
+from app.crawler.crawler import (
     ImageCrawler, 
     validate_url_security, 
     validate_content_security, 
@@ -180,7 +180,7 @@ class TestCrawlerSecurityIntegration:
         
         for url in malicious_urls:
             # Create mock image info
-            from app.services.crawler import ImageInfo
+            from app.crawler.crawler import ImageInfo
             image_info = ImageInfo(url=url, alt_text="test", title="test", width=None, height=None)
             
             # Try to download - should be rejected
@@ -212,7 +212,7 @@ class TestCrawlerSecurityIntegration:
                 AsyncMock(__aenter__=AsyncMock(return_value=mock_response2))
             ]
             
-            from app.services.crawler import ImageInfo
+            from app.crawler.crawler import ImageInfo
             image_info = ImageInfo(url="https://example.com/redirect", alt_text="test", title="test", width=None, height=None)
             
             # Should handle redirects securely

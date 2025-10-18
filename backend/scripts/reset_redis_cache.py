@@ -30,7 +30,7 @@ except ImportError:
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
-    from app.services.cache import HybridCacheService
+    from app.crawler.cache import HybridCacheService
     from app.core.config import get_settings
     APP_MODULES_AVAILABLE = True
 except ImportError as e:

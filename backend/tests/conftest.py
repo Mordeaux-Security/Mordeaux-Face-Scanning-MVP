@@ -135,7 +135,7 @@ def admin_tenant_headers():
 @pytest.fixture
 async def real_cache_service():
     """Real cache service for integration tests."""
-    from app.services.cache import HybridCacheService
+    from app.crawler.cache import HybridCacheService
     
     # Use test-specific Redis database
     test_redis_url = "redis://localhost:6379/15"  # Use DB 15 for tests

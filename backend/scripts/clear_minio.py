@@ -9,7 +9,7 @@ import os
 # Add the backend directory to Python path
 sys.path.insert(0, '/app')
 
-from app.services.storage import _minio
+from app.crawler.storage import _minio
 from app.core.config import get_settings
 
 def clear_minio_buckets():

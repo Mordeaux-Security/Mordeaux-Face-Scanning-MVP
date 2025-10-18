@@ -5,9 +5,9 @@ import logging
 from ..core.config import get_settings
 from ..core.metrics import get_metrics
 from ..services.health import get_health_service
-from ..services.cache import get_cache_service
+from ..crawler.cache import get_cache_service
 from ..services.webhook import get_webhook_service
-from ..services.batch import get_batch_processor
+from ..crawler.batch import get_batch_processor
 import psycopg
 
 logger = logging.getLogger(__name__)

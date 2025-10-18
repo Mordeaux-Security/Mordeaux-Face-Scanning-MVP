@@ -352,7 +352,7 @@ async def get_performance_thresholds():
 @app.get("/cache/stats")
 async def get_cache_stats():
     """Get cache statistics and performance metrics."""
-    from app.services.cache import get_cache_service
+    from app.crawler.cache import get_cache_service
     
     cache_service = get_cache_service()
     stats = await cache_service.get_cache_stats()
@@ -361,7 +361,7 @@ async def get_cache_stats():
 @app.delete("/cache/tenant/{tenant_id}")
 async def clear_tenant_cache(tenant_id: str):
     """Clear all cached data for a specific tenant."""
-    from app.services.cache import get_cache_service
+    from app.crawler.cache import get_cache_service
     
     cache_service = get_cache_service()
     deleted_count = await cache_service.invalidate_tenant_cache(tenant_id)
@@ -373,7 +373,7 @@ async def clear_tenant_cache(tenant_id: str):
 @app.delete("/cache/all")
 async def clear_all_cache():
     """Clear all cached data (use with caution)."""
-    from app.services.cache import get_cache_service
+    from app.crawler.cache import get_cache_service
     
     cache_service = get_cache_service()
     success = await cache_service.clear_all_cache()

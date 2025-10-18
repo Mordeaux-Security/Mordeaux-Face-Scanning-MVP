@@ -210,7 +210,7 @@ class HealthService:
     async def check_face_service_health(self) -> Dict[str, Any]:
         """Check face processing service health."""
         try:
-            from ..services.face import _load_app, _read_image
+            from ..crawler.face import _load_app, _read_image
             
             start_time = time.time()
             

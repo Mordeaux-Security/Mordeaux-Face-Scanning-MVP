@@ -2,11 +2,11 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Backgro
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
-from ..services.face import get_face_service
-from ..services.storage import save_raw_and_thumb_async, get_object_from_storage
+from ..crawler.face import get_face_service
+from ..crawler.storage import save_raw_and_thumb_async, get_object_from_storage
 from ..services.vector import get_vector_client
-from ..services.cache import get_cache_service
-from ..services.batch import get_batch_processor
+from ..crawler.cache import get_cache_service
+from ..crawler.batch import get_batch_processor
 from ..services.webhook import get_webhook_service, WebhookEvent
 from ..core.audit import get_audit_logger
 from ..core.errors import (

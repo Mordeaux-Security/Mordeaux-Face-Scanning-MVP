@@ -5,10 +5,10 @@ import aiohttp
 from typing import Dict, List, Optional, Any
 import logging
 from ..core.config import get_settings
-from ..services.face import get_face_service
-from ..services.storage import save_raw_and_thumb_async
+from .face import get_face_service
+from .storage import save_raw_and_thumb_async
 from ..services.vector import get_vector_client
-from ..services.cache import get_cache_service
+from .cache import get_cache_service
 from ..services.webhook import get_webhook_service, WebhookEvent
 from ..core.audit import get_audit_logger
 

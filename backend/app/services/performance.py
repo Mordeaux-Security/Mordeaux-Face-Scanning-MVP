@@ -20,7 +20,7 @@ class PerformanceOptimizer:
         
         try:
             # Run face processing operations in parallel
-            from ..services.face import get_face_service
+            from ..crawler.face import get_face_service
             face_service = get_face_service()
             
             # Use asyncio.gather for parallel execution
@@ -58,7 +58,7 @@ class PerformanceOptimizer:
         start_time = time.time()
         
         try:
-            from ..services.storage import save_raw_and_thumb_async
+            from ..crawler.storage import save_raw_and_thumb_async
             
             # Use async storage operations
             raw_key, raw_url, thumb_key, thumb_url = await save_raw_and_thumb_async(

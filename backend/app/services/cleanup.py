@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import logging
 from ..core.config import get_settings
-from ..services.storage import list_objects, get_object_from_storage
+from ..crawler.storage import list_objects, get_object_from_storage
 from ..services.vector import get_vector_client
 import psycopg
 from psycopg_pool import AsyncConnectionPool

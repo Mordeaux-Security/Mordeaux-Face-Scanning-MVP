@@ -1,0 +1,22 @@
+---
+alwaysApply: true
+---
+
+# Python Style & Linting (PEP8)
+
+**Always do this for Python:**
+- Format with **Black** (line-length 88) and **isort** (profile=black).
+- Lint with **Ruff** and fix autofixable issues.
+- Prefer idiomatic, PEP8-compliant names and import order.
+- If a suggestion would break these rules, adjust the code or add the needed config.
+
+**Commands to assume:**
+- `ruff check --fix .`
+- `ruff format .`  # or `black .` if not using ruff-format
+- `ruff --version >= 0.4`
+
+**When generating code:**
+- Include imports sorted per isort/black.
+- Wrap lines at 88 where practical.
+- Use type hints where natural; avoid unused imports/variables.
+(This nudges Cursor's AI to keep outputs PEP 8-friendly.)
