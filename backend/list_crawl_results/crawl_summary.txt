@@ -1,0 +1,77 @@
+LIST CRAWL SUMMARY
+==================
+
+Total sites processed: 7
+Successful crawls: 7
+Failed crawls: 0
+Total images saved: 166
+Total thumbnails saved: 83
+Selector mining attempts: 2
+Selector mining successes: 0
+
+PER-SITE DETAILED RESULTS:
+==========================
+
+Domain: candidteens.net
+URL: https://candidteens.net
+Crawl Success: True
+Selector Mining: Skipped (using existing recipe)
+Images saved: 3
+Thumbnails saved: 0
+Pages crawled: 5
+--------------------------------------------------
+
+Domain: forum.candidgirls.io
+URL: https://forum.candidgirls.io
+Crawl Success: True
+Selector Mining: Skipped (using existing recipe)
+Images saved: 2
+Thumbnails saved: 0
+Pages crawled: 5
+--------------------------------------------------
+
+Domain: wikifeet.com
+URL: https://wikifeet.com
+Crawl Success: True
+Selector Mining: Attempted - FAILED
+Images saved: 40
+Thumbnails saved: 33
+Pages crawled: 2
+--------------------------------------------------
+
+Domain: www.candidcreepshots.cc
+URL: https://www.candidcreepshots.cc
+Crawl Success: True
+Selector Mining: Skipped (using existing recipe)
+Images saved: 68
+Thumbnails saved: 26
+Pages crawled: 4
+--------------------------------------------------
+
+Domain: ibradome.com
+URL: https://ibradome.com
+Crawl Success: True
+Selector Mining: Skipped (using existing recipe)
+Images saved: 19
+Thumbnails saved: 2
+Pages crawled: 5
+--------------------------------------------------
+
+Domain: oneprotests.thefap.net
+URL: https://oneprotests.thefap.net
+Crawl Success: True
+Selector Mining: Skipped (using existing recipe)
+Images saved: 34
+Thumbnails saved: 22
+Pages crawled: 5
+--------------------------------------------------
+
+Domain: picazor.com
+URL: https://picazor.com/en
+Crawl Success: True
+Selector Mining: Attempted - FAILED
+Images saved: 0
+Thumbnails saved: 0
+Pages crawled: 5
+--------------------------------------------------
+

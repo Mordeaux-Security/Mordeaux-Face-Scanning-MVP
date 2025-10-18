@@ -34,6 +34,19 @@ crawl:
 	if [ "$${CROP_FACES:-true}" = "false" ]; then CROP_FACES_FLAG="--no-crop-faces"; fi; \
 	docker compose exec backend-cpu python app/crawler/crawl_images.py $(URL) --method $$METHOD --min-face-quality $$MIN_FACE_QUALITY --face-margin $$FACE_MARGIN --max-images $$MAX_TOTAL_IMAGES --max-pages $$MAX_PAGES --mode $$CRAWL_MODE --max-concurrent-images $$MAX_CONCURRENT_IMAGES --batch-size $$BATCH_SIZE --tenant-id $$TENANT_ID $$REQUIRE_FACE_FLAG $$CROP_FACES_FLAG
 
+crawl-list:
+	@echo "Usage: make crawl-list [SITES_FILE=<file>] [OUTPUT_DIR=<dir>] [MAX_CONCURRENT=<number>] [MAX_PAGES_PER_SITE=<number>] [MAX_IMAGES_PER_SITE=<number>] [REQUIRE_FACE=<true/false>] [NO_SELECTOR_MINING=<true/false>]"
+	@echo "Example: make crawl-list SITES_FILE=sites.txt MAX_CONCURRENT=2 MAX_PAGES_PER_SITE=5 MAX_IMAGES_PER_SITE=20"
+	@SITES_FILE=$${SITES_FILE:-sites.txt}; \
+	OUTPUT_DIR=$${OUTPUT_DIR:-list_crawl_results}; \
+	MAX_CONCURRENT=$${MAX_CONCURRENT:-2}; \
+	MAX_PAGES_PER_SITE=$${MAX_PAGES_PER_SITE:-5}; \
+	MAX_IMAGES_PER_SITE=$${MAX_IMAGES_PER_SITE:-20}; \
+	REQUIRE_FACE_FLAG=""; \
+	if [ "$${REQUIRE_FACE:-false}" = "true" ]; then REQUIRE_FACE_FLAG="--require-face"; fi; \
+	NO_SELECTOR_MINING_FLAG=""; \
+	if [ "$${NO_SELECTOR_MINING:-false}" = "true" ]; then NO_SELECTOR_MINING_FLAG="--no-selector-mining"; fi; \
+	docker compose exec backend-cpu python app/crawler/crawl_list.py --sites-file $$SITES_FILE --output-dir $$OUTPUT_DIR --max-concurrent $$MAX_CONCURRENT --max-pages-per-site $$MAX_PAGES_PER_SITE --max-images-per-site $$MAX_IMAGES_PER_SITE $$REQUIRE_FACE_FLAG $$NO_SELECTOR_MINING_FLAG
 
 restart:
 	docker compose restart

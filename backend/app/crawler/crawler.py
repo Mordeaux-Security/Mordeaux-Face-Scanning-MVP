@@ -21,7 +21,7 @@ import weakref
 from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, Set, Dict
+from typing import List, Optional, Tuple, Set, Dict, Any
 from urllib.parse import urljoin, urlparse, parse_qs
 
 import psutil
@@ -32,11 +32,17 @@ from PIL import Image, ImageFile
 # Import HTTP service
 from .http_service import get_http_service, HTTPService
 
+# Import JavaScript rendering service
+from .js_rendering_service import get_js_rendering_service, JSRenderingService
+
 # Import site recipes functionality
 from ..selector_miner.site_recipes import get_recipe_for_url, get_recipe_for_host
 
+# Import crawler settings
+from .crawler_settings import *
+
 # Image safety configuration - set once on import
-Image.MAX_IMAGE_PIXELS = 50_000_000
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from .storage import (
@@ -48,6 +54,7 @@ from . import storage
 from .face import get_face_service, close_face_service
 from . import face
 from .cache import get_hybrid_cache_service, close_cache_service
+from .album_processor import get_album_processor, close_album_processor
 
 # ============================================================================
 # SECURITY CONFIGURATION
@@ -70,15 +77,8 @@ BLOCKED_TLDS = {
     '.tk', '.ml', '.ga', '.cf'  # Free TLDs often used for malicious purposes
 }
 
-# Content Security Configuration
-ALLOWED_CONTENT_TYPES = {'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'}
-BLOCKED_CONTENT_TYPES = {'image/svg+xml'}  # SVG's often are logos, not images
-MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8MB
-
-# Crawl Policy Configuration
-DEFAULT_MAX_DEPTH = 1
-DEFAULT_PER_HOST_CONCURRENCY = 3
-DEFAULT_JITTER_RANGE = (100, 400)  # milliseconds
+# Content Security Configuration and Crawl Policy Configuration
+# These constants are now imported from crawler_settings.py
 
 # ============================================================================
 # SECURITY GUARDS
@@ -161,7 +161,7 @@ def validate_content_security(content_type: str, content_length: Optional[int] =
     
     return True, "SAFE"
 
-def validate_redirect_security(redirect_url: str, redirect_count: int, max_redirects: int = 3) -> Tuple[bool, str]:
+def validate_redirect_security(redirect_url: str, redirect_count: int, max_redirects: int = DEFAULT_MAX_REDIRECTS) -> Tuple[bool, str]:
     """
     Validate redirect URL for security and limits.
     
@@ -188,7 +188,7 @@ def validate_redirect_security(redirect_url: str, redirect_count: int, max_redir
 # THUMBNAIL EXTRACTION HELPERS
 # ============================================================================
 
-def pick_from_srcset(srcset: str, base_url: str, preferred_width: int = 640) -> Optional[str]:
+def pick_from_srcset(srcset: str, base_url: str, preferred_width: int = PREFERRED_IMAGE_WIDTH) -> Optional[str]:
     """
     Pick the best image URL from a srcset attribute.
     
@@ -395,11 +395,11 @@ class MemoryMonitor:
     
     def _calculate_pressure_level(self, memory_percent: float) -> str:
         """Calculate memory pressure level."""
-        if memory_percent < 60:
+        if memory_percent < MEMORY_LOW_THRESHOLD:
             return 'low'
-        elif memory_percent < 75:
+        elif memory_percent < MEMORY_MODERATE_THRESHOLD:
             return 'moderate'
-        elif memory_percent < 85:
+        elif memory_percent < MEMORY_HIGH_THRESHOLD:
             return 'high'
         else:
             return 'critical'
@@ -435,7 +435,7 @@ class MemoryMonitor:
         elif status['pressure_level'] == 'moderate':
             return int(base_concurrency * 0.75)
         else:  # low
-            return min(base_concurrency * 2, 30)  # Cap at 30
+            return min(base_concurrency * 2, DEFAULT_MAX_CONCURRENCY_CAP)
 
 logger = logging.getLogger(__name__)
 
@@ -443,7 +443,7 @@ logger = logging.getLogger(__name__)
 # LOGGING UTILITIES
 # ============================================================================
 
-def _truncate_log_string(text: str, max_length: int = 120) -> str:
+def _truncate_log_string(text: str, max_length: int = LOG_TRUNCATE_MAX_LENGTH) -> str:
     """
     Truncate long strings for logging with a hash suffix for identification.
     
@@ -458,7 +458,7 @@ def _truncate_log_string(text: str, max_length: int = 120) -> str:
         return text
     
     # Create a short hash of the original string for identification
-    hash_suffix = hashlib.md5(text.encode()).hexdigest()[:8]
+    hash_suffix = hashlib.md5(text.encode()).hexdigest()[:LOG_HASH_SUFFIX_LENGTH]
     truncated = text[:max_length - len(hash_suffix) - 3]  # Reserve space for "..." and hash
     return f"{truncated}...{hash_suffix}"
 
@@ -513,19 +513,19 @@ class ImageCrawler:
     def __init__(
         self,
         tenant_id: str = "default",
-        max_file_size: int = 10 * 1024 * 1024,  # 10MB
+        max_file_size: int = MAX_IMAGE_BYTES,  # 10MB
         allowed_extensions: Optional[Set[str]] = None,
-        timeout: int = 30,
-        min_face_quality: float = 0.5,
+        timeout: int = DEFAULT_TIMEOUT,
+        min_face_quality: float = FACE_MIN_QUALITY,
         require_face: bool = True,
         crop_faces: bool = True,
-        face_margin: float = 0.2,
-        max_total_images: int = 50,
-        max_pages: int = 20,
+        face_margin: float = FACE_MARGIN,
+        max_total_images: int = DEFAULT_MAX_TOTAL_IMAGES,
+        max_pages: int = DEFAULT_MAX_PAGES,
         same_domain_only: bool = True,
-        similarity_threshold: int = 5,
-        max_concurrent_images: int = 20,  # Maximum concurrent image processing
-        batch_size: int = 50,
+        similarity_threshold: int = SIMILARITY_THRESHOLD,
+        max_concurrent_images: int = DEFAULT_MAX_CONCURRENT_IMAGES,  # Maximum concurrent image processing
+        batch_size: int = DEFAULT_BATCH_SIZE,
         enable_audit_logging: bool = True,
     ):
         self.tenant_id = tenant_id  # Multi-tenancy support
@@ -552,45 +552,52 @@ class ImageCrawler:
         self.per_host_concurrency = DEFAULT_PER_HOST_CONCURRENCY
         self.jitter_range = DEFAULT_JITTER_RANGE
         self.respect_robots_txt = False  # Optional robots.txt respect flag
-        self.max_redirects = 3
+        self.max_redirects = DEFAULT_MAX_REDIRECTS
         self._redirect_counts = {}  # Track redirect counts per URL
         
         # Concurrency control with semaphores and per-host limits
         self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
-        self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, 50))  # Allow more downloads
+        self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, DEFAULT_MAX_CONCURRENT_DOWNLOADS))  # Allow more downloads
         self._per_host_semaphores = {}  # Per-host concurrency control
         self._per_host_limits = {}  # Track per-host limits
         
         # Thread pool for CPU-intensive face detection
         self._face_detection_thread_pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=min(psutil.cpu_count() or 4, 8),  # Limit to CPU cores but cap at 8
+            max_workers=min(psutil.cpu_count() or 4, FACE_MAX_WORKERS),  # Limit to CPU cores but cap at 8
             thread_name_prefix="face_detection"
         )
         
         # Thread pool for storage operations
         self._storage_thread_pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=min(self.max_concurrent_images, 16),  # Match concurrency limit
+            max_workers=min(self.max_concurrent_images, FACE_MAX_WORKERS),  # Match concurrency limit
             thread_name_prefix="storage"
         )
         
         # Memory monitoring and management
         self._memory_monitor = MemoryMonitor()
         self._active_tasks = weakref.WeakSet()  # Track active tasks for memory cleanup
-        self._memory_pressure_threshold = 75  # Memory pressure threshold
-        self._gc_frequency = 10  # Force GC every N operations
+        self._memory_pressure_threshold = MEMORY_PRESSURE_THRESHOLD  # Memory pressure threshold
+        self._gc_frequency = GC_FREQUENCY  # Force GC every N operations
         self._operation_count = 0
         self._cpu_sample_counter = 0  # Counter for CPU sampling frequency
         self._jitter_applied = False  # Track if jitter has been applied
         
         self.http_service: Optional[HTTPService] = None
+        self.js_rendering_service: Optional[JSRenderingService] = None
         self.cache_service = get_hybrid_cache_service()  # Hybrid caching service
         self.pending_cache_entries = []  # Batch cache writes
+        self.album_processor = get_album_processor(tenant_id)
         
     async def __aenter__(self):
         """Async context manager entry."""
         # Use centralized HTTP service
         self.http_service = await get_http_service()
+        
+        # Initialize JavaScript rendering service if enabled
+        if JS_RENDERING_ENABLED:
+            self.js_rendering_service = await get_js_rendering_service()
+        
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -602,6 +609,13 @@ class ImageCrawler:
             logger.info("HTTP service cleanup handled globally")
         except Exception as e:
             logger.warning(f"Error during HTTP service cleanup: {e}")
+        
+        try:
+            # JavaScript rendering service cleanup is handled globally
+            if self.js_rendering_service:
+                logger.info("JavaScript rendering service cleanup handled globally")
+        except Exception as e:
+            logger.warning(f"Error during JavaScript rendering service cleanup: {e}")
         
         try:
             # Clean up crawler thread pools
@@ -656,7 +670,7 @@ class ImageCrawler:
         try:
             # Get comprehensive system metrics - only sample CPU every ~20 operations to reduce overhead
             self._cpu_sample_counter += 1
-            if self._cpu_sample_counter % 20 == 0:
+            if self._cpu_sample_counter % CPU_SAMPLE_FREQUENCY == 0:
                 cpu_percent = psutil.cpu_percent(interval=None)  # Non-blocking call
             else:
                 cpu_percent = 50.0  # Default moderate CPU usage
@@ -668,11 +682,11 @@ class ImageCrawler:
                 gc.collect()
             
             # Calculate base concurrency from CPU and memory
-            cpu_factor = 1.0
-            if cpu_percent > 80:
-                cpu_factor = 0.5  # Reduce by half if CPU is high
-            elif cpu_percent < 30:
-                cpu_factor = 1.5  # Increase by 50% if CPU is low
+            cpu_factor = CPU_DEFAULT_FACTOR
+            if cpu_percent > CPU_HIGH_THRESHOLD:
+                cpu_factor = CPU_HIGH_FACTOR  # Reduce by half if CPU is high
+            elif cpu_percent < CPU_LOW_THRESHOLD:
+                cpu_factor = CPU_LOW_FACTOR  # Increase by 50% if CPU is low
             
             # Get memory-safe concurrency limit
             base_concurrency = int(self.max_concurrent_images * cpu_factor)
@@ -687,7 +701,7 @@ class ImageCrawler:
                 self.max_concurrent_images = new_concurrency
                 self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
                 self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
-                self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, 50))
+                self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, DEFAULT_MAX_CONCURRENT_DOWNLOADS))
                 
                 logger.info(f"Dynamic concurrency adjustment: {old_concurrency} → {new_concurrency} "
                            f"(CPU: {cpu_percent:.1f}%, Memory: {memory_status['pressure_level']}, "
@@ -787,6 +801,22 @@ class ImageCrawler:
                 cache_misses += 1
 
                 if image_bytes:
+                    # Get all face thumbnails for album processing
+                    all_face_thumbnails = []
+                    if faces and hasattr(self, 'album_processor') and ALBUM_SAVE_ALL_QUALITY_FACES:
+                        try:
+                            from .face import get_face_service
+                            face_service = get_face_service()
+                            all_face_thumbnails = face_service.crop_all_faces_and_create_thumbnails(
+                                image_bytes, 
+                                faces, 
+                                quality_threshold=ALBUM_FACE_QUALITY_THRESHOLD
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to create face thumbnails for {image_info.url}: {e}")
+                            all_face_thumbnails = [thumbnail_bytes] if thumbnail_bytes else []
+                    else:
+                        all_face_thumbnails = [thumbnail_bytes] if thumbnail_bytes else []
                     # Extract site for storage organization
                     parsed_url = urlparse(url)
                     site = parsed_url.netloc.replace('www.', '')  # Remove www prefix
@@ -797,7 +827,12 @@ class ImageCrawler:
                     # Debug logging for video URL
                     logger.info(f"Processing image with video URL: {image_info.video_url}")
                     
-                    # Store raw image with sidecar metadata
+                    # Prepare enhanced metadata for album processing
+                    enhanced_metadata = {}
+                    if hasattr(image_info, 'album_metadata') and image_info.album_metadata:
+                        enhanced_metadata.update(image_info.album_metadata)
+                    
+                    # Store raw image with enhanced metadata
                     raw_result = await save_image(
                         image_bytes=image_bytes,
                         mime="image/jpeg",
@@ -808,11 +843,13 @@ class ImageCrawler:
                         page_url=url,
                         source_video_url=image_info.video_url,
                         source_image_url=image_info.url,
+                        metadata=enhanced_metadata
                     )
                     saved_raw_keys.append(raw_result["image_key"])
                     
-                    # Store thumbnail if available
+                    # Store thumbnails if available
                     if thumbnail_bytes is not None:
+                        # Store primary thumbnail (backward compatibility)
                         thumbnail_result = await save_image(
                             image_bytes=thumbnail_bytes,
                             mime="image/jpeg", 
@@ -823,8 +860,37 @@ class ImageCrawler:
                             page_url=url,
                             source_video_url=image_info.video_url,
                             source_image_url=image_info.url,
+                            metadata=enhanced_metadata
                         )
                         saved_thumbnail_keys.append(thumbnail_result["image_key"])
+                        
+                        # Store additional face thumbnails for album processing
+                        if hasattr(self, 'album_processor') and ALBUM_SAVE_ALL_QUALITY_FACES and len(all_face_thumbnails) > 1:
+                            for i, face_thumbnail in enumerate(all_face_thumbnails[1:], 1):  # Skip first (already saved)
+                                try:
+                                    # Enhanced metadata for face thumbnails
+                                    face_metadata = enhanced_metadata.copy()
+                                    face_metadata.update({
+                                        "face_index": i, 
+                                        "album_processing": True,
+                                        "face_thumbnail": True
+                                    })
+                                    
+                                    face_thumbnail_result = await save_image(
+                                        image_bytes=face_thumbnail,
+                                        mime="image/jpeg",
+                                        filename=f"face_thumbnail_{i}.jpg",
+                                        bucket="thumbnails",
+                                        client=minio_client,
+                                        site=site,
+                                        page_url=url,
+                                        source_video_url=image_info.video_url,
+                                        source_image_url=image_info.url,
+                                        metadata=face_metadata
+                                    )
+                                    saved_thumbnail_keys.append(face_thumbnail_result["image_key"])
+                                except Exception as e:
+                                    logger.warning(f"Failed to save face thumbnail {i} for {image_info.url}: {e}")
         
         # Get detailed cache statistics
         cache_stats = await self.cache_service.get_cache_stats()
@@ -853,9 +919,9 @@ class ImageCrawler:
     async def _process_images_streaming(self, images: List[ImageInfo], all_errors: List[str], cache_hits: int, cache_misses: int, method_used: str, url: str) -> 'CrawlResult':
         """Process images using memory-efficient streaming pipeline for large workloads."""
         # Memory-efficient streaming pipeline with bounded queues
-        download_queue = asyncio.Queue(maxsize=20)      # Small queue for backpressure
-        processing_queue = asyncio.Queue(maxsize=10)    # Even smaller processing queue
-        storage_queue = asyncio.Queue(maxsize=10)       # Small storage queue
+        download_queue = asyncio.Queue(maxsize=DOWNLOAD_QUEUE_SIZE)      # Small queue for backpressure
+        processing_queue = asyncio.Queue(maxsize=PROCESSING_QUEUE_SIZE)    # Even smaller processing queue
+        storage_queue = asyncio.Queue(maxsize=STORAGE_QUEUE_SIZE)       # Small storage queue
         
         # Results tracking
         streaming_results = {
@@ -926,7 +992,24 @@ class ImageCrawler:
                 else:
                     results['cache_misses'] += 1
                     if image_bytes:
-                        await processing_queue.put((image_bytes, thumbnail_bytes, image_info, faces))
+                        # Get all face thumbnails for album processing
+                        all_face_thumbnails = []
+                        if faces and hasattr(self, 'album_processor') and ALBUM_SAVE_ALL_QUALITY_FACES:
+                            try:
+                                from .face import get_face_service
+                                face_service = get_face_service()
+                                all_face_thumbnails = face_service.crop_all_faces_and_create_thumbnails(
+                                    image_bytes, 
+                                    faces, 
+                                    quality_threshold=ALBUM_FACE_QUALITY_THRESHOLD
+                                )
+                            except Exception as e:
+                                logger.warning(f"Failed to create face thumbnails for {image_info.url}: {e}")
+                                all_face_thumbnails = [thumbnail_bytes] if thumbnail_bytes else []
+                        else:
+                            all_face_thumbnails = [thumbnail_bytes] if thumbnail_bytes else []
+                        
+                        await processing_queue.put((image_bytes, thumbnail_bytes, image_info, faces, all_face_thumbnails))
                         
             except Exception as e:
                 logger.error(f"Download worker error for {_truncate_log_string(image_info.url)}: {e}")
@@ -942,12 +1025,12 @@ class ImageCrawler:
                 await storage_queue.put(None)  # Pass sentinel to next stage
                 break
             
-            image_bytes, thumbnail_bytes, image_info, faces = item
+            image_bytes, thumbnail_bytes, image_info, faces, all_face_thumbnails = item
             try:
                 # Face detection if needed (reuse existing logic)
                 if self.require_face or self.crop_faces:
                     if not faces:  # Only detect if not already detected
-                        faces, thumbnail_bytes = await self._async_face_detection(image_bytes, image_info)
+                        faces, thumbnail_bytes, all_face_thumbnails = await self._async_face_detection(image_bytes, image_info)
                     
                     if self.require_face and not faces:
                         logger.info(f"No faces detected for {_truncate_log_string(image_info.url)}, skipping.")
@@ -958,7 +1041,7 @@ class ImageCrawler:
                         thumbnail_bytes = None
                 
                 # Queue for storage
-                await storage_queue.put((image_bytes, thumbnail_bytes, image_info))
+                await storage_queue.put((image_bytes, thumbnail_bytes, image_info, all_face_thumbnails))
                         
             except Exception as e:
                 logger.error(f"Processing worker error for {_truncate_log_string(image_info.url)}: {e}")
@@ -969,12 +1052,12 @@ class ImageCrawler:
     async def _streaming_storage_worker(self, storage_queue: asyncio.Queue, results: dict, url: str):
         """Memory-efficient storage worker with micro-batching."""
         storage_batch = []
-        batch_size = 5  # Small batch size for memory efficiency
+        batch_size = SMALL_BATCH_SIZE  # Small batch size for memory efficiency
         
         while True:
             try:
                 # Wait for item with timeout for micro-batching
-                item = await asyncio.wait_for(storage_queue.get(), timeout=0.5)
+                item = await asyncio.wait_for(storage_queue.get(), timeout=STORAGE_TIMEOUT)
                 
                 if item is None:  # Sentinel value
                     # Process any remaining items
@@ -1012,13 +1095,20 @@ class ImageCrawler:
         
         # Process batch concurrently
         batch_tasks = []
-        for image_bytes, thumbnail_bytes, image_info in batch:
-            batch_tasks.append(self._store_single_item(image_bytes, thumbnail_bytes, image_info, results, url))
+        for item in batch:
+            if len(item) == 4:  # New format with all_face_thumbnails
+                image_bytes, thumbnail_bytes, image_info, all_face_thumbnails = item
+            else:  # Old format for backward compatibility
+                image_bytes, thumbnail_bytes, image_info = item
+                all_face_thumbnails = []
+            batch_tasks.append(self._store_single_item(image_bytes, thumbnail_bytes, image_info, results, url, all_face_thumbnails))
         
         await asyncio.gather(*batch_tasks, return_exceptions=True)
     
-    async def _store_single_item(self, image_bytes: bytes, thumbnail_bytes: Optional[bytes], image_info: 'ImageInfo', results: dict, url: str):
+    async def _store_single_item(self, image_bytes: bytes, thumbnail_bytes: Optional[bytes], image_info: 'ImageInfo', results: dict, url: str, all_face_thumbnails: List[bytes] = None):
         """Store a single item and update cache."""
+        if all_face_thumbnails is None:
+            all_face_thumbnails = []
         try:
             async with self._storage_semaphore:
                 # Extract site for storage organization
@@ -1031,7 +1121,12 @@ class ImageCrawler:
                 # Debug logging for video URL
                 logger.info(f"Processing image with video URL: {image_info.video_url}")
                 
-                # Store raw image with sidecar metadata
+                # Prepare enhanced metadata for album processing
+                enhanced_metadata = {}
+                if hasattr(image_info, 'album_metadata') and image_info.album_metadata:
+                    enhanced_metadata.update(image_info.album_metadata)
+                
+                # Store raw image with enhanced metadata
                 raw_result = await save_image(
                     image_bytes=image_bytes,
                     mime="image/jpeg",
@@ -1042,11 +1137,13 @@ class ImageCrawler:
                     page_url=url,
                     source_video_url=image_info.video_url,
                     source_image_url=image_info.url,
+                    metadata=enhanced_metadata
                 )
                 results['saved_raw_keys'].append(raw_result["image_key"])
                 
-                # Store thumbnail if available
+                # Store thumbnails if available
                 if thumbnail_bytes is not None:
+                    # Store primary thumbnail (backward compatibility)
                     thumbnail_result = await save_image(
                         image_bytes=thumbnail_bytes,
                         mime="image/jpeg", 
@@ -1057,8 +1154,37 @@ class ImageCrawler:
                         page_url=url,
                         source_video_url=image_info.video_url,
                         source_image_url=image_info.url,
+                        metadata=enhanced_metadata
                     )
                     results['saved_thumbnail_keys'].append(thumbnail_result["image_key"])
+                    
+                    # Store additional face thumbnails for album processing
+                    if hasattr(self, 'album_processor') and ALBUM_SAVE_ALL_QUALITY_FACES and len(all_face_thumbnails) > 1:
+                        for i, face_thumbnail in enumerate(all_face_thumbnails[1:], 1):  # Skip first (already saved)
+                            try:
+                                # Enhanced metadata for face thumbnails
+                                face_metadata = enhanced_metadata.copy()
+                                face_metadata.update({
+                                    "face_index": i, 
+                                    "album_processing": True,
+                                    "face_thumbnail": True
+                                })
+                                
+                                face_thumbnail_result = await save_image(
+                                    image_bytes=face_thumbnail,
+                                    mime="image/jpeg",
+                                    filename=f"face_thumbnail_{i}.jpg",
+                                    bucket="thumbnails",
+                                    client=minio_client,
+                                    site=site,
+                                    page_url=url,
+                                    source_video_url=image_info.video_url,
+                                    source_image_url=image_info.url,
+                                    metadata=face_metadata
+                                )
+                                results['saved_thumbnail_keys'].append(face_thumbnail_result["image_key"])
+                            except Exception as e:
+                                logger.warning(f"Failed to save face thumbnail {i} for {image_info.url}: {e}")
                         
         except Exception as e:
             logger.error(f"Storage error for {_truncate_log_string(image_info.url)}: {e}")
@@ -1110,7 +1236,7 @@ class ImageCrawler:
                         method_used = f"recipe-{recipe_method}"
                         logger.info(f"Site recipe method '{recipe_method}' found {len(images)} images")
                         # Debug: Show first few image URLs
-                        for i, img in enumerate(images[:3]):
+                        for i, img in enumerate(images[:MAX_PREVIEW_IMAGES]):
                             logger.debug(f"DEBUG: Recipe image {i+1}: {img.url}")
                     else:
                         logger.debug(f"Site recipe found no images, falling back to built-in patterns")
@@ -1180,7 +1306,7 @@ class ImageCrawler:
                     method_used = pattern_name
                     logger.info(f"Built-in method selected: {pattern_name} (found {len(images)} images)")
                     # Debug: Show first few image URLs
-                    for i, img in enumerate(images[:3]):
+                    for i, img in enumerate(images[:MAX_PREVIEW_IMAGES]):
                         logger.debug(f"DEBUG: Sample image {i+1}: {img.url}")
                     break
                 else:
@@ -1234,7 +1360,8 @@ class ImageCrawler:
         # First, try traditional CSS selector-based extraction
         for selector_config in selectors:
             try:
-                selector = selector_config["selector"]
+                # Handle both old format ("selector") and new format ("css")
+                selector = selector_config.get("css") or selector_config.get("selector")
                 description = selector_config.get("description", selector)
                 
                 # Handle different types of selectors
@@ -1773,7 +1900,7 @@ class ImageCrawler:
             logger.warning(f"Failed to strip EXIF data: {e}. Using original image.")
             return image_bytes
     
-    def _check_image_dimensions(self, image_bytes: bytes, min_dimension: int = 100) -> bool:
+    def _check_image_dimensions(self, image_bytes: bytes, min_dimension: int = 50) -> bool:
         """
         Check if image meets minimum dimension requirements.
         
@@ -1838,7 +1965,7 @@ class ImageCrawler:
         
         return False
     
-    async def _async_face_detection(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[List[dict], Optional[bytes]]:
+    async def _async_face_detection(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[List[dict], Optional[bytes], List[bytes]]:
         """
         Run face detection via the async face API (single source of truth).
         """
@@ -1849,20 +1976,43 @@ class ImageCrawler:
 
         faces = await detect_and_embed_async(enhanced_bytes)
 
-        # Optional thumbnail
+        # Enhanced thumbnail processing for albums
         thumbnail_bytes: Optional[bytes] = None
+        all_face_thumbnails: List[bytes] = []
+        
         if self.crop_faces and faces:
             try:
-                thumbnail_bytes = crop_face_and_create_thumbnail(image_bytes, faces[0])
-            except Exception:
+                # For album processing, save all quality faces, not just the best
+                if hasattr(self, 'album_processor') and ALBUM_SAVE_ALL_QUALITY_FACES:
+                    # Create thumbnails for all faces above quality threshold
+                    from .face import get_face_service
+                    face_service = get_face_service()
+                    all_face_thumbnails = face_service.crop_all_faces_and_create_thumbnails(
+                        image_bytes, 
+                        faces, 
+                        quality_threshold=ALBUM_FACE_QUALITY_THRESHOLD
+                    )
+                    # Return the first thumbnail for backward compatibility
+                    thumbnail_bytes = all_face_thumbnails[0] if all_face_thumbnails else None
+                    logger.info(f"Album processing: created {len(all_face_thumbnails)} thumbnails, primary: {thumbnail_bytes is not None}")
+                else:
+                    # Original behavior: only the best face
+                    thumbnail_bytes = crop_face_and_create_thumbnail(image_bytes, faces[0])
+                    all_face_thumbnails = [thumbnail_bytes] if thumbnail_bytes else []
+                    logger.info(f"Standard processing: created thumbnail: {thumbnail_bytes is not None}")
+            except Exception as e:
+                logger.error(f"Thumbnail creation failed: {e}")
                 thumbnail_bytes = None
+                all_face_thumbnails = []
         elif not self.crop_faces:
             try:
                 thumbnail_bytes = create_thumbnail(image_bytes)
+                all_face_thumbnails = [thumbnail_bytes] if thumbnail_bytes else []
             except Exception:
                 thumbnail_bytes = None
+                all_face_thumbnails = []
 
-        return faces, thumbnail_bytes
+        return faces, thumbnail_bytes, all_face_thumbnails
     
     async def _process_single_image(self, image_info: ImageInfo, index: int, total: int) -> Tuple[Optional[str], Optional[str], bool, List[str]]:
         """
@@ -1886,8 +2036,8 @@ class ImageCrawler:
                     logger.warning(f"Failed to download image: {_truncate_log_string(image_info.url)}")
                     return None, None, False, download_errors, []
 
-                # Check image dimensions - skip if any dimension is below 100px
-                if not self._check_image_dimensions(image_bytes, min_dimension=100):
+                # Check image dimensions - skip if any dimension is below 50px
+                if not self._check_image_dimensions(image_bytes, min_dimension=50):
                     logger.info(f"Image dimensions too small, skipping: {_truncate_log_string(image_info.url)}")
                     return None, None, False, download_errors + ["Image dimensions below minimum threshold"], []
 
@@ -1897,12 +2047,26 @@ class ImageCrawler:
                     logger.info(f"Image {_truncate_log_string(image_info.url)} found in cache. Key: {_truncate_log_string(cached_key)}")
                     return cached_key, cached_key, True, download_errors, []
 
+                # Compute perceptual hash for visual similarity checking
+                from .face import get_face_service
+                face_service = get_face_service()
+                phash = await face_service.compute_phash_async(image_bytes)
+                
+                # Check for perceptual hash similarity (catches visually identical images)
+                if phash:
+                    should_skip_phash, cached_key_phash = await self.cache_service.should_skip_crawled_image_by_phash(
+                        image_bytes, phash, self.tenant_id, self.similarity_threshold
+                    )
+                    if should_skip_phash and cached_key_phash:
+                        logger.info(f"Image {_truncate_log_string(image_info.url)} found as visually similar to cached image. Key: {_truncate_log_string(cached_key_phash)}")
+                        return cached_key_phash, cached_key_phash, True, download_errors, []
+
                 # Use async face detection with thread pool
                 faces = []
                 thumbnail_bytes = None
                 if self.require_face or self.crop_faces:
                     t_detect_start = datetime.utcnow()
-                    faces, thumbnail_bytes = await self._async_face_detection(image_bytes, image_info)
+                    faces, thumbnail_bytes, all_face_thumbnails = await self._async_face_detection(image_bytes, image_info)
                     t_detect_ms = (datetime.utcnow() - t_detect_start).total_seconds() * 1000.0
                     logger.debug(f"Face detection pipeline completed in {t_detect_ms:.1f} ms for {_truncate_log_string(image_info.url)}")
                     # Track early-exit usage
@@ -1937,8 +2101,18 @@ class ImageCrawler:
     # URL PROCESSING METHODS
     # ============================================================================
     
-    async def fetch_page(self, url: str) -> Tuple[Optional[str], List[str]]:
-        """Fetch a web page and return its content and any errors."""
+    async def fetch_page(self, url: str, force_js_rendering: bool = False) -> Tuple[Optional[str], List[str]]:
+        """
+        Fetch a web page and return its content and any errors.
+        Supports both static HTML and JavaScript rendering.
+        
+        Args:
+            url: URL to fetch
+            force_js_rendering: Force JavaScript rendering even if not detected as needed
+            
+        Returns:
+            Tuple of (html_content, errors)
+        """
         if not self.http_service:
             raise RuntimeError("Crawler not initialized. Use 'async with' context manager.")
             
@@ -1954,15 +2128,84 @@ class ImageCrawler:
             
             logger.info(f"Fetching page: {_truncate_log_string(url)}")
             
-            # Use HTTP service for page fetching (as text for HTML)
-            content, status = await self.http_service.get(url, as_text=True)
+            # First, try to get static HTML content
+            static_content, status = await self.http_service.get(url, as_text=True)
             
-            if content is None:
-                logger.warning(f"Failed to fetch page: {status} - {_truncate_log_string(url)}")
-                errors.append(f"Fetch failed: {status}")
+            if static_content is None:
+                logger.warning(f"Failed to fetch static content: {status} - {_truncate_log_string(url)}")
+                errors.append(f"Static fetch failed: {status}")
                 return None, errors
             
-            return content, errors
+            # Check if JavaScript rendering is needed or forced
+            needs_js_rendering = force_js_rendering
+            
+            if not needs_js_rendering and JS_RENDERING_ENABLED and self.js_rendering_service:
+                # Detect if JavaScript rendering is needed
+                # Ensure static_content is a string for JavaScript detection
+                if isinstance(static_content, bytes):
+                    static_content = static_content.decode('utf-8', errors='ignore')
+                
+                # Check if this is a forum with static content first
+                is_forum = self._detect_forum_site(url, BeautifulSoup(static_content, 'html.parser'))
+                if is_forum:
+                    # For forums, check if we have enough content in static HTML
+                    soup = BeautifulSoup(static_content, 'html.parser')
+                    images_in_static = len(soup.find_all('img'))
+                    if images_in_static >= 3:  # If we have at least 3 images in static HTML, skip JS rendering
+                        logger.info(f"Forum page has {images_in_static} images in static HTML, skipping JS rendering for {_truncate_log_string(url)}")
+                        needs_js_rendering = False
+                    else:
+                        needs_js, detection_info = self.js_rendering_service.detect_javascript_usage(static_content)
+                        needs_js_rendering = needs_js
+                        if needs_js_rendering:
+                            logger.info(f"JavaScript rendering detected for forum {_truncate_log_string(url)}: {detection_info}")
+                else:
+                    needs_js, detection_info = self.js_rendering_service.detect_javascript_usage(static_content)
+                    needs_js_rendering = needs_js
+                    if needs_js_rendering:
+                        logger.info(f"JavaScript rendering detected for {_truncate_log_string(url)}: {detection_info}")
+                    else:
+                        logger.debug(f"Static HTML sufficient for {_truncate_log_string(url)}")
+            
+            # If JavaScript rendering is needed, try to render the page
+            if needs_js_rendering and JS_RENDERING_ENABLED and self.js_rendering_service:
+                # Check memory pressure before attempting JavaScript rendering
+                memory_status = self._memory_monitor.get_memory_status()
+                if memory_status['pressure_level'] == 'critical':
+                    logger.info(f"Critical memory pressure ({memory_status['percent']:.1f}%), skipping JS rendering for {_truncate_log_string(url)}")
+                    needs_js_rendering = False
+                else:
+                    try:
+                        logger.info(f"Attempting JavaScript rendering for {_truncate_log_string(url)}")
+                        rendered_content, render_status = await self.js_rendering_service.render_page(url)
+                        
+                        if rendered_content and render_status == "200":
+                            logger.info(f"JavaScript rendering successful for {_truncate_log_string(url)}")
+                            return rendered_content.html, errors
+                        else:
+                            logger.warning(f"JavaScript rendering failed: {render_status} - {_truncate_log_string(url)}")
+                            errors.append(f"JS rendering failed: {render_status}")
+                            
+                            # Fallback to static content if enabled
+                            if JS_DETECTION_FALLBACK_ENABLED:
+                                logger.info(f"Falling back to static HTML for {_truncate_log_string(url)}")
+                                return static_content, errors
+                            else:
+                                return None, errors
+                                
+                    except Exception as e:
+                        logger.error(f"JavaScript rendering exception for {_truncate_log_string(url)}: {e}")
+                        errors.append(f"JS rendering exception: {str(e)}")
+                        
+                        # Fallback to static content if enabled
+                        if JS_DETECTION_FALLBACK_ENABLED:
+                            logger.info(f"Falling back to static HTML for {_truncate_log_string(url)}")
+                            return static_content, errors
+                        else:
+                            return None, errors
+            
+            # Return static content if JavaScript rendering is not needed or not available
+            return static_content, errors
             
         except Exception as e:
             error_msg = f"Unexpected error fetching {_truncate_log_string(url)}: {str(e)}"
@@ -1986,19 +2229,29 @@ class ImageCrawler:
             soup = BeautifulSoup(html_content, 'html.parser')
             urls = set()
             
-            # Extract links from <a> tags
-            for link in soup.find_all('a', href=True):
-                href = link.get('href')
-                if href:
-                    # Convert relative URLs to absolute
-                    absolute_url = urljoin(base_url, href)
-                    parsed_url = urlparse(absolute_url)
-                    
-                    # Filter URLs
-                    if self._is_valid_page_url(absolute_url, base_url):
-                        urls.add(absolute_url)
+            # Check if this is a forum site
+            is_forum = self._detect_forum_site(base_url, soup)
             
-            # Also look for pagination patterns (common on adult sites)
+            if is_forum:
+                logger.info(f"Detected forum site, extracting forum-specific URLs")
+                # Extract forum-specific URLs
+                forum_urls = self._extract_forum_urls(soup, base_url)
+                urls.update(forum_urls)
+            else:
+                # Standard URL extraction for non-forum sites
+                # Extract links from <a> tags
+                for link in soup.find_all('a', href=True):
+                    href = link.get('href')
+                    if href:
+                        # Convert relative URLs to absolute
+                        absolute_url = urljoin(base_url, href)
+                        parsed_url = urlparse(absolute_url)
+                        
+                        # Filter URLs
+                        if self._is_valid_page_url(absolute_url, base_url):
+                            urls.add(absolute_url)
+            
+            # Also look for pagination patterns (common on adult sites and forums)
             pagination_selectors = [
                 'a[href*="page="]',
                 'a[href*="p="]', 
@@ -2026,6 +2279,181 @@ class ImageCrawler:
             logger.error(f"Error extracting page URLs: {str(e)}")
             return []
     
+    def _detect_forum_site(self, url: str, soup: BeautifulSoup) -> bool:
+        """
+        Detect if a site is a forum based on URL patterns and HTML structure.
+        
+        Args:
+            url: URL to analyze
+            soup: BeautifulSoup object of the page
+            
+        Returns:
+            True if site appears to be a forum
+        """
+        confidence = 0.0
+        
+        # Forum URL patterns
+        forum_patterns = [
+            r'/forum/', r'/forums/', r'/thread/', r'/threads/', r'/topic/', r'/topics/',
+            r'/post/', r'/posts/', r'/discussion/', r'/discussions/', r'/board/', r'/boards/',
+            r'/community/', r'/message/', r'/messages/', r'forum=', r'thread=', r'topic=', r'board='
+        ]
+        
+        # Check URL patterns
+        url_lower = url.lower()
+        for pattern in forum_patterns:
+            if re.search(pattern, url_lower):
+                confidence += 0.3
+                break
+        
+        # Forum HTML indicators
+        forum_indicators = [
+            'forum', 'thread', 'topic', 'post', 'discussion', 'board', 'community',
+            'message', 'reply', 'comment', 'author', 'member', 'user', 'avatar',
+            'signature', 'quote', 'pm', 'inbox', 'profile', 'registration', 'login'
+        ]
+        
+        # Check HTML structure indicators
+        html_text = soup.get_text().lower()
+        for indicator in forum_indicators:
+            if indicator in html_text:
+                confidence += 0.05
+        
+        # Check for forum-specific elements
+        forum_selectors = [
+            '.forum', '.thread', '.topic', '.post', '.discussion', '.board', '.message',
+            '.reply', '.comment', '.thread-list', '.topic-list', '.post-list', '.forum-list',
+            '.board-list', '.message-list', '.thread-item', '.topic-item', '.post-item',
+            '.forum-item', '.board-item', '.message-item'
+        ]
+        
+        for selector in forum_selectors:
+            if soup.select(selector):
+                confidence += 0.1
+        
+        # Check for common forum software indicators
+        forum_software_indicators = [
+            'vbulletin', 'phpbb', 'invision', 'xenforo', 'discourse', 
+            'flarum', 'mybb', 'smf', 'punbb', 'fluxbb', 'bbpress'
+        ]
+        
+        for indicator in forum_software_indicators:
+            if indicator in html_text or indicator in url_lower:
+                confidence += 0.2
+        
+        return confidence >= 0.3
+    
+    def _extract_forum_urls(self, soup: BeautifulSoup, base_url: str) -> List[str]:
+        """
+        Extract forum-specific URLs (threads, topics, posts).
+        
+        Args:
+            soup: BeautifulSoup object of the forum page
+            base_url: Base URL for resolving relative links
+            
+        Returns:
+            List of forum URLs
+        """
+        urls = set()
+        
+        # Common thread/topic link patterns
+        thread_selectors = [
+            'a[href*="/thread/"]',
+            'a[href*="/topic/"]',
+            'a[href*="/post/"]',
+            'a[href*="/discussion/"]',
+            'a[href*="thread="]',
+            'a[href*="topic="]',
+            'a[href*="post="]',
+            '.thread-title a',
+            '.topic-title a',
+            '.post-title a',
+            '.thread-item a',
+            '.topic-item a',
+            '.post-item a',
+            '.thread-list a',
+            '.topic-list a',
+            '.post-list a'
+        ]
+        
+        for selector in thread_selectors:
+            for link in soup.select(selector):
+                href = link.get('href')
+                if href:
+                    absolute_url = urljoin(base_url, href)
+                    if self._is_valid_forum_url(absolute_url, base_url):
+                        urls.add(absolute_url)
+        
+        # Also extract general links for forum navigation
+        for link in soup.find_all('a', href=True):
+            href = link.get('href')
+            if href:
+                absolute_url = urljoin(base_url, href)
+                if self._is_valid_page_url(absolute_url, base_url):
+                    urls.add(absolute_url)
+        
+        return list(urls)
+    
+    def _is_valid_forum_url(self, url: str, base_url: str) -> bool:
+        """
+        Check if a URL is valid for forum crawling.
+        
+        Args:
+            url: URL to check
+            base_url: Base URL for domain comparison
+            
+        Returns:
+            True if URL is valid for forum crawling
+        """
+        # First check if it's a valid page URL
+        if not self._is_valid_page_url(url, base_url):
+            return False
+        
+        url_lower = url.lower()
+        
+        # Skip obvious non-thread URLs
+        skip_patterns = [
+            'login', 'register', 'profile', 'settings', 'admin', 'moderator',
+            'search', 'help', 'faq', 'rules', 'terms', 'privacy', 'contact',
+            'index', 'home', 'archive', 'rss', 'xml', 'json', 'api'
+        ]
+        
+        for pattern in skip_patterns:
+            if pattern in url_lower:
+                return False
+        
+        # Look for thread indicators
+        thread_patterns = [
+            r'/thread/\d+',
+            r'/topic/\d+',
+            r'/post/\d+',
+            r'/discussion/\d+',
+            r'thread=\d+',
+            r'topic=\d+',
+            r'post=\d+',
+            r'discussion=\d+'
+        ]
+        
+        for pattern in thread_patterns:
+            if re.search(pattern, url_lower):
+                return True
+        
+        # Allow forum board/category pages
+        forum_patterns = [
+            r'/forum/',
+            r'/forums/',
+            r'/board/',
+            r'/boards/',
+            r'/category/',
+            r'/section/'
+        ]
+        
+        for pattern in forum_patterns:
+            if re.search(pattern, url_lower):
+                return True
+        
+        return False
+
     def _is_valid_page_url(self, url: str, base_url: str) -> bool:
         """
         Check if a URL is valid for crawling with security validation.
@@ -2179,12 +2607,24 @@ class ImageCrawler:
                 end_time=end_time
             )
         
-        # Apply image limit if specified
-        if hasattr(self, 'max_total_images') and self.max_total_images > 0:
-            images_to_process = images[:self.max_total_images]
-            logger.info(f"Processing {len(images_to_process)} images (limited by max_total_images={self.max_total_images})")
+        # Process images as album if detected
+        album_metadata = {}
+        if ALBUM_DETECTION_ENABLED:
+            # Process images as album (JavaScript rendering info not needed for album processing)
+            processed_images, album_metadata = await self.album_processor.process_album_images(
+                images, url, method_used, False
+            )
+            images_to_process = processed_images
+            if album_metadata.get('is_album', False):
+                logger.info(f"Processing as album: {album_metadata}")
         else:
             images_to_process = images
+        
+        # Apply image limit if specified
+        if hasattr(self, 'max_total_images') and self.max_total_images > 0:
+            images_to_process = images_to_process[:self.max_total_images]
+            logger.info(f"Processing {len(images_to_process)} images (limited by max_total_images={self.max_total_images})")
+        else:
             logger.info(f"Processing all {len(images_to_process)} images found")
             
         # Use streaming pipeline only for larger workloads to avoid overhead
@@ -2263,6 +2703,11 @@ class ImageCrawler:
                 
                 logger.info(f"Page {pages_crawled} results: Found {page_result.images_found}, Raw Saved {page_result.raw_images_saved}, Thumbnails Saved {page_result.thumbnails_saved}")
                 
+                # Check if we've reached our thumbnail target immediately after updating counts
+                if len(all_saved_thumbnail_keys) >= self.max_total_images:
+                    logger.info(f"Reached target of {self.max_total_images} thumbnails, stopping crawl")
+                    break
+                
                 # If we haven't reached the thumbnail limit, discover new URLs
                 if len(all_saved_thumbnail_keys) < self.max_total_images and len(urls_to_visit) < self.max_pages * 2 and current_depth < self.max_depth:
                     # Fetch page content for URL discovery
@@ -2279,11 +2724,6 @@ class ImageCrawler:
                                 urls_to_visit.append((url, current_depth + 1))
                         
                         logger.info(f"Found {len(new_urls)} new URLs to explore at depth {current_depth + 1}")
-                
-                # Check if we've reached our goals
-                if len(all_saved_thumbnail_keys) >= self.max_total_images:
-                    logger.info(f"Reached target of {self.max_total_images} thumbnails, stopping crawl")
-                    break
                     
             except Exception as e:
                 error_msg = f"Error crawling page {_truncate_log_string(current_url)}: {str(e)}"
@@ -2315,5 +2755,37 @@ class ImageCrawler:
         
         logger.info(f"Site crawl completed in {total_duration:.2f} seconds - Pages: {pages_crawled}, Found: {total_images_found}, Raw Images Saved: {total_raw_saved}, Thumbnails Saved: {total_thumbnails_saved}")
         return result
+    
+    def get_js_rendering_stats(self) -> Dict[str, Any]:
+        """
+        Get JavaScript rendering performance statistics.
+        
+        Returns:
+            Dictionary containing JavaScript rendering statistics
+        """
+        if not self.js_rendering_service:
+            return {
+                "js_rendering_enabled": False,
+                "error": "JavaScript rendering service not initialized"
+            }
+        
+        try:
+            stats = self.js_rendering_service.get_performance_stats()
+            stats["js_rendering_enabled"] = True
+            stats["js_rendering_config"] = {
+                "timeout": JS_RENDERING_TIMEOUT,
+                "wait_time": JS_RENDERING_WAIT_TIME,
+                "max_concurrent": JS_RENDERING_MAX_CONCURRENT,
+                "headless": JS_RENDERING_HEADLESS,
+                "viewport": f"{JS_RENDERING_VIEWPORT_WIDTH}x{JS_RENDERING_VIEWPORT_HEIGHT}",
+                "memory_limit_mb": JS_RENDERING_MEMORY_LIMIT // (1024 * 1024),
+                "cpu_limit": JS_RENDERING_CPU_LIMIT
+            }
+            return stats
+        except Exception as e:
+            return {
+                "js_rendering_enabled": True,
+                "error": f"Failed to get JavaScript rendering stats: {str(e)}"
+            }
 
 

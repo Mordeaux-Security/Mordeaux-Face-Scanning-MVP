@@ -1,0 +1,79 @@
+[
+  {
+    "domain": "candidteens.net",
+    "url": "https://candidteens.net",
+    "mining_attempted": false,
+    "mining_success": null,
+    "success": true,
+    "error": null,
+    "images_saved": 3,
+    "thumbnails_saved": 0,
+    "pages_crawled": 5
+  },
+  {
+    "domain": "forum.candidgirls.io",
+    "url": "https://forum.candidgirls.io",
+    "mining_attempted": false,
+    "mining_success": null,
+    "success": true,
+    "error": null,
+    "images_saved": 2,
+    "thumbnails_saved": 0,
+    "pages_crawled": 5
+  },
+  {
+    "domain": "wikifeet.com",
+    "url": "https://wikifeet.com",
+    "mining_attempted": true,
+    "mining_success": false,
+    "success": true,
+    "error": null,
+    "images_saved": 40,
+    "thumbnails_saved": 33,
+    "pages_crawled": 2
+  },
+  {
+    "domain": "www.candidcreepshots.cc",
+    "url": "https://www.candidcreepshots.cc",
+    "mining_attempted": false,
+    "mining_success": null,
+    "success": true,
+    "error": null,
+    "images_saved": 68,
+    "thumbnails_saved": 26,
+    "pages_crawled": 4
+  },
+  {
+    "domain": "ibradome.com",
+    "url": "https://ibradome.com",
+    "mining_attempted": false,
+    "mining_success": null,
+    "success": true,
+    "error": null,
+    "images_saved": 19,
+    "thumbnails_saved": 2,
+    "pages_crawled": 5
+  },
+  {
+    "domain": "oneprotests.thefap.net",
+    "url": "https://oneprotests.thefap.net",
+    "mining_attempted": false,
+    "mining_success": null,
+    "success": true,
+    "error": null,
+    "images_saved": 34,
+    "thumbnails_saved": 22,
+    "pages_crawled": 5
+  },
+  {
+    "domain": "picazor.com",
+    "url": "https://picazor.com/en",
+    "mining_attempted": true,
+    "mining_success": false,
+    "success": true,
+    "error": null,
+    "images_saved": 0,
+    "thumbnails_saved": 0,
+    "pages_crawled": 5
+  }
+]

@@ -30,6 +30,7 @@ alwaysApply: true
 - Replacing optimized paths with naive loops or eager loads without proof of equal/better performance.
 - Shrinking test scope to trivial inputs (toy domains, solid-color images) to avoid fixing real issues.
 - Silencing exceptions broadly (`try/except: pass`) or weakening assertions.
+- Creating "simple" or "basic" versions of test scripts upon failure
 
 ---
 

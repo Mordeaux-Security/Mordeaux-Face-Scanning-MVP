@@ -1,0 +1,15 @@
+# Sample sites file for list crawling
+# One URL per line, comments start with #
+
+# Creepshot sites
+https://candidteens.net
+https://forum.candidgirls.io
+https://wikifeet.com
+https://www.candidcreepshots.cc
+
+#leaked sites
+https://ibradome.com
+https://oneprotests.thefap.net
+https://picazor.com/en
+
+# Add more sites here, one per line

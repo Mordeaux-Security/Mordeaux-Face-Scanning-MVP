@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from urllib.parse import urljoin, urlparse
 import httpx
 from ..core.config import get_settings
+from .crawler_settings import *
 # URL security validation (moved from redirect_utils.py)
 
 logger = logging.getLogger(__name__)
@@ -66,9 +67,9 @@ def validate_url_security(url: str) -> Tuple[bool, str]:
 @dataclass
 class RequestConfig:
     """Configuration for HTTP requests."""
-    timeout: float = 30.0
-    max_retries: int = 3
-    retry_delay: float = 1.0
+    timeout: float = DEFAULT_TIMEOUT
+    max_retries: int = HTTP_MAX_RETRIES
+    retry_delay: float = HTTP_RETRY_DELAY
     max_redirects: int = 3
     follow_redirects: bool = True
     verify_ssl: bool = True
@@ -97,9 +98,9 @@ class HTTPService:
         
         # Connection pool configuration
         self._limits = httpx.Limits(
-            max_keepalive_connections=200,  # Increased for better reuse
-            max_connections=500,            # Increased for higher concurrency
-            keepalive_expiry=30.0           # Keep connections alive longer
+            max_keepalive_connections=HTTP_MAX_KEEPALIVE_CONNECTIONS,  # Increased for better reuse
+            max_connections=HTTP_MAX_CONNECTIONS,            # Increased for higher concurrency
+            keepalive_expiry=HTTP_KEEPALIVE_EXPIRY           # Keep connections alive longer
         )
         
         # Request configuration

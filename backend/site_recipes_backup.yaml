@@ -1,0 +1,244 @@
+schema_version: 2
+defaults:
+  selectors:
+  - selector: img[data-mediumthumb]
+    description: data-mediumthumb attribute
+  - selector: img.js-videoThumb
+    description: js-videoThumb class
+  - selector: .phimage img
+    description: images in .phimage containers
+  - selector: a.latestThumb img
+    description: images in .latestThumb links
+  - selector: img[data-video-thumb]
+    description: data-video-thumb attribute
+  - selector: .video-thumb img
+    description: .video-thumb container images
+  - selector: .thumbnail img
+    description: .thumbnail container images
+  - selector: .thumb img
+    description: .thumb container images
+  - selector: img[width='320'][height='180']
+    description: 320x180 dimensions
+  - selector: img[width='640'][height='360']
+    description: 640x360 dimensions
+  - selector: img[width='1280'][height='720']
+    description: 1280x720 dimensions
+  - selector: img
+    description: all images
+  extra_sources:
+  - data-src
+  - data-lazy-src
+  - data-original
+  - data-large
+  - data-medium
+  - data-thumb
+  attributes_priority:
+  - alt
+  - title
+  - data-title
+  - data-alt
+  method: smart
+sites:
+  www.wikifeet.com:
+    selectors:
+    - kind: video_grid
+      css: div.widgetbox a.wcont div img
+      description: 'video_grid: 420 images in div.widgetbox a.wcont div img'
+      sample_urls:
+      - https://thumbs.wikifeet.com/7055932.jpg
+      - https://thumbs.wikifeet.com/6443685.jpg
+      - https://thumbs.wikifeet.com/6443462.jpg
+      score: 0.25
+    attributes_priority:
+    - data-src
+    - data-srcset
+    - data-image
+    - srcset
+    - src
+    - data-lazy-src
+    - data-original
+    - data-large
+    - data-medium
+    extra_sources: []
+    method: miner
+  www.pornhub.com:
+    selectors:
+    - selector: img[data-mediumthumb]
+      description: PornHub data-mediumthumb attribute
+    - selector: img.js-videoThumb
+      description: PornHub js-videoThumb class
+    - selector: .phimage img
+      description: PornHub .phimage container images
+    - selector: a.latestThumb img
+      description: PornHub .latestThumb link images
+    - selector: img[data-video-thumb]
+      description: PornHub data-video-thumb attribute
+    - selector: .video-thumb img
+      description: PornHub .video-thumb container images
+    - selector: .thumbnail img
+      description: PornHub .thumbnail container images
+    - selector: .thumb img
+      description: PornHub .thumb container images
+    - selector: img[width='320'][height='180']
+      description: PornHub 320x180 thumbnail dimensions
+    - selector: img[width='640'][height='360']
+      description: PornHub 640x360 thumbnail dimensions
+    - selector: img[width='1280'][height='720']
+      description: PornHub 1280x720 thumbnail dimensions
+    - selector: img
+      description: All images as fallback
+    attributes_priority:
+    - alt
+    - title
+    - data-title
+    - data-alt
+    method: smart
+    extra_sources:
+    - data-src
+    - data-lazy-src
+    - data-original
+    - data-large
+    - data-medium
+    - data-thumb
+  example.com:
+    selectors:
+    - selector: .custom-thumbnail img
+      description: Custom thumbnail images
+    - selector: img[data-custom-attr]
+      description: Images with custom attribute
+    - selector: .gallery img
+      description: Gallery images
+    - selector: img
+      description: All images as fallback
+    attributes_priority:
+    - data-title
+    - alt
+    - title
+    method: custom-gallery
+    extra_sources:
+    - data-src
+    - data-lazy-src
+  demo-site.net:
+    selectors:
+    - selector: .demo-content img
+      description: Demo content images
+    method: demo-specific
+    attributes_priority:
+    - data-demo-title
+    - alt
+  forum.candidgirls.io:
+    selectors:
+    - kind: forum_content
+      css: .post-content img
+      description: Images in post content
+    - kind: forum_content
+      css: .post-body img
+      description: Images in post body
+    - kind: forum_content
+      css: .message img
+      description: Images in messages
+    - kind: forum_content
+      css: .thread-content img
+      description: Images in thread content
+    - kind: forum_content
+      css: .post img
+      description: Images in posts
+    - kind: forum_content
+      css: .reply img
+      description: Images in replies
+    - kind: forum_content
+      css: .comment img
+      description: Images in comments
+    - kind: forum_attachment
+      css: .attachment img
+      description: Attached images
+    - kind: forum_attachment
+      css: .attachment-thumb img
+      description: Attachment thumbnails
+    - kind: forum_avatar
+      css: .user-avatar img
+      description: User avatars
+    - kind: forum_avatar
+      css: .profile-pic img
+      description: Profile pictures
+    - kind: forum_fallback
+      css: img
+      description: All images as fallback
+    attributes_priority:
+    - data-src
+    - data-srcset
+    - data-image
+    - srcset
+    - src
+    - data-lazy-src
+    - data-original
+    - data-large
+    - data-medium
+    - data-thumb
+    - alt
+    - title
+    - data-title
+    - data-alt
+    method: forum
+    extra_sources:
+    - data-src
+    - data-lazy-src
+    - data-original
+    - data-large
+    - data-medium
+    - data-thumb
+  candidteens.net:
+    domain: candidteens.net
+    selectors:
+    - kind: video_grid
+      css: div.site-branding span.site-logo-img a.custom-logo-link img.custom-logo
+      description: 'video_grid: 19 images in div.site-branding span.site-logo-img
+        a.custom-logo-link img.custom-logo'
+      sample_urls:
+      - https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174938.png
+      score: 0.625
+    - kind: wordpress_content
+      css: li a.crp_link figure img.crp_featured
+      description: 'wordpress_content: 200 images in li a.crp_link figure img.crp_featured'
+      sample_urls:
+      - https://candidteens.net/wp-content/uploads/2025/06/Photo_1751001548705-300x300.jpg
+      - https://candidteens.net/wp-content/uploads/2025/09/Photo_1757187249104-300x300.jpg
+      - https://candidteens.net/wp-content/uploads/2025/03/Photo_1741197746206-300x300.jpg
+      - https://candidteens.net/wp-content/uploads/2025/09/Photo_1757091054831-300x300.jpg
+      - https://candidteens.net/wp-content/uploads/2025/02/IMG_20250209_035438-300x300.jpg
+      score: 0.5
+    - kind: direct_image
+      css: img.custom-logo
+      description: 'direct_image: 2 images with img.custom-logo'
+      sample_urls:
+      - https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174938.png
+      score: 0.3
+    - kind: direct_image
+      css: img.crp_featured
+      description: 'direct_image: 20 images with img.crp_featured'
+      sample_urls:
+      - https://candidteens.net/wp-content/uploads/2025/06/Photo_1751001548705-300x300.jpg
+      - https://candidteens.net/wp-content/uploads/2025/09/Photo_1757187249104-300x300.jpg
+      - https://candidteens.net/wp-content/uploads/2025/03/Photo_1741197746206-300x300.jpg
+      - https://candidteens.net/wp-content/uploads/2025/09/Photo_1757091054831-300x300.jpg
+      - https://candidteens.net/wp-content/uploads/2025/02/IMG_20250209_035438-300x300.jpg
+      score: 0.3
+    - kind: video_grid
+      css: img::attr(srcset)
+      description: 'EXTRA_SOURCES: img::attr(srcset)'
+      sample_urls:
+      - https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png
+      - https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174938.png
+      - https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png
+      - https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174938.png
+      - https://candidteens.net/wp-content/uploads/2025/10/Photo_1760816686612.jpg
+      score: 0.5
+    attributes_priority:
+    - src
+    - data-src
+    - srcset
+    extra_sources: []
+    method: miner
+    confidence: 0.625
+    sample_urls: []
+    validation_results: []

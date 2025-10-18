@@ -15,8 +15,15 @@ import psutil
 import threading
 import atexit
 
+# Import crawler settings
+try:
+    from .crawler_settings import *
+except ImportError:
+    # Fallback for direct imports
+    from crawler_settings import *
+
 # Image safety configuration - set once on import
-Image.MAX_IMAGE_PIXELS = 50_000_000
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 logger = logging.getLogger(__name__)
@@ -30,7 +37,7 @@ def _get_thread_pool() -> ThreadPoolExecutor:
     """Get thread pool for CPU-intensive operations."""
     global _thread_pool
     if _thread_pool is None:
-        _thread_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="face_processing")
+        _thread_pool = ThreadPoolExecutor(max_workers=FACE_THREADS, thread_name_prefix="face_processing")
     return _thread_pool
 
 def _load_app() -> FaceAnalysis:
@@ -44,9 +51,9 @@ def _load_app() -> FaceAnalysis:
             logger.info("Loading face analysis model (first time)")
             home = os.path.expanduser("~/.insightface")
             os.makedirs(home, exist_ok=True)
-            app = FaceAnalysis(name="buffalo_l", root=home)
+            app = FaceAnalysis(name=FACE_MODEL_NAME, root=home)
             # CPU default (onnxruntime)
-            app.prepare(ctx_id=-1, det_size=(640, 640))
+            app.prepare(ctx_id=-1, det_size=FACE_DETECTION_SIZE)
             _face_app = app
             logger.info("Face analysis model loaded successfully")
         else:
@@ -90,7 +97,7 @@ def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
         width, height = pil_image.size
         
         # Determine if this is a low-resolution image; avoid heavy upscaling here.
-        is_low_res = width < 500 or height < 400
+        is_low_res = width < IMAGE_ENHANCEMENT_LOW_RES_WIDTH or height < IMAGE_ENHANCEMENT_LOW_RES_HEIGHT
         
         if is_low_res:
             logger.info(f"Enhancing low-resolution image ({width}x{height}) for better face detection (no resize)")
@@ -98,20 +105,20 @@ def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
             # Apply light enhancement only (no resizing). Multi-scale detection handles scaling.
             enhanced = pil_image
             enhancer = ImageEnhance.Contrast(enhanced)
-            enhanced = enhancer.enhance(1.15)
+            enhanced = enhancer.enhance(IMAGE_ENHANCEMENT_CONTRAST)
             enhancer = ImageEnhance.Sharpness(enhanced)
-            enhanced = enhancer.enhance(1.1)
+            enhanced = enhancer.enhance(IMAGE_ENHANCEMENT_SHARPNESS)
             enhanced = enhanced.filter(ImageFilter.UnsharpMask(radius=1, percent=120, threshold=3))
             
             output = io.BytesIO()
-            enhanced.save(output, format='JPEG', quality=95, optimize=True)
+            enhanced.save(output, format='JPEG', quality=IMAGE_JPEG_QUALITY, optimize=True)
             elapsed_ms = (time.perf_counter() - t_start) * 1000.0
             logger.debug(f"Image enhancement completed in {elapsed_ms:.1f} ms (scale=1.0, no resize)")
             return output.getvalue(), 1.0
         else:
             # For high-resolution images, just ensure good quality
             output = io.BytesIO()
-            pil_image.save(output, format='JPEG', quality=95, optimize=True)
+            pil_image.save(output, format='JPEG', quality=IMAGE_JPEG_QUALITY, optimize=True)
             elapsed_ms = (time.perf_counter() - t_start) * 1000.0
             logger.debug(f"Image enhancement (hi-res passthrough) completed in {elapsed_ms:.1f} ms (scale=1.0)")
             return output.getvalue(), 1.0
@@ -125,7 +132,7 @@ def _check_memory_usage() -> bool:
     try:
         memory_percent = psutil.virtual_memory().percent
         memory_gb = psutil.virtual_memory().used / (1024**3)
-        if memory_percent > 85:  # If memory usage is above 85%
+        if memory_percent > MEMORY_CRITICAL_THRESHOLD:  # If memory usage is above 85%
             logger.warning(f"High memory usage detected: {memory_percent}% ({memory_gb:.1f}GB used)")
             gc.collect()  # Force garbage collection
             return False
@@ -170,7 +177,7 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
     all_faces = []
     
     # Try detection at multiple scales
-    scales = [1.0, 2.0, 4.0]  # Original and 2x and 4x
+    scales = FACE_DETECTION_SCALES  # Original and 2x and 4x
     
     for scale in scales:
         try:
@@ -267,7 +274,7 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
                     all_faces.append(face_data)
                     # Early exit condition: if a strong detection is found, stop further scaling
                     # Threshold chosen to balance precision/recall; adjust via config later if needed
-                    if face_data["det_score"] >= 0.8:
+                    if face_data["det_score"] >= FACE_STRONG_DETECTION_THRESHOLD:
                         strong_face_found = True
                         break
             if strong_face_found:
@@ -332,7 +339,7 @@ async def compute_phash_async(content: bytes):
         logger.error(f"Error in async phash computation: {e}")
         raise
 
-def crop_face_from_image(image_bytes: bytes, bbox: list, margin: float = 0.2) -> bytes:
+def crop_face_from_image(image_bytes: bytes, bbox: list, margin: float = FACE_MARGIN) -> bytes:
     """
     Crop face region from image with margin around the face.
     
@@ -394,11 +401,11 @@ def crop_face_from_image(image_bytes: bytes, bbox: list, margin: float = 0.2) ->
     
     # Convert back to bytes
     output = io.BytesIO()
-    cropped_image.save(output, format='JPEG', quality=95)
+    cropped_image.save(output, format='JPEG', quality=THUMBNAIL_QUALITY)
     return output.getvalue()
 
 
-def crop_face_and_create_thumbnail(image_bytes: bytes, face_data: dict, margin: float = 0.2) -> bytes:
+def crop_face_and_create_thumbnail(image_bytes: bytes, face_data: dict, margin: float = FACE_MARGIN) -> bytes:
     """
     Crop face region from image and create a thumbnail.
     
@@ -422,7 +429,42 @@ def crop_face_and_create_thumbnail(image_bytes: bytes, face_data: dict, margin: 
     # Create thumbnail from cropped face
     return create_thumbnail(cropped_face)
 
-def create_thumbnail(image_bytes: bytes, size: tuple = (150, 150)) -> bytes:
+def crop_all_faces_and_create_thumbnails(
+    image_bytes: bytes, 
+    faces_data: List[dict], 
+    quality_threshold: float = FACE_MIN_QUALITY,
+    margin: float = FACE_MARGIN
+) -> List[bytes]:
+    """
+    Crop all faces from image and create thumbnails for faces above quality threshold.
+    
+    Args:
+        image_bytes: Original image data
+        faces_data: List of face data dictionaries
+        quality_threshold: Minimum detection score for face quality
+        margin: Margin around face as fraction of face size
+        
+    Returns:
+        List of thumbnail images as bytes
+    """
+    thumbnails = []
+    
+    for face_data in faces_data:
+        det_score = face_data.get("det_score", 0.0)
+        
+        # Only process faces above quality threshold
+        if det_score >= quality_threshold:
+            try:
+                thumbnail = crop_face_and_create_thumbnail(image_bytes, face_data, margin)
+                thumbnails.append(thumbnail)
+            except Exception as e:
+                logger.warning(f"Failed to create thumbnail for face with score {det_score}: {e}")
+                continue
+    
+    logger.debug(f"Created {len(thumbnails)} thumbnails from {len(faces_data)} faces (threshold: {quality_threshold})")
+    return thumbnails
+
+def create_thumbnail(image_bytes: bytes, size: tuple = THUMBNAIL_SIZE) -> bytes:
     """
     Create a thumbnail from image bytes.
     
@@ -448,7 +490,7 @@ def create_thumbnail(image_bytes: bytes, size: tuple = (150, 150)) -> bytes:
     
     # Convert back to bytes
     output = io.BytesIO()
-    pil_image.save(output, format='JPEG', quality=95)
+    pil_image.save(output, format='JPEG', quality=THUMBNAIL_QUALITY)
     return output.getvalue()
 
 def get_face_service():
@@ -461,6 +503,7 @@ def get_face_service():
         crop_face_from_image = staticmethod(crop_face_from_image)
         enhance_image_for_face_detection = staticmethod(enhance_image_for_face_detection)
         crop_face_and_create_thumbnail = staticmethod(crop_face_and_create_thumbnail)
+        crop_all_faces_and_create_thumbnails = staticmethod(crop_all_faces_and_create_thumbnails)
         create_thumbnail = staticmethod(create_thumbnail)
         consume_early_exit_flag = staticmethod(consume_early_exit_flag)
     return _FaceSvc()

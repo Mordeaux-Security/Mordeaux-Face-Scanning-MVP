@@ -1,151 +1,221 @@
-# Site Recipes Configuration
-# 
-# This file contains per-domain crawling recipes that customize image extraction
-# behavior for specific websites. Each site can override default selectors,
-# attributes, and crawling methods.
-#
-# Structure:
-# - defaults: Default configuration used for all sites unless overridden
-# - sites: Per-domain configurations that override or extend defaults
-
+schema_version: 2
 defaults:
-  # Default CSS selectors for image extraction (tried in order)
   selectors:
-    - selector: "img[data-mediumthumb]"
-      description: "data-mediumthumb attribute"
-    - selector: "img.js-videoThumb"
-      description: "js-videoThumb class"
-    - selector: ".phimage img"
-      description: "images in .phimage containers"
-    - selector: "a.latestThumb img"
-      description: "images in .latestThumb links"
-    - selector: "img[data-video-thumb]"
-      description: "data-video-thumb attribute"
-    - selector: ".video-thumb img"
-      description: ".video-thumb container images"
-    - selector: ".thumbnail img"
-      description: ".thumbnail container images"
-    - selector: ".thumb img"
-      description: ".thumb container images"
-    - selector: "img[width='320'][height='180']"
-      description: "320x180 dimensions"
-    - selector: "img[width='640'][height='360']"
-      description: "640x360 dimensions"
-    - selector: "img[width='1280'][height='720']"
-      description: "1280x720 dimensions"
-    - selector: "img"
-      description: "all images"
-
-  # Additional image sources to check (beyond CSS selectors)
-  extra_sources:
-    - "data-src"
-    - "data-lazy-src"
-    - "data-original"
-    - "data-large"
-    - "data-medium"
-    - "data-thumb"
-
-  # Priority order for extracting image metadata attributes
+  - kind: video_grid
+    css: img
+  - kind: video_grid
+    css: .thumbnail img
+  - kind: video_grid
+    css: .thumb img
   attributes_priority:
-    - "alt"
-    - "title"
-    - "data-title"
-    - "data-alt"
-
-  # Default extraction method
-  method: "smart"
-
-# Per-domain site configurations
-# These override or extend the defaults for specific hosts
+  - src
+  - data-src
+  - srcset
+  extra_sources:
+  - meta[property='og:image']::attr(content)
+  - img::attr(srcset)
+  - source::attr(data-srcset)
+  - source::attr(srcset)
+  - script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl,
+    $..image, $..contentUrl)
+  method: smart
 sites:
-  # PornHub-specific configuration
-  www.pornhub.com:
-    # PornHub-specific selectors (optimized for their layout)
+  candidteens.net:
     selectors:
-      - selector: "img[data-mediumthumb]"
-        description: "PornHub data-mediumthumb attribute"
-      - selector: "img.js-videoThumb"
-        description: "PornHub js-videoThumb class"
-      - selector: ".phimage img"
-        description: "PornHub .phimage container images"
-      - selector: "a.latestThumb img"
-        description: "PornHub .latestThumb link images"
-      - selector: "img[data-video-thumb]"
-        description: "PornHub data-video-thumb attribute"
-      - selector: ".video-thumb img"
-        description: "PornHub .video-thumb container images"
-      - selector: ".thumbnail img"
-        description: "PornHub .thumbnail container images"
-      - selector: ".thumb img"
-        description: "PornHub .thumb container images"
-      - selector: "img[width='320'][height='180']"
-        description: "PornHub 320x180 thumbnail dimensions"
-      - selector: "img[width='640'][height='360']"
-        description: "PornHub 640x360 thumbnail dimensions"
-      - selector: "img[width='1280'][height='720']"
-        description: "PornHub 1280x720 thumbnail dimensions"
-      - selector: "img"
-        description: "All images as fallback"
-
-    # PornHub-specific attributes priority
+    - kind: video_grid
+      css: div.site-branding span.site-logo-img a.custom-logo-link img.custom-logo
+    - kind: wordpress_content
+      css: li a.crp_link figure img.crp_featured
+    - kind: direct_image
+      css: img.custom-logo
+    - kind: direct_image
+      css: img.crp_featured
+    - kind: video_grid
+      css: img::attr(srcset)
     attributes_priority:
-      - "alt"
-      - "title"
-      - "data-title"
-      - "data-alt"
-
-    # PornHub extraction method
-    method: "smart"
-
-    # PornHub-specific extra sources
+    - src
+    - data-src
+    - srcset
     extra_sources:
-      - "data-src"
-      - "data-lazy-src"
-      - "data-original"
-      - "data-large"
-      - "data-medium"
-      - "data-thumb"
-
-  # Example site configuration (replace with actual domains)
-  example.com:
-    # Custom selectors for this specific site
+    - meta[property='og:image']::attr(content)
+    - img::attr(srcset)
+    - source::attr(data-srcset)
+    - source::attr(srcset)
+    - script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl,
+      $..image, $..contentUrl)
+    method: miner
+  forum.candidgirls.io:
     selectors:
-      - selector: ".custom-thumbnail img"
-        description: "Custom thumbnail images"
-      - selector: "img[data-custom-attr]"
-        description: "Images with custom attribute"
-      - selector: ".gallery img"
-        description: "Gallery images"
-      - selector: "img"
-        description: "All images as fallback"
-
-    # Custom attributes to prioritize for this site
+    - kind: gallery_images
+      css: p div.lightbox-wrapper a.lightbox img
+    - kind: video_grid
+      css: div.topic-body div.post p img.emoji
+    - kind: video_grid
+      css: div.topic-body div.post p img.animated
+    - kind: video_grid
+      css: meta[property='og:image']::attr(content)
     attributes_priority:
-      - "data-title"
-      - "alt"
-      - "title"
-
-    # Custom extraction method for this site
-    method: "custom-gallery"
-
-    # Additional sources specific to this site
+    - src
+    - data-src
+    - srcset
     extra_sources:
-      - "data-src"
-      - "data-lazy-src"
-
-  # Another example site
-  demo-site.net:
+    - meta[property='og:image']::attr(content)
+    - img::attr(srcset)
+    - source::attr(data-srcset)
+    - source::attr(srcset)
+    - script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl,
+      $..image, $..contentUrl)
+    method: miner
+  www.candidcreepshots.cc:
+    domain: www.candidcreepshots.cc
     selectors:
-      - selector: ".demo-content img"
-        description: "Demo content images"
-    method: "demo-specific"
+    - kind: wordpress_content
+      css: div.entry-featured-media a.g1-frame div.g1-frame-inner img.attachment-bimber-grid-masonry
+      description: 'wordpress_content: 420 images in div.entry-featured-media a.g1-frame
+        div.g1-frame-inner img.attachment-bimber-grid-masonry'
+      sample_urls:
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/onlyfans-sluts.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-teen-wedgie-creepshots.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-ass-upskirts.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/sexy-tiktokers-porn.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/spandex-vpl-young-tennies.jpg
+      score: 0.5
+    - kind: direct_image
+      css: img
+      description: 'direct_image: 4 images with img'
+      sample_urls:
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/09/cc_logo.png
+      - https://www.candidcreepshots.cc/wp-content/uploads/2022/11/cc_logo.png
+      - https://sstatic1.histats.com/0.gif?4557157&101
+      score: 0.3
+    - kind: direct_image
+      css: img.attachment-bimber-grid-masonry
+      description: 'direct_image: 30 images with img.attachment-bimber-grid-masonry'
+      sample_urls:
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/onlyfans-sluts.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-teen-wedgie-creepshots.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-ass-upskirts.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/sexy-tiktokers-porn.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/spandex-vpl-young-tennies.jpg
+      score: 0.3
+    - kind: video_grid
+      css: img::attr(srcset)
+      description: 'EXTRA_SOURCES: img::attr(srcset)'
+      sample_urls:
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies-300x173.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies-561x324.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies-364x210.jpg
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies-608x351.jpg
+      score: 0.5
+    - kind: video_grid
+      css: source::attr(srcset)
+      description: 'EXTRA_SOURCES: source::attr(srcset)'
+      sample_urls:
+      - https://www.candidcreepshots.cc/wp-content/uploads/2025/09/cc_logo.png
+      - https://www.candidcreepshots.cc/wp-content/uploads/2022/11/cc_logo.png
+      score: 0.5
     attributes_priority:
-      - "data-demo-title"
-      - "alt"
-
-# Notes:
-# - Host names are case-insensitive and should not include protocols or paths
-# - Site configurations completely override defaults when present
-# - The "smart" method tries selectors in order until images are found
-# - Custom methods can be defined in the crawler code
-# - Attributes are checked in priority order for metadata extraction
+    - src
+    - data-src
+    - srcset
+    extra_sources: []
+    method: miner
+    confidence: 0.5
+    sample_urls: []
+    validation_results: []
+  ibradome.com:
+    domain: ibradome.com
+    selectors:
+    - kind: direct_image
+      css: img
+      description: 'direct_image: 33 images with img'
+      sample_urls:
+      - https://ibradome.com/logoefd8b8470be94b63.png
+      - https://ibradome.com/Uploads/Icons/cat-1.png
+      - https://ibradome.com/Uploads/Icons/cat-2.png
+      - https://ibradome.com/Uploads/Icons/cat-4.png
+      - https://ibradome.com/Uploads/Icons/cat-5.png
+      score: 0.3
+    - kind: video_grid
+      css: ul li a img.pdfav
+      description: 'video_grid: 2 images in ul li a img.pdfav'
+      sample_urls:
+      - https://ibradome.com/tpd-b-24px.png
+      score: 0.020833333333333332
+    attributes_priority:
+    - src
+    - data-src
+    - srcset
+    extra_sources: []
+    method: miner
+    confidence: 0.3
+    sample_urls: []
+    validation_results: []
+  oneprotests.thefap.net:
+    domain: oneprotests.thefap.net
+    selectors:
+    - kind: video_grid
+      css: div div.grid-cols-2 a.col-span-2 img.rounded-md
+      description: 'video_grid: 110 images in div div.grid-cols-2 a.col-span-2 img.rounded-md'
+      sample_urls:
+      - https://i0.wp.com/thumbs.onlyfans.com/public/files/thumbs/w480/h/hs/hsv/hsvjxwe2atcka0vqw5ced5ppfuvtmfxs1686438407/338820501/avatar.jpg?w=700
+      - https://img1.pixhost.to/images/9520/652714942_2dqpmmj9.jpg
+      - https://i0.wp.com/public.onlyfans.com/files/l/l0/l0t/l0tabkpfgyjmpnkul7trt0r7zmh5vg3h1605897084/avatar.jpg?w=700
+      - https://img1.pixhost.to/images/9520/652714779_71945cbbfa3aea2126144a2e9a366373-tplv-tiktokx-cropcenter-1080-1080.jpg
+      - https://i0.wp.com/pbs.twimg.com/ext_tw_video_thumb/1794004600040878080/pu/img/isOl3wOYWluACTR_.jpg:small?w=700
+      score: 0.375
+    - kind: video_grid
+      css: div div.grid-cols-2 a img.rounded-md
+      description: 'video_grid: 44 images in div div.grid-cols-2 a img.rounded-md'
+      sample_urls:
+      - https://img1.pixhost.to/images/9520/652714944_ayiofipk.jpg
+      - https://i0.wp.com/pbs.twimg.com/amplify_video_thumb/1691058790177669120/img/G1qnCDi2UyxouT9r.jpg:small?w=700
+      - https://i0.wp.com/pbs.twimg.com/media/E9ipFGBWUBIaNRZ.jpg:small?w=700
+      - https://fapello.com/content/b/e/belle-bean/1000/belle-bean_0038.jpg
+      score: 0.375
+    - kind: video_grid
+      css: div div.grid-cols-2 a.relative img.rounded-md
+      description: 'video_grid: 44 images in div div.grid-cols-2 a.relative img.rounded-md'
+      sample_urls:
+      - https://img1.pixhost.to/images/9520/652714947_ujhrvfv3.jpg
+      - https://i0.wp.com/pbs.twimg.com/media/FrBut4BWcAAcoBC.jpg:small?w=700
+      - https://i0.wp.com/pbs.twimg.com/media/FiqsEMyWIAAHIK4.jpg:small?w=700
+      - https://fapello.com/content/b/e/belle-bean/1000/belle-bean_0037.jpg
+      score: 0.375
+    - kind: video_grid
+      css: div.flex-1 a div.bg-gradient-to-tr img.bg-gray-200
+      description: 'video_grid: 55 images in div.flex-1 a div.bg-gradient-to-tr img.bg-gray-200'
+      sample_urls:
+      - https://thumbs.onlyfans.com/public/files/thumbs/w480/h/hs/hsv/hsvjxwe2atcka0vqw5ced5ppfuvtmfxs1686438407/338820501/avatar.jpg
+      - https://t1.pixhost.to/thumbs/9520/652714953_jluy1kvr.jpg
+      - https://oneprotests.thefap.net/assets/images/models/avatar.jpg
+      - https://t1.pixhost.to/thumbs/9520/652714779_71945cbbfa3aea2126144a2e9a366373-tplv-tiktokx-cropcenter-1080-1080.jpg
+      - https://i0.wp.com/cdn.bsky.app/img/avatar/plain/did:plc:x7by6io57bwoem5tjdepxkm4/bafkreigilnhggfpszon3wa65k52u6fuuhcqinjb3oxkzd22el6kap6r2lu@jpeg?w=400
+      score: 0.25
+    - kind: video_grid
+      css: div.items-start div.relative a img.w-10
+      description: 'video_grid: 55 images in div.items-start div.relative a img.w-10'
+      sample_urls:
+      - https://oneprotests.thefap.net/assets/images/groups/4.jpg?t=1749535947
+      - https://oneprotests.thefap.net/assets/images/groups/3.jpg?t=1749541376
+      - https://oneprotests.thefap.net/assets/images/groups/60.jpg?t=1758865604
+      score: 0.25
+    - kind: video_grid
+      css: div.items-start div.relative a img.w-6
+      description: 'video_grid: 55 images in div.items-start div.relative a img.w-6'
+      sample_urls:
+      - https://oneprotests.thefap.net/assets/images/models/avatar.jpg
+      - https://i0.wp.com/pbs.twimg.com/profile_images/1732890028/xHekx1h1?w=200
+      - https://fapello.com/assets/images/avatar.jpg
+      - https://userpic.redgifs.com/c/a6/ca6ba7a3ef3b0b38800eb4ef18e7e03b.png
+      score: 0.25
+    attributes_priority:
+    - src
+    - data-src
+    - srcset
+    extra_sources: []
+    method: miner
+    confidence: 0.375
+    sample_urls: []
+    validation_results: []

@@ -599,7 +599,7 @@ class HybridCacheService:
                 if result:
                     return True, result['raw_image_key']
                 
-                # Check by content hash for duplicates
+                # Check by content hash for exact duplicates
                 cur.execute("""
                     SELECT raw_image_key FROM crawl_cache 
                     WHERE content_hash = %s
@@ -608,6 +608,70 @@ class HybridCacheService:
                 result = cur.fetchone()
                 if result:
                     return True, result['raw_image_key']
+        
+        return None
+    
+    async def should_skip_crawled_image_by_phash(self, image_bytes: bytes, phash: str, tenant_id: str = "default", similarity_threshold: int = 5) -> Tuple[bool, Optional[str]]:
+        """
+        Check if image should be skipped based on perceptual hash similarity.
+        This catches visually identical images with different metadata/compression.
+        """
+        if not self.postgres_enabled:
+            return False, None
+            
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                self._thread_pool,
+                self._check_phash_similarity_postgres,
+                phash, similarity_threshold
+            )
+            
+            if result:
+                should_skip, raw_key = result
+                logger.debug(f"Perceptual hash similarity match found (threshold: {similarity_threshold})")
+                return should_skip, raw_key
+                
+        except Exception as e:
+            logger.warning(f"PostgreSQL perceptual hash lookup failed: {e}")
+        
+        return False, None
+    
+    def _check_phash_similarity_postgres(self, phash: str, similarity_threshold: int) -> Optional[Tuple[bool, Optional[str]]]:
+        """Check for perceptual hash similarity in PostgreSQL."""
+        with self._get_postgres_connection() as conn:
+            with conn.cursor() as cur:
+                # Get all stored perceptual hashes and compare using Hamming distance
+                cur.execute("""
+                    SELECT cc.raw_image_key, ph.phash 
+                    FROM crawl_cache cc
+                    JOIN perceptual_hash_cache ph ON cc.content_hash = ph.content_hash
+                    WHERE ph.phash IS NOT NULL
+                """)
+                
+                results = cur.fetchall()
+                
+                # Convert input phash to integer for comparison
+                try:
+                    input_phash_int = int(phash, 16)
+                except ValueError:
+                    logger.warning(f"Invalid perceptual hash format: {phash}")
+                    return None
+                
+                for result in results:
+                    raw_key, stored_phash = result
+                    
+                    try:
+                        stored_phash_int = int(stored_phash, 16)
+                        # Calculate Hamming distance (XOR and count bits)
+                        hamming_distance = bin(input_phash_int ^ stored_phash_int).count('1')
+                        
+                        if hamming_distance <= similarity_threshold:
+                            logger.debug(f"Perceptual hash similarity found: distance={hamming_distance} <= threshold={similarity_threshold}")
+                            return True, raw_key
+                            
+                    except ValueError:
+                        continue  # Skip invalid hash formats
         
         return None
     

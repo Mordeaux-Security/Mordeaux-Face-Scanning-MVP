@@ -185,6 +185,7 @@ async def save_image(
     page_url: str | None = None,
     source_video_url: str | None = None,
     source_image_url: str | None = None,
+    metadata: dict | None = None,   # Additional metadata for album processing
 ) -> dict:
     """
     Uploads the image and a JSON sidecar. Sets small user metadata:
@@ -215,6 +216,14 @@ async def save_image(
         user_meta["video-url-sha256"] = vid_sha
     if preview:
         user_meta["video-url-head"] = preview
+    
+    # Add additional metadata for album processing
+    if metadata:
+        for key, value in metadata.items():
+            # Convert to string and ensure it fits in metadata budget
+            str_value = str(value)
+            if len(str_value) < 100:  # Keep individual values small
+                user_meta[f"album-{key}"] = str_value
 
     # 4) upload image
     settings = get_settings()
@@ -281,6 +290,16 @@ async def save_image(
             tenant_id="default",
             source_url=page_url
         )
+        
+        # Also cache the perceptual hash for visual similarity detection
+        try:
+            from .face import get_face_service
+            face_service = get_face_service()
+            phash = await face_service.compute_phash_async(image_bytes)
+            if phash:
+                await cache_service.cache_perceptual_hash(image_bytes, "default", phash)
+        except Exception as e:
+            logger.warning(f"Failed to cache perceptual hash: {e}")
     except Exception as e:
         # Don't fail the entire operation if cache storage fails
         logger.warning(f"Failed to store crawl cache entry: {e}")

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Schema definitions for validation and normalization
 SCHEMA_URL_ATTRIBUTES = ["data-src", "data-srcset", "srcset", "src"]
-SCHEMA_SELECTOR_KINDS = ["video_grid", "album_grid", "gallery_images"]
+SCHEMA_SELECTOR_KINDS = ["video_grid", "album_grid", "gallery_images", "wordpress_content", "direct_image"]
 
 # Valid extra_sources patterns
 VALID_EXTRA_SOURCE_PATTERNS = [
@@ -119,6 +119,43 @@ def load_site_recipes(path: str = "site_recipes.yaml") -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error loading recipe file {abs_path}: {e}")
         raise
+
+
+def save_site_recipes(recipes: Dict[str, Any], path: str = "site_recipes.yaml") -> bool:
+    """
+    Save site recipes to YAML file.
+    
+    Args:
+        recipes: Dictionary containing site recipes to save
+        path: Path to save the YAML file
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        import yaml
+        
+        # Normalize path to absolute path
+        abs_path = os.path.abspath(path)
+        
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        
+        # Write the recipes to file
+        with open(abs_path, 'w', encoding='utf-8') as f:
+            yaml.dump(recipes, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        
+        # Update cache
+        global _recipe_cache, _recipe_cache_file
+        _recipe_cache = recipes
+        _recipe_cache_file = abs_path
+        
+        logger.info(f"Saved site recipes to {abs_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error saving site recipes to {path}: {e}")
+        return False
 
 
 def get_recipe_for_host(host: str, path: str = "site_recipes.yaml") -> Dict[str, Any]:

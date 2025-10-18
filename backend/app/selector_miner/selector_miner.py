@@ -33,13 +33,130 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Constants bucket - minimal set of configurable values
-ATTR_PRIORITY = ("data-src", "data-srcset", "data-image", "srcset", "src")
-HOST_DENY = {"doubleclick.net", "exoclick.com", "s.magsrv.com", "afcdn.net"}
-MAX_REDIRECTS = 3
+ATTR_PRIORITY = ("data-src", "data-srcset", "data-image", "srcset", "src", "data-lazy-src", "data-original", "data-large", "data-medium")
+HOST_DENY = {"doubleclick.net", "exoclick.com", "s.magsrv.com", "afcdn.net", "google-analytics.com", "googletagmanager.com", "facebook.com", "twitter.com"}
+MAX_REDIRECTS = 5
 MAX_IMAGE_BYTES = int(os.getenv("MINER_MAX_IMAGE_BYTES", 10 * 1024 * 1024))
 REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
-HTTP_TIMEOUT = 10.0
+HTTP_TIMEOUT = 15.0
 CHUNK_SIZE = 8192
+
+# Enhanced gallery/album detection patterns
+GALLERY_PATTERNS = [
+    r'/gallery/',
+    r'/album/',
+    r'/photos/',
+    r'/images/',
+    r'/collection/',
+    r'/portfolio/',
+    r'/showcase/',
+    r'/media/',
+    r'/pictures/',
+    r'/pics/',
+    r'album=',
+    r'gallery=',
+    r'photos=',
+    r'images=',
+    r'collection=',
+    r'portfolio='
+]
+
+# Forum detection patterns
+FORUM_PATTERNS = [
+    r'/forum/',
+    r'/forums/',
+    r'/thread/',
+    r'/threads/',
+    r'/topic/',
+    r'/topics/',
+    r'/post/',
+    r'/posts/',
+    r'/discussion/',
+    r'/discussions/',
+    r'/board/',
+    r'/boards/',
+    r'/community/',
+    r'/message/',
+    r'/messages/',
+    r'forum=',
+    r'thread=',
+    r'topic=',
+    r'board='
+]
+
+# Forum-specific HTML indicators
+FORUM_INDICATORS = [
+    'forum', 'thread', 'topic', 'post', 'discussion', 'board', 'community',
+    'message', 'reply', 'comment', 'author', 'member', 'user', 'avatar',
+    'signature', 'quote', 'pm', 'inbox', 'profile', 'registration', 'login'
+]
+
+# Forum container selectors
+FORUM_SELECTORS = [
+    '.forum',
+    '.thread',
+    '.topic',
+    '.post',
+    '.discussion',
+    '.board',
+    '.message',
+    '.reply',
+    '.comment',
+    '.thread-list',
+    '.topic-list',
+    '.post-list',
+    '.forum-list',
+    '.board-list',
+    '.message-list',
+    '.thread-item',
+    '.topic-item',
+    '.post-item',
+    '.forum-item',
+    '.board-item',
+    '.message-item',
+    '.thread-title',
+    '.topic-title',
+    '.post-title',
+    '.post-content',
+    '.post-body',
+    '.post-text',
+    '.post-message',
+    '.thread-content',
+    '.topic-content',
+    '.discussion-content'
+]
+
+# Common gallery container selectors
+GALLERY_SELECTORS = [
+    '.gallery',
+    '.album',
+    '.photos',
+    '.images',
+    '.collection',
+    '.portfolio',
+    '.showcase',
+    '.media-grid',
+    '.photo-grid',
+    '.image-grid',
+    '.gallery-item',
+    '.photo-item',
+    '.image-item',
+    '.album-item',
+    '.collection-item',
+    '.portfolio-item',
+    '.media-item',
+    '.grid-item',
+    '.item',
+    '.card',
+    '.tile'
+]
+
+# Enhanced image quality indicators
+QUALITY_INDICATORS = {
+    'high': ['high-res', 'highres', 'hd', 'full', 'original', 'large', 'xl', 'xxl'],
+    'medium': ['medium', 'med', 'standard', 'normal', 'regular'],
+    'low': ['thumb', 'thumbnail', 'small', 'mini', 'preview', 'low-res', 'lowres']
+}
 
 
 class MinerNetworkError(Exception):
@@ -150,6 +267,159 @@ class CandidateSelector:
     score: float = 0.0
 
 
+
+
+def detect_forum_site(url: str, soup: BeautifulSoup) -> Tuple[bool, float]:
+    """
+    Detect if a site is a forum based on URL patterns and HTML structure.
+    
+    Args:
+        url: URL to analyze
+        soup: BeautifulSoup object of the page
+        
+    Returns:
+        Tuple of (is_forum, confidence_score)
+    """
+    confidence = 0.0
+    
+    # Check URL patterns
+    url_lower = url.lower()
+    for pattern in FORUM_PATTERNS:
+        if re.search(pattern, url_lower):
+            confidence += 0.3
+            break
+    
+    # Check HTML structure indicators
+    html_text = soup.get_text().lower()
+    for indicator in FORUM_INDICATORS:
+        if indicator in html_text:
+            confidence += 0.05
+    
+    # Check for forum-specific elements
+    for selector in FORUM_SELECTORS:
+        if soup.select(selector):
+            confidence += 0.1
+    
+    # Check for common forum software indicators
+    forum_software_indicators = [
+        'vbulletin', 'phpbb', 'invision', 'xenforo', 'discourse', 
+        'flarum', 'mybb', 'smf', 'punbb', 'fluxbb', 'bbpress'
+    ]
+    
+    for indicator in forum_software_indicators:
+        if indicator in html_text or indicator in url_lower:
+            confidence += 0.2
+    
+    # Check meta tags for forum indicators
+    meta_tags = soup.find_all('meta')
+    for meta in meta_tags:
+        content = meta.get('content', '').lower()
+        name = meta.get('name', '').lower()
+        property_attr = meta.get('property', '').lower()
+        
+        for indicator in FORUM_INDICATORS:
+            if indicator in content or indicator in name or indicator in property_attr:
+                confidence += 0.05
+    
+    # Check for pagination patterns common in forums
+    pagination_indicators = [
+        'page=', 'p=', '/page/', '/p/', 'start=', 'offset='
+    ]
+    
+    for indicator in pagination_indicators:
+        if indicator in url_lower:
+            confidence += 0.1
+    
+    is_forum = confidence >= 0.3
+    return is_forum, min(confidence, 1.0)
+
+
+def extract_forum_threads(soup: BeautifulSoup, base_url: str) -> List[str]:
+    """
+    Extract thread URLs from a forum page.
+    
+    Args:
+        soup: BeautifulSoup object of the forum page
+        base_url: Base URL for resolving relative links
+        
+    Returns:
+        List of thread URLs
+    """
+    thread_urls = set()
+    
+    # Common thread link patterns
+    thread_selectors = [
+        'a[href*="/thread/"]',
+        'a[href*="/topic/"]',
+        'a[href*="/post/"]',
+        'a[href*="/discussion/"]',
+        'a[href*="thread="]',
+        'a[href*="topic="]',
+        'a[href*="post="]',
+        '.thread-title a',
+        '.topic-title a',
+        '.post-title a',
+        '.thread-item a',
+        '.topic-item a',
+        '.post-item a',
+        '.thread-list a',
+        '.topic-list a',
+        '.post-list a'
+    ]
+    
+    for selector in thread_selectors:
+        for link in soup.select(selector):
+            href = link.get('href')
+            if href:
+                absolute_url = urljoin(base_url, href)
+                # Filter out non-thread URLs
+                if _is_thread_url(absolute_url):
+                    thread_urls.add(absolute_url)
+    
+    return list(thread_urls)
+
+
+def _is_thread_url(url: str) -> bool:
+    """
+    Check if a URL appears to be a thread URL.
+    
+    Args:
+        url: URL to check
+        
+    Returns:
+        True if URL appears to be a thread
+    """
+    url_lower = url.lower()
+    
+    # Skip obvious non-thread URLs
+    skip_patterns = [
+        'login', 'register', 'profile', 'settings', 'admin', 'moderator',
+        'search', 'help', 'faq', 'rules', 'terms', 'privacy', 'contact',
+        'index', 'home', 'forum', 'forums', 'board', 'boards', 'category',
+        'section', 'archive', 'rss', 'xml', 'json', 'api'
+    ]
+    
+    for pattern in skip_patterns:
+        if pattern in url_lower:
+            return False
+    
+    # Look for thread indicators
+    thread_patterns = [
+        r'/thread/\d+',
+        r'/topic/\d+',
+        r'/post/\d+',
+        r'/discussion/\d+',
+        r'thread=\d+',
+        r'topic=\d+',
+        r'post=\d+',
+        r'discussion=\d+'
+    ]
+    
+    for pattern in thread_patterns:
+        if re.search(pattern, url_lower):
+            return True
+    
+    return False
 
 
 def resolve_image_url(el: Tag, base_url: str) -> Optional[str]:
@@ -534,12 +804,27 @@ def stable_selector(node: Tag, max_depth: int = 4) -> str:
                     ]
                     return any(re.search(pattern, token) for pattern in random_patterns)
                 
-                non_random_classes = [
-                    cls for cls in classes 
-                    if not is_random_token(cls) and len(cls) > 2
+                # WordPress-specific class priority
+                wordpress_priority_classes = [
+                    'wp-post-image', 'attachment', 'post-thumbnail', 'entry-thumbnail',
+                    'post-thumb', 'entry-thumb', 'featured-image', 'post-featured-image',
+                    'crp_featured', 'crp_thumb', 'crp_thumbnail', 'related-post',
+                    'ast-blog-featured-section', 'post-thumb-img-content', 'entry-content',
+                    'wp-block-image', 'wp-image', 'aligncenter', 'alignleft', 'alignright'
                 ]
-                if non_random_classes:
-                    selector_part += f'.{non_random_classes[0]}'
+                
+                # Check for WordPress priority classes first
+                wordpress_classes = [cls for cls in classes if cls in wordpress_priority_classes]
+                if wordpress_classes:
+                    selector_part += f'.{wordpress_classes[0]}'
+                else:
+                    # Fallback to non-random classes
+                    non_random_classes = [
+                        cls for cls in classes 
+                        if not is_random_token(cls) and len(cls) > 2
+                    ]
+                    if non_random_classes:
+                        selector_part += f'.{non_random_classes[0]}'
         
         path_parts.insert(0, selector_part)
         current = current.parent
@@ -780,7 +1065,10 @@ async def render_js(url: str) -> str:
             gallery_selectors = [
                 '.gallery img', '.gallery-item img', '.thumb img', '.thumbnail img',
                 '.photo-grid img', '.image-grid img', '.media-grid img',
-                '.album img', '.video-thumb img', '.content img'
+                '.album img', '.video-thumb img', '.content img',
+                '.wikifeet img', '.photo img', '.image img', '.media img',
+                '.collection img', '.portfolio img', '.showcase img',
+                '.grid img', '.masonry img', '.card img', '.tile img'
             ]
             
             for selector in gallery_selectors:
@@ -842,10 +1130,36 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, clien
     soup = BeautifulSoup(html, 'html.parser')
     base_url = url
     
+    # Detect if this is a forum site
+    is_forum, forum_confidence = detect_forum_site(url, soup)
+    if is_forum:
+        logger.info(f"Detected forum site with confidence {forum_confidence:.2f}")
+        # Extract forum threads for additional mining
+        thread_urls = extract_forum_threads(soup, base_url)
+        logger.info(f"Found {len(thread_urls)} forum threads")
+        
+        # Mine a few thread pages for better selectors
+        for thread_url in thread_urls[:3]:  # Limit to first 3 threads
+            try:
+                logger.info(f"Mining forum thread: {thread_url}")
+                thread_response = await client.get(thread_url, timeout=limits.timeout_seconds)
+                if thread_response.status_code == 200:
+                    thread_soup = BeautifulSoup(thread_response.text, 'html.parser')
+                    thread_candidates = _selector_pass(thread_soup, thread_url, limits)
+                    selector_candidates.extend(thread_candidates)
+                    logger.info(f"Found {len(thread_candidates)} additional candidates from thread")
+            except Exception as e:
+                logger.debug(f"Failed to mine forum thread {thread_url}: {e}")
+                continue
+    
     # Selector pass: find repeated containers and build candidates
     logger.info("Starting selector pass")
-    selector_candidates = _selector_pass(soup, base_url, limits)
-    stats['static_candidates'] = len(selector_candidates)
+    selector_candidates = []
+    if not is_forum:  # Only do initial selector pass if not a forum
+        selector_candidates = _selector_pass(soup, base_url, limits)
+        stats['static_candidates'] = len(selector_candidates)
+    else:
+        stats['static_candidates'] = len(selector_candidates)
     
     # If homepage didn't yield good results, try category pages
     if len(selector_candidates) < 2:
@@ -1070,10 +1384,13 @@ def _classify_selector_kind(selector: str, nodes: List[Tag], soup: BeautifulSoup
         soup: BeautifulSoup parsed HTML for additional context
         
     Returns:
-        Selector kind: "album_grid", "gallery_images", or "video_grid"
+        Selector kind: "album_grid", "gallery_images", "wordpress_content", or "video_grid"
     """
     if not nodes:
         return "video_grid"
+    
+    # Detect WordPress site
+    is_wordpress = _detect_wordpress_site(soup)
     
     # Collect all class names from ancestors of matching nodes
     all_classes = set()
@@ -1088,6 +1405,20 @@ def _classify_selector_kind(selector: str, nodes: List[Tag], soup: BeautifulSoup
     
     # Convert to lowercase for case-insensitive matching
     all_classes_lower = {cls.lower() for cls in all_classes}
+    
+    # WordPress-specific classification
+    if is_wordpress:
+        wordpress_content_keywords = {
+            'wp-post-image', 'attachment', 'post-thumbnail', 'entry-thumbnail',
+            'post-thumb', 'entry-thumb', 'featured-image', 'post-featured-image',
+            'crp_featured', 'crp_thumb', 'crp_thumbnail', 'related-post',
+            'ast-blog-featured-section', 'post-thumb-img-content', 'entry-content',
+            'wp-block-image', 'wp-image', 'aligncenter', 'alignleft', 'alignright'
+        }
+        wordpress_matches = sum(1 for keyword in wordpress_content_keywords if any(keyword in cls for cls in all_classes_lower))
+        
+        if wordpress_matches >= 1:
+            return "wordpress_content"
     
     # Check for album-related keywords
     album_keywords = {'album', 'gallery', 'photos', 'pics', 'collection', 'portfolio'}
@@ -1107,6 +1438,32 @@ def _classify_selector_kind(selector: str, nodes: List[Tag], soup: BeautifulSoup
         return "album_grid"
     else:
         return "video_grid"
+
+
+def _detect_wordpress_site(soup: BeautifulSoup) -> bool:
+    """Detect if a site is built with WordPress."""
+    # Check for WordPress-specific meta tags
+    wp_meta = soup.find('meta', {'name': 'generator'})
+    if wp_meta and 'wordpress' in wp_meta.get('content', '').lower():
+        return True
+    
+    # Check for WordPress-specific classes
+    wp_classes = [
+        'wp-post-image', 'wp-block-image', 'wp-image', 'attachment',
+        'post-thumbnail', 'entry-thumbnail', 'crp_featured'
+    ]
+    
+    for wp_class in wp_classes:
+        if soup.find(class_=wp_class):
+            return True
+    
+    # Check for WordPress-specific IDs
+    wp_ids = ['wp-content', 'wp-header', 'wp-footer']
+    for wp_id in wp_ids:
+        if soup.find(id=wp_id):
+            return True
+    
+    return False
 
 
 def _should_use_javascript(soup: BeautifulSoup, static_candidates: int) -> bool:
@@ -1164,23 +1521,54 @@ def _should_use_javascript(soup: BeautifulSoup, static_candidates: int) -> bool:
     if soup.find('div', class_=lambda x: x and 'loading' in x.lower()):
         js_indicators += 1
     
+    # 7. Check for gallery/album specific patterns
+    page_text = soup.get_text().lower()
+    gallery_indicators = ['gallery', 'album', 'photos', 'images', 'collection', 'portfolio', 'wikifeet']
+    if any(indicator in page_text for indicator in gallery_indicators):
+        js_indicators += 1
+    
+    # 8. Check for gallery container selectors
+    for selector in GALLERY_SELECTORS:
+        if soup.select(selector):
+            js_indicators += 1
+            break
+    
+    # 9. Check for lazy loading indicators
+    lazy_attrs = soup.find_all(attrs={'data-src': True}) + soup.find_all(attrs={'data-lazy-src': True})
+    if len(lazy_attrs) > 2:
+        js_indicators += 1
+    
     # Use JavaScript if we have strong indicators or no static candidates
     return js_indicators >= 2 or static_candidates == 0
 
 
 def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[CandidateSelector]:
     """Selector pass: find repeated containers and build candidates."""
-    # Find repeated container patterns - expanded for better coverage
+    # Find repeated container patterns - expanded for better coverage including WordPress and modern CMS patterns
     container_patterns = [
+        # Traditional patterns
         '.thumb', '.thumbnail', '.video', '.item', '.list-global__item',
         '.gallery-item', '.media-item', '.content-item', '.post-item',
         '.thumb-block', '.thumb-cat', '.thumb-inside', '.thumb-wrapper',
         '.video-thumb', '.video-item', '.media-thumb', '.content-thumb',
-        # More generic patterns for modern sites
-        'div', 'article', 'section', 'li', 'a',
-        # Common gallery patterns
+        '.gallery', '.album', '.photos', '.images', '.collection', '.portfolio',
+        '.showcase', '.media-grid', '.photo-grid', '.image-grid', '.grid-item',
+        '.card', '.tile', '.photo', '.image', '.media', '.content',
+        
+        # WordPress-specific patterns
+        '.wp-post-image', '.attachment', '.post-thumbnail', '.entry-thumbnail',
+        '.post-thumb', '.entry-thumb', '.featured-image', '.post-featured-image',
+        '.crp_featured', '.crp_thumb', '.crp_thumbnail', '.related-post',
+        '.ast-blog-featured-section', '.post-thumb-img-content', '.entry-content',
+        '.wp-block-image', '.wp-image', '.aligncenter', '.alignleft', '.alignright',
+        
+        # Modern CMS patterns
         '.gallery', '.grid', '.masonry', '.photo', '.image', '.media',
-        '.album', '.collection', '.portfolio', '.showcase'
+        '.album', '.collection', '.portfolio', '.showcase',
+        '.content-block', '.media-block', '.image-block', '.post-block',
+        
+        # Generic patterns (lower priority)
+        'div', 'article', 'section', 'li', 'a', 'figure', 'picture'
     ]
     
     candidate_groups = {}
@@ -1216,10 +1604,17 @@ def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[C
                         candidate_groups[selector] = []
                     candidate_groups[selector].append(img)
     
-    # Build candidates from groups
+    # Build candidates from groups and deduplicate
     candidates = []
+    seen_selectors = set()
+    
     for selector, nodes in candidate_groups.items():
         if len(nodes) >= 2:  # Only consider selectors with 2+ matches
+            # Skip duplicate selectors
+            if selector in seen_selectors:
+                continue
+            seen_selectors.add(selector)
+            
             # Classify the selector kind
             kind = _classify_selector_kind(selector, nodes, soup)
             
@@ -1255,9 +1650,101 @@ def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[C
             candidate.kind = kind
             candidates.append(candidate)
     
+    # If we didn't find enough candidates with container-based approach, try direct image approach
+    if len(candidates) < 3:
+        logger.info(f"Container-based approach found only {len(candidates)} candidates, trying direct image approach")
+        direct_candidates = _direct_image_selector_pass(soup, base_url, limits)
+        candidates.extend(direct_candidates)
+    
     # Sort by score and limit
     candidates.sort(key=lambda x: x.score, reverse=True)
     return candidates[:limits.max_candidates]
+
+
+def _direct_image_selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[CandidateSelector]:
+    """Direct image selector pass for when container-based approach fails."""
+    candidates = []
+    
+    # Find all images directly
+    all_images = soup.find_all('img')
+    if len(all_images) < 5:  # Not enough images to be useful
+        return candidates
+    
+    # Group images by their direct selectors
+    image_groups = {}
+    for img in all_images:
+        # Generate a simple selector for the image
+        selector = _generate_simple_image_selector(img)
+        if selector:
+            if selector not in image_groups:
+                image_groups[selector] = []
+            image_groups[selector].append(img)
+    
+    # Create candidates from groups with 2+ images
+    for selector, nodes in image_groups.items():
+        if len(nodes) >= 2:
+            # Extract sample URLs
+            sample_urls = []
+            seen_urls = set()
+            for node in nodes:
+                url = resolve_image_url(node, base_url)
+                if url and url not in seen_urls and len(sample_urls) < 12:
+                    sample_urls.append(url)
+                    seen_urls.add(url)
+            
+            # Create candidate
+            candidate = CandidateSelector(
+                selector=selector,
+                description=f"direct_image: {len(nodes)} images with {selector}",
+                evidence={},
+                sample_urls=sample_urls,
+                repetition_count=len(nodes),
+                score=0.3  # Lower score for direct approach
+            )
+            candidate.kind = "direct_image"
+            candidates.append(candidate)
+    
+    return candidates
+
+
+def _generate_simple_image_selector(img: Tag) -> str:
+    """Generate a simple selector for an image element."""
+    if not img or not img.name:
+        return ""
+    
+    # Start with the tag name
+    selector = img.name
+    
+    # Add class if present and not random
+    if img.get('class'):
+        classes = img.get('class')
+        # Find non-random classes
+        non_random_classes = []
+        for cls in classes:
+            if len(cls) > 2 and not _is_random_class(cls):
+                non_random_classes.append(cls)
+        
+        if non_random_classes:
+            selector += f'.{non_random_classes[0]}'
+    
+    return selector
+
+
+def _is_random_class(cls: str) -> bool:
+    """Check if a class name appears to be random/generated."""
+    if len(cls) < 3:
+        return True
+    
+    random_patterns = [
+        r'^[a-f0-9]{8,}$',  # Hex strings
+        r'^[0-9]+$',        # Pure numbers
+        r'[A-Z]{3,}',       # Multiple caps
+        r'_[a-f0-9]{6,}_',  # Underscore hex patterns
+        r'^[a-z]{1,2}[0-9]{4,}$',  # Short letters + long numbers
+        r'^[0-9]{4,}[a-z]{1,2}$',  # Long numbers + short letters
+    ]
+    
+    return any(re.search(pattern, cls) for pattern in random_patterns)
 
 
 async def _extra_sources_pass(soup: BeautifulSoup, base_url: str, client: httpx.AsyncClient, limits: Limits) -> List[CandidateSelector]:
