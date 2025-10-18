@@ -612,182 +612,81 @@ def _get_content_metadata(content: bytes, raw_key: str, thumb_key: Optional[str]
     return metadata
 
 
-def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str, source_url: Optional[str] = None, video_url: Optional[str] = None) -> Tuple[str, str, Dict[str, Any]]:
-    """
-    Store raw image using content-addressed keys.
-    Returns (raw_key, raw_url, metadata)
-    """
-    settings = get_settings()
     
-    # Generate content-addressed key
-    raw_key = _generate_content_addressed_key(image_bytes, tenant_id, ".jpg")
-    
-    # Check if object already exists (deduplication)
-    try:
-        if settings.using_minio:
-            cli = _minio()
-            try:
-                # Try to get object metadata to check if it exists
-                cli.stat_object(settings.s3_bucket_raw, raw_key)
-                logger.info(f"Content-addressed object already exists: {raw_key}")
-                # Object exists, return existing key and URL
-                raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-                metadata = _get_content_metadata(image_bytes, raw_key, source_url=source_url)
-                return raw_key, raw_url, metadata
-            except Exception:
-                # Object doesn't exist, proceed to upload
-                pass
-        else:
-            s3 = _boto3_s3()
-            try:
-                # Try to get object metadata to check if it exists
-                s3.head_object(Bucket=settings.s3_bucket_raw, Key=raw_key)
-                logger.info(f"Content-addressed object already exists: {raw_key}")
-                # Object exists, return existing key and URL
-                raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-                metadata = _get_content_metadata(image_bytes, raw_key, source_url=source_url)
-                return raw_key, raw_url, metadata
-            except Exception:
-                # Object doesn't exist, proceed to upload
-                pass
-    except Exception as e:
-        logger.warning(f"Error checking for existing object {raw_key}: {e}")
-    
-    # Upload the object with source URL and video URL metadata
-    save_image(
-        image_bytes=image_bytes,
-        mime="image/jpeg",
-        filepath=raw_key,
-        source_image_url=source_url,
-        source_video_url=video_url,
-        bucket=settings.s3_bucket_raw,
-        tenant_id=tenant_id
-    )
-    
-    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-    metadata = _get_content_metadata(image_bytes, raw_key, source_url=source_url)
-    
-    return raw_key, raw_url, metadata
 
 
-def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, source_url: Optional[str] = None, video_url: Optional[str] = None) -> Tuple[str, str, str, str, Dict[str, Any]]:
-    """
-    Store raw image and thumbnail using content-addressed keys.
-    Returns (raw_key, raw_url, thumb_key, thumb_url, metadata)
-    """
-    settings = get_settings()
     
-    # Generate content-addressed keys
-    raw_key = _generate_content_addressed_key(image_bytes, tenant_id, ".jpg")
-    thumb_key = _generate_content_addressed_key(thumbnail_bytes, tenant_id, "_thumb.jpg")
-    
-    # Check if objects already exist (deduplication)
-    raw_exists = False
-    thumb_exists = False
-    
-    try:
-        if settings.using_minio:
-            cli = _minio()
-            try:
-                cli.stat_object(settings.s3_bucket_raw, raw_key)
-                raw_exists = True
-                logger.info(f"Content-addressed raw object already exists: {raw_key}")
-            except Exception:
-                pass
-            
-            try:
-                cli.stat_object(settings.s3_bucket_thumbs, thumb_key)
-                thumb_exists = True
-                logger.info(f"Content-addressed thumb object already exists: {thumb_key}")
-            except Exception:
-                pass
-        else:
-            s3 = _boto3_s3()
-            try:
-                s3.head_object(Bucket=settings.s3_bucket_raw, Key=raw_key)
-                raw_exists = True
-                logger.info(f"Content-addressed raw object already exists: {raw_key}")
-            except Exception:
-                pass
-            
-            try:
-                s3.head_object(Bucket=settings.s3_bucket_thumbs, Key=thumb_key)
-                thumb_exists = True
-                logger.info(f"Content-addressed thumb object already exists: {thumb_key}")
-            except Exception:
-                pass
-    except Exception as e:
-        logger.warning(f"Error checking for existing objects: {e}")
-    
-    # Upload objects only if they don't exist
-    if not raw_exists:
-        save_image(
-            image_bytes=image_bytes,
-            mime="image/jpeg",
-            filepath=raw_key,
-            source_image_url=source_url,
-            source_video_url=video_url,
-            bucket=settings.s3_bucket_raw,
-            tenant_id=tenant_id
-        )
-    
-    if not thumb_exists:
-        # For thumbnails, we don't store video URL metadata (it's already on the raw image)
-        save_image(
-            image_bytes=thumbnail_bytes,
-            mime="image/jpeg",
-            filepath=thumb_key,
-            source_image_url=source_url,
-            source_video_url=None,  # No video URL for thumbnails
-            bucket=settings.s3_bucket_thumbs,
-            tenant_id=tenant_id
-        )
-    
-    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-    thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
-    metadata = _get_content_metadata(image_bytes, raw_key, thumb_key, source_url=source_url)
-    
-    return raw_key, raw_url, thumb_key, thumb_url, metadata
 
 
 async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, source_url: Optional[str] = None, video_url: Optional[str] = None) -> Tuple[str, str, str, str, Dict[str, Any]]:
     """
-    Async version of save_raw_and_thumb_content_addressed for better performance.
+    Store raw and thumbnail using content-addressed keys asynchronously.
     """
     loop = asyncio.get_event_loop()
     thread_pool = _get_thread_pool()
-    
-    try:
-        result = await loop.run_in_executor(
-            thread_pool, 
-            save_raw_and_thumb_content_addressed, 
-            image_bytes, 
-            thumbnail_bytes, 
-            tenant_id,
-            source_url,
-            video_url
-        )
-        return result
-    except Exception as e:
-        # Fallback to sync version if async fails
-        logger.warning(f"Async storage failed, falling back to sync: {e}")
-        return save_raw_and_thumb_content_addressed(image_bytes, thumbnail_bytes, tenant_id, source_url, video_url)
+
+    def _sync_impl() -> Tuple[str, str, str, str, Dict[str, Any]]:
+        settings = get_settings()
+        raw_key = _generate_content_addressed_key(image_bytes, tenant_id, ".jpg")
+        thumb_key = _generate_content_addressed_key(thumbnail_bytes, tenant_id, "_thumb.jpg")
+
+        raw_exists = False
+        thumb_exists = False
+
+        try:
+            if settings.using_minio:
+                cli = _minio()
+                try:
+                    cli.stat_object(settings.s3_bucket_raw, raw_key)
+                    raw_exists = True
+                except Exception:
+                    pass
+                try:
+                    cli.stat_object(settings.s3_bucket_thumbs, thumb_key)
+                    thumb_exists = True
+                except Exception:
+                    pass
+            else:
+                s3 = _boto3_s3()
+                try:
+                    s3.head_object(Bucket=settings.s3_bucket_raw, Key=raw_key)
+                    raw_exists = True
+                except Exception:
+                    pass
+                try:
+                    s3.head_object(Bucket=settings.s3_bucket_thumbs, Key=thumb_key)
+                    thumb_exists = True
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Error checking for existing objects: {e}")
+
+        if not raw_exists:
+            # Save raw image with metadata
+            # Note: save_image is async, but this sync impl is only for run_in_executor fallback; avoid calling it here
+            if settings.using_minio:
+                cli = _minio()
+                cli.put_object(settings.s3_bucket_raw, raw_key, io.BytesIO(image_bytes), len(image_bytes), content_type="image/jpeg")
+            else:
+                s3 = _boto3_s3()
+                s3.put_object(Bucket=settings.s3_bucket_raw, Key=raw_key, Body=image_bytes, ContentType="image/jpeg")
+
+        if not thumb_exists:
+            if settings.using_minio:
+                cli = _minio()
+                cli.put_object(settings.s3_bucket_thumbs, thumb_key, io.BytesIO(thumbnail_bytes), len(thumbnail_bytes), content_type="image/jpeg")
+            else:
+                s3 = _boto3_s3()
+                s3.put_object(Bucket=settings.s3_bucket_thumbs, Key=thumb_key, Body=thumbnail_bytes, ContentType="image/jpeg")
+
+        raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
+        thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
+        metadata = _get_content_metadata(image_bytes, raw_key, thumb_key, source_url=source_url)
+        return raw_key, raw_url, thumb_key, thumb_url, metadata
+
+    return await loop.run_in_executor(thread_pool, _sync_impl)
 
 
-def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str]:
-    """
-    Store raw image to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg only
-    Returns (raw_key, raw_url)
-    """
-    settings = get_settings()
-    img_id = str(uuid.uuid4()).replace("-", "")
-    raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
-
-    tags = {"source_url": source_url} if source_url else None
-    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
-
-    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-    return raw_key, raw_url
 
 
 
@@ -796,43 +695,31 @@ def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = ""
 
 async def save_raw_and_thumb_async(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
     """
-    Async version of save_raw_and_thumb_with_precreated_thumb for better performance.
-    Creates a thumbnail from the raw image.
+    Create a thumbnail and store both raw and thumbnail asynchronously.
     """
     loop = asyncio.get_event_loop()
     thread_pool = _get_thread_pool()
-    
-    try:
-        # Create thumbnail from raw image
+
+    def _sync_impl() -> Tuple[str, str, str, str]:
+        settings = get_settings()
+        img_id = str(uuid.uuid4()).replace("-", "")
+        raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
+        thumb_key = f"{tenant_id}/{key_prefix}{img_id}_thumb.jpg"
+
         thumbnail_bytes = _make_thumbnail(image_bytes)
-        result = await loop.run_in_executor(thread_pool, save_raw_and_thumb_with_precreated_thumb, image_bytes, thumbnail_bytes, tenant_id, key_prefix)
-        return result
-    except Exception as e:
-        # Fallback to sync version if async fails
-        thumbnail_bytes = _make_thumbnail(image_bytes)
-        return save_raw_and_thumb_with_precreated_thumb(image_bytes, thumbnail_bytes, tenant_id, key_prefix)
+
+        tags = None
+        put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
+        put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg", tags)
+
+        raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
+        thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
+        return raw_key, raw_url, thumb_key, thumb_url
+
+    return await loop.run_in_executor(thread_pool, _sync_impl)
 
 
-def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str, str, str]:
-    """
-    Store raw JPG to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg and pre-created thumbnail to BUCKET_THUMBS/<tenant_id>/<prefix><uuid>.jpg
-    Returns (raw_key, raw_url, thumb_key, thumb_url)
     
-    This function combines the efficiency of basic_crawler1.1 (pre-created thumbnails) 
-    with the multi-tenancy support of main branch.
-    """
-    settings = get_settings()
-    img_id = str(uuid.uuid4()).replace("-", "")
-    raw_key = f"{tenant_id}/{key_prefix}{img_id}.jpg"
-    thumb_key = f"{tenant_id}/{key_prefix}{img_id}_thumb.jpg"
-
-    tags = {"source_url": source_url} if source_url else None
-    put_object(settings.s3_bucket_raw, raw_key, image_bytes, "image/jpeg", tags)
-    put_object(settings.s3_bucket_thumbs, thumb_key, thumbnail_bytes, "image/jpeg", tags)
-
-    raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
-    thumb_url = get_presigned_url(settings.s3_bucket_thumbs, thumb_key, "GET") or ""
-    return raw_key, raw_url, thumb_key, thumb_url
 
 
 def close_storage_resources():

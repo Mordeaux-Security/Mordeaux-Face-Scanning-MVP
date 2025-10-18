@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from typing import List
 
-from .selector_miner import (
+from ..selector_miner import (
     SelectorMiner, 
     CandidateSelector, 
     ImageNode, 

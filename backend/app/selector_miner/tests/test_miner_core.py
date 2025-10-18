@@ -10,7 +10,7 @@ import re
 from typing import List
 from unittest.mock import Mock, patch
 
-from .selector_miner import (
+from ..selector_miner import (
     SelectorMiner, 
     CandidateSelector, 
     ImageNode, 

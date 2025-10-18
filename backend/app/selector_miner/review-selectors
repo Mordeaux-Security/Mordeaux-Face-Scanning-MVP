@@ -20,10 +20,10 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 # Add the project root to the path
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from tools.selector_miner import SelectorMiner
-from tools.redirect_utils import create_safe_client, fetch_with_redirects
+from backend.app.selector_miner import emit_recipe_yaml_block
+from backend.app.selector_miner import create_safe_client, fetch_with_redirects
 import httpx
 import yaml
 import hashlib
@@ -100,7 +100,14 @@ async def download_sample_images(selectors: List[Dict], domain: str, download_di
     
     async with create_safe_client(timeout=30.0) as client:
         for i, selector in enumerate(selectors):
-            selector_key = selector['selector']
+            # Handle both schema v1 and v2 formats
+            if 'css' in selector:
+                # Schema v2 format
+                selector_key = selector['css']
+            else:
+                # Schema v1 format (backward compatibility)
+                selector_key = selector['selector']
+            
             sample_urls = selector.get('sample_urls', [])
             
             if not sample_urls:
@@ -175,12 +182,22 @@ def display_review_interface(selectors: List[Dict], downloaded_images: Dict[str,
     print("="*80)
     
     for i, selector in enumerate(selectors):
-        selector_key = selector['selector']
+        # Handle both schema v1 and v2 formats
+        if 'css' in selector:
+            # Schema v2 format
+            selector_key = selector['css']
+            kind = selector.get('kind', 'video_grid')
+        else:
+            # Schema v1 format (backward compatibility)
+            selector_key = selector['selector']
+            kind = 'video_grid'  # Default for v1
+        
         description = selector.get('description', 'No description')
         image_paths = downloaded_images.get(selector_key, [])
         
         print(f"\n[{i+1}/{len(selectors)}] SELECTOR REVIEW")
         print("-" * 60)
+        print(f"Kind: {kind}")
         print(f"Selector: {selector_key}")
         print(f"Description: {description}")
         print(f"Downloaded Images: {len(image_paths)}")
@@ -217,7 +234,7 @@ def display_review_interface(selectors: List[Dict], downloaded_images: Dict[str,
 
 def update_yaml_with_approvals(domain: str, selectors: List[Dict], approvals: List[bool], yaml_file: str) -> bool:
     """
-    Update YAML file based on approval decisions using the selector miner's save functionality.
+    Update YAML file based on approval decisions.
     
     Args:
         domain: Domain name
@@ -239,16 +256,55 @@ def update_yaml_with_approvals(domain: str, selectors: List[Dict], approvals: Li
             logging.warning(f"No selectors were approved for {domain}")
             return True  # Consider this a success (nothing to save)
         
-        # Create a SelectorMiner instance to use its save functionality
-        miner = SelectorMiner()
+        # Load existing recipes
+        yaml_path = Path(yaml_file)
+        existing_recipes = {
+            'schema_version': 2,
+            'defaults': {
+                'selectors': [
+                    {'kind': 'video_grid', 'css': '.video-thumb img'},
+                    {'kind': 'album_grid', 'css': '.album-thumb img'},
+                    {'kind': 'album_grid', 'css': "a[href*='/album'] img"},
+                    {'kind': 'gallery_images', 'css': '.gallery img'},
+                    {'kind': 'gallery_images', 'css': 'figure img'}
+                ],
+                'attributes_priority': ['data-src', 'data-srcset', 'srcset', 'src'],
+                'extra_sources': [
+                    "meta[property='og:image']::attr(content)",
+                    "img::attr(srcset)",
+                    "source::attr(data-srcset)",
+                    "source::attr(srcset)",
+                    "script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl, $..image, $..contentUrl)"
+                ],
+                'method': 'smart'
+            },
+            'sites': {}
+        }
         
-        # Save approved selectors to YAML
-        success = miner.save_accepted_selectors_to_yaml(domain, approved_selectors, yaml_file)
+        if yaml_path.exists():
+            with open(yaml_path, 'r', encoding='utf-8') as f:
+                loaded_recipes = yaml.safe_load(f) or {}
+                if 'sites' in loaded_recipes:
+                    existing_recipes['sites'] = loaded_recipes['sites']
+                if 'defaults' in loaded_recipes:
+                    existing_recipes['defaults'] = loaded_recipes['defaults']
+                if 'schema_version' in loaded_recipes:
+                    existing_recipes['schema_version'] = loaded_recipes['schema_version']
         
-        if success:
-            logging.info(f"Updated YAML file with {len(approved_selectors)} approved selectors for {domain}")
+        # Update the site with approved selectors
+        existing_recipes['sites'][domain] = {
+            'selectors': approved_selectors,
+            'attributes_priority': ['data-src', 'data-srcset', 'srcset', 'src'],
+            'extra_sources': [],
+            'method': 'review'
+        }
         
-        return success
+        # Write back to file
+        with open(yaml_path, 'w', encoding='utf-8') as f:
+            yaml.dump(existing_recipes, f, default_flow_style=False, sort_keys=False)
+        
+        logging.info(f"Updated YAML file with {len(approved_selectors)} approved selectors for {domain}")
+        return True
         
     except Exception as e:
         logging.error(f"Failed to update YAML file: {e}")

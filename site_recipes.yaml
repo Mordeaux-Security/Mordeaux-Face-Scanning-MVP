@@ -32,16 +32,20 @@ defaults:
 sites:
   pornhub.com:
     selectors:
-    - selector: ul.catHeaderSubMenu li.big a img.js-menuSwap
-      description: Extracted from pornhub.com
-      sample_urls: []
-      score: 0.8
-    - selector: ul.catHeaderSubMenu li.big a img.js-menuSwap
-      description: Extracted from pornhub.com
-      sample_urls: []
-      score: 0.8
-    - selector: ul.catHeaderSubMenu li.big a img.js-menuSwap
-      description: Extracted from pornhub.com
+    - kind: video_grid
+      css: ul.catHeaderSubMenu li.big a img.js-menuSwap
+    attributes_priority:
+    - data-src
+    - data-srcset
+    - data-image
+    - srcset
+    - src
+    extra_sources: []
+    method: miner
+  wikifeet.com:
+    selectors:
+    - selector: div.widgetbox a.wcont div img
+      description: Extracted from wikifeet.com
       sample_urls: []
       score: 0.8
     attributes_priority:

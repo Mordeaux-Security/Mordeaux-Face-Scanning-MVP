@@ -11,9 +11,9 @@ import sys
 from pathlib import Path
 
 # Add the project root to the path
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from tools.selector_miner import SelectorMiner, PLAYWRIGHT_AVAILABLE, mine_selectors_with_js_fallback
+from backend.app.selector_miner.selector_miner import SelectorMiner, PLAYWRIGHT_AVAILABLE, mine_selectors_with_js_fallback
 
 
 class TestJavaScriptFallback:
@@ -28,7 +28,7 @@ class TestJavaScriptFallback:
     async def test_render_with_javascript_no_playwright(self):
         """Test JavaScript rendering when Playwright is not available."""
         # Mock PLAYWRIGHT_AVAILABLE to False
-        with patch('tools.selector_miner.PLAYWRIGHT_AVAILABLE', False):
+        with patch('backend.app.selector_miner.selector_miner.PLAYWRIGHT_AVAILABLE', False):
             miner = SelectorMiner("https://example.com")
             result = await miner.render_with_javascript("https://example.com")
             assert result is None
@@ -56,7 +56,7 @@ class TestJavaScriptFallback:
         mock_playwright = Mock()
         mock_playwright.chromium.launch = AsyncMock(return_value=mock_browser)
         
-        with patch('tools.selector_miner.async_playwright') as mock_async_playwright:
+        with patch('backend.app.selector_miner.selector_miner.async_playwright') as mock_async_playwright:
             mock_async_playwright.return_value.__aenter__.return_value = mock_playwright
             
             miner = SelectorMiner("https://example.com")
@@ -73,7 +73,7 @@ class TestJavaScriptFallback:
             pytest.skip("Playwright not available")
         
         # Mock Playwright to raise an exception
-        with patch('tools.selector_miner.async_playwright') as mock_async_playwright:
+        with patch('backend.app.selector_miner.selector_miner.async_playwright') as mock_async_playwright:
             mock_async_playwright.side_effect = Exception("Browser launch failed")
             
             miner = SelectorMiner("https://example.com")
@@ -104,7 +104,7 @@ class TestJavaScriptFallback:
     async def test_mine_selectors_with_js_fallback_insufficient_static_no_js(self):
         """Test JS fallback when static mining finds insufficient candidates and no JS available."""
         # Mock PLAYWRIGHT_AVAILABLE to False
-        with patch('tools.selector_miner.PLAYWRIGHT_AVAILABLE', False):
+        with patch('backend.app.selector_miner.selector_miner.PLAYWRIGHT_AVAILABLE', False):
             miner = SelectorMiner("https://example.com")
             
             # Mock static mining to return insufficient candidates
@@ -234,7 +234,7 @@ class TestConvenienceFunction:
         mock_candidates = [Mock(), Mock()]
         
         # Mock the SelectorMiner class and its method
-        with patch('tools.selector_miner.SelectorMiner') as mock_selector_miner_class:
+        with patch('backend.app.selector_miner.selector_miner.SelectorMiner') as mock_selector_miner_class:
             mock_miner = Mock()
             mock_miner.mine_selectors_with_js_fallback = AsyncMock(return_value=mock_candidates)
             mock_selector_miner_class.return_value = mock_miner
@@ -275,7 +275,7 @@ class TestIntegration:
         """
         
         # Mock PLAYWRIGHT_AVAILABLE to True to ensure JS fallback is attempted
-        with patch('tools.selector_miner.PLAYWRIGHT_AVAILABLE', True):
+        with patch('backend.app.selector_miner.selector_miner.PLAYWRIGHT_AVAILABLE', True):
             # Mock the methods to simulate the workflow
             with patch.object(miner, 'mine_selectors') as mock_mine:
                 # Static mining returns 1 candidate (insufficient)

@@ -1,21 +1,25 @@
 # CLI Tools for Selector Mining
 
-This directory contains command-line tools for mining and reviewing image selectors as part of Phase 2.2 of the Mordeaux Face Scanning MVP.
+**Note: The selector mining CLI tools have been moved to `backend/app/selector_miner/` for better organization.**
+
+This directory previously contained command-line tools for mining and reviewing image selectors as part of Phase 2.2 of the Mordeaux Face Scanning MVP.
 
 ## Tools Overview
 
-### `mine-selectors`
+The following tools have been moved to `backend/app/selector_miner/`:
+
+### `mine-selectors` (moved to `backend/app/selector_miner/mine-selectors`)
 Mines and validates image selectors for a domain by analyzing HTML content from provided URLs.
 
-### `review-selectors`
+### `review-selectors` (moved to `backend/app/selector_miner/review-selectors`)
 Downloads sample thumbnails and provides a console interface for reviewing and approving selectors.
 
 ## Installation & Setup
 
 Make sure the CLI scripts are executable:
 ```bash
-chmod +x bin/mine-selectors
-chmod +x bin/review-selectors
+chmod +x backend/app/selector_miner/mine-selectors
+chmod +x backend/app/selector_miner/review-selectors
 ```
 
 ## Usage
@@ -25,7 +29,7 @@ chmod +x bin/review-selectors
 Mine and validate image selectors for a domain.
 
 ```bash
-python bin/mine-selectors --domain example.com --urls urls.txt --out site_recipes.yaml [--append] [--verbose]
+python backend/app/selector_miner/mine-selectors --domain example.com --urls urls.txt --out site_recipes.yaml [--append] [--verbose]
 ```
 
 **Arguments:**
@@ -77,7 +81,7 @@ https://example.com/page3
 Review and approve image selectors for a domain.
 
 ```bash
-python bin/review-selectors --domain example.com [--yaml site_recipes.yaml] [--download-dir /tmp/review] [--keep-downloads] [--verbose]
+python backend/app/selector_miner/review-selectors --domain example.com [--yaml site_recipes.yaml] [--download-dir /tmp/review] [--keep-downloads] [--verbose]
 ```
 
 **Arguments:**
@@ -90,13 +94,13 @@ python bin/review-selectors --domain example.com [--yaml site_recipes.yaml] [--d
 **Examples:**
 ```bash
 # Basic usage
-python bin/review-selectors --domain example.com
+python backend/app/selector_miner/review-selectors --domain example.com
 
 # Specify custom YAML file
-python bin/review-selectors --domain example.com --yaml custom_recipes.yaml
+python backend/app/selector_miner/review-selectors --domain example.com --yaml custom_recipes.yaml
 
 # Keep downloaded images for inspection
-python bin/review-selectors --domain example.com --keep-downloads --download-dir /tmp/review
+python backend/app/selector_miner/review-selectors --domain example.com --keep-downloads --download-dir /tmp/review
 ```
 
 **Process:**
@@ -217,12 +221,12 @@ EOF
 
 ### 2. Mine Selectors
 ```bash
-python bin/mine-selectors --domain example.com --urls urls.txt --out site_recipes.yaml --verbose
+python backend/app/selector_miner/mine-selectors --domain example.com --urls urls.txt --out site_recipes.yaml --verbose
 ```
 
 ### 3. Review Selectors
 ```bash
-python bin/review-selectors --domain example.com --yaml site_recipes.yaml --verbose
+python backend/app/selector_miner/review-selectors --domain example.com --yaml site_recipes.yaml --verbose
 ```
 
 ### 4. Verify Results
@@ -263,7 +267,7 @@ These CLI tools integrate seamlessly with the existing Mordeaux Face Scanning MV
 
 Use the `--verbose` flag to enable detailed logging:
 ```bash
-python bin/mine-selectors --domain example.com --urls urls.txt --out site_recipes.yaml --verbose
+python backend/app/selector_miner/mine-selectors --domain example.com --urls urls.txt --out site_recipes.yaml --verbose
 ```
 
 This will show:

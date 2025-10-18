@@ -1,0 +1,63 @@
+---
+description: stop cursor from downgrading when tests fail
+globs:
+alwaysApply: true
+---
+
+# Refactor & Fix Protocol — NO DOWNGRADES (Mordeaux Crawler)
+
+**Intent**
+- Keep existing **features and optimizations** intact. When code breaks, **fix it** without removing capabilities or reverting to simpler/slow paths.
+- Any removal or downgrade must be **explicitly justified**, measured, and approved in-code (commented rationale) with equal or better performance & correctness.
+
+---
+
+## NON-NEGOTIABLE OPTIMIZATIONS (must be preserved)
+- **Streaming + batching hybrid** pipeline (stream downloads → batch face-detect/encode).
+- **Concurrency** with bounded queues/backpressure; **no multi-instancing** of heavy models (detector/encoder).
+- **Early exits** (content-type, size limits, robots/dup checks) to save bandwidth/CPU.
+- **Retry & backoff** (exponential + jitter) for 429/5xx; idempotent writes.
+- **Memory budgets** enforced (configurable caps for buffers/batches).
+- **Dedup** (pHash/embedding), **throttle** policy, and **save paths** (raw/thumb/crops) unchanged.
+- **HTTP correctness**: redirects, gzip/br, chunked, partial reads, timeouts.
+
+> If a change affects any of the above, treat it as a **migration**, not a quick fix.
+
+---
+
+## PROHIBITED BEHAVIORS
+- Deleting or disabling features to “make tests pass” (e.g., remove streaming; switch to single-threaded; skip dedupe; drop retries).
+- Replacing optimized paths with naive loops or eager loads without proof of equal/better performance.
+- Shrinking test scope to trivial inputs (toy domains, solid-color images) to avoid fixing real issues.
+- Silencing exceptions broadly (`try/except: pass`) or weakening assertions.
+
+---
+
+## REQUIRED WORKFLOW WHEN A TEST FAILS OR DURING REFACTOR
+1. **State the spec** (1–2 lines) in the PR/test docstring; do not narrow it unless the product requirement was wrong.
+2. **Fix implementation**, not tests. If spec truly changes, update tests but keep them **equally strict** or stricter.
+3. **Benchmark & compare** against `main` (or previous baseline):
+   - Throughput (items/sec), latency P95, memory max, error rate under 429/5xx bursts.
+   - Must be **≥ baseline** or within **-3%** with a documented tradeoff and compensating gain.
+4. **Keep public APIs stable** (function signatures, message schemas). If you must change them, include a migration note and shims.
+5. **Add regression tests** reproducing the original failure.
+
+---
+
+## “NO DOWNGRADE” CHECKLIST (Cursor must follow)
+- [ ] Does the change **preserve** streaming+batching, concurrency, early exits, retries, memory caps, dedupe, and save paths?
+- [ ] If something is removed/disabled, is there a **Justification block** explaining *why necessary*, *measured impact*, and *migration*?
+- [ ] Do integration tests still cover **realistic HTTP** (redirects/gzip/chunked/429/5xx) and **real images** (EXIF, corruption, formats)?
+- [ ] Does the refactor keep a **single shared model instance** across workers?
+- [ ] Are **benchmarks** updated and **≥ baseline** (or justified within allowed budget)?
+
+**Template: Justification block (required for any removal/downgrade)**
+```text
+JUSTIFICATION:
+- Change: <what optimization/feature changed>
+- Reason: <bug in X / incompatible with Y / spec update Z>
+- Alternatives considered: <A, B; why rejected>
+- Perf vs main: <throughput, latency P95, memory, error rate>
+- Migration/shim: <kept API? adapter?>
+- Plan to restore/improve: <tracked in issue #>
+

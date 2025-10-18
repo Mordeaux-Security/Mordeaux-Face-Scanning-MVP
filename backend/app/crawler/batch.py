@@ -1,7 +1,6 @@
 import asyncio
 import time
 import uuid
-import aiohttp
 from typing import Dict, List, Optional, Any
 import logging
 from ..core.config import get_settings
@@ -11,6 +10,7 @@ from ..services.vector import get_vector_client
 from .cache import get_cache_service
 from ..services.webhook import get_webhook_service, WebhookEvent
 from ..core.audit import get_audit_logger
+from .http_service import get_http_service
 
 logger = logging.getLogger(__name__)
 
@@ -234,15 +234,17 @@ class BatchProcessor:
                 })
     
     async def _download_image(self, image_url: str) -> Optional[bytes]:
-        """Download image from URL."""
+        """Download image from URL using centralized HTTP service."""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(image_url, timeout=30) as response:
-                    if response.status == 200:
-                        return await response.read()
-                    else:
-                        logger.error(f"Failed to download image from {image_url}: HTTP {response.status}")
-                        return None
+            http_service = await get_http_service()
+            content, status = await http_service.download_image(image_url)
+            
+            if content is None:
+                logger.error(f"Failed to download image from {image_url}: {status}")
+                return None
+            
+            return content
+            
         except Exception as e:
             logger.error(f"Error downloading image from {image_url}: {e}")
             return None

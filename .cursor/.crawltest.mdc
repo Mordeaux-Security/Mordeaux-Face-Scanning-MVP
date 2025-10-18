@@ -1,0 +1,17 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+After changes to crawler functionality run a "STANDARD TEST": make crawl URL=https://www.pornhub.com MAX_TOTAL_IMAGES=20 CRAWL_MODE=site MAX_PAGES=3 MAX_CONCURRENT_IMAGES=10 BATCH_SIZE=25
+
+Make explicit note of images processed per second
+# of images processed
+# of raw images saved
+# of thumbnails saved
+
+images processed per second of <0.4 is unacceptable
+
+Almost every crawl should result in some thumbnails being saved.
+0 Thumbnials saved should be scrutinized heavily before making any justification.

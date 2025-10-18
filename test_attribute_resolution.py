@@ -9,7 +9,7 @@ from pathlib import Path
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent))
 
-from tools.selector_miner import SelectorMiner
+from backend.app.selector_miner import SelectorMiner
 from bs4 import BeautifulSoup
 
 def test_attribute_resolution_order():

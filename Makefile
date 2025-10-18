@@ -83,3 +83,21 @@ download-raw:
 
 download-both:
 	@./scripts/download_images.sh both
+
+clean-downloads:
+	@echo "Cleaning up download directories..."
+	@if [ -d "flat" ]; then \
+		echo "  - Removing flat/ directory..."; \
+		rm -rf flat; \
+		echo "    ✓ Removed flat/ directory"; \
+	else \
+		echo "  - flat/ directory not found"; \
+	fi
+	@if [ -d "zips" ]; then \
+		echo "  - Removing zips/ directory..."; \
+		rm -rf zips; \
+		echo "    ✓ Removed zips/ directory"; \
+	else \
+		echo "  - zips/ directory not found"; \
+	fi
+	@echo "Download directories cleaned."

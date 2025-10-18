@@ -6,44 +6,48 @@ Features include intelligent image detection, face recognition, caching, and mul
 """
 
 import asyncio
+import concurrent.futures
+import gc
 import hashlib
+import json
 import logging
 import os
-import sys
-import concurrent.futures
-import psutil
-import gc
-import weakref
-import re
 import random
+import re
+import sys
 import time
-import json
+import weakref
+
+from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple, Set, Dict
 from urllib.parse import urljoin, urlparse, parse_qs
-from dataclasses import dataclass
-from datetime import datetime
 
+import psutil
 import httpx
 from bs4 import BeautifulSoup
+from PIL import Image, ImageFile
 
-# Import redirect utilities (local copy in services directory)
-from .redirect_utils import create_safe_client, fetch_html_with_redirects
+# Import HTTP service
+from .http_service import get_http_service, HTTPService
 
 # Import site recipes functionality
-from ..config.site_recipes import get_recipe_for_url, get_recipe_for_host
+from ..selector_miner.site_recipes import get_recipe_for_url, get_recipe_for_host
 
 # Image safety configuration - set once on import
-from PIL import Image, ImageFile
 Image.MAX_IMAGE_PIXELS = 50_000_000
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only, save_raw_and_thumb_content_addressed_async, save_raw_image_content_addressed, get_storage_cleanup_function, save_image, _minio
+from .storage import (
+    get_storage_cleanup_function,
+    save_image,
+    _minio,
+)
 from . import storage
 from .face import get_face_service, close_face_service
 from . import face
 from .cache import get_hybrid_cache_service, close_cache_service
-from urllib.parse import urljoin, urlparse
 
 # ============================================================================
 # SECURITY CONFIGURATION
@@ -55,6 +59,7 @@ SUSPICIOUS_EXTENSIONS = {'.exe', '.scr', '.apk', '.msi', '.bat', '.cmd', '.ps1',
 BAIT_QUERY_KEYS = {'download', 'redirect', 'out', 'go'}
 
 # Host/TLD Denylist (placeholders - can be expanded)
+# TODO: REPLACE AI SLOP WITH REAL VALUES
 BLOCKED_HOSTS = {
     'malware.example.com',
     'phishing-site.net',
@@ -67,7 +72,7 @@ BLOCKED_TLDS = {
 
 # Content Security Configuration
 ALLOWED_CONTENT_TYPES = {'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'}
-BLOCKED_CONTENT_TYPES = {'image/svg+xml'}  # SVG can contain malicious scripts
+BLOCKED_CONTENT_TYPES = {'image/svg+xml'}  # SVG's often are logos, not images
 MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8MB
 
 # Crawl Policy Configuration
@@ -578,28 +583,14 @@ class ImageCrawler:
         self._cpu_sample_counter = 0  # Counter for CPU sampling frequency
         self._jitter_applied = False  # Track if jitter has been applied
         
-        self.session: Optional[httpx.AsyncClient] = None
+        self.http_service: Optional[HTTPService] = None
         self.cache_service = get_hybrid_cache_service()  # Hybrid caching service
         self.pending_cache_entries = []  # Batch cache writes
         
     async def __aenter__(self):
         """Async context manager entry."""
-        # Create secure HTTP client with redirect utilities
-        limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
-        self.session = create_safe_client(
-            timeout=httpx.Timeout(
-                connect=10.0,  # Connection timeout
-                read=30.0,    # Read timeout
-                write=10.0,   # Write timeout
-                pool=5.0      # Pool timeout
-            ),
-            verify=True,  # TLS verification
-            http2=True,
-            limits=limits,
-            headers={
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        )
+        # Use centralized HTTP service
+        self.http_service = await get_http_service()
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -607,13 +598,10 @@ class ImageCrawler:
         logger.info("Starting crawler cleanup...")
         
         try:
-            # Close HTTP session
-            if self.session:
-                logger.info("Closing HTTP session...")
-                await self.session.aclose()
-                logger.info("HTTP session closed")
+            # HTTP service cleanup is handled globally, no need to close here
+            logger.info("HTTP service cleanup handled globally")
         except Exception as e:
-            logger.warning(f"Error closing HTTP session: {e}")
+            logger.warning(f"Error during HTTP service cleanup: {e}")
         
         try:
             # Clean up crawler thread pools
@@ -1684,7 +1672,7 @@ class ImageCrawler:
     
     async def download_image(self, image_info: ImageInfo) -> Tuple[Optional[bytes], List[str]]:
         """Download an image from its URL with streaming and early abort capabilities."""
-        if not self.session:
+        if not self.http_service:
             raise RuntimeError("Crawler not initialized. Use 'async with' context manager.")
         
         # Use separate download semaphore for better throughput
@@ -1729,143 +1717,29 @@ class ImageCrawler:
                 return None, errors
     
     async def _download_with_redirect_handling(self, url: str, errors: List[str]) -> Optional[bytes]:
-        """Download with manual redirect handling for security."""
-        current_url = url
-        redirect_count = 0
-        
-        while redirect_count <= self.max_redirects:
-            # Validate URL security
-            is_safe, reason = validate_url_security(current_url)
-            if not is_safe:
-                logger.warning(f"URL rejected: {reason} - {_truncate_log_string(current_url)}")
-                errors.append(f"URL rejected: {reason}")
-                return None
-            
-            try:
-                async with self.session.stream("GET", current_url) as response:
-                    # Handle redirects
-                    if response.status_code in (301, 302, 303, 307, 308):
-                        redirect_url = response.headers.get('location')
-                        if not redirect_url:
-                            errors.append("Redirect without location header")
-                            return None
-                        
-                        # Resolve relative redirects
-                        redirect_url = urljoin(current_url, redirect_url)
-                        
-                        # Validate redirect security
-                        is_safe, reason = validate_redirect_security(redirect_url, redirect_count, self.max_redirects)
-                        if not is_safe:
-                            logger.warning(f"Redirect rejected: {reason} - {_truncate_log_string(redirect_url)}")
-                            errors.append(f"Redirect rejected: {reason}")
-                            return None
-                        
-                        current_url = redirect_url
-                        redirect_count += 1
-                        continue
-                    
-                    response.raise_for_status()
-                    
-                    # Validate content security
-                    content_type = response.headers.get('content-type', '')
-                    content_length = response.headers.get('content-length')
-                    content_length = int(content_length) if content_length else None
-                    
-                    is_safe, reason = validate_content_security(content_type, content_length)
-                    if not is_safe:
-                        logger.warning(f"Content rejected: {reason} - {content_type}")
-                        errors.append(f"Content rejected: {reason}")
-                        return None
-                    
-                    # Stream content with rolling buffer for MIME sniffing and early abort
-                    content = await self._stream_image_content(response, ImageInfo(url=current_url, alt_text='', title='', width=None, height=None), errors)
-                    return content
-                    
-            except httpx.HTTPError as e:
-                if redirect_count == 0:
-                    raise
-                else:
-                    errors.append(f"HTTP error after {redirect_count} redirects: {str(e)}")
-                    return None
-        
-        errors.append(f"Too many redirects: {redirect_count}")
-        return None
-    
-    async def _stream_image_content(self, response: httpx.Response, image_info: ImageInfo, errors: List[str]) -> Optional[bytes]:
-        """
-        Stream image content with rolling buffer for MIME sniffing and early abort rules.
-        
-        Args:
-            response: HTTP response object with streaming capability
-            image_info: Image information object
-            errors: List to append any errors to
-            
-        Returns:
-            Complete image content as bytes, or None if early abort occurred
-        """
-        content_chunks = []
-        total_size = 0
-        rolling_buffer = bytearray()
-        buffer_size = 128 * 1024  # 128KB rolling buffer
-        header_check_size = 32 * 1024  # Check first 32KB for image headers
-        header_checked = False
-        
+        """Download with optimized HTTP service."""
         try:
-            async for chunk in response.aiter_bytes(chunk_size=64 * 1024):  # 64KB chunks
-                total_size += len(chunk)
-                
-                # Early abort: Check total size against security limit
-                if total_size > MAX_CONTENT_LENGTH:
-                    errors.append(f"File too large during streaming: {total_size} bytes (max: {MAX_CONTENT_LENGTH})")
-                    return None
-                
-                # Add to rolling buffer for header detection
-                rolling_buffer.extend(chunk)
-                
-                # Keep rolling buffer at desired size
-                if len(rolling_buffer) > buffer_size:
-                    # Move excess to content chunks
-                    excess = len(rolling_buffer) - buffer_size
-                    content_chunks.append(bytes(rolling_buffer[:excess]))
-                    rolling_buffer = rolling_buffer[excess:]
-                
-                # Early abort: Check image headers in first 32KB
-                if not header_checked and total_size >= header_check_size:
-                    header_checked = True
-                    if not self._is_image_header(rolling_buffer[:header_check_size]):
-                        errors.append("First 32KB does not contain recognizable image header")
-                        return None
-                
-                # Store chunk for final assembly
-                content_chunks.append(chunk)
+            # Use the centralized HTTP service for image downloads
+            content, status = await self.http_service.download_image(url)
             
-            # Add remaining buffer content
-            if rolling_buffer:
-                content_chunks.append(bytes(rolling_buffer))
-            
-            # Assemble final content
-            content = b''.join(content_chunks)
-            
-            # Final size check against security limit
-            if len(content) > MAX_CONTENT_LENGTH:
-                errors.append(f"Final file size too large: {len(content)} bytes (max: {MAX_CONTENT_LENGTH})")
+            if content is None:
+                if status.startswith("BLOCKED_"):
+                    errors.append(f"URL blocked: {status}")
+                elif status.startswith("HTTP_ERROR_"):
+                    errors.append(f"HTTP error: {status}")
+                elif status.startswith("DOWNLOAD_ERROR_"):
+                    errors.append(f"Download error: {status}")
+                else:
+                    errors.append(f"Download failed: {status}")
                 return None
-            
-            # Strip EXIF data for security
-            content = self._strip_exif_data(content)
             
             return content
             
         except Exception as e:
-            error_msg = f"Error during streaming: {str(e)}"
+            error_msg = f"Unexpected error downloading {_truncate_log_string(url)}: {str(e)}"
             logger.error(error_msg)
             errors.append(error_msg)
             return None
-        finally:
-            # Clean up references to free memory immediately
-            del content_chunks
-            del rolling_buffer
-            gc.collect()
     
     def _strip_exif_data(self, image_bytes: bytes) -> bytes:
         """
@@ -1964,41 +1838,30 @@ class ImageCrawler:
         
         return False
     
-    async def _async_face_detection(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[List, Optional[bytes]]:
+    async def _async_face_detection(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[List[dict], Optional[bytes]]:
         """
-        Run face detection in thread pool to avoid blocking async loop.
+        Run face detection via the async face API (single source of truth).
         """
-        def _run_face_detection():
-            """Synchronous face detection function to run in thread pool."""
+        from face import get_face_service, detect_and_embed_async, crop_face_and_create_thumbnail, create_thumbnail
+        # Enhance image once, then call the async face detector.
+        face_svc = get_face_service()
+        enhanced_bytes, _enh_scale = face_svc.enhance_image_for_face_detection(image_bytes)
+
+        faces = await detect_and_embed_async(enhanced_bytes)
+
+        # Optional thumbnail
+        thumbnail_bytes: Optional[bytes] = None
+        if self.crop_faces and faces:
             try:
-                face_service = get_face_service()
-                
-                # Enhance image for better face detection
-                enhanced_bytes, enhancement_scale = face_service.enhance_image_for_face_detection(image_bytes)
-                faces = face_service.detect_and_embed(enhanced_bytes, enhancement_scale, min_size=0)
-                
-                if self.crop_faces and faces:
-                    # Use the first face for thumbnail creation
-                    thumbnail_bytes = face_service.crop_face_and_create_thumbnail(
-                        image_bytes, faces[0], self.face_margin
-                    )
-                elif self.crop_faces and not faces:
-                    # Don't create thumbnail for images without faces when CROP_FACES=true
-                    # Only crop faces that are actually detected
-                    thumbnail_bytes = None
-                # If CROP_FACES=false, no thumbnail is created regardless of face detection
-                
-                return faces, thumbnail_bytes
-            except Exception as e:
-                logger.error(f"Error in face detection thread: {e}")
-                return [], None
-        
-        # Run face detection in thread pool
-        loop = asyncio.get_event_loop()
-        faces, thumbnail_bytes = await loop.run_in_executor(
-            self._face_detection_thread_pool, _run_face_detection
-        )
-        
+                thumbnail_bytes = crop_face_and_create_thumbnail(image_bytes, faces[0])
+            except Exception:
+                thumbnail_bytes = None
+        elif not self.crop_faces:
+            try:
+                thumbnail_bytes = create_thumbnail(image_bytes)
+            except Exception:
+                thumbnail_bytes = None
+
         return faces, thumbnail_bytes
     
     async def _process_single_image(self, image_info: ImageInfo, index: int, total: int) -> Tuple[Optional[str], Optional[str], bool, List[str]]:
@@ -2076,7 +1939,7 @@ class ImageCrawler:
     
     async def fetch_page(self, url: str) -> Tuple[Optional[str], List[str]]:
         """Fetch a web page and return its content and any errors."""
-        if not self.session:
+        if not self.http_service:
             raise RuntimeError("Crawler not initialized. Use 'async with' context manager.")
             
         errors = []
@@ -2091,12 +1954,12 @@ class ImageCrawler:
             
             logger.info(f"Fetching page: {_truncate_log_string(url)}")
             
-            # Use redirect utility for page fetching
-            content, fetch_reason = await fetch_html_with_redirects(url, self.session, max_hops=self.max_redirects)
+            # Use HTTP service for page fetching (as text for HTML)
+            content, status = await self.http_service.get(url, as_text=True)
             
             if content is None:
-                logger.warning(f"Failed to fetch page: {fetch_reason} - {_truncate_log_string(url)}")
-                errors.append(f"Fetch failed: {fetch_reason}")
+                logger.warning(f"Failed to fetch page: {status} - {_truncate_log_string(url)}")
+                errors.append(f"Fetch failed: {status}")
                 return None, errors
             
             return content, errors

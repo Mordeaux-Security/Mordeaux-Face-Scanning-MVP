@@ -52,18 +52,18 @@ class MinerSchemaError(Exception):
     pass
 
 
-def emit_recipe_yaml_block(domain: str, selectors: List[str], attr_priority: List[str], extra_sources: List[str]) -> Dict[str, Any]:
+def emit_recipe_yaml_block(domain: str, candidates: List[CandidateSelector], attr_priority: List[str], extra_sources: List[str]) -> Dict[str, Any]:
     """
-    Emit a normalized YAML recipe block for a domain.
+    Emit a normalized YAML recipe block for a domain using schema v2 format.
     
     Args:
         domain: Domain name for the recipe
-        selectors: List of CSS selectors
+        candidates: List of CandidateSelector objects with kind information
         attr_priority: List of attribute names in priority order
         extra_sources: List of extra source selectors
         
     Returns:
-        Dictionary ready for YAML serialization and merging
+        Dictionary ready for YAML serialization and merging (schema v2)
         
     Raises:
         MinerSchemaError: If schema validation fails
@@ -94,29 +94,27 @@ def emit_recipe_yaml_block(domain: str, selectors: List[str], attr_priority: Lis
     if not domain or not isinstance(domain, str):
         raise MinerSchemaError("Domain must be a non-empty string")
     
-    # Validate selectors
-    if not selectors or not isinstance(selectors, list):
-        raise MinerSchemaError("Selectors must be a non-empty list")
+    # Validate candidates
+    if not candidates or not isinstance(candidates, list):
+        raise MinerSchemaError("Candidates must be a non-empty list")
     
-    if not all(isinstance(sel, str) and sel.strip() for sel in selectors):
-        raise MinerSchemaError("All selectors must be non-empty strings")
-    
-    # Construct the YAML block
+    # Construct the YAML block using schema v2 format
     recipe_block = {
         'domain': domain,
         'selectors': [
             {
-                'selector': selector,
-                'description': f"Extracted from {domain}",
-                'sample_urls': [],  # CLIs can populate these separately
-                'score': 0.8  # Default confidence score
+                'kind': getattr(candidate, 'kind', 'video_grid'),  # Default to video_grid if no kind
+                'css': candidate.selector,
+                'description': candidate.description,
+                'sample_urls': candidate.sample_urls,
+                'score': candidate.score
             }
-            for selector in selectors
+            for candidate in candidates
         ],
         'attributes_priority': normalized_attr_priority,
         'extra_sources': normalized_extra_sources,
         'method': 'miner',
-        'confidence': 0.8,
+        'confidence': candidates[0].score if candidates else 0.0,
         'sample_urls': [],
         'validation_results': []
     }
@@ -737,7 +735,7 @@ def score_candidate(repeats: int, has_duration: int, has_video_href: int, class_
 
 async def render_js(url: str) -> str:
     """
-    JavaScript rendering shim using Playwright.
+    Enhanced JavaScript rendering using Playwright with intelligent waiting.
     
     Args:
         url: URL to render
@@ -754,20 +752,47 @@ async def render_js(url: str) -> str:
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
-                images=False,  # Block images for faster rendering
                 user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             )
             
             page = await context.new_page()
-            page.set_default_timeout(3000)  # 3 seconds
+            page.set_default_timeout(10000)  # 10 seconds
             
             logger.info(f"Rendering JavaScript for URL: {url}")
             
             # Navigate to the page
             await page.goto(url, wait_until='domcontentloaded')
             
-            # Wait for potential dynamic content
-            await page.wait_for_timeout(3000)
+            # Wait for network to be idle (no requests for 500ms)
+            try:
+                await page.wait_for_load_state('networkidle', timeout=5000)
+            except:
+                pass  # Continue even if network doesn't become idle
+            
+            # Wait for common dynamic content patterns
+            try:
+                # Wait for images to load
+                await page.wait_for_selector('img', timeout=3000)
+            except:
+                pass
+            
+            # Try to wait for common gallery/grid patterns
+            gallery_selectors = [
+                '.gallery img', '.gallery-item img', '.thumb img', '.thumbnail img',
+                '.photo-grid img', '.image-grid img', '.media-grid img',
+                '.album img', '.video-thumb img', '.content img'
+            ]
+            
+            for selector in gallery_selectors:
+                try:
+                    await page.wait_for_selector(selector, timeout=1000)
+                    logger.info(f"Found dynamic content with selector: {selector}")
+                    break
+                except:
+                    continue
+            
+            # Additional wait for any remaining dynamic content
+            await page.wait_for_timeout(2000)
             
             # Get the rendered HTML
             html_content = await page.content()
@@ -782,14 +807,14 @@ async def render_js(url: str) -> str:
         raise MinerNetworkError(f"JavaScript rendering failed: {e}") from e
 
 
-async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: httpx.AsyncClient, limits: Limits) -> MinedResult:
+async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, client: httpx.AsyncClient, limits: Limits) -> MinedResult:
     """
-    Single mining entrypoint that orchestrates static and optional JavaScript mining.
+    Single mining entrypoint that orchestrates static and automatic JavaScript mining.
     
     Args:
         url: URL to mine
         html: HTML content (if None, will fetch once statically)
-        use_js: Whether to use JavaScript fallback if no candidates found
+        use_js: Whether to use JavaScript fallback if no candidates found (default: True)
         client: HTTP client for fetching and validation
         limits: Configuration limits
         
@@ -845,9 +870,11 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: http
                 logger.debug(f"Failed to fetch category page {category_url}: {e}")
                 continue
     
-    # If no candidates and JS is enabled, try JavaScript rendering
-    if len(selector_candidates) == 0 and use_js:
-        logger.info("No static candidates found, trying JavaScript rendering")
+    # Auto-detect if JavaScript rendering is needed and enabled
+    needs_js = _should_use_javascript(soup, len(selector_candidates))
+    
+    if needs_js and use_js and PLAYWRIGHT_AVAILABLE:
+        logger.info("Auto-detected JavaScript-heavy site, trying JavaScript rendering")
         try:
             js_html = await render_js(url)
             js_soup = BeautifulSoup(js_html, 'html.parser')
@@ -861,6 +888,10 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: http
                 logger.info("JavaScript rendering found no additional candidates")
         except Exception as e:
             logger.warning(f"JavaScript rendering failed: {e}")
+    elif needs_js and not PLAYWRIGHT_AVAILABLE:
+        logger.warning("JavaScript rendering needed but Playwright not available")
+    elif needs_js and not use_js:
+        logger.info("JavaScript rendering needed but disabled by user")
     
     # Extra sources pass: extract and validate extra sources
     logger.info("Starting extra sources pass")
@@ -1029,14 +1060,127 @@ async def _discover_category_pages(soup: BeautifulSoup, base_url: str, client: h
     return tested_urls
 
 
+def _classify_selector_kind(selector: str, nodes: List[Tag], soup: BeautifulSoup) -> str:
+    """
+    Classify a selector based on context keywords in ancestor class names.
+    
+    Args:
+        selector: CSS selector string
+        nodes: List of matching nodes
+        soup: BeautifulSoup parsed HTML for additional context
+        
+    Returns:
+        Selector kind: "album_grid", "gallery_images", or "video_grid"
+    """
+    if not nodes:
+        return "video_grid"
+    
+    # Collect all class names from ancestors of matching nodes
+    all_classes = set()
+    for node in nodes[:5]:  # Check first 5 nodes to avoid performance issues
+        current = node
+        level = 0
+        while current and level < 4:  # Check up to 4 levels up
+            if current.get('class'):
+                all_classes.update(current.get('class'))
+            current = current.parent
+            level += 1
+    
+    # Convert to lowercase for case-insensitive matching
+    all_classes_lower = {cls.lower() for cls in all_classes}
+    
+    # Check for album-related keywords
+    album_keywords = {'album', 'gallery', 'photos', 'pics', 'collection', 'portfolio'}
+    album_matches = sum(1 for keyword in album_keywords if any(keyword in cls for cls in all_classes_lower))
+    
+    # Check for gallery/viewer keywords
+    gallery_keywords = {'gallery', 'lightbox', 'viewer', 'slideshow', 'carousel', 'modal'}
+    gallery_matches = sum(1 for keyword in gallery_keywords if any(keyword in cls for cls in all_classes_lower))
+    
+    # Count total images on the page for gallery_images classification
+    total_images = len(soup.find_all('img'))
+    
+    # Classification logic - prioritize gallery_images for high image count
+    if gallery_matches >= 1 and total_images >= 10:
+        return "gallery_images"
+    elif album_matches >= 1:
+        return "album_grid"
+    else:
+        return "video_grid"
+
+
+def _should_use_javascript(soup: BeautifulSoup, static_candidates: int) -> bool:
+    """
+    Auto-detect if JavaScript rendering is needed based on page characteristics.
+    
+    Args:
+        soup: BeautifulSoup parsed HTML
+        static_candidates: Number of static candidates found
+        
+    Returns:
+        True if JavaScript rendering should be attempted
+    """
+    # If we already have good static candidates, don't use JS
+    if static_candidates >= 3:
+        return False
+    
+    # Check for JavaScript-heavy indicators
+    js_indicators = 0
+    
+    # 1. Check for React/Vue/Angular indicators
+    scripts = soup.find_all('script')
+    for script in scripts:
+        if script.get('src'):
+            src = script.get('src', '').lower()
+            if any(framework in src for framework in ['react', 'vue', 'angular', 'next.js', 'nuxt']):
+                js_indicators += 2
+        elif script.string:
+            content = script.string.lower()
+            if any(framework in content for framework in ['react', 'vue', 'angular', 'webpack', 'chunk']):
+                js_indicators += 1
+    
+    # 2. Check for SPA indicators (minimal content, lots of scripts)
+    if len(scripts) > 5 and len(soup.find_all(['img', 'video'])) < 3:
+        js_indicators += 2
+    
+    # 3. Check for modern framework divs
+    app_divs = soup.find_all('div', {'id': ['app', 'root', 'main']})
+    if app_divs:
+        js_indicators += 1
+    
+    # 4. Check for data attributes that suggest dynamic loading
+    elements_with_data = soup.find_all(attrs={'data-reactid': True}) + \
+                        soup.find_all(attrs={'data-vue': True}) + \
+                        soup.find_all(attrs={'ng-app': True})
+    if elements_with_data:
+        js_indicators += 1
+    
+    # 5. Check for minimal static content (suggests JS-heavy site)
+    text_content = soup.get_text()
+    if len(text_content.strip()) < 1000 and len(scripts) > 3:
+        js_indicators += 1
+    
+    # 6. Check for common SPA patterns
+    if soup.find('div', class_=lambda x: x and 'loading' in x.lower()):
+        js_indicators += 1
+    
+    # Use JavaScript if we have strong indicators or no static candidates
+    return js_indicators >= 2 or static_candidates == 0
+
+
 def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[CandidateSelector]:
     """Selector pass: find repeated containers and build candidates."""
-    # Find repeated container patterns
+    # Find repeated container patterns - expanded for better coverage
     container_patterns = [
         '.thumb', '.thumbnail', '.video', '.item', '.list-global__item',
         '.gallery-item', '.media-item', '.content-item', '.post-item',
         '.thumb-block', '.thumb-cat', '.thumb-inside', '.thumb-wrapper',
-        '.video-thumb', '.video-item', '.media-thumb', '.content-thumb'
+        '.video-thumb', '.video-item', '.media-thumb', '.content-thumb',
+        # More generic patterns for modern sites
+        'div', 'article', 'section', 'li', 'a',
+        # Common gallery patterns
+        '.gallery', '.grid', '.masonry', '.photo', '.image', '.media',
+        '.album', '.collection', '.portfolio', '.showcase'
     ]
     
     candidate_groups = {}
@@ -1044,7 +1188,11 @@ def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[C
     # Find containers and their images
     for pattern in container_patterns:
         containers = soup.select(pattern)
-        if len(containers) >= 3:  # Only consider patterns with 3+ instances
+        
+        # Adjust minimum threshold based on pattern specificity
+        min_instances = 3 if not pattern in ['div', 'article', 'section', 'li', 'a'] else 10
+        
+        if len(containers) >= min_instances:
             for container in containers:
                 # Find images within this container
                 images = container.find_all(['img', 'source', 'video'])
@@ -1052,6 +1200,10 @@ def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[C
                     # Resolve URL
                     url = resolve_image_url(img, base_url)
                     if not url:
+                        continue
+                    
+                    # Skip very small images (likely icons/logos)
+                    if 'icon' in url.lower() or 'logo' in url.lower() or 'sprite' in url.lower():
                         continue
                     
                     # Generate stable selector
@@ -1068,6 +1220,9 @@ def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[C
     candidates = []
     for selector, nodes in candidate_groups.items():
         if len(nodes) >= 2:  # Only consider selectors with 2+ matches
+            # Classify the selector kind
+            kind = _classify_selector_kind(selector, nodes, soup)
+            
             # Gather evidence and score
             evidence_counts = gather_evidence(nodes)
             score = score_candidate(
@@ -1087,15 +1242,17 @@ def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[C
                     sample_urls.append(url)
                     seen_urls.add(url)
             
-            # Create candidate
+            # Create candidate with kind information
             candidate = CandidateSelector(
                 selector=selector,
-                description=f"{len(nodes)} images in {selector}",
+                description=f"{kind}: {len(nodes)} images in {selector}",
                 evidence={},
                 sample_urls=sample_urls,
                 repetition_count=len(nodes),
                 score=score
             )
+            # Add kind as a custom attribute
+            candidate.kind = kind
             candidates.append(candidate)
     
     # Sort by score and limit
