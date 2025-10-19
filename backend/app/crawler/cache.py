@@ -65,7 +65,7 @@ class HybridCacheService:
             
             # Test Redis connection
             self.redis_client.ping()
-            logger.info("Redis cache initialized successfully")
+            logger.debug("Redis cache initialized successfully")
             
         except Exception as e:
             logger.warning(f"Redis cache unavailable: {e}. Falling back to PostgreSQL only.")
@@ -91,7 +91,7 @@ class HybridCacheService:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1")
             
-            logger.info("PostgreSQL cache initialized successfully")
+            logger.debug("PostgreSQL cache initialized successfully")
             
         except Exception as e:
             logger.warning(f"PostgreSQL cache unavailable: {e}. Using Redis only.")

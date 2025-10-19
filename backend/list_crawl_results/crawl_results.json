@@ -6,9 +6,11 @@
     "mining_success": null,
     "success": true,
     "error": null,
-    "images_saved": 3,
+    "images_saved": 0,
     "thumbnails_saved": 0,
-    "pages_crawled": 5
+    "pages_crawled": 5,
+    "images_found": 15,
+    "total_duration_seconds": 8.308682
   },
   {
     "domain": "forum.candidgirls.io",
@@ -17,9 +19,11 @@
     "mining_success": null,
     "success": true,
     "error": null,
-    "images_saved": 2,
+    "images_saved": 0,
     "thumbnails_saved": 0,
-    "pages_crawled": 5
+    "pages_crawled": 5,
+    "images_found": 31,
+    "total_duration_seconds": 11.803773
   },
   {
     "domain": "wikifeet.com",
@@ -28,9 +32,11 @@
     "mining_success": false,
     "success": true,
     "error": null,
-    "images_saved": 40,
-    "thumbnails_saved": 33,
-    "pages_crawled": 2
+    "images_saved": 0,
+    "thumbnails_saved": 0,
+    "pages_crawled": 5,
+    "images_found": 100,
+    "total_duration_seconds": 38.066711
   },
   {
     "domain": "www.candidcreepshots.cc",
@@ -39,9 +45,11 @@
     "mining_success": null,
     "success": true,
     "error": null,
-    "images_saved": 68,
-    "thumbnails_saved": 26,
-    "pages_crawled": 4
+    "images_saved": 0,
+    "thumbnails_saved": 0,
+    "pages_crawled": 5,
+    "images_found": 100,
+    "total_duration_seconds": 84.858961
   },
   {
     "domain": "ibradome.com",
@@ -50,9 +58,11 @@
     "mining_success": null,
     "success": true,
     "error": null,
-    "images_saved": 19,
-    "thumbnails_saved": 2,
-    "pages_crawled": 5
+    "images_saved": 0,
+    "thumbnails_saved": 0,
+    "pages_crawled": 5,
+    "images_found": 100,
+    "total_duration_seconds": 27.772432
   },
   {
     "domain": "oneprotests.thefap.net",
@@ -61,9 +71,11 @@
     "mining_success": null,
     "success": true,
     "error": null,
-    "images_saved": 34,
-    "thumbnails_saved": 22,
-    "pages_crawled": 5
+    "images_saved": 0,
+    "thumbnails_saved": 0,
+    "pages_crawled": 5,
+    "images_found": 47,
+    "total_duration_seconds": 33.292445
   },
   {
     "domain": "picazor.com",
@@ -74,6 +86,8 @@
     "error": null,
     "images_saved": 0,
     "thumbnails_saved": 0,
-    "pages_crawled": 5
+    "pages_crawled": 5,
+    "images_found": 99,
+    "total_duration_seconds": 18.542297
   }
 ]

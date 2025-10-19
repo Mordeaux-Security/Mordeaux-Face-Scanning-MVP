@@ -4,8 +4,12 @@ LIST CRAWL SUMMARY
 Total sites processed: 7
 Successful crawls: 7
 Failed crawls: 0
-Total images saved: 166
-Total thumbnails saved: 83
+Total images found: 492
+Total images processed: 0
+Total images saved: 0
+Total thumbnails saved: 0
+Total duration: 222.65 seconds
+Images processed per second: 0.00
 Selector mining attempts: 2
 Selector mining successes: 0
 
@@ -16,62 +20,90 @@ Domain: candidteens.net
 URL: https://candidteens.net
 Crawl Success: True
 Selector Mining: Skipped (using existing recipe)
-Images saved: 3
+Images found: 15
+Images saved: 0
 Thumbnails saved: 0
+Images not saved: 15
 Pages crawled: 5
+Duration: 8.31 seconds
+Status: CRITICAL FAIL: No thumbnails saved despite finding images
 --------------------------------------------------
 
 Domain: forum.candidgirls.io
 URL: https://forum.candidgirls.io
 Crawl Success: True
 Selector Mining: Skipped (using existing recipe)
-Images saved: 2
+Images found: 31
+Images saved: 0
 Thumbnails saved: 0
+Images not saved: 31
 Pages crawled: 5
+Duration: 11.80 seconds
+Status: CRITICAL FAIL: No thumbnails saved despite finding images
 --------------------------------------------------
 
 Domain: wikifeet.com
 URL: https://wikifeet.com
 Crawl Success: True
-Selector Mining: Attempted - FAILED
-Images saved: 40
-Thumbnails saved: 33
-Pages crawled: 2
+Selector Mining: Attempted - CRITICAL FAIL
+Images found: 100
+Images saved: 0
+Thumbnails saved: 0
+Images not saved: 100
+Pages crawled: 5
+Duration: 38.07 seconds
+Status: CRITICAL FAIL: No thumbnails saved despite finding images | CRITICAL FAIL: Selector mining failed
 --------------------------------------------------
 
 Domain: www.candidcreepshots.cc
 URL: https://www.candidcreepshots.cc
 Crawl Success: True
 Selector Mining: Skipped (using existing recipe)
-Images saved: 68
-Thumbnails saved: 26
-Pages crawled: 4
+Images found: 100
+Images saved: 0
+Thumbnails saved: 0
+Images not saved: 100
+Pages crawled: 5
+Duration: 84.86 seconds
+Status: CRITICAL FAIL: No thumbnails saved despite finding images
 --------------------------------------------------
 
 Domain: ibradome.com
 URL: https://ibradome.com
 Crawl Success: True
 Selector Mining: Skipped (using existing recipe)
-Images saved: 19
-Thumbnails saved: 2
+Images found: 100
+Images saved: 0
+Thumbnails saved: 0
+Images not saved: 100
 Pages crawled: 5
+Duration: 27.77 seconds
+Status: CRITICAL FAIL: No thumbnails saved despite finding images
 --------------------------------------------------
 
 Domain: oneprotests.thefap.net
 URL: https://oneprotests.thefap.net
 Crawl Success: True
 Selector Mining: Skipped (using existing recipe)
-Images saved: 34
-Thumbnails saved: 22
+Images found: 47
+Images saved: 0
+Thumbnails saved: 0
+Images not saved: 47
 Pages crawled: 5
+Duration: 33.29 seconds
+Status: CRITICAL FAIL: No thumbnails saved despite finding images
 --------------------------------------------------
 
 Domain: picazor.com
 URL: https://picazor.com/en
 Crawl Success: True
-Selector Mining: Attempted - FAILED
+Selector Mining: Attempted - CRITICAL FAIL
+Images found: 99
 Images saved: 0
 Thumbnails saved: 0
+Images not saved: 99
 Pages crawled: 5
+Duration: 18.54 seconds
+Status: CRITICAL FAIL: No thumbnails saved despite finding images | CRITICAL FAIL: Selector mining failed
 --------------------------------------------------
 

@@ -85,7 +85,7 @@ def load_site_recipes(path: str = "site_recipes.yaml") -> Dict[str, Any]:
     
     # Check if we already have this file cached
     if _recipe_cache is not None and _recipe_cache_file == abs_path:
-        logger.debug(f"Using cached recipes from {abs_path}")
+        logger.debug("Using cached recipes")
         return _recipe_cache
     
     # Check if file exists
@@ -110,7 +110,7 @@ def load_site_recipes(path: str = "site_recipes.yaml") -> Dict[str, Any]:
         _recipe_cache = recipes
         _recipe_cache_file = abs_path
         
-        logger.debug(f"Loaded recipes from {abs_path}: {len(recipes.get('sites', {}))} sites")
+        logger.debug(f"Loaded {len(recipes.get('sites', {}))} site recipes")
         return recipes
         
     except yaml.YAMLError as e:
@@ -150,7 +150,7 @@ def save_site_recipes(recipes: Dict[str, Any], path: str = "site_recipes.yaml") 
         _recipe_cache = recipes
         _recipe_cache_file = abs_path
         
-        logger.info(f"Saved site recipes to {abs_path}")
+        logger.debug(f"Saved site recipes to {abs_path}")
         return True
         
     except Exception as e:
@@ -188,7 +188,7 @@ def get_recipe_for_host(host: str, path: str = "site_recipes.yaml") -> Dict[str,
         # Merge site recipe with defaults (site recipe takes precedence)
         merged_recipe = _merge_recipes(defaults, site_recipe)
         
-        logger.debug(f"Recipe for host '{host}': {len(merged_recipe.get('selectors', []))} selectors, method='{merged_recipe.get('method', 'smart')}'")
+        logger.debug(f"Recipe for {host}: {len(merged_recipe.get('selectors', []))} selectors")
         return merged_recipe
         
     except Exception as e:
@@ -242,7 +242,7 @@ def _enforce_schema(recipes: Dict[str, Any]) -> Dict[str, Any]:
     # Remove invalid top-level keys
     invalid_keys = set(recipes.keys()) - VALID_SCHEMA_KEYS
     if invalid_keys:
-        logger.warning(f"Auto-fixed: removed invalid top-level keys {sorted(invalid_keys)}")
+        logger.debug(f"Auto-fixed: removed invalid top-level keys {sorted(invalid_keys)}")
     
     # Process defaults section
     if "defaults" in recipes and isinstance(recipes["defaults"], dict):
@@ -343,7 +343,7 @@ def _normalize_selectors(selectors: Any, entry_path: str) -> List[Dict[str, str]
                     logger.warning(f"Auto-fixed {entry_path}[{i}]: invalid kind '{selector['kind']}', skipping")
             # Legacy format: {"selector": ".selector", "description": "..."} - convert to new format
             elif "selector" in selector:
-                logger.info(f"Auto-converted {entry_path}[{i}]: legacy selector to new format")
+                logger.debug(f"Auto-converted {entry_path}[{i}]: legacy selector to new format")
                 normalized_selector = {
                     "kind": "video_grid",  # Default kind for backward compatibility
                     "css": str(selector["selector"])
@@ -353,7 +353,7 @@ def _normalize_selectors(selectors: Any, entry_path: str) -> List[Dict[str, str]
                 logger.warning(f"Auto-fixed {entry_path}[{i}]: invalid selector entry, skipping")
         # String format: ".selector" - convert to new format
         elif isinstance(selector, str):
-            logger.info(f"Auto-converted {entry_path}[{i}]: string selector to new format")
+            logger.debug(f"Auto-converted {entry_path}[{i}]: string selector to new format")
             normalized_selector = {
                 "kind": "video_grid",  # Default kind for backward compatibility
                 "css": str(selector)

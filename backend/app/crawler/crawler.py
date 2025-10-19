@@ -407,7 +407,7 @@ class MemoryMonitor:
     def should_trigger_gc(self) -> bool:
         """Determine if garbage collection should be triggered."""
         status = self.get_memory_status()
-        logger.info(f"Memory status: {status}")
+        logger.debug(f"Memory status: {status}")
         
         # Always trigger GC if memory is critical
         if status['pressure_level'] == 'critical':
@@ -602,60 +602,60 @@ class ImageCrawler:
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit with comprehensive cleanup."""
-        logger.info("Starting crawler cleanup...")
+        logger.debug("Starting crawler cleanup...")
         
         try:
             # HTTP service cleanup is handled globally, no need to close here
-            logger.info("HTTP service cleanup handled globally")
+            logger.debug("HTTP service cleanup handled globally")
         except Exception as e:
             logger.warning(f"Error during HTTP service cleanup: {e}")
         
         try:
             # JavaScript rendering service cleanup is handled globally
             if self.js_rendering_service:
-                logger.info("JavaScript rendering service cleanup handled globally")
+                logger.debug("JavaScript rendering service cleanup handled globally")
         except Exception as e:
             logger.warning(f"Error during JavaScript rendering service cleanup: {e}")
         
         try:
             # Clean up crawler thread pools
-            logger.info("Shutting down crawler thread pools...")
+            logger.debug("Shutting down crawler thread pools...")
             self._face_detection_thread_pool.shutdown(wait=True)
             self._storage_thread_pool.shutdown(wait=True)
-            logger.info("Crawler thread pools shutdown complete")
+            logger.debug("Crawler thread pools shutdown complete")
         except Exception as e:
             logger.warning(f"Error shutting down crawler thread pools: {e}")
         
         try:
             # Clean up service resources
-            logger.info("Cleaning up service resources...")
+            logger.debug("Cleaning up service resources...")
             close_storage_resources = get_storage_cleanup_function()
             close_storage_resources()
-            logger.info("Storage service resources cleaned up")
+            logger.debug("Storage service resources cleaned up")
         except Exception as e:
             logger.warning(f"Error cleaning up storage resources: {e}")
         
         try:
             # Clean up face service resources
-            logger.info("Cleaning up face service resources...")
+            logger.debug("Cleaning up face service resources...")
             close_face_service()
-            logger.info("Face service resources cleaned up")
+            logger.debug("Face service resources cleaned up")
         except Exception as e:
             logger.warning(f"Error cleaning up face service resources: {e}")
         
         try:
             # Clean up cache service resources
-            logger.info("Cleaning up cache service resources...")
+            logger.debug("Cleaning up cache service resources...")
             close_cache_service()
-            logger.info("Cache service resources cleaned up")
+            logger.debug("Cache service resources cleaned up")
         except Exception as e:
             logger.warning(f"Error cleaning up cache service resources: {e}")
         
         try:
             # Final memory cleanup
-            logger.info("Performing final memory cleanup...")
+            logger.debug("Performing final memory cleanup...")
             gc.collect()
-            logger.info("Crawler cleanup complete")
+            logger.debug("Crawler cleanup complete")
         except Exception as e:
             logger.warning(f"Error during final memory cleanup: {e}")
     
@@ -678,7 +678,7 @@ class ImageCrawler:
             
             # Trigger garbage collection if needed
             if self._memory_monitor.should_trigger_gc():
-                logger.info(f"Triggering garbage collection due to memory pressure: {memory_status['pressure_level']}")
+                logger.debug(f"Triggering garbage collection due to memory pressure: {memory_status['pressure_level']}")
                 gc.collect()
             
             # Calculate base concurrency from CPU and memory
@@ -703,9 +703,8 @@ class ImageCrawler:
                 self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
                 self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, DEFAULT_MAX_CONCURRENT_DOWNLOADS))
                 
-                logger.info(f"Dynamic concurrency adjustment: {old_concurrency} → {new_concurrency} "
-                           f"(CPU: {cpu_percent:.1f}%, Memory: {memory_status['pressure_level']}, "
-                           f"Available: {memory_status['available_gb']:.1f}GB)")
+                logger.debug(f"Dynamic concurrency adjustment: {old_concurrency} → {new_concurrency} "
+                           f"(CPU: {cpu_percent:.1f}%, Memory: {memory_status['pressure_level']})")
                 
         except Exception as e:
             logger.warning(f"Failed to adjust concurrency dynamically: {e}")
@@ -1668,9 +1667,9 @@ class ImageCrawler:
             
             # Debug logging for video URL extraction
             if video_url:
-                logger.info(f"✅ Extracted video URL: {video_url[:100]}... for image: {absolute_url[:80]}...")
+                logger.info(f" Extracted video URL: {video_url[:100]}... for image: {absolute_url[:80]}...")
             else:
-                logger.info(f"❌ No video URL found for image: {absolute_url[:80]}...")
+                logger.info(f" No video URL found for image: {absolute_url[:80]}...")
             
             images.append(ImageInfo(
                 url=absolute_url,
@@ -1694,7 +1693,7 @@ class ImageCrawler:
                 return None
             
             src = img_tag.get('src', '')
-            logger.info(f"🔍 Extracting video URL from context for img tag: {src[:50]}...")
+            logger.info(f" Extracting video URL from context for img tag: {src[:50]}...")
             # Method 1: Check parent <a> tag href
             parent_link = img_tag.find_parent('a')
             logger.info(f"DEBUG: parent_link = {parent_link is not None}")
@@ -1709,12 +1708,12 @@ class ImageCrawler:
                     is_video = self._is_video_url(absolute_url)
                     logger.info(f"DEBUG: is_video = {is_video}")
                     if is_video:
-                        logger.info(f"✅ Found video URL in parent <a> tag: {absolute_url[:100]}...")
+                        logger.info(f" Found video URL in parent <a> tag: {absolute_url[:100]}...")
                         return absolute_url
                     else:
-                        logger.info(f"❌ Parent href is not a video URL: {absolute_url[:100]}...")
+                        logger.info(f" Parent href is not a video URL: {absolute_url[:100]}...")
             else:
-                logger.info(f"❌ No parent <a> tag found for img")
+                logger.info(f" No parent <a> tag found for img")
             
             # Method 2: Check data attributes on the image tag itself
             video_attrs = ['data-video-url', 'data-video', 'data-href', 'data-link']

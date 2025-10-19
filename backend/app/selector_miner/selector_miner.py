@@ -1043,7 +1043,7 @@ async def render_js(url: str) -> str:
             page = await context.new_page()
             page.set_default_timeout(10000)  # 10 seconds
             
-            logger.info(f"Rendering JavaScript for URL: {url}")
+            logger.debug(f"Rendering JavaScript for {url}")
             
             # Navigate to the page
             await page.goto(url, wait_until='domcontentloaded')
@@ -1074,7 +1074,7 @@ async def render_js(url: str) -> str:
             for selector in gallery_selectors:
                 try:
                     await page.wait_for_selector(selector, timeout=1000)
-                    logger.info(f"Found dynamic content with selector: {selector}")
+                    logger.debug(f"Found dynamic content with selector: {selector}")
                     break
                 except:
                     continue
@@ -1087,7 +1087,7 @@ async def render_js(url: str) -> str:
             
             await browser.close()
             
-            logger.info(f"JavaScript rendering completed for {url} ({len(html_content)} chars)")
+            logger.debug(f"JavaScript rendering completed for {url} ({len(html_content)} chars)")
             return html_content
             
     except Exception as e:
@@ -1121,7 +1121,7 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, clien
         try:
             response = await client.get(url, timeout=limits.timeout_seconds)
             html = response.text
-            logger.info(f"Fetched HTML from {url} ({len(html)} chars)")
+            logger.debug(f"Fetched HTML from {url} ({len(html)} chars)")
         except Exception as e:
             logger.error(f"Failed to fetch HTML from {url}: {e}")
             raise MinerNetworkError(f"Failed to fetch HTML from {url}: {e}") from e
@@ -1133,15 +1133,15 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, clien
     # Detect if this is a forum site
     is_forum, forum_confidence = detect_forum_site(url, soup)
     if is_forum:
-        logger.info(f"Detected forum site with confidence {forum_confidence:.2f}")
+        logger.debug(f"Detected forum site with confidence {forum_confidence:.2f}")
         # Extract forum threads for additional mining
         thread_urls = extract_forum_threads(soup, base_url)
-        logger.info(f"Found {len(thread_urls)} forum threads")
+        logger.debug(f"Found {len(thread_urls)} forum threads")
         
         # Mine a few thread pages for better selectors
         for thread_url in thread_urls[:3]:  # Limit to first 3 threads
             try:
-                logger.info(f"Mining forum thread: {thread_url}")
+                logger.debug(f"Mining forum thread: {thread_url}")
                 thread_response = await client.get(thread_url, timeout=limits.timeout_seconds)
                 if thread_response.status_code == 200:
                     thread_soup = BeautifulSoup(thread_response.text, 'html.parser')
@@ -1153,7 +1153,7 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, clien
                 continue
     
     # Selector pass: find repeated containers and build candidates
-    logger.info("Starting selector pass")
+    logger.debug("Starting selector pass")
     selector_candidates = []
     if not is_forum:  # Only do initial selector pass if not a forum
         selector_candidates = _selector_pass(soup, base_url, limits)
@@ -1163,12 +1163,12 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, clien
     
     # If homepage didn't yield good results, try category pages
     if len(selector_candidates) < 2:
-        logger.info("Homepage yielded few candidates, discovering category pages...")
+        logger.debug("Homepage yielded few candidates, discovering category pages...")
         category_urls = await _discover_category_pages(soup, base_url, client)
         
         for category_url in category_urls:
             try:
-                logger.info(f"Testing category page: {category_url}")
+                logger.debug(f"Testing category page: {category_url}")
                 cat_response = await client.get(category_url, timeout=limits.timeout_seconds)
                 if cat_response.status_code == 200:
                     cat_soup = BeautifulSoup(cat_response.text, 'html.parser')
@@ -1176,7 +1176,7 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, clien
                     
                     # Add candidates from category pages
                     selector_candidates.extend(cat_candidates)
-                    logger.info(f"Found {len(cat_candidates)} additional candidates from {category_url}")
+                    logger.debug(f"Found {len(cat_candidates)} additional candidates from {category_url}")
                     
                     if len(selector_candidates) >= 3:  # Stop once we have enough candidates
                         break
@@ -1188,7 +1188,7 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, clien
     needs_js = _should_use_javascript(soup, len(selector_candidates))
     
     if needs_js and use_js and PLAYWRIGHT_AVAILABLE:
-        logger.info("Auto-detected JavaScript-heavy site, trying JavaScript rendering")
+        logger.debug("Auto-detected JavaScript-heavy site, trying JavaScript rendering")
         try:
             js_html = await render_js(url)
             js_soup = BeautifulSoup(js_html, 'html.parser')
@@ -1197,9 +1197,9 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool = True, clien
             
             if len(js_candidates) > 0:
                 selector_candidates = js_candidates
-                logger.info(f"JavaScript rendering found {len(js_candidates)} candidates")
+                logger.debug(f"JavaScript rendering found {len(js_candidates)} candidates")
             else:
-                logger.info("JavaScript rendering found no additional candidates")
+                logger.debug("JavaScript rendering found no additional candidates")
         except Exception as e:
             logger.warning(f"JavaScript rendering failed: {e}")
     elif needs_js and not PLAYWRIGHT_AVAILABLE:

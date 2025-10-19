@@ -20,6 +20,7 @@ from app.crawler.crawler_settings import (
     LIST_CRAWL_SKIP_EXISTING_RECIPES
 )
 from app.crawler.crawler import ImageCrawler
+from app.crawler.simple_logging import setup_crawler_logging
 from app.selector_miner.selector_miner import mine_page, Limits, emit_recipe_yaml_block
 from app.selector_miner.site_recipes import load_site_recipes, save_site_recipes
 import yaml
@@ -44,6 +45,10 @@ class ListCrawler:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         
+        # Setup enhanced logging
+        self.log_file = setup_crawler_logging()
+        logger.debug(f"Enhanced logging enabled - debug logs saved to: {self.log_file}")
+        
         # Load existing site recipes
         self.site_recipes = load_site_recipes()
         
@@ -54,6 +59,9 @@ class ListCrawler:
             'sites_failed': 0,
             'total_images_saved': 0,
             'total_thumbnails_saved': 0,
+            'total_images_found': 0,
+            'total_images_processed': 0,
+            'total_duration_seconds': 0.0,
             'selector_mining_attempts': 0,
             'selector_mining_successes': 0
         }
@@ -87,7 +95,7 @@ class ListCrawler:
         except Exception as e:
             logger.error(f"Error reading sites file {self.sites_file}: {e}")
         
-        logger.info(f"Parsed {len(sites)} valid URLs from {self.sites_file}")
+        logger.debug(f"Parsed {len(sites)} valid URLs from {self.sites_file}")
         return sites
     
     def _is_valid_url(self, url: str) -> bool:
@@ -120,7 +128,7 @@ class ListCrawler:
             True if successful, False otherwise
         """
         domain = self._extract_domain(url)
-        logger.info(f"Mining selectors for {domain} ({url})")
+        logger.debug(f"Mining selectors for {domain}")
         
         try:
             limits = Limits(
@@ -134,7 +142,7 @@ class ListCrawler:
                 result = await mine_page(url, None, use_js=False, client=client, limits=limits)
                 
                 if result.candidates:
-                    logger.info(f"Found {len(result.candidates)} selector candidates for {domain}")
+                    logger.debug(f"Found {len(result.candidates)} selector candidates for {domain}")
                     
                     # Generate recipe
                     recipe = emit_recipe_yaml_block(
@@ -153,7 +161,7 @@ class ListCrawler:
                     # Save updated recipes
                     save_site_recipes(self.site_recipes)
                     
-                    logger.info(f"Successfully generated recipe for {domain}")
+                    logger.info(f"Generated recipe for {domain}")
                     self.stats['selector_mining_successes'] += 1
                     return True
                 else:
@@ -177,7 +185,7 @@ class ListCrawler:
             Dictionary with crawling results
         """
         domain = self._extract_domain(url)
-        logger.info(f"Starting crawl of {domain} ({url})")
+        logger.debug(f"Starting crawl of {domain}")
         
         result = {
             'url': url,
@@ -186,7 +194,9 @@ class ListCrawler:
             'error': None,
             'images_saved': 0,
             'thumbnails_saved': 0,
-            'pages_crawled': 0
+            'pages_crawled': 0,
+            'images_found': 0,
+            'total_duration_seconds': 0.0
         }
         
         try:
@@ -206,14 +216,19 @@ class ListCrawler:
                 'success': True,
                 'images_saved': crawl_result.raw_images_saved,
                 'thumbnails_saved': crawl_result.thumbnails_saved,
-                'pages_crawled': crawl_result.pages_crawled
+                'pages_crawled': crawl_result.pages_crawled,
+                'images_found': crawl_result.images_found,
+                'total_duration_seconds': crawl_result.total_duration_seconds
             })
             
             # Update global stats
             self.stats['total_images_saved'] += crawl_result.raw_images_saved
             self.stats['total_thumbnails_saved'] += crawl_result.thumbnails_saved
+            self.stats['total_images_found'] += crawl_result.images_found
+            self.stats['total_images_processed'] += crawl_result.raw_images_saved + crawl_result.thumbnails_saved
+            self.stats['total_duration_seconds'] += crawl_result.total_duration_seconds
             
-            logger.info(f"Completed crawl of {domain}: {crawl_result.raw_images_saved} images, {crawl_result.thumbnails_saved} thumbnails")
+            logger.info(f"{domain}: {crawl_result.raw_images_saved} images, {crawl_result.thumbnails_saved} thumbnails")
             
         except Exception as e:
             logger.error(f"Error crawling {domain}: {e}")
@@ -242,12 +257,12 @@ class ListCrawler:
         
         mining_success = None
         if needs_mining:
-            logger.info(f"Mining selectors for {domain}")
+            logger.debug(f"Mining selectors for {domain}")
             mining_success = await self.mine_site_selectors(url)
             if not mining_success:
-                logger.warning(f"Selector mining failed for {domain}, proceeding with crawl anyway")
+                logger.warning(f"Selector mining failed for {domain}")
         else:
-            logger.info(f"Using existing recipe for {domain}")
+            logger.debug(f"Using existing recipe for {domain}")
         
         # Crawl the site
         crawl_result = await self.crawl_site(url)
@@ -331,8 +346,11 @@ class ListCrawler:
         actual_stats = {
             'sites_processed': sum(1 for r in results if r['success']),
             'sites_failed': sum(1 for r in results if not r['success']),
+            'total_images_found': sum(r.get('images_found', 0) for r in results),
             'total_images_saved': sum(r.get('images_saved', 0) for r in results),
             'total_thumbnails_saved': sum(r.get('thumbnails_saved', 0) for r in results),
+            'total_images_processed': sum(r.get('images_saved', 0) + r.get('thumbnails_saved', 0) for r in results),
+            'total_duration_seconds': sum(r.get('total_duration_seconds', 0) for r in results),
             'selector_mining_attempts': sum(1 for r in results if r.get('mining_attempted', False)),
             'selector_mining_successes': sum(1 for r in results if r.get('mining_success', False))
         }
@@ -346,8 +364,19 @@ class ListCrawler:
             f.write(f"Total sites processed: {len(results)}\n")
             f.write(f"Successful crawls: {actual_stats['sites_processed']}\n")
             f.write(f"Failed crawls: {actual_stats['sites_failed']}\n")
+            f.write(f"Total images found: {actual_stats['total_images_found']}\n")
+            f.write(f"Total images processed: {actual_stats['total_images_processed']}\n")
             f.write(f"Total images saved: {actual_stats['total_images_saved']}\n")
             f.write(f"Total thumbnails saved: {actual_stats['total_thumbnails_saved']}\n")
+            f.write(f"Total duration: {actual_stats['total_duration_seconds']:.2f} seconds\n")
+            
+            # Calculate images per second
+            if actual_stats['total_duration_seconds'] > 0:
+                images_per_second = actual_stats['total_images_processed'] / actual_stats['total_duration_seconds']
+                f.write(f"Images processed per second: {images_per_second:.2f}\n")
+            else:
+                f.write(f"Images processed per second: N/A (no processing time)\n")
+            
             f.write(f"Selector mining attempts: {actual_stats['selector_mining_attempts']}\n")
             f.write(f"Selector mining successes: {actual_stats['selector_mining_successes']}\n\n")
             
@@ -359,22 +388,47 @@ class ListCrawler:
                 f.write(f"URL: {result['url']}\n")
                 f.write(f"Crawl Success: {result['success']}\n")
                 
-                # Mining information
+                # Mining information with critical failure indicator
                 if result.get('mining_attempted', False):
-                    f.write(f"Selector Mining: Attempted - {'SUCCESS' if result.get('mining_success', False) else 'FAILED'}\n")
+                    mining_success = result.get('mining_success', False)
+                    mining_status = "SUCCESS" if mining_success else "CRITICAL FAIL"
+                    f.write(f"Selector Mining: Attempted - {mining_status}\n")
                 else:
                     f.write(f"Selector Mining: Skipped (using existing recipe)\n")
                 
                 if result['success']:
-                    f.write(f"Images saved: {result.get('images_saved', 0)}\n")
-                    f.write(f"Thumbnails saved: {result.get('thumbnails_saved', 0)}\n")
-                    f.write(f"Pages crawled: {result.get('pages_crawled', 0)}\n")
+                    images_found = result.get('images_found', 0)
+                    images_saved = result.get('images_saved', 0)
+                    thumbnails_saved = result.get('thumbnails_saved', 0)
+                    pages_crawled = result.get('pages_crawled', 0)
+                    duration = result.get('total_duration_seconds', 0)
+                    
+                    f.write(f"Images found: {images_found}\n")
+                    f.write(f"Images saved: {images_saved}\n")
+                    f.write(f"Thumbnails saved: {thumbnails_saved}\n")
+                    f.write(f"Images not saved: {images_found - images_saved}\n")
+                    f.write(f"Pages crawled: {pages_crawled}\n")
+                    f.write(f"Duration: {duration:.2f} seconds\n")
+                    
+                    # Critical failure indicators
+                    critical_fails = []
+                    if thumbnails_saved == 0 and images_found > 0:
+                        critical_fails.append("CRITICAL FAIL: No thumbnails saved despite finding images")
+                    if result.get('mining_attempted', False) and not result.get('mining_success', False):
+                        critical_fails.append("CRITICAL FAIL: Selector mining failed")
+                    
+                    if critical_fails:
+                        f.write(f"Status: {' | '.join(critical_fails)}\n")
+                    else:
+                        f.write(f"Status: OK\n")
+                        
                 else:
                     f.write(f"Error: {result.get('error', 'Unknown error')}\n")
+                    f.write(f"Status: CRITICAL FAIL: Crawl failed\n")
                 
                 f.write("-" * 50 + "\n\n")
         
-        logger.info(f"Results saved to {self.output_dir}")
+        logger.debug(f"Results saved to {self.output_dir}")
 
 
 async def main():

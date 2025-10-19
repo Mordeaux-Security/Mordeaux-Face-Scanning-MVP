@@ -240,7 +240,7 @@ async def save_image(
         try:
             client.put_object(bucket, image_key, io.BytesIO(image_bytes), len(image_bytes),
                               content_type=mime, metadata=user_meta)
-            logger.info(f"Successfully uploaded image to {bucket}/{image_key}")
+            logger.debug(f"Successfully uploaded image to {bucket}/{image_key}")
         except Exception as e:
             logger.error(f"Failed to upload image to {bucket}/{image_key}: {e}")
             raise
@@ -267,7 +267,7 @@ async def save_image(
         try:
             client.put_object(bucket, sidecar_key, io.BytesIO(sidecar_bytes), len(sidecar_bytes),
                               content_type="application/json")
-            logger.info(f"Successfully uploaded sidecar to {bucket}/{sidecar_key}")
+            logger.debug(f"Successfully uploaded sidecar to {bucket}/{sidecar_key}")
         except Exception as e:
             logger.error(f"Failed to upload sidecar to {bucket}/{sidecar_key}: {e}")
             raise
@@ -754,40 +754,40 @@ def close_storage_resources():
     """
     global _minio_client, _minio_http, _boto3_client, _thread_pool
     
-    logger.info("Closing storage service resources...")
+    logger.debug("Closing storage service resources...")
     
     try:
         # Shutdown thread pool if it exists
         if _thread_pool is not None:
-            logger.info("Shutting down storage service thread pool...")
+            logger.debug("Shutting down storage service thread pool...")
             _thread_pool.shutdown(wait=True)
-            logger.info("Storage service thread pool shutdown complete")
+            logger.debug("Storage service thread pool shutdown complete")
     except Exception as e:
         logger.warning(f"Error shutting down storage service thread pool: {e}")
     
     try:
         # Close MinIO HTTP connection pool if it exists
         if _minio_http is not None:
-            logger.info("Closing MinIO HTTP connection pool...")
+            logger.debug("Closing MinIO HTTP connection pool...")
             _minio_http.clear()
-            logger.info("MinIO HTTP connection pool closed")
+            logger.debug("MinIO HTTP connection pool closed")
     except Exception as e:
         logger.warning(f"Error closing MinIO HTTP connection pool: {e}")
     
     try:
         # Clear client references
         if _minio_client is not None:
-            logger.info("Clearing MinIO client reference...")
+            logger.debug("Clearing MinIO client reference...")
             del _minio_client
-            logger.info("MinIO client reference cleared")
+            logger.debug("MinIO client reference cleared")
     except Exception as e:
         logger.warning(f"Error clearing MinIO client: {e}")
     
     try:
         if _boto3_client is not None:
-            logger.info("Clearing boto3 S3 client reference...")
+            logger.debug("Clearing boto3 S3 client reference...")
             del _boto3_client
-            logger.info("boto3 S3 client reference cleared")
+            logger.debug("boto3 S3 client reference cleared")
     except Exception as e:
         logger.warning(f"Error clearing boto3 S3 client: {e}")
     
@@ -797,14 +797,14 @@ def close_storage_resources():
         _minio_http = None
         _boto3_client = None
         _thread_pool = None
-        logger.info("Storage service global variables reset")
+        logger.debug("Storage service global variables reset")
     except Exception as e:
         logger.warning(f"Error resetting storage service globals: {e}")
     
     try:
         # Force garbage collection to free memory
         gc.collect()
-        logger.info("Storage service cleanup complete - garbage collection triggered")
+        logger.debug("Storage service cleanup complete - garbage collection triggered")
     except Exception as e:
         logger.warning(f"Error during storage service garbage collection: {e}")
 

@@ -112,14 +112,7 @@ def main():
     crawler_settings.LIST_CRAWL_MAX_IMAGES_PER_SITE = args.max_images_per_site
     crawler_settings.LIST_CRAWL_AUTO_SELECTOR_MINING = not args.no_selector_mining
     
-    logger.info(f"Starting list crawl with settings:")
-    logger.info(f"  Sites file: {args.sites_file}")
-    logger.info(f"  Output directory: {args.output_dir}")
-    logger.info(f"  Max concurrent: {args.max_concurrent}")
-    logger.info(f"  Max pages per site: {args.max_pages_per_site}")
-    logger.info(f"  Max images per site: {args.max_images_per_site}")
-    logger.info(f"  Require face: {args.require_face}")
-    logger.info(f"  Auto selector mining: {not args.no_selector_mining}")
+    logger.info(f"Starting crawl: {args.sites_file} -> {args.output_dir}")
     
     # Run the list crawler
     async def run_crawler():
@@ -140,36 +133,35 @@ def main():
             actual_stats = {
                 'sites_processed': sum(1 for r in results_list if r['success']),
                 'sites_failed': sum(1 for r in results_list if not r['success']),
+                'total_images_found': sum(r.get('images_found', 0) for r in results_list),
                 'total_images_saved': sum(r.get('images_saved', 0) for r in results_list),
                 'total_thumbnails_saved': sum(r.get('thumbnails_saved', 0) for r in results_list),
+                'total_images_processed': sum(r.get('images_saved', 0) + r.get('thumbnails_saved', 0) for r in results_list),
+                'total_duration_seconds': sum(r.get('total_duration_seconds', 0) for r in results_list),
                 'selector_mining_attempts': sum(1 for r in results_list if r.get('mining_attempted', False)),
                 'selector_mining_successes': sum(1 for r in results_list if r.get('mining_success', False))
             }
             
             # Print summary
-            logger.info("\n" + "="*50)
-            logger.info("CRAWL SUMMARY")
-            logger.info("="*50)
-            logger.info(f"Total sites processed: {results['total_sites']}")
-            logger.info(f"Successful crawls: {actual_stats['sites_processed']}")
-            logger.info(f"Failed crawls: {actual_stats['sites_failed']}")
-            logger.info(f"Total images saved: {actual_stats['total_images_saved']}")
-            logger.info(f"Total thumbnails saved: {actual_stats['total_thumbnails_saved']}")
-            logger.info(f"Selector mining attempts: {actual_stats['selector_mining_attempts']}")
-            logger.info(f"Selector mining successes: {actual_stats['selector_mining_successes']}")
+            logger.info(f"SUMMARY: {actual_stats['sites_processed']}/{results['total_sites']} sites successful")
+            logger.info(f"Images found: {actual_stats['total_images_found']}, Images processed: {actual_stats['total_images_processed']}")
+            logger.info(f"Images saved: {actual_stats['total_images_saved']}, Thumbnails saved: {actual_stats['total_thumbnails_saved']}")
             
-            # Print per-site summary
-            logger.info("\n" + "="*50)
-            logger.info("PER-SITE RESULTS")
-            logger.info("="*50)
+            # Calculate and display images per second
+            if actual_stats['total_duration_seconds'] > 0:
+                images_per_second = actual_stats['total_images_processed'] / actual_stats['total_duration_seconds']
+                logger.info(f"Images processed per second: {images_per_second:.2f}")
+            
+            # Count critical failures
+            critical_failures = 0
             for result in results_list:
-                logger.info(f"✅ {result['domain']}: {result.get('images_saved', 0)} images, {result.get('thumbnails_saved', 0)} thumbnails")
-                if result.get('mining_attempted', False):
-                    status = "✅ SUCCESS" if result.get('mining_success', False) else "❌ FAILED"
-                    logger.info(f"   Selector Mining: {status}")
-                else:
-                    logger.info(f"   Selector Mining: Skipped (existing recipe)")
-            logger.info("="*50)
+                if result.get('thumbnails_saved', 0) == 0 and result.get('images_found', 0) > 0:
+                    critical_failures += 1
+                if result.get('mining_attempted', False) and not result.get('mining_success', False):
+                    critical_failures += 1
+            
+            if critical_failures > 0:
+                logger.warning(f"CRITICAL FAILURES: {critical_failures} sites require immediate attention")
             
             return 0 if actual_stats['sites_failed'] == 0 else 1
             
