@@ -1,0 +1,421 @@
+#!/usr/bin/env python3
+"""
+review-selectors - CLI tool for reviewing and approving image selectors
+
+Usage:
+    review-selectors --domain example.com [--yaml site_recipes.yaml] [--download-dir /tmp/review]
+
+This tool downloads sample thumbnails for each candidate selector,
+displays them in a console interface for review, and updates the YAML
+file based on user approval.
+"""
+
+import argparse
+import asyncio
+import logging
+import os
+import sys
+import tempfile
+from pathlib import Path
+from typing import List, Dict, Optional
+
+# Add the project root to the path
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from backend.app.selector_miner import emit_recipe_yaml_block
+from backend.app.selector_miner import create_safe_client, fetch_with_redirects
+import httpx
+import yaml
+import hashlib
+
+
+def setup_logging(verbose: bool = False):
+    """Set up logging configuration."""
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+
+
+def load_domain_recipe(domain: str, yaml_file: str) -> Optional[Dict]:
+    """
+    Load recipe for a domain from YAML file.
+    
+    Args:
+        domain: Domain name to load
+        yaml_file: Path to YAML file
+        
+    Returns:
+        Recipe dictionary if found, None otherwise
+    """
+    yaml_path = Path(yaml_file)
+    if not yaml_path.exists():
+        logging.error(f"YAML file not found: {yaml_file}")
+        return None
+    
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            recipes = yaml.safe_load(f) or {}
+        
+        sites = recipes.get('sites', {})
+        if domain not in sites:
+            logging.error(f"No recipe found for domain: {domain}")
+            return None
+        
+        recipe = sites[domain]
+        recipe['domain'] = domain
+        return recipe
+        
+    except Exception as e:
+        logging.error(f"Error loading YAML file: {e}")
+        return None
+
+
+def get_selector_hash(selector: str) -> str:
+    """Generate a hash for the selector to use in directory naming."""
+    return hashlib.md5(selector.encode('utf-8')).hexdigest()[:8]
+
+
+async def download_sample_images(selectors: List[Dict], domain: str, download_dir: str, max_per_selector: int = 12) -> Dict[str, List[str]]:
+    """
+    Download sample images for each selector using real URLs from the selector data.
+    
+    Args:
+        selectors: List of selector dictionaries with sample_urls
+        domain: Domain name
+        download_dir: Base directory to download images to
+        max_per_selector: Maximum images to download per selector
+        
+    Returns:
+        Dictionary mapping selector to list of downloaded image paths
+    """
+    downloaded_images = {}
+    
+    # Create the directory structure: tmp/mordeaux_miner/<domain>/
+    base_path = Path(download_dir)
+    domain_path = base_path / domain
+    domain_path.mkdir(parents=True, exist_ok=True)
+    
+    async with create_safe_client(timeout=30.0) as client:
+        for i, selector in enumerate(selectors):
+            # Handle both schema v1 and v2 formats
+            if 'css' in selector:
+                # Schema v2 format
+                selector_key = selector['css']
+            else:
+                # Schema v1 format (backward compatibility)
+                selector_key = selector['selector']
+            
+            sample_urls = selector.get('sample_urls', [])
+            
+            if not sample_urls:
+                logging.warning(f"No sample URLs found for selector: {selector_key}")
+                downloaded_images[selector_key] = []
+                continue
+            
+            logging.info(f"Downloading samples for selector {i+1}/{len(selectors)}: {selector_key}")
+            logging.info(f"  Found {len(sample_urls)} sample URLs")
+            
+            # Create selector-specific directory: <domain>/<selector_hash>/
+            selector_hash = get_selector_hash(selector_key)
+            selector_dir = domain_path / selector_hash
+            selector_dir.mkdir(exist_ok=True)
+            
+            downloaded_paths = []
+            
+            # Download actual sample URLs (limited to max_per_selector)
+            for j, url in enumerate(sample_urls[:max_per_selector]):
+                try:
+                    logging.debug(f"Downloading sample {j+1}: {url}")
+                    
+                    # Try to download the image with redirect handling
+                    response, reason = await fetch_with_redirects(url, client, max_hops=3, method="GET")
+                    
+                    if response is not None and response.status_code == 200:
+                        content_type = response.headers.get('content-type', '').lower()
+                        if 'image/' in content_type and 'svg' not in content_type:
+                            # Save the image with proper extension
+                            ext = content_type.split('/')[-1]
+                            if ext not in ['jpeg', 'jpg', 'png', 'gif', 'webp', 'bmp']:
+                                ext = 'jpg'
+                            
+                            image_path = selector_dir / f"sample_{j+1:02d}.{ext}"
+                            with open(image_path, 'wb') as f:
+                                f.write(response.content)
+                            
+                            downloaded_paths.append(str(image_path))
+                            logging.debug(f"Downloaded: {image_path}")
+                        else:
+                            logging.warning(f"Non-image or SVG content from {url}: {content_type}")
+                    else:
+                        logging.warning(f"Failed to download {url}: {reason if response is None else f'HTTP {response.status_code}'}")
+                        
+                except Exception as e:
+                    logging.warning(f"Error downloading {url}: {e}")
+            
+            downloaded_images[selector_key] = downloaded_paths
+            logging.info(f"Downloaded {len(downloaded_paths)}/{len(sample_urls[:max_per_selector])} images for selector: {selector_key}")
+    
+    return downloaded_images
+
+
+def display_review_interface(selectors: List[Dict], downloaded_images: Dict[str, List[str]]) -> List[bool]:
+    """
+    Display console interface for reviewing selectors.
+    
+    Args:
+        selectors: List of selector dictionaries
+        downloaded_images: Dictionary mapping selectors to downloaded image paths
+        
+    Returns:
+        List of boolean values indicating approval for each selector
+    """
+    approvals = []
+    
+    print("\n" + "="*80)
+    print("SELECTOR REVIEW INTERFACE")
+    print("="*80)
+    print("Review each selector and approve (y) or reject (n)")
+    print("Press Enter for default (approve)")
+    print("="*80)
+    
+    for i, selector in enumerate(selectors):
+        # Handle both schema v1 and v2 formats
+        if 'css' in selector:
+            # Schema v2 format
+            selector_key = selector['css']
+            kind = selector.get('kind', 'video_grid')
+        else:
+            # Schema v1 format (backward compatibility)
+            selector_key = selector['selector']
+            kind = 'video_grid'  # Default for v1
+        
+        description = selector.get('description', 'No description')
+        image_paths = downloaded_images.get(selector_key, [])
+        
+        print(f"\n[{i+1}/{len(selectors)}] SELECTOR REVIEW")
+        print("-" * 60)
+        print(f"Kind: {kind}")
+        print(f"Selector: {selector_key}")
+        print(f"Description: {description}")
+        print(f"Downloaded Images: {len(image_paths)}")
+        
+        if image_paths:
+            print("Sample Images:")
+            for j, image_path in enumerate(image_paths[:4]):  # Show max 4
+                print(f"  {j+1}. {image_path}")
+            if len(image_paths) > 4:
+                print(f"  ... and {len(image_paths) - 4} more")
+        else:
+            print("  ⚠️  No images were successfully downloaded")
+        
+        # Get user input
+        while True:
+            try:
+                response = input(f"\nApprove this selector? [Y/n]: ").strip().lower()
+                if response in ['', 'y', 'yes']:
+                    approvals.append(True)
+                    print("✅ APPROVED")
+                    break
+                elif response in ['n', 'no']:
+                    approvals.append(False)
+                    print("❌ REJECTED")
+                    break
+                else:
+                    print("Please enter 'y' for yes or 'n' for no")
+            except KeyboardInterrupt:
+                print("\n\nReview cancelled by user")
+                return []
+    
+    return approvals
+
+
+def update_yaml_with_approvals(domain: str, selectors: List[Dict], approvals: List[bool], yaml_file: str) -> bool:
+    """
+    Update YAML file based on approval decisions.
+    
+    Args:
+        domain: Domain name
+        selectors: List of selector dictionaries
+        approvals: List of approval decisions
+        yaml_file: Path to YAML file
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Filter selectors based on approvals
+        approved_selectors = [
+            selector for selector, approved in zip(selectors, approvals)
+            if approved
+        ]
+        
+        if not approved_selectors:
+            logging.warning(f"No selectors were approved for {domain}")
+            return True  # Consider this a success (nothing to save)
+        
+        # Load existing recipes
+        yaml_path = Path(yaml_file)
+        existing_recipes = {
+            'schema_version': 2,
+            'defaults': {
+                'selectors': [
+                    {'kind': 'video_grid', 'css': '.video-thumb img'},
+                    {'kind': 'album_grid', 'css': '.album-thumb img'},
+                    {'kind': 'album_grid', 'css': "a[href*='/album'] img"},
+                    {'kind': 'gallery_images', 'css': '.gallery img'},
+                    {'kind': 'gallery_images', 'css': 'figure img'}
+                ],
+                'attributes_priority': ['data-src', 'data-srcset', 'srcset', 'src'],
+                'extra_sources': [
+                    "meta[property='og:image']::attr(content)",
+                    "img::attr(srcset)",
+                    "source::attr(data-srcset)",
+                    "source::attr(srcset)",
+                    "script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl, $..image, $..contentUrl)"
+                ],
+                'method': 'smart'
+            },
+            'sites': {}
+        }
+        
+        if yaml_path.exists():
+            with open(yaml_path, 'r', encoding='utf-8') as f:
+                loaded_recipes = yaml.safe_load(f) or {}
+                if 'sites' in loaded_recipes:
+                    existing_recipes['sites'] = loaded_recipes['sites']
+                if 'defaults' in loaded_recipes:
+                    existing_recipes['defaults'] = loaded_recipes['defaults']
+                if 'schema_version' in loaded_recipes:
+                    existing_recipes['schema_version'] = loaded_recipes['schema_version']
+        
+        # Update the site with approved selectors
+        existing_recipes['sites'][domain] = {
+            'selectors': approved_selectors,
+            'attributes_priority': ['data-src', 'data-srcset', 'srcset', 'src'],
+            'extra_sources': [],
+            'method': 'review'
+        }
+        
+        # Write back to file
+        with open(yaml_path, 'w', encoding='utf-8') as f:
+            yaml.dump(existing_recipes, f, default_flow_style=False, sort_keys=False)
+        
+        logging.info(f"Updated YAML file with {len(approved_selectors)} approved selectors for {domain}")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Failed to update YAML file: {e}")
+        return False
+
+
+def cleanup_download_dir(download_dir: str):
+    """Clean up the download directory."""
+    try:
+        import shutil
+        if Path(download_dir).exists():
+            shutil.rmtree(download_dir)
+            logging.info(f"Cleaned up download directory: {download_dir}")
+    except Exception as e:
+        logging.warning(f"Failed to clean up download directory: {e}")
+
+
+async def main():
+    """Main CLI function."""
+    parser = argparse.ArgumentParser(
+        description="Review and approve image selectors for a domain",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  review-selectors --domain example.com
+  review-selectors --domain example.com --yaml site_recipes.yaml --download-dir /tmp/review
+  review-selectors --domain example.com --verbose
+        """
+    )
+    
+    parser.add_argument('--domain', required=True, help='Domain name to review')
+    parser.add_argument('--yaml', default='site_recipes.yaml', help='YAML file path (default: site_recipes.yaml)')
+    parser.add_argument('--download-dir', help='Directory to download sample images (default: temporary directory)')
+    parser.add_argument('--keep-downloads', action='store_true', help='Keep downloaded images after review')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
+    
+    args = parser.parse_args()
+    
+    # Set up logging
+    setup_logging(args.verbose)
+    
+    # Set up download directory with proper structure
+    if args.download_dir:
+        download_dir = args.download_dir
+    else:
+        # Create tmp/mordeaux_miner directory structure
+        base_temp = tempfile.mkdtemp(prefix='mordeaux_miner_')
+        download_dir = base_temp
+        logging.info(f"Using temporary directory: {download_dir}")
+    
+    try:
+        # Load domain recipe
+        recipe = load_domain_recipe(args.domain, args.yaml)
+        if not recipe:
+            logging.error(f"No recipe found for domain: {args.domain}")
+            sys.exit(1)
+        
+        selectors = recipe.get('selectors', [])
+        if not selectors:
+            logging.error(f"No selectors found for domain: {args.domain}")
+            sys.exit(1)
+        
+        # Check if selectors have sample URLs
+        selectors_with_samples = [s for s in selectors if s.get('sample_urls')]
+        if not selectors_with_samples:
+            logging.warning(f"No selectors with sample URLs found for domain: {args.domain}")
+            logging.warning("This may indicate that the recipe was created before sample URLs were implemented.")
+            logging.warning("Consider re-running the miner to generate fresh selectors with sample URLs.")
+            sys.exit(1)
+        
+        logging.info(f"Found {len(selectors)} selectors for domain: {args.domain}")
+        logging.info(f"  {len(selectors_with_samples)} selectors have sample URLs")
+        
+        # Download sample images
+        logging.info("Downloading sample images...")
+        downloaded_images = await download_sample_images(selectors, args.domain, download_dir)
+        
+        # Display review interface
+        approvals = display_review_interface(selectors, downloaded_images)
+        
+        if not approvals:
+            logging.info("Review cancelled by user")
+            sys.exit(0)
+        
+        # Update YAML file
+        success = update_yaml_with_approvals(args.domain, selectors, approvals, args.yaml)
+        
+        if success:
+            approved_count = sum(approvals)
+            total_count = len(approvals)
+            logging.info(f"✅ Review completed successfully!")
+            print(f"\nApproved {approved_count}/{total_count} selectors for {args.domain}")
+            print(f"Updated {args.yaml}")
+        else:
+            logging.error("Failed to update YAML file")
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        logging.info("Review cancelled by user")
+        sys.exit(0)
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+    finally:
+        # Clean up download directory unless keeping downloads
+        if not args.keep_downloads:
+            cleanup_download_dir(download_dir)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

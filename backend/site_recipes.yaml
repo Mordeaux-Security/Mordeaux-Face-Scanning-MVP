@@ -23,199 +23,163 @@ sites:
   candidteens.net:
     selectors:
     - kind: video_grid
-      css: div.site-branding span.site-logo-img a.custom-logo-link img.custom-logo
-    - kind: wordpress_content
-      css: li a.crp_link figure img.crp_featured
-    - kind: direct_image
-      css: img.custom-logo
-    - kind: direct_image
-      css: img.crp_featured
+      css: .post-content.ast-grid-common-col
+      description: 'Keyword ''grid'': 15 containers with .post-content.ast-grid-common-col'
+      score: 1.0
     - kind: video_grid
-      css: img::attr(srcset)
+      css: .post-thumb-img-content.post-thumb
+      description: 'Keyword ''img'': 15 containers with .post-thumb-img-content.post-thumb'
+      score: 1.0
+    - kind: video_grid
+      css: .ast-post-format-.blog-layout-1.ast-article-inner
+      description: 'Keyword ''post'': 15 containers with .ast-post-format-.blog-layout-1.ast-article-inner'
+      score: 1.0
+    - kind: video_grid
+      css: .post-content.ast-grid-common-col
+      description: 'Keyword ''post'': 15 containers with .post-content.ast-grid-common-col'
+      score: 1.0
+    - kind: video_grid
+      css: .ast-blog-featured-section.post-thumb.ast-blog-single-element
+      description: 'Keyword ''post'': 15 containers with .ast-blog-featured-section.post-thumb.ast-blog-single-element'
+      score: 1.0
+    - kind: video_grid
+      css: .post-thumb-img-content.post-thumb
+      description: 'Keyword ''post'': 30 containers with .post-thumb-img-content.post-thumb'
+      score: 1.0
+    - kind: video_grid
+      css: .post-content.ast-grid-common-col
+      description: 'Keyword ''content'': 15 containers with .post-content.ast-grid-common-col'
+      score: 1.0
+    - kind: video_grid
+      css: .post-thumb-img-content.post-thumb
+      description: 'Keyword ''content'': 15 containers with .post-thumb-img-content.post-thumb'
+      score: 1.0
+    - kind: video_grid
+      css: .ast-blog-featured-section.post-thumb.ast-blog-single-element
+      description: 'Keyword ''thumb'': 15 containers with .ast-blog-featured-section.post-thumb.ast-blog-single-element'
+      score: 1.0
+    - kind: video_grid
+      css: .post-thumb-img-content.post-thumb
+      description: 'Keyword ''thumb'': 30 containers with .post-thumb-img-content.post-thumb'
+      score: 1.0
+    - kind: video_grid
+      css: .ast-blog-featured-section.post-thumb.ast-blog-single-element
+      description: 'Keyword ''featured'': 15 containers with .ast-blog-featured-section.post-thumb.ast-blog-single-element'
+      score: 1.0
+    - kind: video_grid
+      css: .ast-builder-grid-row.ast-builder-grid-row-has-sides.ast-builder-grid-row-no-center
+      description: 'Keyword ''grid'': 6 containers with .ast-builder-grid-row.ast-builder-grid-row-has-sides.ast-builder-grid-row-no-center'
+      score: 0.895
+    - kind: video_grid
+      css: .post-65870.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-tumblr-teens.tag-fikfap.tag-hot.tag-latina.tag-pussy.tag-sexy.tag-shaved.tag-strip.tag-tiktok-girl.tag-tiktok-porn.tag-xxxtik.ast-grid-common-col.ast-full-width.ast-article-post
+      description: 'Keyword ''post'': 5 containers with .post-65870.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-tumblr-teens.tag-fikfap.tag-hot.tag-latina.tag-pussy.tag-sexy.tag-shaved.tag-strip.tag-tiktok-girl.tag-tiktok-porn.tag-xxxtik.ast-grid-common-col.ast-full-width.ast-article-post'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .post-65825.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-my-girlfriend-nudes.category-premium-content-.tag-girlfriend-nudes.tag-leaked.tag-leaked-nudes.tag-premium-nudes.tag-pussy.tag-sexy.tag-tits.ast-grid-common-col.ast-full-width.ast-article-post
+      description: 'Keyword ''post'': 5 containers with .post-65825.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-my-girlfriend-nudes.category-premium-content-.tag-girlfriend-nudes.tag-leaked.tag-leaked-nudes.tag-premium-nudes.tag-pussy.tag-sexy.tag-tits.ast-grid-common-col.ast-full-width.ast-article-post'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .post-65774.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-candidteen-creepshots.tag-ass.tag-booty.tag-butt.tag-jiggle.tag-jiggling.tag-onlytight.tag-pawg.tag-pink.tag-sexy.tag-shorts.tag-thicc.tag-tight.ast-grid-common-col.ast-full-width.ast-article-post
+      description: 'Keyword ''post'': 5 containers with .post-65774.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-candidteen-creepshots.tag-ass.tag-booty.tag-butt.tag-jiggle.tag-jiggling.tag-onlytight.tag-pawg.tag-pink.tag-sexy.tag-shorts.tag-thicc.tag-tight.ast-grid-common-col.ast-full-width.ast-article-post'
+      score: 0.8600000000000001
     attributes_priority:
-    - src
     - data-src
+    - data-srcset
     - srcset
+    - src
     extra_sources:
     - meta[property='og:image']::attr(content)
     - img::attr(srcset)
     - source::attr(data-srcset)
-    - source::attr(srcset)
-    - script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl,
-      $..image, $..contentUrl)
-    method: miner
-  forum.candidgirls.io:
-    selectors:
-    - kind: gallery_images
-      css: p div.lightbox-wrapper a.lightbox img
-    - kind: video_grid
-      css: div.topic-body div.post p img.emoji
-    - kind: video_grid
-      css: div.topic-body div.post p img.animated
-    - kind: video_grid
-      css: meta[property='og:image']::attr(content)
-    attributes_priority:
-    - src
-    - data-src
-    - srcset
-    extra_sources:
-    - meta[property='og:image']::attr(content)
-    - img::attr(srcset)
-    - source::attr(data-srcset)
-    - source::attr(srcset)
-    - script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl,
-      $..image, $..contentUrl)
-    method: miner
+    method: mined
+    confidence: 1.0
   www.candidcreepshots.cc:
-    domain: www.candidcreepshots.cc
     selectors:
-    - kind: wordpress_content
-      css: div.entry-featured-media a.g1-frame div.g1-frame-inner img.attachment-bimber-grid-masonry
-      description: 'wordpress_content: 420 images in div.entry-featured-media a.g1-frame
-        div.g1-frame-inner img.attachment-bimber-grid-masonry'
-      sample_urls:
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/onlyfans-sluts.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-teen-wedgie-creepshots.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-ass-upskirts.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/sexy-tiktokers-porn.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/spandex-vpl-young-tennies.jpg
-      score: 0.5
-    - kind: direct_image
-      css: img
-      description: 'direct_image: 4 images with img'
-      sample_urls:
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/09/cc_logo.png
-      - https://www.candidcreepshots.cc/wp-content/uploads/2022/11/cc_logo.png
-      - https://sstatic1.histats.com/0.gif?4557157&101
-      score: 0.3
-    - kind: direct_image
-      css: img.attachment-bimber-grid-masonry
-      description: 'direct_image: 30 images with img.attachment-bimber-grid-masonry'
-      sample_urls:
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/onlyfans-sluts.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-teen-wedgie-creepshots.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-ass-upskirts.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/sexy-tiktokers-porn.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/spandex-vpl-young-tennies.jpg
-      score: 0.3
     - kind: video_grid
-      css: img::attr(srcset)
-      description: 'EXTRA_SOURCES: img::attr(srcset)'
-      sample_urls:
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies-300x173.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies-561x324.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies-364x210.jpg
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/10/candid-voyeur-jb-teenies-608x351.jpg
-      score: 0.5
+      css: .g1-collection-item.g1-collection-item-1of3
+      description: 'Keyword ''item'': 128 containers with .g1-collection-item.g1-collection-item-1of3'
+      score: 1.0
     - kind: video_grid
-      css: source::attr(srcset)
-      description: 'EXTRA_SOURCES: source::attr(srcset)'
-      sample_urls:
-      - https://www.candidcreepshots.cc/wp-content/uploads/2025/09/cc_logo.png
-      - https://www.candidcreepshots.cc/wp-content/uploads/2022/11/cc_logo.png
-      score: 0.5
+      css: .entry-featured-media
+      description: 'Keyword ''featured'': 66 containers with .entry-featured-media'
+      score: 1.0
+    - kind: video_grid
+      css: .entry-featured-media
+      description: 'Keyword ''media'': 66 containers with .entry-featured-media'
+      score: 1.0
+    - kind: video_grid
+      css: .g1-collection-item.g1-collection-item-1of3
+      description: 'Keyword ''collection'': 128 containers with .g1-collection-item.g1-collection-item-1of3'
+      score: 1.0
+    - kind: video_grid
+      css: .entry-tpl-tile.entry-tpl-tile-xl.g1-dark.post-7845.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-sexy-legs.tag-tight-shorts.tag-upshorts.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-tile.entry-tpl-tile-xl.g1-dark.post-7845.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-sexy-legs.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-tile.entry-tpl-tile-xl.g1-dark.post-7840.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-bikini-ass.tag-bikinis.tag-thongs.tag-water-park.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-tile.entry-tpl-tile-xl.g1-dark.post-7840.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-bikini-ass.tag-bikinis.tag-thongs.tag-water-park.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7835.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-compilation.tag-latinas.tag-social-media-teens.tag-tits.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7835.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-compilation.tag-latinas.tag-social-media-teens.tag-tits.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7830.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-panty-line.tag-see-through-vpl.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7830.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-panty-line.tag-see-through-vpl.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7825.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-upskirts.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7825.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-upskirts.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7820.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-compilation.tag-latinas.tag-leggings.tag-teen-cameltoe.tag-social-media-teens.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7820.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-compilation.tag-latinas.tag-leggings.tag-teen-cameltoe.tag-social-media-teens.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7815.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-panties.tag-panty-line.tag-see-through-vpl.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7815.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-panties.tag-panty-line.tag-see-through-vpl.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7810.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-mall-voyeur.tag-panty-line.tag-see-through-vpl.tag-tight-shorts.tag-upshorts.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7810.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-mall-voyeur.tag-panty-line.tag-see-through-vpl.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7805.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-see-through-vpl.tag-spandex-shorts.tag-upshorts.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7805.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-see-through-vpl.tag-spandex-shorts.tag-upshorts.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7798.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-panty-line.tag-see-through-vpl.tag-sexy-legs.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7798.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-panty-line.tag-see-through-vpl.tag-sexy-legs.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
+      score: 0.8600000000000001
+    - kind: video_grid
+      css: .entry-tpl-grid.post-7792.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-compilation.tag-social-media-teens.tag-spandex-shorts.tag-tight-shorts.tag-tits.post_format-post-format-video
+      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7792.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-compilation.tag-social-media-teens.tag-spandex-shorts.tag-tight-shorts.tag-tits.post_format-post-format-video'
+      score: 0.8600000000000001
     attributes_priority:
-    - src
     - data-src
+    - data-srcset
     - srcset
-    extra_sources: []
-    method: miner
-    confidence: 0.5
-    sample_urls: []
-    validation_results: []
+    - src
+    extra_sources:
+    - meta[property='og:image']::attr(content)
+    - img::attr(srcset)
+    - source::attr(data-srcset)
+    method: mined
+    confidence: 1.0
   ibradome.com:
-    domain: ibradome.com
-    selectors:
-    - kind: direct_image
-      css: img
-      description: 'direct_image: 33 images with img'
-      sample_urls:
-      - https://ibradome.com/logoefd8b8470be94b63.png
-      - https://ibradome.com/Uploads/Icons/cat-1.png
-      - https://ibradome.com/Uploads/Icons/cat-2.png
-      - https://ibradome.com/Uploads/Icons/cat-4.png
-      - https://ibradome.com/Uploads/Icons/cat-5.png
-      score: 0.3
-    - kind: video_grid
-      css: ul li a img.pdfav
-      description: 'video_grid: 2 images in ul li a img.pdfav'
-      sample_urls:
-      - https://ibradome.com/tpd-b-24px.png
-      score: 0.020833333333333332
-    attributes_priority:
-    - src
-    - data-src
-    - srcset
-    extra_sources: []
-    method: miner
-    confidence: 0.3
-    sample_urls: []
-    validation_results: []
-  oneprotests.thefap.net:
-    domain: oneprotests.thefap.net
     selectors:
     - kind: video_grid
-      css: div div.grid-cols-2 a.col-span-2 img.rounded-md
-      description: 'video_grid: 110 images in div div.grid-cols-2 a.col-span-2 img.rounded-md'
-      sample_urls:
-      - https://i0.wp.com/thumbs.onlyfans.com/public/files/thumbs/w480/h/hs/hsv/hsvjxwe2atcka0vqw5ced5ppfuvtmfxs1686438407/338820501/avatar.jpg?w=700
-      - https://img1.pixhost.to/images/9520/652714942_2dqpmmj9.jpg
-      - https://i0.wp.com/public.onlyfans.com/files/l/l0/l0t/l0tabkpfgyjmpnkul7trt0r7zmh5vg3h1605897084/avatar.jpg?w=700
-      - https://img1.pixhost.to/images/9520/652714779_71945cbbfa3aea2126144a2e9a366373-tplv-tiktokx-cropcenter-1080-1080.jpg
-      - https://i0.wp.com/pbs.twimg.com/ext_tw_video_thumb/1794004600040878080/pu/img/isOl3wOYWluACTR_.jpg:small?w=700
-      score: 0.375
-    - kind: video_grid
-      css: div div.grid-cols-2 a img.rounded-md
-      description: 'video_grid: 44 images in div div.grid-cols-2 a img.rounded-md'
-      sample_urls:
-      - https://img1.pixhost.to/images/9520/652714944_ayiofipk.jpg
-      - https://i0.wp.com/pbs.twimg.com/amplify_video_thumb/1691058790177669120/img/G1qnCDi2UyxouT9r.jpg:small?w=700
-      - https://i0.wp.com/pbs.twimg.com/media/E9ipFGBWUBIaNRZ.jpg:small?w=700
-      - https://fapello.com/content/b/e/belle-bean/1000/belle-bean_0038.jpg
-      score: 0.375
-    - kind: video_grid
-      css: div div.grid-cols-2 a.relative img.rounded-md
-      description: 'video_grid: 44 images in div div.grid-cols-2 a.relative img.rounded-md'
-      sample_urls:
-      - https://img1.pixhost.to/images/9520/652714947_ujhrvfv3.jpg
-      - https://i0.wp.com/pbs.twimg.com/media/FrBut4BWcAAcoBC.jpg:small?w=700
-      - https://i0.wp.com/pbs.twimg.com/media/FiqsEMyWIAAHIK4.jpg:small?w=700
-      - https://fapello.com/content/b/e/belle-bean/1000/belle-bean_0037.jpg
-      score: 0.375
-    - kind: video_grid
-      css: div.flex-1 a div.bg-gradient-to-tr img.bg-gray-200
-      description: 'video_grid: 55 images in div.flex-1 a div.bg-gradient-to-tr img.bg-gray-200'
-      sample_urls:
-      - https://thumbs.onlyfans.com/public/files/thumbs/w480/h/hs/hsv/hsvjxwe2atcka0vqw5ced5ppfuvtmfxs1686438407/338820501/avatar.jpg
-      - https://t1.pixhost.to/thumbs/9520/652714953_jluy1kvr.jpg
-      - https://oneprotests.thefap.net/assets/images/models/avatar.jpg
-      - https://t1.pixhost.to/thumbs/9520/652714779_71945cbbfa3aea2126144a2e9a366373-tplv-tiktokx-cropcenter-1080-1080.jpg
-      - https://i0.wp.com/cdn.bsky.app/img/avatar/plain/did:plc:x7by6io57bwoem5tjdepxkm4/bafkreigilnhggfpszon3wa65k52u6fuuhcqinjb3oxkzd22el6kap6r2lu@jpeg?w=400
-      score: 0.25
-    - kind: video_grid
-      css: div.items-start div.relative a img.w-10
-      description: 'video_grid: 55 images in div.items-start div.relative a img.w-10'
-      sample_urls:
-      - https://oneprotests.thefap.net/assets/images/groups/4.jpg?t=1749535947
-      - https://oneprotests.thefap.net/assets/images/groups/3.jpg?t=1749541376
-      - https://oneprotests.thefap.net/assets/images/groups/60.jpg?t=1758865604
-      score: 0.25
-    - kind: video_grid
-      css: div.items-start div.relative a img.w-6
-      description: 'video_grid: 55 images in div.items-start div.relative a img.w-6'
-      sample_urls:
-      - https://oneprotests.thefap.net/assets/images/models/avatar.jpg
-      - https://i0.wp.com/pbs.twimg.com/profile_images/1732890028/xHekx1h1?w=200
-      - https://fapello.com/assets/images/avatar.jpg
-      - https://userpic.redgifs.com/c/a6/ca6ba7a3ef3b0b38800eb4ef18e7e03b.png
-      score: 0.25
+      css: .brick.video
+      description: 'Keyword ''video'': 15 containers with .brick.video'
+      score: 1.0
     attributes_priority:
-    - src
     - data-src
+    - data-srcset
     - srcset
-    extra_sources: []
-    method: miner
-    confidence: 0.375
-    sample_urls: []
-    validation_results: []
+    - src
+    extra_sources:
+    - meta[property='og:image']::attr(content)
+    - img::attr(srcset)
+    - source::attr(data-srcset)
+    method: mined
+    confidence: 1.0
