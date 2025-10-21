@@ -1,6 +1,7 @@
 from typing import Optional, Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 """
@@ -20,6 +21,19 @@ class Settings(BaseSettings):
     detector_ctx_id: int = Field(default=-1, description="-1 for CPU, 0+ for GPU")
     detector_size_width: int = Field(default=640, description="Detection width")
     detector_size_height: int = Field(default=640, description="Detection height")
+
+    # Face models
+    INSIGHTFACE_DET_NAME: str = Field(default="scrfd_10g_bnkps", description="InsightFace detector model name")
+    INSIGHTFACE_EMB_NAME: str = Field(default="w600k_r50", description="InsightFace embedding model name (buffalo_l pack uses this)")
+    IMAGE_SIZE: int = Field(default=112, description="Aligned crop size for ArcFace")
+
+    # ONNX Runtime providers
+    # Primarily "CUDAExecutionProvider" or "CPUExecutionProvider"
+    ONNX_PROVIDERS_CSV: str = Field(default="CPUExecutionProvider", description="ONNX Runtime providers (comma-separated)")
+
+    # Detection settings
+    DET_SIZE: str = Field(default="640,640", description="Detection size (width,height)")
+    DET_SCORE_THRESH: float = Field(default=0.45, description="Detection score threshold")
 
     # ========================================================================
     # Embedding Settings

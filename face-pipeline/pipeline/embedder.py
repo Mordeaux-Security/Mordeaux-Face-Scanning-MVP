@@ -1,212 +1,67 @@
-import logging
-from typing import List, Dict, Any, Optional, TYPE_CHECKING
+from __future__ import annotations
+import threading
+import numpy as np
+import cv2
 
-    import numpy as np
-    import PIL.Image
+from insightface.app import FaceAnalysis
 
-        import insightface
-    import numpy as np
+from config.settings import settings
 
-    # Placeholder: return zeros of shape (512,) float32
+_embed_lock = threading.Lock()
+_embed_model = None  # ArcFace-like model
 
-"""
-Face Embedding Module
-
-TODO: Implement face embedding/encoding using InsightFace
-TODO: Support multiple embedding models (ArcFace, CosFace, etc.)
-TODO: Add batch embedding for performance
-TODO: Normalize embeddings for cosine similarity
-TODO: Add embedding caching/memoization
-
-POTENTIAL DUPLICATE: backend/app/services/face.py has embedding logic
-"""
-
-if TYPE_CHECKING:
-logger = logging.getLogger(__name__)
-
-# Global model singleton
-_model = None
-
-
-# ============================================================================
-# Embedding Functions
-# ============================================================================
-
-def load_model() -> object:
+def load_model():
     """
-    Load and return the face embedding model (singleton pattern).
-
-    Lazy-loads InsightFace model on first call and caches for subsequent calls.
-    This avoids loading the model multiple times and saves memory.
-
-    Returns:
-        Loaded embedding model instance (e.g., InsightFace app)
-
-    TODO: Initialize InsightFace app with buffalo_l model
-    TODO: Set context ID from settings (CPU vs GPU)
-    TODO: Configure detection size from settings
-    TODO: Add error handling for model loading failures
-    TODO: Support alternative embedding models
-    TODO: Add model warmup (run on dummy input)
-
-    Example implementation:
-        app = insightface.app.FaceAnalysis(name='buffalo_l')
-        app.prepare(ctx_id=-1, det_size=(640, 640))
-        return app
+    Load the ArcFace embedding model once. We'll use the buffalo_l app which includes the recognition model.
     """
-    global _model
-    if _model is None:
-        # TODO: Load model here
-        # from config.settings import settings
-        # import insightface
-        # _model = insightface.app.FaceAnalysis(name=settings.detector_model)
-        # _model.prepare(ctx_id=settings.detector_ctx_id, det_size=(settings.detector_size_width, settings.detector_size_height))
-        pass
-    return _model
+    global _embed_model
+    if _embed_model is not None:
+        return _embed_model
+    with _embed_lock:
+        if _embed_model is not None:
+            return _embed_model
 
+        # Use buffalo_l app which includes the recognition model
+        app = FaceAnalysis(name="buffalo_l")
+        app.prepare(ctx_id=0)  # 0 for GPU if available; falls back gracefully
+        _embed_model = app
+        return _embed_model
 
-def l2_normalize(embedding: "np.ndarray") -> "np.ndarray":
+def l2_normalize(vec: np.ndarray, eps: float = 1e-10) -> np.ndarray:
+    n = np.linalg.norm(vec)
+    if n < eps:
+        return vec
+    return vec / n
+
+def embed(aligned_bgr_112: "np.ndarray") -> "np.ndarray":
     """
-    L2-normalize an embedding vector for cosine similarity.
-
-    Normalizing embeddings to unit length allows using dot product
-    instead of cosine similarity, which is faster for large-scale search.
-
-    Args:
-        embedding: Raw embedding vector (any length)
-
-    Returns:
-        L2-normalized embedding with unit length (norm = 1.0)
-
-    TODO: Compute L2 norm (np.linalg.norm)
-    TODO: Divide embedding by norm
-    TODO: Handle zero vectors (return as-is or raise error)
-    TODO: Validate input shape (1D array)
-
-    Example:
-        norm = np.linalg.norm(embedding)
-        if norm > 0:
-            return embedding / norm
-        return embedding
+    aligned_bgr_112: ndarray HxWxC, 112x112x3, BGR aligned crop (from detector.align_and_crop).
+    Returns: np.ndarray shape (512,), dtype float32
     """
-    # TODO: Implement L2 normalization
-    pass
+    app = load_model()
 
+    if aligned_bgr_112 is None or aligned_bgr_112.ndim != 3 or aligned_bgr_112.shape[:2] != (settings.IMAGE_SIZE, settings.IMAGE_SIZE):
+        raise ValueError(f"Expected aligned {settings.IMAGE_SIZE}x{settings.IMAGE_SIZE} BGR image, got {None if aligned_bgr_112 is None else aligned_bgr_112.shape}")
 
-def embed(img_pil: "PIL.Image.Image") -> "np.ndarray":
-    """
-    Generate a 512-dimensional face embedding from a PIL image.
+    # InsightFace expects BGR aligned crop (uint8)
+    if aligned_bgr_112.dtype != np.uint8:
+        img = np.clip(aligned_bgr_112, 0, 255).astype(np.uint8)
+    else:
+        img = aligned_bgr_112
 
-    Converts the face crop to an embedding vector suitable for similarity
-    search and vector indexing. Uses InsightFace's ArcFace model.
-
-    Args:
-        img_pil: Face crop as PIL Image (RGB format)
-                 Should be aligned and cropped face, not full image
-
-    Returns:
-        Normalized embedding vector as numpy array, shape (512,), dtype float32
-
-    TODO: Load model using load_model()
-    TODO: Convert PIL Image to numpy array (BGR for InsightFace)
-    TODO: Run model inference to extract embedding
-    TODO: Call l2_normalize() to normalize the embedding
-    TODO: Ensure output is shape (512,) and dtype float32
-    TODO: Add error handling for inference failures
-    TODO: Add input validation (image size, format)
-
-    Example flow:
-        model = load_model()
-        img_np = np.array(img_pil)[:, :, ::-1]  # RGB to BGR
-        faces = model.get(img_np)
-        if faces:
-            embedding = faces[0].embedding
-            return l2_normalize(embedding).astype(np.float32)
-    """
-    embedding = np.zeros(512, dtype=np.float32)
-
-    # TODO: Call l2_normalize(embedding) once implemented
-    # return l2_normalize(embedding)
-
-    return embedding
-
-
-class FaceEmbedder:
-    """Face embedding/encoding service."""
-
-    def __init__(
-        self,
-        model_name: str = "buffalo_l",
-        ctx_id: int = -1,
-        normalize: bool = True
-    ):
-        """
-        Initialize face embedder.
-
-        Args:
-            model_name: InsightFace model name
-            ctx_id: Context ID (-1 for CPU, 0+ for GPU)
-            normalize: Whether to L2-normalize embeddings
-
-        TODO: Load model lazily
-        TODO: Support custom embedding models
-        """
-        self.model_name = model_name
-        self.ctx_id = ctx_id
-        self.normalize = normalize
-        self._app = None
-
-    def _load_model(self):
-        """
-        Load the face embedding model.
-
-        TODO: Implement lazy loading
-        TODO: Add error handling
-        TODO: Support multiple model formats (ONNX, PyTorch, etc.)
-        """
-        pass
-
-    def embed(self, face_crop: "np.ndarray") -> "np.ndarray":
-        """
-        Generate embedding for a face crop.
-
-        Args:
-            face_crop: Cropped face image as numpy array
-
-        Returns:
-            Embedding vector as numpy array
-
-        TODO: Implement embedding extraction
-        TODO: Add preprocessing (alignment, normalization)
-        TODO: Handle edge cases (blur, occlusion)
-        """
-        pass
-
-    async def embed_async(self, face_crop: "np.ndarray") -> "np.ndarray":
-        """
-        Async wrapper for face embedding.
-
-        TODO: Run embedding in thread pool
-        TODO: Handle cancellation
-        """
-        pass
-
-    def embed_batch(self, face_crops: List["np.ndarray"]) -> List["np.ndarray"]:
-        """
-        Batch face embedding for multiple crops.
-
-        TODO: Implement efficient batch processing
-        TODO: Use GPU batching if available
-        TODO: Add progress tracking
-        """
-        pass
-
-    @staticmethod
-    def compute_similarity(emb1: "np.ndarray", emb2: "np.ndarray") -> float:
-        """
-        Compute cosine similarity between two embeddings.
-
-        TODO: Implement cosine similarity
-        TODO: Support other distance metrics (Euclidean, etc.)
-        """
-        pass
+    # Use the buffalo_l app to get embeddings
+    faces = app.get(img)
+    if not faces:
+        raise ValueError("No faces found in aligned crop")
+    
+    # Get the first face's embedding
+    face = faces[0]
+    feat = face.embedding  # This should be the 512-dim embedding
+    feat = feat.astype(np.float32, copy=False)
+    feat = l2_normalize(feat).astype(np.float32, copy=False)
+    
+    if feat.ndim == 2 and feat.shape[0] == 1:
+        feat = feat[0]
+    if feat.shape[0] != 512:
+        raise ValueError(f"Expected 512-dim embedding, got {feat.shape}")
+    return feat

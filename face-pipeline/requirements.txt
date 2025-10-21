@@ -62,3 +62,16 @@ ruff==0.6.8
 # 1. Uncomment the InsightFace dependencies above
 # 2. Consider copying backend/requirements.txt face processing section
 # 3. Update the Dockerfile to install all dependencies
+
+# Core
+numpy>=1.26
+Pillow>=10.0.0
+opencv-python-headless>=4.10.0.84
+
+# Models
+insightface>=0.7.3
+onnxruntime>=1.18.0           # CPU fallback
+# onnxruntime-gpu>=1.18.0     # (optional) if you have CUDA in your container/host
+
+# Utils (used later; safe to add now)
+imagehash>=4.3

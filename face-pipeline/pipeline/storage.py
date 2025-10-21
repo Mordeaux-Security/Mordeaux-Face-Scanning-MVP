@@ -9,9 +9,9 @@ from loguru import logger
 # ============================================================================
 
 # Retry configuration
-    from datetime import timedelta
+from datetime import timedelta
 
-    # Use settings default or provided TTL, but never exceed 10 minutes (600 seconds)
+# Use settings default or provided TTL, but never exceed 10 minutes (600 seconds)
 
 from config.settings import settings
 
