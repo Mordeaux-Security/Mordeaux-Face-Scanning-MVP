@@ -54,7 +54,7 @@ restart:
 reset-cache:
 	@echo "Clearing crawl cache database..."
 	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing cache for db: {s.postgres_db}')"
-	docker compose exec postgres psql -U mordeaux -d mordeaux -c "DELETE FROM crawl_cache;"
+	docker compose exec postgres psql -U mordeaux -d mordeaux -c "DELETE FROM crawl_cache;" || echo "Cache table does not exist - nothing to clear"
 
 reset-redis:
 	@echo "Clearing Redis cache..."
@@ -79,7 +79,7 @@ reset-redis-all-methods:
 
 reset-minio:
 	@echo "Clearing MinIO buckets..."
-	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing buckets: {s.s3_bucket_raw}, {s.s3_bucket_thumbs}')"
+	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing bucket: {s.s3_bucket_raw} (with images/ and thumbnails/ folders)')"
 	docker compose exec backend-cpu python scripts/clear_minio.py
 
 reset-both: reset-cache reset-redis-docker reset-minio

@@ -120,10 +120,18 @@ class StorageManager:
             from minio.error import S3Error
             
             # Get credentials from environment
-            endpoint = os.getenv('MINIO_ENDPOINT', 'localhost:9000')
-            access_key = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
-            secret_key = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
-            secure = os.getenv('MINIO_SECURE', 'false').lower() == 'true'
+            endpoint = os.getenv('S3_ENDPOINT', os.getenv('MINIO_ENDPOINT', 'localhost:9000'))
+            # Remove protocol and path from endpoint for MinIO client
+            if endpoint.startswith('http://'):
+                endpoint = endpoint[7:]
+            elif endpoint.startswith('https://'):
+                endpoint = endpoint[8:]
+            # Remove any path components
+            endpoint = endpoint.split('/')[0]
+            
+            access_key = os.getenv('S3_ACCESS_KEY', os.getenv('MINIO_ACCESS_KEY', 'minioadmin'))
+            secret_key = os.getenv('S3_SECRET_KEY', os.getenv('MINIO_SECRET_KEY', 'minioadmin'))
+            secure = os.getenv('S3_USE_SSL', os.getenv('MINIO_SECURE', 'false')).lower() == 'true'
             
             self.client = Minio(
                 endpoint,
@@ -496,41 +504,143 @@ class StorageManager:
             return {}
     
     async def _save_recipes(self, recipes: Dict[str, Any]) -> None:
-        """Save recipes to storage."""
+        """Save recipes to storage with canonical formatting."""
         try:
             import yaml
+            from collections import OrderedDict
             
-            # Save to file
+            # Create canonical YAML with fixed key order
+            canonical_recipes = self._create_canonical_recipes(recipes)
+            
+            # Save to file with canonical formatting (convert OrderedDict to regular dict for clean YAML)
+            clean_recipes = self._convert_ordered_dict_to_dict(canonical_recipes)
+            
             with open(self._recipe_cache_file, 'w', encoding='utf-8') as f:
-                yaml.dump(recipes, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+                yaml.dump(clean_recipes, f, 
+                         default_flow_style=False,
+                         sort_keys=False,  # Maintain our custom order
+                         allow_unicode=True,
+                         width=120,
+                         indent=2)
             
             # Also save to storage backend if available
             if self.client:
-                recipes_json = json.dumps(recipes, indent=2)
+                recipes_json = json.dumps(canonical_recipes, indent=2)
                 await self._store_object("recipes/site_recipes.json", recipes_json.encode('utf-8'), 'application/json')
             
         except Exception as e:
             logger.error(f"Error saving recipes: {e}")
             raise
     
+    def _create_canonical_recipes(self, recipes: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create canonical recipes with fixed key order and normalized attributes.
+        
+        Args:
+            recipes: Original recipes dictionary
+            
+        Returns:
+            Canonical recipes dictionary with consistent formatting
+        """
+        from collections import OrderedDict
+        
+        # Canonical key order for site recipes
+        YAML_KEY_ORDER = ["selectors", "attributes_priority", "extra_sources", "method", "confidence"]
+        CANONICAL_ATTRIBUTES = ["data-src", "data-srcset", "srcset", "src"]
+        EXTRA_SOURCES_PATTERNS = [
+            "meta[property='og:image']::attr(content)",
+            "link[rel='image_src']::attr(href)",
+            "video::attr(poster)",
+            "script[type='application/ld+json']",
+            "[style*='background-image']"
+        ]
+        
+        # Create ordered dictionary to maintain key order
+        canonical_recipes = OrderedDict()
+        
+        # Add schema version first
+        canonical_recipes['schema_version'] = recipes.get('schema_version', 2)
+        
+        # Add defaults with canonical order
+        if 'defaults' in recipes:
+            canonical_defaults = OrderedDict()
+            defaults = recipes['defaults']
+            
+            # Add defaults keys in canonical order
+            for key in YAML_KEY_ORDER:
+                if key in defaults:
+                    if key == "attributes_priority":
+                        # Normalize attributes to canonical order
+                        canonical_defaults[key] = CANONICAL_ATTRIBUTES
+                    elif key == "extra_sources":
+                        # Use canonical extra sources patterns
+                        canonical_defaults[key] = EXTRA_SOURCES_PATTERNS
+                    else:
+                        canonical_defaults[key] = defaults[key]
+            
+            canonical_recipes['defaults'] = canonical_defaults
+        
+        # Add sites with sorted domain names for consistency
+        if 'sites' in recipes:
+            canonical_sites = OrderedDict()
+            for domain in sorted(recipes['sites'].keys()):
+                site_recipe = recipes['sites'][domain]
+                canonical_site = OrderedDict()
+                
+                # Add site keys in canonical order
+                for key in YAML_KEY_ORDER:
+                    if key in site_recipe:
+                        if key == "attributes_priority":
+                            # Normalize attributes to canonical order
+                            canonical_site[key] = CANONICAL_ATTRIBUTES
+                        elif key == "extra_sources":
+                            # Use canonical extra sources patterns
+                            canonical_site[key] = EXTRA_SOURCES_PATTERNS
+                        elif key == "selectors":
+                            # Sort selectors by score for consistency
+                            selectors = site_recipe[key]
+                            if isinstance(selectors, list):
+                                # Sort by score if available, otherwise by CSS selector
+                                sorted_selectors = sorted(selectors, 
+                                                        key=lambda x: x.get('score', 0) if isinstance(x, dict) else 0, 
+                                                        reverse=True)
+                                canonical_site[key] = sorted_selectors
+                            else:
+                                canonical_site[key] = selectors
+                        else:
+                            canonical_site[key] = site_recipe[key]
+                
+                canonical_sites[domain] = canonical_site
+            
+            canonical_recipes['sites'] = canonical_sites
+        
+        return canonical_recipes
+    
+    def _convert_ordered_dict_to_dict(self, obj):
+        """Convert OrderedDict objects to regular dicts for clean YAML output."""
+        if isinstance(obj, dict):
+            return {key: self._convert_ordered_dict_to_dict(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_ordered_dict_to_dict(item) for item in obj]
+        else:
+            return obj
+    
     def _get_default_recipe(self) -> Dict[str, Any]:
-        """Get default recipe configuration."""
+        """Get default recipe configuration with canonical formatting."""
         return {
             "selectors": [
-                {"kind": "video_grid", "css": ".video-thumb img"},
-                {"kind": "album_grid", "css": ".album-thumb img"},
-                {"kind": "album_grid", "css": "a[href*='/album'] img"},
-                {"kind": "gallery_images", "css": ".gallery img"},
-                {"kind": "gallery_images", "css": "figure img"}
-            ],
-            "extra_sources": [
-                "meta[property='og:image']::attr(content)",
-                "img::attr(srcset)",
-                "source::attr(data-srcset)",
-                "source::attr(srcset)",
-                "script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl, $..image, $..contentUrl)"
+                {"kind": "video_grid", "css": "img"},
+                {"kind": "video_grid", "css": ".thumbnail img"},
+                {"kind": "video_grid", "css": ".thumb img"}
             ],
             "attributes_priority": ["data-src", "data-srcset", "srcset", "src"],
+            "extra_sources": [
+                "meta[property='og:image']::attr(content)",
+                "link[rel='image_src']::attr(href)",
+                "video::attr(poster)",
+                "script[type='application/ld+json']",
+                "[style*='background-image']"
+            ],
             "method": "smart"
         }
     

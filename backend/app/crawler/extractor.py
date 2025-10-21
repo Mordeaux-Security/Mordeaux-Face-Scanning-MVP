@@ -16,6 +16,9 @@ import httpx
 from bs4 import BeautifulSoup
 
 from .config import CrawlerConfig
+from .http_service import HTTPService, get_http_service
+from .js_rendering_service import JSRenderingService, get_js_rendering_service
+from .forum_navigator import ForumNavigator
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +54,12 @@ class ImageExtractor:
     
     def __init__(self, config: CrawlerConfig):
         self.config = config
-        self.http_client: Optional[httpx.AsyncClient] = None
+        self.http_service: Optional[HTTPService] = None
+        self.js_service: Optional[JSRenderingService] = None
+        self.forum_navigator: Optional[ForumNavigator] = None
+        
+        # JavaScript rendering tracking
+        self.js_render_count = 0  # Track JS renders per run
         self._url_cache: Set[str] = set()
         
         # URL validation patterns
@@ -78,34 +86,17 @@ class ImageExtractor:
         await self._cleanup()
     
     async def _initialize_http_client(self):
-        """Initialize HTTP client with proper configuration."""
-        if self.http_client is None:
-            limits = httpx.Limits(
-                max_connections=self.config.max_connections,
-                max_keepalive_connections=self.config.max_keepalive_connections,
-                keepalive_expiry=self.config.keepalive_expiry
-            )
-            
-            self.http_client = httpx.AsyncClient(
-                timeout=httpx.Timeout(
-                    connect=self.config.connect_timeout,
-                    read=self.config.read_timeout,
-                    write=self.config.timeout_seconds,
-                    pool=self.config.timeout_seconds
-                ),
-                limits=limits,
-                follow_redirects=True,
-                max_redirects=self.config.max_redirects,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
-            )
+        """Initialize HTTP service and JS rendering service with proper configuration."""
+        if self.http_service is None:
+            self.http_service = await get_http_service(self.config)
+        if self.js_service is None:
+            self.js_service = await get_js_rendering_service(self.config)
+        if self.forum_navigator is None:
+            self.forum_navigator = ForumNavigator(self.config)
     
     async def _cleanup(self):
-        """Cleanup HTTP client and resources."""
-        if self.http_client:
-            await self.http_client.aclose()
-            self.http_client = None
+        """Cleanup HTTP service and resources."""
+        # Note: HTTP service cleanup is handled globally
         self._url_cache.clear()
     
     async def extract_images(self, url: str, recipe: Dict[str, Any]) -> ExtractionResult:
@@ -122,32 +113,39 @@ class ImageExtractor:
         start_time = asyncio.get_event_loop().time()
         
         try:
-            # Fetch page content
-            page_content = await self._fetch_page(url)
-            if not page_content:
-                return ExtractionResult(
-                    images=[],
-                    total_found=0,
-                    unique_urls=0,
-                    extraction_time=asyncio.get_event_loop().time() - start_time,
-                    success=False,
-                    error="Failed to fetch page content"
-                )
-            
-            # Parse HTML
-            soup = BeautifulSoup(page_content, 'html.parser')
-            
-            # Extract images using recipe selectors
-            images = []
-            for selector_config in recipe.get('selectors', []):
-                selector_images = await self._extract_with_selector(
-                    soup, selector_config, url, recipe
-                )
-                images.extend(selector_images)
-            
-            # Extract from extra sources
-            extra_images = await self._extract_extra_sources(soup, url, recipe)
-            images.extend(extra_images)
+            # Check if forum extraction is needed
+            if self._is_forum_site(url):
+                images = await self._extract_forum_images(url)
+            # Check if navigation is needed (for sites like ibradome)
+            elif recipe.get('method') == 'navigation' or self._needs_navigation(url):
+                images = await self._navigate_and_extract(url)
+            else:
+                # Fetch page content
+                page_content = await self._fetch_page(url)
+                if not page_content:
+                    return ExtractionResult(
+                        images=[],
+                        total_found=0,
+                        unique_urls=0,
+                        extraction_time=asyncio.get_event_loop().time() - start_time,
+                        success=False,
+                        error="Failed to fetch page content"
+                    )
+                
+                # Parse HTML
+                soup = BeautifulSoup(page_content, 'html.parser')
+                
+                # Extract images using recipe selectors
+                images = []
+                for selector_config in recipe.get('selectors', []):
+                    selector_images = await self._extract_with_selector(
+                        soup, selector_config, url, recipe
+                    )
+                    images.extend(selector_images)
+                
+                # Extract from extra sources
+                extra_images = await self._extract_extra_sources(soup, url, recipe)
+                images.extend(extra_images)
             
             # Remove duplicates and validate URLs
             unique_images = self._deduplicate_and_validate(images)
@@ -216,86 +214,30 @@ class ImageExtractor:
     
     async def _fetch_page(self, url: str) -> Optional[str]:
         """Fetch page content with advanced retry logic, security validation, and JavaScript rendering fallback."""
-        if not self.http_client:
+        if not self.http_service:
             await self._initialize_http_client()
         
-        # Validate URL security first
-        is_safe, reason = self._validate_url_security(url)
-        if not is_safe:
-            logger.warning(f"Unsafe URL blocked: {url} (reason: {reason})")
+        # Use HTTP service to fetch page content (disable caching for fresh content)
+        content, status_code = await self.http_service.get(url, as_text=True, use_cache=False)
+        
+        if content is None:
+            # If regular fetch failed, try JavaScript rendering as fallback
+            logger.info(f"Regular fetch failed, trying JavaScript rendering for {url}")
+            js_content = await self._fetch_with_js_rendering(url)
+            if js_content:
+                return js_content
+            
+            logger.error(f"Failed to fetch {url} after HTTP service and JS fallback")
             return None
         
-        # Advanced retry logic with exponential backoff
-        for attempt in range(self.config.max_retries):
-            try:
-                # Track redirects
-                redirect_count = 0
-                current_url = url
-                visited_urls = set()
-                
-                while redirect_count < self.config.max_redirects:
-                    if current_url in visited_urls:
-                        logger.warning(f"Redirect loop detected for {url}")
-                        break
-                    visited_urls.add(current_url)
-                    
-                    response = await self.http_client.get(current_url)
-                    
-                    # Handle redirects
-                    if response.status_code in {301, 302, 303, 307, 308}:
-                        redirect_count += 1
-                        location = response.headers.get('location')
-                        if location:
-                            current_url = self._resolve_redirect_url(current_url, location)
-                            continue
-                    
-                    response.raise_for_status()
-                    content = response.text
-                    
-                    # Check if page might need JavaScript rendering
-                    if self._needs_js_rendering(content):
-                        logger.info(f"Page appears to need JavaScript rendering, trying JS fallback for {current_url}")
-                        js_content = await self._fetch_with_js_rendering(current_url)
-                        if js_content:
-                            return js_content
-                    
-                    return content
-                
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 404:
-                    logger.warning(f"Page not found: {url}")
-                    return None
-                elif e.response.status_code >= 500:
-                    # Exponential backoff for server errors
-                    backoff_delay = self.config.retry_delay * (2 ** attempt)
-                    logger.warning(f"Server error {e.response.status_code} for {url}, attempt {attempt + 1}, retrying in {backoff_delay}s")
-                    if attempt < self.config.max_retries - 1:
-                        await asyncio.sleep(backoff_delay)
-                        continue
-                else:
-                    logger.warning(f"HTTP error {e.response.status_code} for {url}")
-                    return None
-                    
-            except (httpx.TimeoutException, httpx.ConnectError) as e:
-                # Exponential backoff for network errors
-                backoff_delay = self.config.retry_delay * (2 ** attempt)
-                logger.warning(f"Network error for {url}, attempt {attempt + 1}, retrying in {backoff_delay}s: {e}")
-                if attempt < self.config.max_retries - 1:
-                    await asyncio.sleep(backoff_delay)
-                    continue
-                    
-            except Exception as e:
-                logger.error(f"Unexpected error fetching {url}: {e}")
-                return None
+        # Check if page might need JavaScript rendering
+        if self._needs_js_rendering(content):
+            logger.info(f"Page appears to need JavaScript rendering, trying JS fallback for {url}")
+            js_content = await self._fetch_with_js_rendering(url)
+            if js_content:
+                return js_content
         
-        # If regular fetch failed, try JavaScript rendering as fallback
-        logger.info(f"Regular fetch failed, trying JavaScript rendering for {url}")
-        js_content = await self._fetch_with_js_rendering(url)
-        if js_content:
-            return js_content
-        
-        logger.error(f"Failed to fetch {url} after {self.config.max_retries} attempts and JS fallback")
-        return None
+        return content
     
     def _needs_js_rendering(self, content: str) -> bool:
         """Check if page content suggests JavaScript rendering is needed."""
@@ -329,172 +271,64 @@ class ImageExtractor:
         
         return False
     
-    async def _fetch_with_js_rendering(self, url: str) -> Optional[str]:
-        """Fetch page content using advanced JavaScript rendering with resource management."""
-        if not self.config.js_rendering_enabled:
+    async def _fetch_with_js_rendering(self, url: str, timeout: Optional[int] = None) -> Optional[str]:
+        """Fetch page content using JavaScript rendering service."""
+        if not self.config.js_render_allowed:
             return None
         
+        if not self.js_service:
+            await self._initialize_http_client()
+        
+        # Use JS rendering service
+        rendered_content, status_code = await self.js_service.render_page(url)
+        
+        if rendered_content is None:
+            logger.warning(f"JS rendering failed for {url}: {status_code}")
+            return None
+        
+        logger.info(f"JS rendering successful for {url}: {rendered_content.images_loaded} images, {rendered_content.scripts_executed} scripts")
+        return rendered_content.html
+    
+    async def _fetch_with_js_rendering_capped(self, url: str) -> Optional[str]:
+        """
+        Fetch page with JavaScript rendering, respecting caps and timeout.
+        
+        Args:
+            url: URL to fetch
+            
+        Returns:
+            HTML content or None if failed or cap exceeded
+        """
+        # Check if JS rendering is allowed
+        if not self.config.js_render_allowed:
+            logger.debug(f"JS rendering not allowed for {url}")
+            return None
+        
+        # Check if we've exceeded the JS render cap
+        if self.js_render_count >= self.config.js_render_max_per_run:
+            logger.info(f"JS render cap exceeded ({self.js_render_count}/{self.config.js_render_max_per_run}), skipping JS rendering for {url}")
+            return None
+        
+        # Increment JS render counter
+        self.js_render_count += 1
+        logger.info(f"Attempting JS rendering for {url} ({self.js_render_count}/{self.config.js_render_max_per_run})")
+        
         try:
-            from playwright.async_api import async_playwright
-            import psutil
+            # Use the existing JS rendering method with configured timeout
+            content = await self._fetch_with_js_rendering(url, timeout=self.config.js_render_timeout)
             
-            # Check system resources before launching browser
-            memory_percent = psutil.virtual_memory().percent
-            cpu_percent = psutil.cpu_percent(interval=1)
-            
-            if memory_percent > 85:
-                logger.warning(f"High memory usage ({memory_percent}%), skipping JS rendering for {url}")
+            if content:
+                logger.info(f"JS rendering successful for {url}")
+                return content
+            else:
+                logger.warning(f"JS rendering failed for {url}")
                 return None
-            
-            if cpu_percent > 90:
-                logger.warning(f"High CPU usage ({cpu_percent}%), skipping JS rendering for {url}")
-                return None
-            
-            async with async_playwright() as p:
-                # Launch browser with resource limits
-                browser = await p.chromium.launch(
-                    headless=self.config.js_rendering_headless,
-                    args=[
-                        '--no-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--disable-gpu',
-                        '--disable-web-security',
-                        '--disable-features=VizDisplayCompositor',
-                        '--memory-pressure-off',
-                        '--max_old_space_size=512'  # Limit memory usage
-                    ]
-                )
-                
-                try:
-                    # Create context with resource limits
-                    context = await browser.new_context(
-                        viewport={
-                            'width': self.config.js_rendering_viewport_width,
-                            'height': self.config.js_rendering_viewport_height
-                        },
-                        user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                    )
-                    
-                    page = await context.new_page()
-                    
-                    # Set timeouts and limits
-                    page.set_default_timeout(self.config.js_rendering_timeout * 1000)
-                    page.set_default_navigation_timeout(self.config.js_rendering_timeout * 1000)
-                    
-                    # Block unnecessary resources to save bandwidth and memory
-                    await page.route("**/*", self._route_handler)
-                    
-                    # Navigate with advanced options
-                    response = await page.goto(
-                        url, 
-                        wait_until='networkidle',
-                        timeout=self.config.js_rendering_timeout * 1000
-                    )
-                    
-                    if not response or response.status >= 400:
-                        logger.warning(f"JS rendering got bad response for {url}: {response.status if response else 'No response'}")
-                        return None
-                    
-                    # Wait for dynamic content
-                    await asyncio.sleep(self.config.js_rendering_wait_time)
-                    
-                    # Scroll to trigger lazy loading
-                    await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                    await asyncio.sleep(1)
-                    await page.evaluate("window.scrollTo(0, 0)")
-                    await asyncio.sleep(1)
-                    
-                    # Get final content
-                    content = await page.content()
-                    
-                    # Get performance metrics
-                    metrics = await page.evaluate("""
-                        () => {
-                            const perf = performance.getEntriesByType('navigation')[0];
-                            return {
-                                loadTime: perf.loadEventEnd - perf.loadEventStart,
-                                domContentLoaded: perf.domContentLoadedEventEnd - perf.domContentLoadedEventStart,
-                                imagesLoaded: document.images.length,
-                                scriptsExecuted: document.scripts.length
-                            };
-                        }
-                    """)
-                    
-                    logger.info(f"JS rendering successful for {url}: {metrics['imagesLoaded']} images, {metrics['scriptsExecuted']} scripts")
-                    return content
-                    
-                finally:
-                    await context.close()
-                    await browser.close()
                 
         except Exception as e:
-            logger.warning(f"JavaScript rendering failed for {url}: {e}")
+            logger.error(f"Error with capped JS rendering for {url}: {e}")
             return None
     
-    async def _route_handler(self, route):
-        """Route handler to block unnecessary resources."""
-        resource_type = route.request.resource_type
-        url = route.request.url
-        
-        # Block unnecessary resources
-        blocked_types = {'font', 'media', 'websocket', 'manifest'}
-        blocked_domains = {
-            'google-analytics.com', 'googletagmanager.com', 'facebook.com',
-            'twitter.com', 'doubleclick.net', 'adsystem.amazon.com'
-        }
-        
-        if resource_type in blocked_types:
-            await route.abort()
-            return
-        
-        # Block ads and tracking
-        if any(domain in url for domain in blocked_domains):
-            await route.abort()
-            return
-        
-        # Block large files
-        if any(ext in url.lower() for ext in ['.pdf', '.zip', '.exe', '.dmg']):
-            await route.abort()
-            return
-        
-        await route.continue_()
     
-    def _validate_url_security(self, url: str) -> Tuple[bool, str]:
-        """Validate URL for security threats."""
-        try:
-            parsed = urlparse(url)
-            
-            # Check for malicious schemes
-            malicious_schemes = {'javascript', 'data', 'file', 'ftp'}
-            if parsed.scheme.lower() in malicious_schemes:
-                return False, "MALICIOUS_SCHEME"
-            
-            # Only allow http/https schemes
-            if parsed.scheme.lower() not in {'http', 'https'}:
-                return False, "UNSAFE_SCHEME"
-            
-            # Check for blocked hosts
-            blocked_hosts = {
-                "doubleclick.net", "exoclick.com", "s.magsrv.com", "afcdn.net",
-                "google-analytics.com", "googletagmanager.com", "facebook.com", "twitter.com"
-            }
-            if parsed.hostname in blocked_hosts:
-                return False, "BLOCKED_HOST"
-            
-            # Check for suspicious patterns
-            suspicious_patterns = [
-                r'javascript:', r'data:', r'vbscript:', r'onload=', r'onerror=',
-                r'<script', r'<iframe', r'<object', r'<embed'
-            ]
-            for pattern in suspicious_patterns:
-                if re.search(pattern, url, re.IGNORECASE):
-                    return False, "SUSPICIOUS_PATTERN"
-            
-            return True, "SAFE"
-            
-        except Exception as e:
-            logger.warning(f"URL validation error for {url}: {e}")
-            return False, "VALIDATION_ERROR"
     
     def _resolve_redirect_url(self, base_url: str, redirect_url: str) -> str:
         """Resolve relative redirect URLs to absolute URLs."""
@@ -685,7 +519,12 @@ class ImageExtractor:
         # Check attributes for quality indicators
         for attr_name, attr_value in attributes.items():
             if attr_value:
-                attr_lower = attr_value.lower()
+                # Handle both string and list attributes
+                if isinstance(attr_value, list):
+                    attr_str = ' '.join(str(x) for x in attr_value)
+                else:
+                    attr_str = str(attr_value)
+                attr_lower = attr_str.lower()
                 for quality, indicators in self._quality_indicators.items():
                     for indicator in indicators:
                         if indicator in attr_lower:
@@ -812,28 +651,43 @@ class ImageExtractor:
                     classes = current.get('class', [])
                     element_id = current.get('id', '')
                     
-                    # Check classes for ad patterns
-                    for cls in classes:
-                        cls_lower = cls.lower()
+                    # Check classes for ad patterns (exact word boundaries)
+                    # classes is already a list of strings from BeautifulSoup
+                    if classes:
+                        cls_str = ' '.join(str(cls) for cls in classes)
+                        cls_lower = cls_str.lower()
                         for pattern in ad_patterns:
-                            if pattern in cls_lower:
-                                logger.debug(f"Found ad pattern '{pattern}' in class '{cls}'")
+                            # Use word boundaries to avoid false positives
+                            if re.search(r'\b' + re.escape(pattern) + r'\b', cls_lower):
+                                logger.debug(f"Found ad pattern '{pattern}' in class '{cls_str}'")
                                 return True
                     
-                    # Check ID for ad patterns
+                    # Check ID for ad patterns (exact word boundaries)
                     if element_id:
-                        id_lower = element_id.lower()
+                        # element_id is typically a string, but handle list case too
+                        if isinstance(element_id, list):
+                            id_str = ' '.join(str(x) for x in element_id)
+                        else:
+                            id_str = str(element_id)
+                        id_lower = id_str.lower()
                         for pattern in ad_patterns:
-                            if pattern in id_lower:
-                                logger.debug(f"Found ad pattern '{pattern}' in ID '{element_id}'")
+                            # Use word boundaries to avoid false positives
+                            if re.search(r'\b' + re.escape(pattern) + r'\b', id_lower):
+                                logger.debug(f"Found ad pattern '{pattern}' in ID '{id_str}'")
                                 return True
                     
-                    # Check data attributes for ad indicators
+                    # Check data attributes for ad indicators (exact word boundaries)
                     for attr_name, attr_value in current.attrs.items():
-                        if attr_name.startswith('data-') and isinstance(attr_value, str):
-                            attr_lower = attr_value.lower()
+                        if attr_name.startswith('data-'):
+                            # Handle both string and list attributes
+                            if isinstance(attr_value, list):
+                                attr_str = ' '.join(str(x) for x in attr_value)
+                            else:
+                                attr_str = str(attr_value)
+                            attr_lower = attr_str.lower()
                             for pattern in ad_patterns:
-                                if pattern in attr_lower:
+                                # Use word boundaries to avoid false positives
+                                if re.search(r'\b' + re.escape(pattern) + r'\b', attr_lower):
                                     logger.debug(f"Found ad pattern '{pattern}' in attribute '{attr_name}'")
                                     return True
                 
@@ -1004,3 +858,159 @@ class ImageExtractor:
         except Exception as e:
             logger.debug(f"Error validating URL {url}: {e}")
             return False
+    
+    async def _find_navigation_links(self, html: str, base_url: str) -> List[str]:
+        """Find navigation links for album/gallery sites."""
+        if not self.config.navigation_enabled:
+            return []
+        
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+            navigation_links = []
+            
+            # Common navigation patterns
+            nav_patterns = [
+                'a[href*="recent"]',
+                'a[href*="gallery"]', 
+                'a[href*="album"]',
+                'a[href*="photos"]',
+                'a[href*="images"]',
+                'a[href*="latest"]',
+                'a[href*="new"]',
+                'a[href*="browse"]',
+                'a[href*="explore"]'
+            ]
+            
+            for pattern in nav_patterns:
+                links = soup.select(pattern)
+                for link in links[:self.config.navigation_links_per_level]:
+                    href = link.get('href')
+                    if href:
+                        full_url = urljoin(base_url, href)
+                        if self._validate_url(full_url):
+                            navigation_links.append(full_url)
+            
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_links = []
+            for link in navigation_links:
+                if link not in seen:
+                    seen.add(link)
+                    unique_links.append(link)
+            
+            logger.info(f"Found {len(unique_links)} navigation links")
+            return unique_links[:self.config.navigation_links_per_level]
+            
+        except Exception as e:
+            logger.error(f"Error finding navigation links: {e}")
+            return []
+    
+    async def _navigate_and_extract(self, url: str, depth: int = 0) -> List[ExtractedImage]:
+        """Navigate through site structure and extract images."""
+        if depth >= self.config.max_navigation_depth:
+            return []
+        
+        try:
+            # Fetch the page
+            html = await self._fetch_page(url)
+            if not html:
+                return []
+            
+            # Extract images from current page using default recipe
+            soup = BeautifulSoup(html, 'html.parser')
+            images = []
+            
+            # Use basic image extraction
+            img_elements = soup.find_all('img')
+            for img in img_elements:
+                src = img.get('src') or img.get('data-src')
+                if src:
+                    full_url = urljoin(url, src)
+                    if self._validate_url(full_url):
+                        images.append(ExtractedImage(
+                            url=full_url,
+                            selector='img',
+                            attributes={'src': src},
+                            context={'page_url': url},
+                            quality_score=0.5
+                        ))
+            
+            # If we have enough images, don't navigate further
+            if len(images) >= 20:
+                return images
+            
+            # Find navigation links
+            nav_links = await self._find_navigation_links(html, url)
+            
+            # Navigate to found links
+            for nav_url in nav_links:
+                try:
+                    nav_images = await self._navigate_and_extract(nav_url, depth + 1)
+                    images.extend(nav_images)
+                    
+                    # Stop if we have enough images
+                    if len(images) >= self.config.max_images:
+                        break
+                        
+                except Exception as e:
+                    logger.warning(f"Error navigating to {nav_url}: {e}")
+                    continue
+            
+            return images
+            
+        except Exception as e:
+            logger.error(f"Error in navigation extraction: {e}")
+            return []
+    
+    def _needs_navigation(self, url: str) -> bool:
+        """Check if a site needs navigation based on URL patterns."""
+        navigation_domains = [
+            'ibradome.com',
+            'gallery',
+            'album',
+            'photos'
+        ]
+        
+        url_lower = url.lower()
+        return any(domain in url_lower for domain in navigation_domains)
+    
+    def _is_forum_site(self, url: str) -> bool:
+        """Check if a site is a forum based on URL patterns."""
+        forum_domains = [
+            'forum',
+            'discourse',
+            'phpbb',
+            'vbulletin',
+            'xenforo',
+            'community'
+        ]
+        
+        url_lower = url.lower()
+        return any(domain in url_lower for domain in forum_domains)
+    
+    async def _extract_forum_images(self, url: str) -> List[ExtractedImage]:
+        """Extract images from forum using forum navigator."""
+        if not self.config.forum_enabled or not self.forum_navigator:
+            return []
+        
+        try:
+            # Navigate forum and get image URLs
+            image_urls = await self.forum_navigator.navigate_forum(url)
+            
+            # Convert to ExtractedImage objects
+            images = []
+            for img_url in image_urls:
+                if self._validate_url(img_url):
+                    images.append(ExtractedImage(
+                        url=img_url,
+                        selector='forum_extraction',
+                        attributes={'source': 'forum'},
+                        context={'forum_url': url},
+                        quality_score=0.8
+                    ))
+            
+            return images
+            
+        except Exception as e:
+            logger.error(f"Error extracting forum images: {e}")
+            return []

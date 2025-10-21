@@ -14,8 +14,8 @@ from dataclasses import dataclass
 from urllib.parse import urlparse
 import psutil
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
-from ..core.config import get_settings
-from .crawler_settings import *
+
+from .config import CrawlerConfig
 from .http_service import validate_url_security
 
 logger = logging.getLogger(__name__)
@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class JSRenderingConfig:
     """Configuration for JavaScript rendering."""
-    timeout: float = JS_RENDERING_TIMEOUT
-    wait_time: float = JS_RENDERING_WAIT_TIME
-    headless: bool = JS_RENDERING_HEADLESS
-    viewport_width: int = JS_RENDERING_VIEWPORT_WIDTH
-    viewport_height: int = JS_RENDERING_VIEWPORT_HEIGHT
+    timeout: float = 30.0
+    wait_time: float = 5.0
+    headless: bool = True
+    viewport_width: int = 1920
+    viewport_height: int = 1080
     user_agent: str = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 
 @dataclass
@@ -51,15 +51,15 @@ class JSRenderingService:
     - Caching capabilities
     """
     
-    def __init__(self):
+    def __init__(self, config: CrawlerConfig):
+        self.config = config
         self._playwright = None
         self._browser: Optional[Browser] = None
         self._contexts: Dict[str, BrowserContext] = {}
         self._active_sessions = 0
-        self._max_concurrent = JS_RENDERING_MAX_CONCURRENT
-        self._memory_limit = JS_RENDERING_MEMORY_LIMIT
-        self._cpu_limit = JS_RENDERING_CPU_LIMIT
-        self._settings = get_settings()
+        self._max_concurrent = config.js_max_concurrent
+        self._memory_limit = config.js_memory_limit
+        self._cpu_limit = config.js_cpu_limit
         
         # Performance tracking
         self._total_renders = 0
@@ -93,7 +93,7 @@ class JSRenderingService:
                 raise RuntimeError("Insufficient system resources for JavaScript rendering")
             
             self._browser = await self._playwright.chromium.launch(
-                headless=JS_RENDERING_HEADLESS,
+                headless=self.config.js_headless,
                 args=[
                     '--no-sandbox',
                     '--disable-dev-shm-usage',
@@ -209,8 +209,8 @@ class JSRenderingService:
             
             self._contexts[session_id] = await self._browser.new_context(
                 viewport={
-                    'width': JS_RENDERING_VIEWPORT_WIDTH,
-                    'height': JS_RENDERING_VIEWPORT_HEIGHT
+                    'width': self.config.js_viewport_width,
+                    'height': self.config.js_viewport_height
                 },
                 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 java_script_enabled=True,
@@ -247,7 +247,7 @@ class JSRenderingService:
         Returns:
             Tuple of (rendered_content, status_code)
         """
-        if not JS_RENDERING_ENABLED:
+        if not self.config.js_enabled:
             return None, "JS_RENDERING_DISABLED"
         
         if config is None:
@@ -297,14 +297,36 @@ class JSRenderingService:
                 if not response or response.status >= 400:
                     return None, f"HTTP_ERROR_{response.status if response else 'NO_RESPONSE'}"
                 
-                # Wait for page to stabilize (reduced wait time)
+                # Wait for page to stabilize
                 await asyncio.sleep(config.wait_time)
                 
-                # Skip networkidle wait for better performance - just wait for DOM
+                # Wait for DOM content to load
                 try:
-                    await page.wait_for_load_state('domcontentloaded', timeout=2000)
+                    await page.wait_for_load_state('domcontentloaded', timeout=5000)
                 except:
                     # Continue even if timeout - we have the content we need
+                    pass
+                
+                # Wait for images to load (especially lazy-loaded ones)
+                try:
+                    # Wait for at least one image to be visible
+                    await page.wait_for_selector('img', timeout=3000)
+                    
+                    # Trigger lazy loading by scrolling
+                    await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    await asyncio.sleep(1)
+                    await page.evaluate("window.scrollTo(0, 0)")
+                    await asyncio.sleep(1)
+                    
+                    # Wait for network to be idle (images loading)
+                    try:
+                        await page.wait_for_load_state('networkidle', timeout=3000)
+                    except:
+                        # Continue if network doesn't become idle
+                        pass
+                        
+                except:
+                    # Continue even if no images found
                     pass
                 
                 # Get final URL after redirects
@@ -384,7 +406,7 @@ class JSRenderingService:
         Returns:
             Tuple of (needs_js_rendering, detection_info)
         """
-        if not JS_DETECTION_ENABLED:
+        if not self.config.js_detection_enabled:
             return False, {"reason": "detection_disabled"}
         
         detection_info = {
@@ -405,7 +427,7 @@ class JSRenderingService:
             
             # Check for JavaScript keywords in content
             content_lower = html_content.lower()
-            for keyword in JS_DETECTION_KEYWORDS:
+            for keyword in self.config.js_detection_keywords:
                 if keyword in content_lower:
                     detection_info["js_keywords_found"].append(keyword)
             
@@ -441,7 +463,7 @@ class JSRenderingService:
             
             # Determine if JavaScript rendering is needed
             needs_js = (
-                detection_info["script_count"] >= JS_DETECTION_SCRIPT_THRESHOLD or
+                detection_info["script_count"] >= self.config.js_detection_script_threshold or
                 len(detection_info["js_keywords_found"]) > 0 or
                 detection_info["has_spa_indicators"] or
                 detection_info["has_lazy_loading"] or
@@ -503,11 +525,11 @@ class JSRenderingService:
 # Global JavaScript rendering service instance
 _js_rendering_service: Optional[JSRenderingService] = None
 
-async def get_js_rendering_service() -> JSRenderingService:
+async def get_js_rendering_service(config: CrawlerConfig) -> JSRenderingService:
     """Get the global JavaScript rendering service instance."""
     global _js_rendering_service
     if _js_rendering_service is None:
-        _js_rendering_service = JSRenderingService()
+        _js_rendering_service = JSRenderingService(config)
     return _js_rendering_service
 
 async def close_js_rendering_service():

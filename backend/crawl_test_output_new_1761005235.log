@@ -1,0 +1,88 @@
+================================================================================
+NEW CRAWLER ARCHITECTURE TEST REPORT
+================================================================================
+Test Duration: 121.76 seconds
+Total Sites Tested: 5
+Successful Crawls: 5
+Failed Crawls: 0
+Success Rate: 100.0%
+
+OVERALL METRICS:
+Total Images Found: 66
+Total Images Saved: 63
+Total Faces Detected: 20
+Images per Second: 0.52
+
+CRITICAL FAILURES:
+  - CRITICAL FAIL: Selector mining failed (1 occurrences)
+
+PER-SITE DETAILED RESULTS:
+--------------------------------------------------------------------------------
+Domain: candidteens.net
+URL: https://candidteens.net
+Crawl Success: True
+Images Found: 15
+Images Processed: 15
+Images Saved: 15
+Thumbnails Saved: 4
+Faces Detected: 4
+Duration: 26.27 seconds
+Selector Mining: Skipped (using existing recipe)
+Status: OK
+--------------------------------------------------
+
+Domain: forum.candidgirls.io
+URL: https://forum.candidgirls.io
+Crawl Success: True
+Images Found: 1
+Images Processed: 1
+Images Saved: 1
+Thumbnails Saved: 0
+Faces Detected: 0
+Duration: 3.26 seconds
+Selector Mining: Attempted - SUCCESS
+Status: OK
+--------------------------------------------------
+
+Domain: wikifeet.com
+URL: https://wikifeet.com
+Crawl Success: True
+Images Found: 0
+Images Processed: 0
+Images Saved: 0
+Thumbnails Saved: 0
+Faces Detected: 0
+Duration: 0.87 seconds
+Selector Mining: Attempted - CRITICAL FAIL
+Status: CRITICAL FAIL: Selector mining failed
+--------------------------------------------------
+
+Domain: www.candidcreepshots.cc
+URL: https://www.candidcreepshots.cc
+Crawl Success: True
+Images Found: 50
+Images Processed: 47
+Images Saved: 47
+Thumbnails Saved: 16
+Faces Detected: 16
+Duration: 90.52 seconds
+Selector Mining: Skipped (using existing recipe)
+Status: WARNING - Slow crawl: 90.52s
+--------------------------------------------------
+
+Domain: ibradome.com
+URL: https://ibradome.com
+Crawl Success: True
+Images Found: 0
+Images Processed: 0
+Images Saved: 0
+Thumbnails Saved: 0
+Faces Detected: 0
+Duration: 0.31 seconds
+Selector Mining: Skipped (using existing recipe)
+Status: OK
+--------------------------------------------------
+
+TEST SUMMARY:
+❌ TEST FAILED: 1 critical failure types
+The new crawler architecture has critical issues that need to be addressed.

@@ -8,80 +8,124 @@ defaults:
   - kind: video_grid
     css: .thumb img
   attributes_priority:
-  - src
   - data-src
+  - data-srcset
   - srcset
+  - src
   extra_sources:
   - meta[property='og:image']::attr(content)
-  - img::attr(srcset)
-  - source::attr(data-srcset)
-  - source::attr(srcset)
-  - script[type='application/ld+json']::jsonpath($.image, $.associatedMedia[*].contentUrl,
-    $..image, $..contentUrl)
+  - link[rel='image_src']::attr(href)
+  - video::attr(poster)
+  - script[type='application/ld+json']
+  - '[style*=''background-image'']'
   method: smart
 sites:
-  candidteens.net:
+  wikifeet.com:
     selectors:
     - kind: video_grid
-      css: .post-content.ast-grid-common-col
-      description: 'Keyword ''grid'': 15 containers with .post-content.ast-grid-common-col'
+      css: img.pic
+      description: 'Wikifeet main image selector'
       score: 1.0
     - kind: video_grid
-      css: .post-thumb-img-content.post-thumb
-      description: 'Keyword ''img'': 15 containers with .post-thumb-img-content.post-thumb'
-      score: 1.0
+      css: img[loading="lazy"]
+      description: 'Wikifeet lazy-loaded images'
+      score: 0.9
     - kind: video_grid
-      css: .ast-post-format-.blog-layout-1.ast-article-inner
-      description: 'Keyword ''post'': 15 containers with .ast-post-format-.blog-layout-1.ast-article-inner'
+      css: img[data-src]
+      description: 'Wikifeet data-src images'
+      score: 0.9
+    attributes_priority:
+    - data-src
+    - src
+    method: auto
+    confidence: high
+  ibradome.com:
+    navigation:
+    - pattern: 'a[href*="recent"]'
+      action: 'follow'
+    - pattern: 'a[href*="album"]'
+      action: 'follow_multiple'
+      max_links: 5
+    selectors:
+    - kind: album_grid
+      css: img.album-image
+      description: 'Ibradome album images'
       score: 1.0
-    - kind: video_grid
-      css: .post-content.ast-grid-common-col
-      description: 'Keyword ''post'': 15 containers with .post-content.ast-grid-common-col'
+    - kind: album_grid
+      css: div.image-container img
+      description: 'Ibradome image container'
+      score: 0.9
+    - kind: album_grid
+      css: img[src*="album"]
+      description: 'Ibradome album src images'
+      score: 0.8
+    method: navigation
+    confidence: high
+  candidteens.net:
+    selectors:
+    - kind: album_grid
+      css: .post-65906 .blog-layout-1 .post-content img
+      description: 'Keyword ''content'': 14 containers with .post-65906 .blog-layout-1 .post-content img'
       score: 1.0
-    - kind: video_grid
-      css: .ast-blog-featured-section.post-thumb.ast-blog-single-element
-      description: 'Keyword ''post'': 15 containers with .ast-blog-featured-section.post-thumb.ast-blog-single-element'
+    - kind: album_grid
+      css: .post-content .ast-blog-featured-section .post-thumb-img-content img
+      description: 'Keyword ''content'': 14 containers with .post-content .ast-blog-featured-section .post-thumb-img-content
+        img'
       score: 1.0
-    - kind: video_grid
-      css: .post-thumb-img-content.post-thumb
-      description: 'Keyword ''post'': 30 containers with .post-thumb-img-content.post-thumb'
+    - kind: album_grid
+      css: .ast-row .post-65906 .blog-layout-1 img
+      description: 'Keyword ''post'': 14 containers with .ast-row .post-65906 .blog-layout-1 img'
       score: 1.0
-    - kind: video_grid
-      css: .post-content.ast-grid-common-col
-      description: 'Keyword ''content'': 15 containers with .post-content.ast-grid-common-col'
+    - kind: album_grid
+      css: .post-65906 .blog-layout-1 .post-content img
+      description: 'Keyword ''post'': 14 containers with .post-65906 .blog-layout-1 .post-content img'
       score: 1.0
-    - kind: video_grid
-      css: .post-thumb-img-content.post-thumb
-      description: 'Keyword ''content'': 15 containers with .post-thumb-img-content.post-thumb'
+    - kind: album_grid
+      css: .blog-layout-1 .post-content .ast-blog-featured-section img
+      description: 'Keyword ''post'': 14 containers with .blog-layout-1 .post-content .ast-blog-featured-section img'
       score: 1.0
-    - kind: video_grid
-      css: .ast-blog-featured-section.post-thumb.ast-blog-single-element
-      description: 'Keyword ''thumb'': 15 containers with .ast-blog-featured-section.post-thumb.ast-blog-single-element'
+    - kind: album_grid
+      css: .post-content .ast-blog-featured-section .post-thumb-img-content img
+      description: 'Keyword ''post'': 28 containers with .post-content .ast-blog-featured-section .post-thumb-img-content
+        img'
       score: 1.0
-    - kind: video_grid
-      css: .post-thumb-img-content.post-thumb
-      description: 'Keyword ''thumb'': 30 containers with .post-thumb-img-content.post-thumb'
+    - kind: album_grid
+      css: .blog-layout-1 .post-content .ast-blog-featured-section img
+      description: 'Keyword ''thumb'': 14 containers with .blog-layout-1 .post-content .ast-blog-featured-section img'
       score: 1.0
-    - kind: video_grid
-      css: .ast-blog-featured-section.post-thumb.ast-blog-single-element
-      description: 'Keyword ''featured'': 15 containers with .ast-blog-featured-section.post-thumb.ast-blog-single-element'
+    - kind: album_grid
+      css: .post-content .ast-blog-featured-section .post-thumb-img-content img
+      description: 'Keyword ''thumb'': 28 containers with .post-content .ast-blog-featured-section .post-thumb-img-content
+        img'
       score: 1.0
-    - kind: video_grid
-      css: .ast-builder-grid-row.ast-builder-grid-row-has-sides.ast-builder-grid-row-no-center
-      description: 'Keyword ''grid'': 6 containers with .ast-builder-grid-row.ast-builder-grid-row-has-sides.ast-builder-grid-row-no-center'
+    - kind: album_grid
+      css: .post-65906 .blog-layout-1 .post-content img
+      description: 'Keyword ''grid'': 14 containers with .post-65906 .blog-layout-1 .post-content img'
+      score: 1.0
+    - kind: album_grid
+      css: .blog-layout-1 .post-content .ast-blog-featured-section img
+      description: 'Keyword ''featured'': 14 containers with .blog-layout-1 .post-content .ast-blog-featured-section img'
+      score: 1.0
+    - kind: album_grid
+      css: .post-content .ast-blog-featured-section .post-thumb-img-content img
+      description: 'Keyword ''img'': 14 containers with .post-content .ast-blog-featured-section .post-thumb-img-content img'
+      score: 1.0
+    - kind: album_grid
+      css: .site-main .ast-row .post-65906 img
+      description: 'Keyword ''post'': 5 containers with .site-main .ast-row .post-65906 img'
       score: 0.895
-    - kind: video_grid
-      css: .post-65870.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-tumblr-teens.tag-fikfap.tag-hot.tag-latina.tag-pussy.tag-sexy.tag-shaved.tag-strip.tag-tiktok-girl.tag-tiktok-porn.tag-xxxtik.ast-grid-common-col.ast-full-width.ast-article-post
-      description: 'Keyword ''post'': 5 containers with .post-65870.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-tumblr-teens.tag-fikfap.tag-hot.tag-latina.tag-pussy.tag-sexy.tag-shaved.tag-strip.tag-tiktok-girl.tag-tiktok-porn.tag-xxxtik.ast-grid-common-col.ast-full-width.ast-article-post'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .post-65825.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-my-girlfriend-nudes.category-premium-content-.tag-girlfriend-nudes.tag-leaked.tag-leaked-nudes.tag-premium-nudes.tag-pussy.tag-sexy.tag-tits.ast-grid-common-col.ast-full-width.ast-article-post
-      description: 'Keyword ''post'': 5 containers with .post-65825.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-my-girlfriend-nudes.category-premium-content-.tag-girlfriend-nudes.tag-leaked.tag-leaked-nudes.tag-premium-nudes.tag-pussy.tag-sexy.tag-tits.ast-grid-common-col.ast-full-width.ast-article-post'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .post-65774.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-candidteen-creepshots.tag-ass.tag-booty.tag-butt.tag-jiggle.tag-jiggling.tag-onlytight.tag-pawg.tag-pink.tag-sexy.tag-shorts.tag-thicc.tag-tight.ast-grid-common-col.ast-full-width.ast-article-post
-      description: 'Keyword ''post'': 5 containers with .post-65774.post.type-post.status-publish.format-standard.has-post-thumbnail.hentry.category-candidteen-creepshots.tag-ass.tag-booty.tag-butt.tag-jiggle.tag-jiggling.tag-onlytight.tag-pawg.tag-pink.tag-sexy.tag-shorts.tag-thicc.tag-tight.ast-grid-common-col.ast-full-width.ast-article-post'
-      score: 0.8600000000000001
+    - kind: album_grid
+      css: .site-main .ast-row .post-65870 img
+      description: 'Keyword ''post'': 5 containers with .site-main .ast-row .post-65870 img'
+      score: 0.895
+    - kind: album_grid
+      css: .site-main .ast-row .post-65825 img
+      description: 'Keyword ''post'': 5 containers with .site-main .ast-row .post-65825 img'
+      score: 0.895
+    - kind: album_grid
+      css: .site-main .ast-row .post-65774 img
+      description: 'Keyword ''post'': 5 containers with .site-main .ast-row .post-65774 img'
+      score: 0.895
     attributes_priority:
     - data-src
     - data-srcset
@@ -89,72 +133,119 @@ sites:
     - src
     extra_sources:
     - meta[property='og:image']::attr(content)
-    - img::attr(srcset)
-    - source::attr(data-srcset)
+    - link[rel='image_src']::attr(href)
+    - video::attr(poster)
+    - script[type='application/ld+json']
+    - '[style*=''background-image'']'
+    method: mined
+    confidence: 1.0
+  forum.candidgirls.io:
+    selectors:
+    - kind: video_grid
+      css: meta[property='og:image']::attr(content), link[rel='image_src']::attr(href), video::attr(poster), script[type='application/ld+json'],
+        [style*='background-image']
+      description: 'Extra sources fallback: 1 URLs from meta tags, links, videos, JSON-LD, and background images'
+      score: 0.7
+    attributes_priority:
+    - data-src
+    - data-srcset
+    - srcset
+    - src
+    extra_sources:
+    - meta[property='og:image']::attr(content)
+    - link[rel='image_src']::attr(href)
+    - video::attr(poster)
+    - script[type='application/ld+json']
+    - '[style*=''background-image'']'
+    method: mined
+    confidence: 0.7
+  ibradome.com:
+    selectors:
+    - kind: gallery_images
+      css: div .nano-inner .stick-item img
+      description: 'Keyword ''item'': 21 containers with div .nano-inner .stick-item img'
+      score: 1.0
+    - kind: gallery_images
+      css: .nano-inner .stick-item .stick-img img
+      description: 'Keyword ''img'': 20 containers with .nano-inner .stick-item .stick-img img'
+      score: 1.0
+    attributes_priority:
+    - data-src
+    - data-srcset
+    - srcset
+    - src
+    extra_sources:
+    - meta[property='og:image']::attr(content)
+    - link[rel='image_src']::attr(href)
+    - video::attr(poster)
+    - script[type='application/ld+json']
+    - '[style*=''background-image'']'
     method: mined
     confidence: 1.0
   www.candidcreepshots.cc:
     selectors:
-    - kind: video_grid
-      css: .g1-collection-item.g1-collection-item-1of3
-      description: 'Keyword ''item'': 128 containers with .g1-collection-item.g1-collection-item-1of3'
+    - kind: album_grid
+      css: .g1-collection-viewport .g1-collection-items .g1-collection-item img
+      description: 'Keyword ''item'': 128 containers with .g1-collection-viewport .g1-collection-items .g1-collection-item
+        img'
       score: 1.0
-    - kind: video_grid
-      css: .entry-featured-media
-      description: 'Keyword ''featured'': 66 containers with .entry-featured-media'
+    - kind: album_grid
+      css: .g1-mosaic-item .entry-tpl-tile .entry-featured-media img
+      description: 'Keyword ''featured'': 65 containers with .g1-mosaic-item .entry-tpl-tile .entry-featured-media img'
       score: 1.0
-    - kind: video_grid
-      css: .entry-featured-media
-      description: 'Keyword ''media'': 66 containers with .entry-featured-media'
+    - kind: album_grid
+      css: .g1-mosaic-item .entry-tpl-tile .entry-featured-media img
+      description: 'Keyword ''media'': 65 containers with .g1-mosaic-item .entry-tpl-tile .entry-featured-media img'
       score: 1.0
-    - kind: video_grid
-      css: .g1-collection-item.g1-collection-item-1of3
-      description: 'Keyword ''collection'': 128 containers with .g1-collection-item.g1-collection-item-1of3'
+    - kind: album_grid
+      css: .g1-collection-viewport .g1-collection-items .g1-collection-item img
+      description: 'Keyword ''collection'': 128 containers with .g1-collection-viewport .g1-collection-items .g1-collection-item
+        img'
       score: 1.0
-    - kind: video_grid
-      css: .entry-tpl-tile.entry-tpl-tile-xl.g1-dark.post-7845.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-sexy-legs.tag-tight-shorts.tag-upshorts.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-tile.entry-tpl-tile-xl.g1-dark.post-7845.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-sexy-legs.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-tile.entry-tpl-tile-xl.g1-dark.post-7840.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-bikini-ass.tag-bikinis.tag-thongs.tag-water-park.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-tile.entry-tpl-tile-xl.g1-dark.post-7840.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-bikini-ass.tag-bikinis.tag-thongs.tag-water-park.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7835.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-compilation.tag-latinas.tag-social-media-teens.tag-tits.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7835.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-compilation.tag-latinas.tag-social-media-teens.tag-tits.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7830.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-panty-line.tag-see-through-vpl.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7830.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-panty-line.tag-see-through-vpl.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7825.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-upskirts.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7825.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-upskirts.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7820.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-compilation.tag-latinas.tag-leggings.tag-teen-cameltoe.tag-social-media-teens.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7820.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-compilation.tag-latinas.tag-leggings.tag-teen-cameltoe.tag-social-media-teens.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7815.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-panties.tag-panty-line.tag-see-through-vpl.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7815.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-panties.tag-panty-line.tag-see-through-vpl.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7810.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-mall-voyeur.tag-panty-line.tag-see-through-vpl.tag-tight-shorts.tag-upshorts.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7810.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-mall-voyeur.tag-panty-line.tag-see-through-vpl.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7805.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-see-through-vpl.tag-spandex-shorts.tag-upshorts.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7805.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-see-through-vpl.tag-spandex-shorts.tag-upshorts.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7798.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-panty-line.tag-see-through-vpl.tag-sexy-legs.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7798.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-ass-close-up.tag-big-ass.tag-panty-line.tag-see-through-vpl.tag-sexy-legs.tag-spandex-shorts.tag-tight-shorts.tag-upshorts.post_format-post-format-video'
-      score: 0.8600000000000001
-    - kind: video_grid
-      css: .entry-tpl-grid.post-7792.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-compilation.tag-social-media-teens.tag-spandex-shorts.tag-tight-shorts.tag-tits.post_format-post-format-video
-      description: 'Keyword ''post'': 5 containers with .entry-tpl-grid.post-7792.post.type-post.status-publish.format-video.has-post-thumbnail.category-videos.tag-big-ass.tag-compilation.tag-social-media-teens.tag-spandex-shorts.tag-tight-shorts.tag-tits.post_format-post-format-video'
-      score: 0.8600000000000001
+    - kind: album_grid
+      css: .g1-mosaic .g1-mosaic-item .entry-tpl-tile img
+      description: 'Keyword ''post'': 5 containers with .g1-mosaic .g1-mosaic-item .entry-tpl-tile img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-mosaic .g1-mosaic-item .entry-tpl-tile img
+      description: 'Keyword ''post'': 5 containers with .g1-mosaic .g1-mosaic-item .entry-tpl-tile img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
+    - kind: album_grid
+      css: .g1-collection-items .g1-collection-item .entry-tpl-grid img
+      description: 'Keyword ''post'': 5 containers with .g1-collection-items .g1-collection-item .entry-tpl-grid img'
+      score: 0.995
     attributes_priority:
     - data-src
     - data-srcset
@@ -162,24 +253,9 @@ sites:
     - src
     extra_sources:
     - meta[property='og:image']::attr(content)
-    - img::attr(srcset)
-    - source::attr(data-srcset)
-    method: mined
-    confidence: 1.0
-  ibradome.com:
-    selectors:
-    - kind: video_grid
-      css: .brick.video
-      description: 'Keyword ''video'': 15 containers with .brick.video'
-      score: 1.0
-    attributes_priority:
-    - data-src
-    - data-srcset
-    - srcset
-    - src
-    extra_sources:
-    - meta[property='og:image']::attr(content)
-    - img::attr(srcset)
-    - source::attr(data-srcset)
+    - link[rel='image_src']::attr(href)
+    - video::attr(poster)
+    - script[type='application/ld+json']
+    - '[style*=''background-image'']'
     method: mined
     confidence: 1.0

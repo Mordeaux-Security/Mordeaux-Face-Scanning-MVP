@@ -25,6 +25,7 @@ import httpx
 
 from .config import CrawlerConfig
 from .memory import MemoryManager
+from .http_service import HTTPService, get_http_service
 
 # Image safety configuration
 Image.MAX_IMAGE_PIXELS = 50_000_000
@@ -425,8 +426,8 @@ class ImageProcessor:
             thread_name_prefix="image_processing"
         )
         
-        # HTTP client for downloading images
-        self.http_client: Optional[httpx.AsyncClient] = None
+        # HTTP service for downloading images
+        self.http_service: Optional[HTTPService] = None
         
         # Processing statistics
         self.stats = {
@@ -447,28 +448,13 @@ class ImageProcessor:
         await self._cleanup()
     
     async def _initialize_http_client(self):
-        """Initialize HTTP client for image downloading."""
-        if self.http_client is None:
-            self.http_client = httpx.AsyncClient(
-                timeout=httpx.Timeout(
-                    connect=self.config.connect_timeout,
-                    read=self.config.read_timeout,
-                    write=self.config.timeout_seconds,
-                    pool=self.config.timeout_seconds
-                ),
-                limits=httpx.Limits(
-                    max_connections=self.config.max_connections,
-                    max_keepalive_connections=self.config.max_keepalive_connections
-                ),
-                follow_redirects=True,
-                max_redirects=self.config.max_redirects
-            )
+        """Initialize HTTP service for image downloading."""
+        if self.http_service is None:
+            self.http_service = await get_http_service(self.config)
     
     async def _cleanup(self):
         """Cleanup resources."""
-        if self.http_client:
-            await self.http_client.aclose()
-            self.http_client = None
+        # Note: HTTP service cleanup is handled globally
         
         self.face_thread_pool.shutdown(wait=True)
         self.processing_thread_pool.shutdown(wait=True)
@@ -625,66 +611,18 @@ class ImageProcessor:
                 self.stats['errors'] += 1
     
     async def _download_image(self, url: str) -> Optional[bytes]:
-        """Download image from URL using streaming to temp file."""
-        if not self.http_client:
+        """Download image from URL using HTTP service."""
+        if not self.http_service:
             await self._initialize_http_client()
         
-        temp_file = None
-        try:
-            # Create temporary file
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.tmp')
-            temp_path = temp_file.name
-            temp_file.close()  # Close the file handle, we'll use the path
-            
-            # Stream download to temp file
-            async with self.http_client.stream('GET', url) as response:
-                response.raise_for_status()
-                
-                # Check content length
-                content_length = response.headers.get('content-length')
-                if content_length and int(content_length) > self.config.max_image_bytes:
-                    logger.warning(f"Image too large: {url} ({content_length} bytes)")
-                    return None
-                
-                # Check content type
-                content_type = response.headers.get('content-type', '').lower()
-                if not any(ct in content_type for ct in self.config.allowed_content_types):
-                    logger.warning(f"Unsupported content type: {url} ({content_type})")
-                    return None
-                
-                # Stream to temp file with size checking
-                total_bytes = 0
-                with open(temp_path, 'wb') as f:
-                    async for chunk in response.aiter_bytes(chunk_size=8192):
-                        total_bytes += len(chunk)
-                        
-                        # Check size limit during download
-                        if total_bytes > self.config.max_image_bytes:
-                            logger.warning(f"Image too large during download: {url} ({total_bytes} bytes)")
-                            return None
-                        
-                        f.write(chunk)
-                
-                # Read the temp file into memory
-                with open(temp_path, 'rb') as f:
-                    return f.read()
-            
-        except httpx.HTTPStatusError as e:
-            logger.warning(f"HTTP error downloading {url}: {e.response.status_code}")
+        # Use HTTP service to download image
+        content, status_code = await self.http_service.download_image(url, self.config.max_image_bytes)
+        
+        if content is None:
+            logger.warning(f"Failed to download image {url}: {status_code}")
             return None
-        except httpx.TimeoutException:
-            logger.warning(f"Timeout downloading {url}")
-            return None
-        except Exception as e:
-            logger.error(f"Error downloading {url}: {e}")
-            return None
-        finally:
-            # Clean up temp file
-            if temp_path and os.path.exists(temp_path):
-                try:
-                    os.unlink(temp_path)
-                except Exception as e:
-                    logger.debug(f"Error cleaning up temp file {temp_path}: {e}")
+        
+        return content
     
     async def _load_image(self, image_data: bytes) -> Optional[Image.Image]:
         """Load and validate image from bytes with EXIF orientation correction."""
@@ -911,19 +849,48 @@ class ImageProcessor:
                 logger.error(f"Face {face_index} error processing bbox coordinates: {e}, bbox: {bbox}")
                 return None
             
-            # Add some padding around the face
+            # Add improved padding around the face with square crop
             try:
                 face_width = R - L
                 face_height = B - T
                 logger.debug(f"Face {face_index} dimensions: width={face_width}, height={face_height}")
                 
-                padding = max(face_width, face_height) * 0.2
+                # Use configurable padding with minimum padding
+                padding = max(self.config.face_crop_min_padding, max(face_width, face_height) * self.config.face_crop_padding)
                 logger.debug(f"Face {face_index} calculated padding: {padding}")
                 
-                L_padded = max(0, int(L - padding))
-                T_padded = max(0, int(T - padding))
-                R_padded = min(image.width, int(R + padding))
-                B_padded = min(image.height, int(B + padding))
+                # Calculate face center
+                center_x = (L + R) / 2
+                center_y = (T + B) / 2
+                
+                if self.config.face_crop_square:
+                    # Make crop square for better thumbnails
+                    crop_size = max(face_width, face_height) + (padding * 2)
+                    
+                    # Center the face in the square crop
+                    L_padded = max(0, int(center_x - crop_size/2))
+                    T_padded = max(0, int(center_y - crop_size/2))
+                    R_padded = min(image.width, int(center_x + crop_size/2))
+                    B_padded = min(image.height, int(center_y + crop_size/2))
+                    
+                    # Ensure we have a square crop
+                    crop_width = R_padded - L_padded
+                    crop_height = B_padded - T_padded
+                    if crop_width != crop_height:
+                        # Make it square by using the smaller dimension
+                        square_size = min(crop_width, crop_height)
+                        center_x = (L_padded + R_padded) / 2
+                        center_y = (T_padded + B_padded) / 2
+                        L_padded = max(0, int(center_x - square_size/2))
+                        T_padded = max(0, int(center_y - square_size/2))
+                        R_padded = min(image.width, int(center_x + square_size/2))
+                        B_padded = min(image.height, int(center_y + square_size/2))
+                else:
+                    # Use rectangular crop with padding
+                    L_padded = max(0, int(L - padding))
+                    T_padded = max(0, int(T - padding))
+                    R_padded = min(image.width, int(R + padding))
+                    B_padded = min(image.height, int(B + padding))
                 
                 logger.debug(f"Face {face_index} padded coordinates: L={L_padded}, T={T_padded}, R={R_padded}, B={B_padded}")
                 

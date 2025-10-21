@@ -19,8 +19,8 @@ class CrawlerConfig:
     # Core Crawling Settings
     # ============================================================================
     max_pages: int = 20
-    max_images: int = 50
-    max_total_images: int = 50
+    max_images: int = 150
+    max_total_images: int = 150
     require_faces: bool = False
     crop_faces: bool = True
     max_depth: int = 1
@@ -29,19 +29,19 @@ class CrawlerConfig:
     # ============================================================================
     # HTTP Client Settings
     # ============================================================================
-    concurrent_downloads: int = 8
-    concurrent_processing: int = 3
-    per_host_concurrency: int = 6
+    concurrent_downloads: int = 12  # Increased from 8
+    concurrent_processing: int = 4  # Increased from 3
+    per_host_concurrency: int = 8   # Increased from 6
     timeout_seconds: int = 30
     connect_timeout: int = 5
     read_timeout: int = 10
     max_retries: int = 3
     retry_delay: float = 1.0
     
-    # HTTP Connection Pooling
-    max_keepalive_connections: int = 200
-    max_connections: int = 500
-    keepalive_expiry: float = 30.0
+    # HTTP Connection Pooling (optimized for better performance)
+    max_keepalive_connections: int = 300
+    max_connections: int = 800
+    keepalive_expiry: float = 60.0
     
     # ============================================================================
     # Memory Management Settings
@@ -49,7 +49,7 @@ class CrawlerConfig:
     memory_pressure_threshold: float = 0.75
     memory_critical_threshold: float = 0.85
     memory_low_threshold: float = 0.60
-    batch_size: int = 32
+    batch_size: int = 64  # Increased for better throughput
     gc_frequency: int = 100
     cpu_sample_frequency: int = 20
     
@@ -69,12 +69,19 @@ class CrawlerConfig:
     face_dup_dist_album: float = 0.38
     
     # ============================================================================
+    # JavaScript Rendering Settings
+    # ============================================================================
+    js_render_allowed: bool = False  # Off by default, requires explicit --js flag
+    js_render_timeout: int = 8  # 7-10s timeout for JS rendering
+    js_render_max_per_run: int = 1  # Hard cap: 1 per run (or 2 with discovery)
+    
+    # ============================================================================
     # Image Processing Settings
     # ============================================================================
     max_image_bytes: int = 10 * 1024 * 1024  # 10 MiB
     max_content_length: int = 8 * 1024 * 1024  # 8MB
     max_image_pixels: int = 50_000_000
-    min_image_size: Tuple[int, int] = (100, 100)  # Minimum width x height in pixels
+    min_image_size: Tuple[int, int] = (50, 50)  # Minimum width x height in pixels
     
     # Image Enhancement
     image_enhancement_low_res_width: int = 500
@@ -123,20 +130,23 @@ class CrawlerConfig:
     # JavaScript Rendering Settings
     # ============================================================================
     js_rendering_enabled: bool = True
-    js_rendering_timeout: float = 15.0
-    js_rendering_wait_time: float = 0.5
-    js_rendering_max_concurrent: int = 5
+    js_rendering_timeout: float = 10.0  # Reduced from 15.0
+    js_rendering_wait_time: float = 0.3  # Reduced from 0.5
+    js_rendering_max_concurrent: int = 8  # Increased from 5
     js_rendering_headless: bool = True
     js_rendering_viewport_width: int = 1280
     js_rendering_viewport_height: int = 720
     
-    # JavaScript Detection
+    # Additional JS service config
+    js_max_concurrent: int = 8
+    js_memory_limit: int = 2 * 1024 * 1024 * 1024  # 2GB
+    js_cpu_limit: int = 80
+    js_enabled: bool = True
     js_detection_enabled: bool = True
-    js_detection_keywords: List[str] = field(default_factory=lambda: [
-        'react', 'vue', 'angular', 'spa', 'single-page',
-        'lazy-load', 'infinite-scroll', 'dynamic-content'
-    ])
-    js_detection_script_threshold: int = 5
+    js_detection_script_threshold: int = 3
+    js_detection_keywords: List[str] = field(default_factory=lambda: ['spa', 'react', 'vue', 'angular'])
+    
+    # JavaScript Detection (consolidated)
     js_detection_fallback_enabled: bool = True
     
     # JavaScript Performance
@@ -156,9 +166,30 @@ class CrawlerConfig:
     # ============================================================================
     list_crawl_default_sites_file: str = "sites.txt"
     list_crawl_max_pages_per_site: int = 5
-    list_crawl_max_images_per_site: int = 20
+    list_crawl_max_images_per_site: int = 150
     list_crawl_auto_selector_mining: bool = True
     list_crawl_skip_existing_recipes: bool = True
+    
+    # ============================================================================
+    # Navigation Settings
+    # ============================================================================
+    navigation_enabled: bool = True
+    max_navigation_depth: int = 2
+    navigation_links_per_level: int = 5
+    
+    # ============================================================================
+    # Forum Settings
+    # ============================================================================
+    forum_enabled: bool = True
+    forum_max_threads: int = 10
+    forum_max_posts_per_thread: int = 20
+    
+    # ============================================================================
+    # Face Cropping Settings
+    # ============================================================================
+    face_crop_padding: float = 0.1
+    face_crop_square: bool = True
+    face_crop_min_padding: int = 10
     
     # ============================================================================
     # GPU Settings (Future)
@@ -201,8 +232,8 @@ class CrawlerConfig:
         return cls(
             # Core settings
             max_pages=int(os.getenv('CRAWLER_MAX_PAGES', 20)),
-            max_images=int(os.getenv('CRAWLER_MAX_IMAGES', 50)),
-            max_total_images=int(os.getenv('CRAWLER_MAX_TOTAL_IMAGES', 50)),
+            max_images=int(os.getenv('CRAWLER_MAX_IMAGES', 150)),
+            max_total_images=int(os.getenv('CRAWLER_MAX_TOTAL_IMAGES', 150)),
             require_faces=os.getenv('CRAWLER_REQUIRE_FACES', 'false').lower() == 'true',
             crop_faces=os.getenv('CRAWLER_CROP_FACES', 'true').lower() == 'true',
             max_depth=int(os.getenv('CRAWLER_MAX_DEPTH', 1)),
@@ -237,13 +268,18 @@ class CrawlerConfig:
             face_dup_dist_image=float(os.getenv('CRAWLER_FACE_DUP_DIST_IMAGE', 0.35)),
             face_dup_dist_album=float(os.getenv('CRAWLER_FACE_DUP_DIST_ALBUM', 0.38)),
             
+            # JavaScript rendering
+            js_render_allowed=os.getenv('CRAWLER_JS_RENDER_ALLOWED', 'false').lower() == 'true',
+            js_render_timeout=int(os.getenv('CRAWLER_JS_RENDER_TIMEOUT', 8)),
+            js_render_max_per_run=int(os.getenv('CRAWLER_JS_RENDER_MAX_PER_RUN', 1)),
+            
             # Image processing
             max_image_bytes=int(os.getenv('CRAWLER_MAX_IMAGE_BYTES', 10 * 1024 * 1024)),
             max_content_length=int(os.getenv('CRAWLER_MAX_CONTENT_LENGTH', 8 * 1024 * 1024)),
             max_image_pixels=int(os.getenv('CRAWLER_MAX_IMAGE_PIXELS', 50_000_000)),
             min_image_size=(
-                int(os.getenv('CRAWLER_MIN_IMAGE_WIDTH', 100)),
-                int(os.getenv('CRAWLER_MIN_IMAGE_HEIGHT', 100))
+                int(os.getenv('CRAWLER_MIN_IMAGE_WIDTH', 50)),
+                int(os.getenv('CRAWLER_MIN_IMAGE_HEIGHT', 50))
             ),
             
             # Image enhancement
@@ -295,7 +331,7 @@ class CrawlerConfig:
             # List crawling
             list_crawl_default_sites_file=os.getenv('CRAWLER_SITES_FILE', 'sites.txt'),
             list_crawl_max_pages_per_site=int(os.getenv('CRAWLER_LIST_MAX_PAGES', 5)),
-            list_crawl_max_images_per_site=int(os.getenv('CRAWLER_LIST_MAX_IMAGES', 20)),
+            list_crawl_max_images_per_site=int(os.getenv('CRAWLER_LIST_MAX_IMAGES', 150)),
             list_crawl_auto_selector_mining=os.getenv('CRAWLER_AUTO_MINING', 'true').lower() == 'true',
             list_crawl_skip_existing_recipes=os.getenv('CRAWLER_SKIP_EXISTING_RECIPES', 'true').lower() == 'true',
             
@@ -361,6 +397,14 @@ class CrawlerConfig:
             'detection_scales': self.face_detection_scales,
             'dup_dist_image': self.face_dup_dist_image,
             'dup_dist_album': self.face_dup_dist_album,
+        }
+    
+    def get_js_render_config(self) -> Dict[str, Any]:
+        """Get JavaScript rendering configuration."""
+        return {
+            'allowed': self.js_render_allowed,
+            'timeout': self.js_render_timeout,
+            'max_per_run': self.js_render_max_per_run,
         }
     
     def get_memory_config(self) -> Dict[str, Any]:

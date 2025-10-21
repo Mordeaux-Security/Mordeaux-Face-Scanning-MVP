@@ -16,9 +16,8 @@ from typing import Optional, Dict, Any, Tuple, List
 from dataclasses import dataclass
 from urllib.parse import urljoin, urlparse
 import httpx
-from ..core.config import get_settings
-from .crawler_settings import *
-# URL security validation (moved from redirect_utils.py)
+
+from .config import CrawlerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +66,9 @@ def validate_url_security(url: str) -> Tuple[bool, str]:
 @dataclass
 class RequestConfig:
     """Configuration for HTTP requests."""
-    timeout: float = DEFAULT_TIMEOUT
-    max_retries: int = HTTP_MAX_RETRIES
-    retry_delay: float = HTTP_RETRY_DELAY
+    timeout: float = 30.0
+    max_retries: int = 3
+    retry_delay: float = 1.0
     max_redirects: int = 3
     follow_redirects: bool = True
     verify_ssl: bool = True
@@ -89,22 +88,27 @@ class HTTPService:
     Centralized HTTP service with connection pooling and intelligent caching.
     """
     
-    def __init__(self):
+    def __init__(self, config: CrawlerConfig):
+        self.config = config
         self._client: Optional[httpx.AsyncClient] = None
         self._response_cache: Dict[str, ResponseCache] = {}
         self._cache_cleanup_interval = 60.0  # Clean cache every minute
         self._last_cache_cleanup = 0.0
-        self._settings = get_settings()
         
         # Connection pool configuration
         self._limits = httpx.Limits(
-            max_keepalive_connections=HTTP_MAX_KEEPALIVE_CONNECTIONS,  # Increased for better reuse
-            max_connections=HTTP_MAX_CONNECTIONS,            # Increased for higher concurrency
-            keepalive_expiry=HTTP_KEEPALIVE_EXPIRY           # Keep connections alive longer
+            max_keepalive_connections=config.max_keepalive_connections,
+            max_connections=config.max_connections,
+            keepalive_expiry=config.keepalive_expiry
         )
         
         # Request configuration
-        self._default_config = RequestConfig()
+        self._default_config = RequestConfig(
+            timeout=config.timeout_seconds,
+            max_retries=config.max_retries,
+            retry_delay=config.retry_delay,
+            max_redirects=config.max_redirects
+        )
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -120,9 +124,9 @@ class HTTPService:
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
                 timeout=httpx.Timeout(
-                    connect=10.0,
-                    read=self._default_config.timeout,
-                    write=10.0,
+                    connect=self.config.connect_timeout,
+                    read=self.config.read_timeout,
+                    write=self.config.timeout_seconds,
                     pool=5.0
                 ),
                 verify=self._default_config.verify_ssl,
@@ -435,11 +439,11 @@ class HTTPService:
 # Global HTTP service instance
 _http_service: Optional[HTTPService] = None
 
-async def get_http_service() -> HTTPService:
+async def get_http_service(config: CrawlerConfig) -> HTTPService:
     """Get the global HTTP service instance."""
     global _http_service
     if _http_service is None:
-        _http_service = HTTPService()
+        _http_service = HTTPService(config)
     return _http_service
 
 async def close_http_service():

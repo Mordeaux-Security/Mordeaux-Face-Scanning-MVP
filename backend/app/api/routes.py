@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from ..crawler.face import get_face_service
-from ..crawler.storage import save_raw_and_thumb_async, get_object_from_storage
+# from ..crawler.storage import save_raw_and_thumb_async, get_object_from_storage
 from ..services.vector import get_vector_client
 from ..crawler.cache import get_cache_service
 from ..crawler.batch import get_batch_processor
@@ -129,7 +129,8 @@ async def index_face(request: Request, file: UploadFile = File(...)):
         face.detect_and_embed_async(content)
     )
 
-    raw_key, raw_url, thumb_key, thumb_url = await save_raw_and_thumb_async(content, tenant_id)
+    # raw_key, raw_url, thumb_key, thumb_url = await save_raw_and_thumb_async(content, tenant_id)
+    raw_key, raw_url, thumb_key, thumb_url = "placeholder", "placeholder", "placeholder", "placeholder"
 
     vec = get_vector_client()
     items = []
@@ -255,7 +256,8 @@ async def search_face(request: Request, file: UploadFile = File(...), top_k: int
         face.detect_and_embed_async(content)
     )
 
-    raw_key, raw_url, thumb_key, thumb_url = await save_raw_and_thumb_async(content, tenant_id)
+    # raw_key, raw_url, thumb_key, thumb_url = await save_raw_and_thumb_async(content, tenant_id)
+    raw_key, raw_url, thumb_key, thumb_url = "placeholder", "placeholder", "placeholder", "placeholder"
 
     vec = get_vector_client()
     items = []
@@ -480,7 +482,8 @@ async def compare_face(request: Request, file: UploadFile = File(...), top_k: in
 async def serve_image(bucket: str, key: str):
     """Proxy endpoint to serve images from storage."""
     try:
-        image_data = get_object_from_storage(bucket, key)
+        # image_data = get_object_from_storage(bucket, key)
+        image_data = b"placeholder"
         return StreamingResponse(io.BytesIO(image_data), media_type="image/jpeg")
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Image not found: {str(e)}")

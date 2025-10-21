@@ -43,7 +43,7 @@ mkdir -p "$ZIP_DIR"
 echo "Downloading images..."
 if [[ "$BUCKET_TYPE" == "thumbnails" || "$BUCKET_TYPE" == "both" ]]; then
     echo "  - Downloading thumbnails..."
-    mc mirror --overwrite "$MC_ALIAS/thumbnails" "$TEMP_DIR/thumbs"
+    mc mirror --overwrite "$MC_ALIAS/crawled-images/thumbnails" "$TEMP_DIR/thumbs"
     # Remove JSON files from thumbnails
     find "$TEMP_DIR/thumbs" -name "*.json" -type f -delete
     echo "    - Removed JSON files from thumbnails"
@@ -51,7 +51,7 @@ fi
 
 if [[ "$BUCKET_TYPE" == "raw-images" || "$BUCKET_TYPE" == "both" ]]; then
     echo "  - Downloading raw images..."
-    mc mirror --overwrite "$MC_ALIAS/raw-images" "$TEMP_DIR/raw"
+    mc mirror --overwrite "$MC_ALIAS/crawled-images/images" "$TEMP_DIR/raw"
     # Remove JSON files from raw images
     find "$TEMP_DIR/raw" -name "*.json" -type f -delete
     echo "    - Removed JSON files from raw images"
