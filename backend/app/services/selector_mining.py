@@ -1,34 +1,27 @@
 """
-Selector Miner Core - Phase 2
+Selector Mining Service
 
-A deterministic selector-miner that analyzes HTML content to generate
-candidate CSS selectors for image extraction with evidence-based scoring.
+Extracts core selector mining logic from tools/selector_miner.py
+and provides it as a service for integration with the crawler.
+
+This service mines CSS selectors for image extraction from HTML content,
+with evidence-based scoring and validation.
 """
-
-from __future__ import annotations
 
 import re
 import logging
 import os
-import yaml
 import json
 from typing import List, Dict, Set, Tuple, Optional, Union, Any
 from urllib.parse import urljoin, urlparse
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup, Tag
-from backend.app.services.http_service import create_safe_client
 
-# Optional Playwright import for JavaScript rendering
-try:
-    from playwright.async_api import async_playwright
-    PLAYWRIGHT_AVAILABLE = True
-except ImportError:
-    PLAYWRIGHT_AVAILABLE = False
-    async_playwright = None
+from .http_service import HttpService, fetch_html_with_redirects
 
 logger = logging.getLogger(__name__)
 
@@ -136,9 +129,10 @@ class Limits:
 @dataclass
 class MinedResult:
     """Result of page mining operation."""
-    candidates: List[CandidateSelector]
+    candidates: List['CandidateSelector']
     status: str  # "OK", "NO_THUMBS_STATIC", "EXTRA_ONLY"
     stats: Dict[str, int]
+    checked_urls: List[str] = field(default_factory=list)  # URLs that were checked during mining
 
 
 @dataclass
@@ -150,8 +144,6 @@ class CandidateSelector:
     sample_urls: List[str]
     repetition_count: int
     score: float = 0.0
-
-
 
 
 def resolve_image_url(el: Tag, base_url: str) -> Optional[str]:
@@ -550,6 +542,66 @@ def stable_selector(node: Tag, max_depth: int = 4) -> str:
     return ' '.join(path_parts)
 
 
+def _detect_structural_bonus(nodes: List[Tag]) -> int:
+    """
+    Detect structural patterns that indicate grid/gallery layouts.
+    
+    Args:
+        nodes: List of BeautifulSoup Tag elements to analyze
+        
+    Returns:
+        Structural bonus score (0-5)
+    """
+    if len(nodes) < 3:
+        return 0
+    
+    bonus = 0
+    
+    # Check for common parent containers
+    parent_groups = {}
+    for node in nodes:
+        parent = node.parent
+        if parent:
+            parent_key = f"{parent.name}.{'.'.join(parent.get('class', []))}"
+            if parent_key not in parent_groups:
+                parent_groups[parent_key] = 0
+            parent_groups[parent_key] += 1
+    
+    # Bonus for having many nodes with same parent structure
+    max_parent_count = max(parent_groups.values()) if parent_groups else 0
+    if max_parent_count >= len(nodes) * 0.8:  # 80% or more have same parent
+        bonus += 2
+    
+    # Check for list structures (ul > li, ol > li)
+    list_structures = 0
+    for node in nodes:
+        if node.parent and node.parent.name in ['li']:
+            if node.parent.parent and node.parent.parent.name in ['ul', 'ol']:
+                list_structures += 1
+    
+    if list_structures >= len(nodes) * 0.7:  # 70% or more in list structures
+        bonus += 2
+    
+    # Check for grid-like class patterns
+    grid_patterns = ['grid', 'masonry', 'gallery', 'list', 'row', 'column']
+    grid_indicators = 0
+    for node in nodes:
+        # Check node's own classes
+        classes = node.get('class', [])
+        if any(pattern in ' '.join(classes).lower() for pattern in grid_patterns):
+            grid_indicators += 1
+            continue
+        
+        # Check parent classes
+        if node.parent:
+            parent_classes = node.parent.get('class', [])
+            if any(pattern in ' '.join(parent_classes).lower() for pattern in grid_patterns):
+                grid_indicators += 1
+    
+    if grid_indicators >= len(nodes) * 0.6:  # 60% or more have grid indicators
+        bonus += 1
+    
+    return min(5, bonus)  # Cap at 5
 
 
 def gather_evidence(nodes: List[Tag]) -> Dict[str, int]:
@@ -560,14 +612,15 @@ def gather_evidence(nodes: List[Tag]) -> Dict[str, int]:
         nodes: List of BeautifulSoup Tag elements to analyze
         
     Returns:
-        Dictionary with evidence counts: repeats, has_duration, has_video_href, class_hits, srcset_count
+        Dictionary with evidence counts: repeats, has_duration, has_video_href, class_hits, srcset_count, structural_bonus
     """
     evidence = {
         'repeats': len(nodes),
         'has_duration': 0,
         'has_video_href': 0,
         'class_hits': 0,
-        'srcset_count': 0
+        'srcset_count': 0,
+        'structural_bonus': 0
     }
     
     # Duration regex pattern
@@ -673,10 +726,13 @@ def gather_evidence(nodes: List[Tag]) -> Dict[str, int]:
             if srcset_entries > 1:
                 evidence['srcset_count'] += 1
     
+    # Structural bonus detection
+    evidence['structural_bonus'] = _detect_structural_bonus(nodes)
+    
     return evidence
 
 
-def score_candidate(repeats: int, has_duration: int, has_video_href: int, class_hits: int, srcset_count: int) -> float:
+def score_candidate(repeats: int, has_duration: int, has_video_href: int, class_hits: int, srcset_count: int, structural_bonus: int = 0) -> float:
     """
     Score a candidate selector based on evidence.
     
@@ -686,6 +742,7 @@ def score_candidate(repeats: int, has_duration: int, has_video_href: int, class_
     - video_href: +2 if ≥3
     - class_hits: +1 if ≥3
     - srcset: +1 if ≥5
+    - structural_bonus: +1.5 if ≥3 (for grid/gallery patterns)
     
     Args:
         repeats: Number of times selector matches
@@ -693,6 +750,7 @@ def score_candidate(repeats: int, has_duration: int, has_video_href: int, class_
         has_video_href: Number of nodes with video-related ancestor links
         class_hits: Net positive class hints (positive - negative)
         srcset_count: Number of nodes with rich srcset
+        structural_bonus: Bonus for structural patterns (grid/gallery detection)
         
     Returns:
         Score between 0.0 and 1.0
@@ -731,163 +789,14 @@ def score_candidate(repeats: int, has_duration: int, has_video_href: int, class_
     elif srcset_count > 0:
         score += srcset_count / 5.0  # Gradual scaling
     
-    # Normalize to [0, 1] range (max possible score is 8.0)
-    return max(0.0, min(1.0, score / 8.0))
-
-
-async def render_js(url: str) -> str:
-    """
-    JavaScript rendering shim using Playwright.
+    # Structural bonus scoring (for enhanced grid detection)
+    if structural_bonus >= 3:
+        score += 1.5  # Bonus for structural patterns
+    elif structural_bonus > 0:
+        score += structural_bonus / 3.0  # Gradual scaling
     
-    Args:
-        url: URL to render
-        
-    Returns:
-        Rendered HTML content
-    """
-    if not PLAYWRIGHT_AVAILABLE:
-        raise RuntimeError("Playwright not available for JavaScript rendering")
-    
-    try:
-        async with async_playwright() as p:
-            # Launch browser in headless mode
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                java_script_enabled=True,
-                images=False,  # Block images for faster rendering
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            )
-            
-            page = await context.new_page()
-            page.set_default_timeout(3000)  # 3 seconds
-            
-            logger.info(f"Rendering JavaScript for URL: {url}")
-            
-            # Navigate to the page
-            await page.goto(url, wait_until='domcontentloaded')
-            
-            # Wait for potential dynamic content
-            await page.wait_for_timeout(3000)
-            
-            # Get the rendered HTML
-            html_content = await page.content()
-            
-            await browser.close()
-            
-            logger.info(f"JavaScript rendering completed for {url} ({len(html_content)} chars)")
-            return html_content
-            
-    except Exception as e:
-        logger.warning(f"JavaScript rendering failed for {url}: {e}")
-        raise MinerNetworkError(f"JavaScript rendering failed: {e}") from e
-
-
-async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: httpx.AsyncClient, limits: Limits) -> MinedResult:
-    """
-    Single mining entrypoint that orchestrates static and optional JavaScript mining.
-    
-    Args:
-        url: URL to mine
-        html: HTML content (if None, will fetch once statically)
-        use_js: Whether to use JavaScript fallback if no candidates found
-        client: HTTP client for fetching and validation
-        limits: Configuration limits
-        
-    Returns:
-        MinedResult with candidates, status, and stats
-    """
-    stats = {
-        'static_candidates': 0,
-        'extra_sources': 0,
-        'js_candidates': 0,
-        'total_validated': 0
-    }
-    
-    # Fetch HTML if not provided
-    if html is None:
-        try:
-            response = await client.get(url, timeout=limits.timeout_seconds)
-            html = response.text
-            logger.info(f"Fetched HTML from {url} ({len(html)} chars)")
-        except Exception as e:
-            logger.error(f"Failed to fetch HTML from {url}: {e}")
-            raise MinerNetworkError(f"Failed to fetch HTML from {url}: {e}") from e
-    
-    # Parse HTML
-    soup = BeautifulSoup(html, 'html.parser')
-    base_url = url
-    
-    # Selector pass: find repeated containers and build candidates
-    logger.info("Starting selector pass")
-    selector_candidates = _selector_pass(soup, base_url, limits)
-    stats['static_candidates'] = len(selector_candidates)
-    
-    # If homepage didn't yield good results, try category pages
-    if len(selector_candidates) < 2:
-        logger.info("Homepage yielded few candidates, discovering category pages...")
-        category_urls = await _discover_category_pages(soup, base_url, client)
-        
-        for category_url in category_urls:
-            try:
-                logger.info(f"Testing category page: {category_url}")
-                cat_response = await client.get(category_url, timeout=limits.timeout_seconds)
-                if cat_response.status_code == 200:
-                    cat_soup = BeautifulSoup(cat_response.text, 'html.parser')
-                    cat_candidates = _selector_pass(cat_soup, category_url, limits)
-                    
-                    # Add candidates from category pages
-                    selector_candidates.extend(cat_candidates)
-                    logger.info(f"Found {len(cat_candidates)} additional candidates from {category_url}")
-                    
-                    if len(selector_candidates) >= 3:  # Stop once we have enough candidates
-                        break
-            except Exception as e:
-                logger.debug(f"Failed to fetch category page {category_url}: {e}")
-                continue
-    
-    # If no candidates and JS is enabled, try JavaScript rendering
-    if len(selector_candidates) == 0 and use_js:
-        logger.info("No static candidates found, trying JavaScript rendering")
-        try:
-            js_html = await render_js(url)
-            js_soup = BeautifulSoup(js_html, 'html.parser')
-            js_candidates = _selector_pass(js_soup, base_url, limits)
-            stats['js_candidates'] = len(js_candidates)
-            
-            if len(js_candidates) > 0:
-                selector_candidates = js_candidates
-                logger.info(f"JavaScript rendering found {len(js_candidates)} candidates")
-            else:
-                logger.info("JavaScript rendering found no additional candidates")
-        except Exception as e:
-            logger.warning(f"JavaScript rendering failed: {e}")
-    
-    # Extra sources pass: extract and validate extra sources
-    logger.info("Starting extra sources pass")
-    extra_candidates = await _extra_sources_pass(soup, base_url, client, limits)
-    stats['extra_sources'] = len(extra_candidates)
-    
-    # Combine and validate candidates
-    all_candidates = selector_candidates + extra_candidates
-    validated_candidates = await _validate_candidates(all_candidates, client, limits)
-    stats['total_validated'] = len(validated_candidates)
-    
-    # Determine status
-    if len(selector_candidates) > 0:
-        status = "OK"
-    elif len(extra_candidates) > 0:
-        status = "EXTRA_ONLY"
-    else:
-        status = "NO_THUMBS_STATIC"
-    
-    # One-line summary logging
-    skipped_by = {
-        'low_score': stats['static_candidates'] + stats['extra_sources'] - stats['total_validated'],
-        'network_errors': 0  # Could be tracked if needed
-    }
-    logger.info(f"candidates={len(validated_candidates)} accepted={len(validated_candidates)} skipped_by={skipped_by}")
-    
-    return MinedResult(candidates=validated_candidates, status=status, stats=stats)
+    # Normalize to [0, 1] range (max possible score is 9.5 with structural bonus)
+    return max(0.0, min(1.0, score / 9.5))
 
 
 def discover_listing_links(soup: BeautifulSoup, base_url: str, same_host: str) -> List[str]:
@@ -1029,14 +938,175 @@ async def _discover_category_pages(soup: BeautifulSoup, base_url: str, client: h
     return tested_urls
 
 
+def _add_structural_analysis(soup: BeautifulSoup, candidate_groups: dict, base_url: str) -> None:
+    """
+    Enhanced structural analysis to detect repeated parent elements and common ancestor containers.
+    This helps find grid/gallery structures that might not match standard patterns.
+    """
+    # Find all images first
+    all_images = soup.find_all(['img', 'source', 'video'])
+    
+    # Group images by their parent elements
+    parent_groups = {}
+    for img in all_images:
+        parent = img.parent
+        if parent:
+            parent_tag = parent.name
+            parent_classes = ' '.join(parent.get('class', []))
+            parent_id = parent.get('id', '')
+            
+            # Create a key that identifies similar parent structures
+            parent_key = f"{parent_tag}.{parent_classes}.{parent_id}"
+            
+            if parent_key not in parent_groups:
+                parent_groups[parent_key] = []
+            parent_groups[parent_key].append(img)
+    
+    # Find parent groups with multiple images (potential grids)
+    for parent_key, images in parent_groups.items():
+        if len(images) >= 3:  # Only consider parents with 3+ images
+            # Find common ancestor containers
+            common_ancestors = _find_common_ancestors(images)
+            
+            for ancestor in common_ancestors:
+                # Generate selector for this ancestor
+                ancestor_selector = _generate_ancestor_selector(ancestor)
+                if ancestor_selector:
+                    # Add images to candidate groups
+                    for img in images:
+                        if ancestor_selector not in candidate_groups:
+                            candidate_groups[ancestor_selector] = []
+                        candidate_groups[ancestor_selector].append(img)
+    
+    # Detect list structures (ul > li, div[class*=grid] > div)
+    _detect_list_structures(soup, candidate_groups, base_url)
+
+
+def _find_common_ancestors(images: List) -> List:
+    """Find common ancestor elements for a group of images."""
+    if not images:
+        return []
+    
+    # Start with the first image's ancestors
+    first_img = images[0]
+    ancestors = []
+    current = first_img.parent
+    while current:
+        ancestors.append(current)
+        current = current.parent
+    
+    # Filter to only ancestors that contain all images
+    common_ancestors = []
+    for ancestor in ancestors:
+        if all(ancestor.find(img) for img in images):
+            common_ancestors.append(ancestor)
+    
+    return common_ancestors
+
+
+def _generate_ancestor_selector(ancestor) -> Optional[str]:
+    """Generate a stable CSS selector for an ancestor element."""
+    if not ancestor:
+        return None
+    
+    # Try to create a meaningful selector
+    tag = ancestor.name
+    classes = ancestor.get('class', [])
+    element_id = ancestor.get('id', '')
+    
+    if element_id:
+        return f"#{element_id}"
+    elif classes:
+        # Use the most specific class
+        main_class = classes[0]
+        return f".{main_class}"
+    else:
+        return tag
+
+
+def _detect_list_structures(soup: BeautifulSoup, candidate_groups: dict, base_url: str) -> None:
+    """Detect list-based structures like ul > li, div[class*=grid] > div."""
+    # Look for ul/ol with multiple li elements containing images
+    for list_tag in ['ul', 'ol']:
+        lists = soup.find_all(list_tag)
+        for list_elem in lists:
+            list_items = list_elem.find_all('li')
+            if len(list_items) >= 3:  # Only consider lists with 3+ items
+                # Check if items contain images
+                images_in_list = []
+                for li in list_items:
+                    images = li.find_all(['img', 'source', 'video'])
+                    images_in_list.extend(images)
+                
+                if len(images_in_list) >= 3:
+                    # Generate selector for the list
+                    list_selector = _generate_list_selector(list_elem)
+                    if list_selector:
+                        for img in images_in_list:
+                            if list_selector not in candidate_groups:
+                                candidate_groups[list_selector] = []
+                            candidate_groups[list_selector].append(img)
+    
+    # Look for div-based grid structures
+    grid_containers = soup.find_all('div', class_=lambda x: x and any(
+        keyword in ' '.join(x).lower() for keyword in ['grid', 'masonry', 'gallery', 'list']
+    ))
+    
+    for container in grid_containers:
+        # Find direct children that might be grid items
+        grid_items = [child for child in container.children 
+                     if hasattr(child, 'find') and child.find(['img', 'source', 'video'])]
+        
+        if len(grid_items) >= 3:
+            container_selector = _generate_ancestor_selector(container)
+            if container_selector:
+                for item in grid_items:
+                    images = item.find_all(['img', 'source', 'video'])
+                    for img in images:
+                        if container_selector not in candidate_groups:
+                            candidate_groups[container_selector] = []
+                        candidate_groups[container_selector].append(img)
+
+
+def _generate_list_selector(list_elem) -> Optional[str]:
+    """Generate a selector for a list element."""
+    if not list_elem:
+        return None
+    
+    classes = list_elem.get('class', [])
+    element_id = list_elem.get('id', '')
+    
+    if element_id:
+        return f"#{element_id}"
+    elif classes:
+        return f".{'.'.join(classes)}"
+    else:
+        return list_elem.name
+
+
 def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[CandidateSelector]:
     """Selector pass: find repeated containers and build candidates."""
-    # Find repeated container patterns
+    # Find repeated container patterns - Enhanced with 30+ patterns
     container_patterns = [
-        '.thumb', '.thumbnail', '.video', '.item', '.list-global__item',
-        '.gallery-item', '.media-item', '.content-item', '.post-item',
-        '.thumb-block', '.thumb-cat', '.thumb-inside', '.thumb-wrapper',
-        '.video-thumb', '.video-item', '.media-thumb', '.content-thumb'
+        # Video/media patterns
+        '.video', '.video-item', '.video-thumb', '.video-card', '.video-block',
+        '.media', '.media-item', '.media-thumb', '.media-card', '.media-wrapper',
+        # Gallery patterns
+        '.gallery', '.gallery-item', '.gallery-thumb', '.gallery-card', '.gallery-block',
+        '.grid-item', '.masonry-item', '.photo-item', '.photo-card',
+        # Thumbnail patterns
+        '.thumb', '.thumbnail', '.thumb-block', '.thumb-wrapper', '.thumb-cat',
+        '.thumb-inside', '.thumb-container', '.thumb-holder',
+        # Generic container patterns
+        '.item', '.card', '.post', '.entry', '.content-item', '.list-item', '.feed-item',
+        '.tile', '.cell', '.box', '.block', '.container-item',
+        # Framework-specific patterns
+        '[class*="thumb"]', '[class*="grid"]', '[class*="card"]', '[class*="item"]',
+        '[class*="video"]', '[class*="media"]', '[class*="gallery"]',
+        # List structures
+        'li', 'li.item', 'li.card', 'li.thumb',
+        # Legacy patterns (preserve existing)
+        '.list-global__item', '.post-item', '.video-thumb', '.media-thumb', '.content-thumb'
     ]
     
     candidate_groups = {}
@@ -1064,6 +1134,9 @@ def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[C
                         candidate_groups[selector] = []
                     candidate_groups[selector].append(img)
     
+    # Enhanced structural analysis: detect repeated parent elements
+    _add_structural_analysis(soup, candidate_groups, base_url)
+    
     # Build candidates from groups
     candidates = []
     for selector, nodes in candidate_groups.items():
@@ -1075,7 +1148,8 @@ def _selector_pass(soup: BeautifulSoup, base_url: str, limits: Limits) -> List[C
                 has_duration=evidence_counts['has_duration'],
                 has_video_href=evidence_counts['has_video_href'],
                 class_hits=evidence_counts['class_hits'],
-                srcset_count=evidence_counts['srcset_count']
+                srcset_count=evidence_counts['srcset_count'],
+                structural_bonus=evidence_counts['structural_bonus']
             )
             
             # Extract sample URLs
@@ -1241,38 +1315,413 @@ async def _validate_candidates(candidates: List[CandidateSelector], client: http
     return validated_candidates
 
 
+async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: httpx.AsyncClient, limits: Limits) -> MinedResult:
+    """
+    Single mining entrypoint that orchestrates static and optional JavaScript mining.
+    
+    Args:
+        url: URL to mine
+        html: HTML content (if None, will fetch once statically)
+        use_js: Whether to use JavaScript fallback if no candidates found
+        client: HTTP client for fetching and validation
+        limits: Configuration limits
+        
+    Returns:
+        MinedResult with candidates, status, and stats
+    """
+    stats = {
+        'static_candidates': 0,
+        'extra_sources': 0,
+        'js_candidates': 0,
+        'total_validated': 0
+    }
+    checked_urls = [url]  # Track the main URL
+    
+    # Fetch HTML if not provided
+    if html is None:
+        try:
+            response = await client.get(url, timeout=limits.timeout_seconds)
+            html = response.text
+            logger.info(f"Fetched HTML from {url} ({len(html)} chars)")
+        except Exception as e:
+            logger.error(f"Failed to fetch HTML from {url}: {e}")
+            raise MinerNetworkError(f"Failed to fetch HTML from {url}: {e}") from e
+    
+    # Parse HTML
+    soup = BeautifulSoup(html, 'html.parser')
+    base_url = url
+    
+    # Selector pass: find repeated containers and build candidates
+    logger.info("Starting selector pass")
+    selector_candidates = _selector_pass(soup, base_url, limits)
+    stats['static_candidates'] = len(selector_candidates)
+    
+    # If homepage didn't yield good results, try category pages
+    if len(selector_candidates) < 2:
+        logger.info("Homepage yielded few candidates, discovering category pages...")
+        category_urls = await _discover_category_pages(soup, base_url, client)
+        
+        for category_url in category_urls:
+            checked_urls.append(category_url)  # Track category URLs
+            try:
+                logger.info(f"Testing category page: {category_url}")
+                cat_response = await client.get(category_url, timeout=limits.timeout_seconds)
+                if cat_response.status_code == 200:
+                    cat_soup = BeautifulSoup(cat_response.text, 'html.parser')
+                    cat_candidates = _selector_pass(cat_soup, category_url, limits)
+                    
+                    # Add candidates from category pages
+                    selector_candidates.extend(cat_candidates)
+                    logger.info(f"Found {len(cat_candidates)} additional candidates from {category_url}")
+                    
+                    if len(selector_candidates) >= 3:  # Stop once we have enough candidates
+                        break
+            except Exception as e:
+                logger.debug(f"Failed to fetch category page {category_url}: {e}")
+                continue
+    
+    # Extra sources pass: extract and validate extra sources
+    logger.info("Starting extra sources pass")
+    extra_candidates = await _extra_sources_pass(soup, base_url, client, limits)
+    stats['extra_sources'] = len(extra_candidates)
+    
+    # Combine and validate candidates
+    all_candidates = selector_candidates + extra_candidates
+    validated_candidates = await _validate_candidates(all_candidates, client, limits)
+    stats['total_validated'] = len(validated_candidates)
+    
+    # Determine status
+    if len(selector_candidates) > 0:
+        status = "OK"
+    elif len(extra_candidates) > 0:
+        status = "EXTRA_ONLY"
+    else:
+        status = "NO_THUMBS_STATIC"
+    
+    # One-line summary logging
+    skipped_by = {
+        'low_score': stats['static_candidates'] + stats['extra_sources'] - stats['total_validated'],
+        'network_errors': 0  # Could be tracked if needed
+    }
+    logger.info(f"candidates={len(validated_candidates)} accepted={len(validated_candidates)} skipped_by={skipped_by}")
+    
+    return MinedResult(candidates=validated_candidates, status=status, stats=stats, checked_urls=checked_urls)
 
 
-@dataclass
-class ImageNode:
-    """Represents an image node found in HTML."""
-    tag: Tag
-    url: str
-    selector_path: str
-    attributes: Dict[str, str]
-    context: Dict[str, any]
-
-
-@dataclass
-class ValidationResult:
-    """Result of URL validation."""
-    url: str
-    is_valid: bool
-    status_code: Optional[int] = None
-    content_type: Optional[str] = None
-    error: Optional[str] = None
-
-
-@dataclass
-class RecipeCandidate:
-    """A candidate recipe for a domain."""
-    domain: str
-    selectors: List[Dict[str, str]]
-    attributes_priority: List[str]
-    extra_sources: List[str]
-    method: str
-    confidence: float
-    sample_urls: List[str]
-    validation_results: List[ValidationResult]
-
-
+# Service interface for integration with crawler
+class SelectorMiningService:
+    """
+    Service interface for selector mining that can be integrated with the crawler.
+    """
+    
+    def __init__(self, http_service: Optional[HttpService] = None):
+        self.http_service = http_service or HttpService()
+    
+    async def mine_selectors_for_page(
+        self, 
+        html: str, 
+        url: str, 
+        client: httpx.AsyncClient,
+        limits: Optional[Limits] = None
+    ) -> MinedResult:
+        """
+        Mine selectors from a single page.
+        
+        Args:
+            html: HTML content of the page
+            url: URL of the page
+            client: HTTP client for validation
+            limits: Configuration limits
+            
+        Returns:
+            MinedResult with candidates and metadata
+        """
+        if limits is None:
+            limits = Limits()
+        
+        return await mine_page(url, html, use_js=False, client=client, limits=limits)
+    
+    async def mine_selectors_for_site(
+        self, 
+        base_url: str, 
+        client: httpx.AsyncClient,
+        max_pages: int = 5,
+        limits: Optional[Limits] = None
+    ) -> MinedResult:
+        """
+        Mine selectors from a site using 3x3 depth approach for better structure diversity.
+        
+        Args:
+            base_url: Base URL of the site
+            client: HTTP client for fetching and validation
+            max_pages: Maximum number of pages to crawl (will be used for 3x3 approach)
+            limits: Configuration limits
+            
+        Returns:
+            MinedResult with candidates from all pages
+        """
+        if limits is None:
+            limits = Limits()
+        
+        # Fetch the base page
+        try:
+            response = await client.get(base_url, timeout=limits.timeout_seconds)
+            if response.status_code != 200:
+                raise MinerNetworkError(f"Failed to fetch base page: {response.status_code}")
+            
+            html = response.text
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            # Mine from base page
+            result = await mine_page(base_url, html, use_js=False, client=client, limits=limits)
+            all_checked_urls = result.checked_urls.copy()  # Track all URLs
+            
+            # Use 3x3 depth approach: find 3 category pages, then 3 content pages from each
+            logger.info("Starting 3x3 depth mining approach...")
+            deep_result = await self._deep_mine_3x3(soup, base_url, client, limits)
+            
+            # Merge results
+            result.candidates.extend(deep_result.candidates)
+            result.stats['static_candidates'] += deep_result.stats['static_candidates']
+            result.stats['extra_sources'] += deep_result.stats['extra_sources']
+            result.stats['total_validated'] += deep_result.stats['total_validated']
+            all_checked_urls.extend(deep_result.checked_urls)
+            
+            # Re-sort and limit candidates
+            result.candidates.sort(key=lambda x: x.score, reverse=True)
+            result.candidates = result.candidates[:limits.max_candidates]
+            
+            # Update checked URLs
+            result.checked_urls = all_checked_urls
+            
+            logger.info(f"3x3 mining completed: {len(all_checked_urls)} URLs checked, {len(result.candidates)} candidates found")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to mine site {base_url}: {e}")
+            raise MinerNetworkError(f"Failed to mine site {base_url}: {e}") from e
+    
+    async def _deep_mine_3x3(
+        self, 
+        soup: BeautifulSoup, 
+        base_url: str, 
+        client: httpx.AsyncClient, 
+        limits: Limits
+    ) -> MinedResult:
+        """
+        Perform 3x3 depth mining: find 3 category pages, then 3 content pages from each.
+        This provides better structure diversity than shallow breadth-first search.
+        """
+        all_candidates = []
+        all_checked_urls = []
+        stats = {
+            'static_candidates': 0,
+            'extra_sources': 0,
+            'total_validated': 0
+        }
+        
+        # Step 1: Find 3 category/listing pages
+        category_urls = await _discover_category_pages(soup, base_url, client)
+        logger.info(f"Found {len(category_urls)} category pages, selecting top 3 for deep mining")
+        
+        # Take first 3 category pages
+        selected_categories = category_urls[:3]
+        
+        for i, category_url in enumerate(selected_categories):
+            logger.info(f"Deep mining category {i+1}/3: {category_url}")
+            all_checked_urls.append(category_url)
+            
+            try:
+                # Fetch category page
+                cat_response = await client.get(category_url, timeout=limits.timeout_seconds)
+                if cat_response.status_code != 200:
+                    logger.warning(f"Failed to fetch category page {category_url}: {cat_response.status_code}")
+                    continue
+                
+                cat_soup = BeautifulSoup(cat_response.text, 'html.parser')
+                
+                # Mine from category page
+                cat_result = await mine_page(category_url, cat_response.text, use_js=False, client=client, limits=limits)
+                all_candidates.extend(cat_result.candidates)
+                stats['static_candidates'] += cat_result.stats['static_candidates']
+                stats['extra_sources'] += cat_result.stats['extra_sources']
+                stats['total_validated'] += cat_result.stats['total_validated']
+                all_checked_urls.extend(cat_result.checked_urls)
+                
+                # Step 2: Find 3 content pages from this category
+                content_urls = await self._discover_content_pages(cat_soup, category_url, client)
+                logger.info(f"Found {len(content_urls)} content pages in category, selecting top 3")
+                
+                # Take first 3 content pages from this category
+                selected_content = content_urls[:3]
+                
+                for j, content_url in enumerate(selected_content):
+                    logger.info(f"Deep mining content {j+1}/3 from category {i+1}: {content_url}")
+                    all_checked_urls.append(content_url)
+                    
+                    try:
+                        # Fetch content page
+                        content_response = await client.get(content_url, timeout=limits.timeout_seconds)
+                        if content_response.status_code != 200:
+                            logger.warning(f"Failed to fetch content page {content_url}: {content_response.status_code}")
+                            continue
+                        
+                        # Mine from content page
+                        content_result = await mine_page(content_url, content_response.text, use_js=False, client=client, limits=limits)
+                        all_candidates.extend(content_result.candidates)
+                        stats['static_candidates'] += content_result.stats['static_candidates']
+                        stats['extra_sources'] += content_result.stats['extra_sources']
+                        stats['total_validated'] += content_result.stats['total_validated']
+                        all_checked_urls.extend(content_result.checked_urls)
+                        
+                    except Exception as e:
+                        logger.debug(f"Failed to mine content page {content_url}: {e}")
+                        continue
+                        
+            except Exception as e:
+                logger.debug(f"Failed to mine category page {category_url}: {e}")
+                continue
+        
+        logger.info(f"3x3 deep mining completed: {len(all_checked_urls)} URLs checked, {len(all_candidates)} candidates found")
+        
+        return MinedResult(
+            candidates=all_candidates,
+            status="OK",
+            stats=stats,
+            checked_urls=all_checked_urls
+        )
+    
+    async def _discover_content_pages(self, soup: BeautifulSoup, base_url: str, client: httpx.AsyncClient) -> List[str]:
+        """
+        Discover content pages (threads, posts, videos, etc.) from a category page.
+        This looks for links that lead to individual content items rather than more categories.
+        """
+        same_host = urlparse(base_url).netloc
+        content_urls = []
+        
+        # Look for common content link patterns
+        content_selectors = [
+            'a[href*="/t/"]',  # Discourse threads
+            'a[href*="/thread"]',  # Thread links
+            'a[href*="/post"]',  # Post links
+            'a[href*="/video"]',  # Video links
+            'a[href*="/watch"]',  # Watch links
+            'a[href*="/view"]',  # View links
+            'a[href*="/item"]',  # Item links
+            'a[href*="/article"]',  # Article links
+            'a[href*="/story"]',  # Story links
+            '.topic-title a',  # Topic titles
+            '.thread-title a',  # Thread titles
+            '.post-title a',  # Post titles
+            '.item-title a',  # Item titles
+            '.content-title a',  # Content titles
+        ]
+        
+        for selector in content_selectors:
+            links = soup.select(selector)
+            for link in links:
+                href = link.get('href')
+                if href:
+                    # Convert relative URLs to absolute
+                    absolute_url = urljoin(base_url, href)
+                    parsed_url = urlparse(absolute_url)
+                    
+                    # Only include same-host URLs
+                    if parsed_url.netloc == same_host:
+                        # Filter out obvious category/admin pages
+                        if not any(skip in parsed_url.path.lower() for skip in ['/category', '/admin', '/user', '/profile', '/settings']):
+                            content_urls.append(absolute_url)
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_urls = []
+        for url in content_urls:
+            if url not in seen:
+                seen.add(url)
+                unique_urls.append(url)
+        
+        logger.info(f"Discovered {len(unique_urls)} potential content pages")
+        return unique_urls[:10]  # Return top 10 for selection
+    
+    async def save_selectors_to_recipe(
+        self, 
+        domain: str, 
+        selectors: List[str], 
+        recipe_file: str = "site_recipes.yaml"
+    ) -> bool:
+        """
+        Save mined selectors to a recipe file.
+        
+        Args:
+            domain: Domain name
+            selectors: List of CSS selectors
+            recipe_file: Path to recipe file
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import yaml
+            
+            # Load existing recipes
+            if os.path.exists(recipe_file):
+                with open(recipe_file, 'r', encoding='utf-8') as f:
+                    recipes = yaml.safe_load(f) or {}
+            else:
+                recipes = {
+                    'schema_version': 1,
+                    'defaults': {
+                        'selectors': [
+                            {'selector': '.video-thumb img', 'description': '.video-thumb container images'},
+                            {'selector': '.thumbnail img', 'description': '.thumbnail container images'},
+                            {'selector': '.thumb img', 'description': '.thumb container images'},
+                            {'selector': 'picture img', 'description': 'picture element images'},
+                            {'selector': 'img.lazy', 'description': 'lazy-loaded images'},
+                            {'selector': 'img', 'description': 'all images'}
+                        ],
+                        'attributes_priority': ['data-src', 'data-srcset', 'srcset', 'src'],
+                        'extra_sources': [
+                            "meta[property='og:image']::attr(content)",
+                            "link[rel='image_src']::attr(href)",
+                            "video::attr(poster)",
+                            "img::attr(srcset)",
+                            "source::attr(srcset)",
+                            "source::attr(data-srcset)",
+                            "script[type='application/ld+json']::jsonpath($.thumbnailUrl, $.image, $..thumbnailUrl, $..image, $..url)",
+                            "::style(background-image)"
+                        ],
+                        'method': 'smart'
+                    },
+                    'sites': {}
+                }
+            
+            # Ensure sites section exists
+            if 'sites' not in recipes:
+                recipes['sites'] = {}
+            
+            # Add the new recipe
+            recipes['sites'][domain] = {
+                'selectors': [
+                    {'selector': sel, 'description': f"Extracted from {domain}"}
+                    for sel in selectors
+                ],
+                'attributes_priority': list(ATTR_PRIORITY),
+                'extra_sources': [],
+                'method': 'miner'
+            }
+            
+            # Write back to file
+            with open(recipe_file, 'w', encoding='utf-8') as f:
+                yaml.dump(recipes, f, default_flow_style=False, sort_keys=False)
+            
+            logger.info(f"Saved {len(selectors)} selectors for {domain} to {recipe_file}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to save selectors for {domain}: {e}")
+            return False
+    
+    async def close(self):
+        """Close the service and clean up resources."""
+        if self.http_service:
+            await self.http_service.close()

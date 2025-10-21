@@ -132,6 +132,8 @@ Available targeting methods:
                        help='Enable audit logging for compliance (default: True)')
     parser.add_argument('--disable-audit-logging', dest='enable_audit_logging', action='store_false',
                        help='Disable audit logging')
+    parser.add_argument('--use-3x3-mining', action='store_true', default=False,
+                       help='Enable 3x3 depth mining for better selector discovery (default: False)')
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Enable verbose logging')
     
@@ -156,6 +158,7 @@ Available targeting methods:
             'max_concurrent_images': args.max_concurrent_images,
             'batch_size': args.batch_size,
             'enable_audit_logging': args.enable_audit_logging,
+            'use_3x3_mining': args.use_3x3_mining,
         }
         
         async with ImageCrawler(**crawler_config) as crawler:
@@ -219,10 +222,28 @@ Available targeting methods:
             pass
         print(f"Saved raw image keys:")
         for key in result.saved_raw_keys:
-            print(f"  - {key}")
+            if isinstance(key, dict) and 'image_key' in key:
+                # Extract just the filename from the full path
+                image_key = key['image_key']
+                filename = image_key.split('/')[-1] if '/' in image_key else image_key
+                print(f"  - {filename}")
+            else:
+                print(f"  - {key}")
         print(f"Saved thumbnail keys:")
         for key in result.saved_thumbnail_keys:
-            print(f"  - {key}")
+            if isinstance(key, dict) and 'image_key' in key:
+                # Extract just the filename from the full path
+                image_key = key['image_key']
+                filename = image_key.split('/')[-1] if '/' in image_key else image_key
+                print(f"  - {filename}")
+            else:
+                print(f"  - {key}")
+        
+        # Display checked URLs if available
+        if hasattr(result, 'checked_urls') and result.checked_urls:
+            print(f"\nURLs checked during crawl ({len(result.checked_urls)} total):")
+            for i, url in enumerate(result.checked_urls, 1):
+                print(f"  {i:2d}. {url}")
         
         if result.errors:
             print(f"\nErrors encountered:")

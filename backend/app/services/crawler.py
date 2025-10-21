@@ -21,14 +21,19 @@ import json
 from pathlib import Path
 from typing import List, Optional, Tuple, Set, Dict
 from urllib.parse import urljoin, urlparse, parse_qs
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from .crawler_modules.types import CrawlResult, ImageInfo
+from .crawler_modules.memory import MemoryMonitor
+from .crawler_modules.extraction import ImageExtractor, extract_style_bg_url, extract_jsonld_thumbnails
 from datetime import datetime
 
 import httpx
 from bs4 import BeautifulSoup
 
-# Import redirect utilities (local copy in services directory)
-from .redirect_utils import create_safe_client, fetch_html_with_redirects
+# Import HTTP service for unified HTTP handling
+from .http_service import HttpService, fetch_html_with_redirects
+# Import selector mining service for 3x3 depth approach
+from .selector_mining import SelectorMiningService
 
 # Import site recipes functionality
 from ..config.site_recipes import get_recipe_for_url, get_recipe_for_host
@@ -368,69 +373,7 @@ def extract_jsonld_thumbnails(html_content: str, base_url: str) -> List[str]:
 # MEMORY MANAGEMENT
 # ============================================================================
 
-class MemoryMonitor:
-    """Memory monitoring with adaptive thresholds for system resource management."""
-    
-    def __init__(self):
-        self.initial_memory = psutil.virtual_memory().percent
-        self.peak_memory = self.initial_memory
-        self.memory_history = []
-        self.gc_triggered = False
-        
-    def get_memory_status(self) -> Dict[str, float]:
-        """Get comprehensive memory status."""
-        memory = psutil.virtual_memory()
-        return {
-            'percent': memory.percent,
-            'available_gb': memory.available / (1024**3),
-            'used_gb': memory.used / (1024**3),
-            'total_gb': memory.total / (1024**3),
-            'pressure_level': self._calculate_pressure_level(memory.percent)
-        }
-    
-    def _calculate_pressure_level(self, memory_percent: float) -> str:
-        """Calculate memory pressure level."""
-        if memory_percent < 60:
-            return 'low'
-        elif memory_percent < 75:
-            return 'moderate'
-        elif memory_percent < 85:
-            return 'high'
-        else:
-            return 'critical'
-    
-    def should_trigger_gc(self) -> bool:
-        """Determine if garbage collection should be triggered."""
-        status = self.get_memory_status()
-        logger.info(f"Memory status: {status}")
-        
-        # Always trigger GC if memory is critical
-        if status['pressure_level'] == 'critical':
-            return True
-            
-        # Trigger GC if memory is high and we haven't done it recently
-        if status['pressure_level'] == 'high' and not self.gc_triggered:
-            self.gc_triggered = True
-            return True
-            
-        # Reset GC flag when memory is low
-        if status['pressure_level'] == 'low':
-            self.gc_triggered = False
-            
-        return False
-    
-    def get_safe_concurrency_limit(self, base_concurrency: int) -> int:
-        """Calculate safe concurrency limit based on memory pressure."""
-        status = self.get_memory_status()
-        
-        if status['pressure_level'] == 'critical':
-            return max(1, base_concurrency // 4)
-        elif status['pressure_level'] == 'high':
-            return max(2, base_concurrency // 2)
-        elif status['pressure_level'] == 'moderate':
-            return int(base_concurrency * 0.75)
-        else:  # low
-            return min(base_concurrency * 2, 30)  # Cap at 30
+# MemoryMonitor moved to .crawler_modules.memory
 
 logger = logging.getLogger(__name__)
 
@@ -461,38 +404,10 @@ def _truncate_log_string(text: str, max_length: int = 120) -> str:
 # DATA CLASSES
 # ============================================================================
 
-@dataclass
-class CrawlResult:
-    """Result of a crawl operation."""
-    url: str
-    images_found: int
-    raw_images_saved: int
-    thumbnails_saved: int
-    pages_crawled: int
-    saved_raw_keys: List[str]
-    saved_thumbnail_keys: List[str]
-    errors: List[str]
-    targeting_method: str
-    cache_hits: int = 0
-    cache_misses: int = 0
-    redis_hits: int = 0
-    postgres_hits: int = 0
-    tenant_id: str = "default"
-    early_exit_count: int = 0
-    total_duration_seconds: float = 0.0
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+# CrawlResult moved to .crawler.types
 
 
-@dataclass
-class ImageInfo:
-    """Information about a discovered image."""
-    url: str
-    alt_text: str
-    title: str
-    width: Optional[int]
-    height: Optional[int]
-    video_url: Optional[str] = None  # URL of the video this thumbnail links to
+# ImageInfo moved to .crawler.types
 
 
 # ============================================================================
@@ -522,6 +437,7 @@ class ImageCrawler:
         max_concurrent_images: int = 20,  # Maximum concurrent image processing
         batch_size: int = 50,
         enable_audit_logging: bool = True,
+        use_3x3_mining: bool = False,  # Enable 3x3 depth mining for better selector discovery
     ):
         self.tenant_id = tenant_id  # Multi-tenancy support
         self.max_file_size = max_file_size
@@ -539,8 +455,12 @@ class ImageCrawler:
         self.similarity_threshold = similarity_threshold  # Hamming distance threshold for content similarity
         self.max_concurrent_images = max_concurrent_images
         self.batch_size = batch_size
-        self.enable_audit_logging = enable_audit_logging  # Audit logging support
+        self.enable_audit_logging = enable_audit_logging
+        self.use_3x3_mining = use_3x3_mining  # Audit logging support
         self._early_exit_count = 0
+        
+        # Initialize extraction service
+        self._extractor = ImageExtractor()
         
         # Security and crawl policy settings
         self.max_depth = DEFAULT_MAX_DEPTH
@@ -579,14 +499,22 @@ class ImageCrawler:
         self._jitter_applied = False  # Track if jitter has been applied
         
         self.session: Optional[httpx.AsyncClient] = None
+        self._http_service: Optional[HttpService] = None
+        self._selector_mining_service: Optional[SelectorMiningService] = None
         self.cache_service = get_hybrid_cache_service()  # Hybrid caching service
         self.pending_cache_entries = []  # Batch cache writes
         
     async def __aenter__(self):
         """Async context manager entry."""
-        # Create secure HTTP client with redirect utilities
-        limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
-        self.session = create_safe_client(
+        # Create HTTP service for unified HTTP handling
+        self._http_service = HttpService()
+        
+        # Create selector mining service for 3x3 depth approach
+        self._selector_mining_service = SelectorMiningService()
+        
+        # Create HTTP client using the service
+        self.session = await self._http_service.create_client(
+            limits=httpx.Limits(max_keepalive_connections=100, max_connections=200),
             timeout=httpx.Timeout(
                 connect=10.0,  # Connection timeout
                 read=30.0,    # Read timeout
@@ -595,7 +523,6 @@ class ImageCrawler:
             ),
             verify=True,  # TLS verification
             http2=True,
-            limits=limits,
             headers={
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
@@ -614,6 +541,15 @@ class ImageCrawler:
                 logger.info("HTTP session closed")
         except Exception as e:
             logger.warning(f"Error closing HTTP session: {e}")
+        
+        try:
+            # Close HTTP service
+            if self._http_service:
+                logger.info("Closing HTTP service...")
+                await self._http_service.close()
+                logger.info("HTTP service closed")
+        except Exception as e:
+            logger.warning(f"Error closing HTTP service: {e}")
         
         try:
             # Clean up crawler thread pools
@@ -810,7 +746,7 @@ class ImageCrawler:
                     logger.info(f"Processing image with video URL: {image_info.video_url}")
                     
                     # Store raw image with sidecar metadata
-                    await save_image(
+                    raw_key = await save_image(
                         image_bytes=image_bytes,
                         mime="image/jpeg",
                         filename="image.jpg",
@@ -821,10 +757,12 @@ class ImageCrawler:
                         source_video_url=image_info.video_url,
                         source_image_url=image_info.url,
                     )
+                    if raw_key:
+                        saved_raw_keys.append(raw_key)
                     
                     # Store thumbnail if available
                     if thumbnail_bytes is not None:
-                        await save_image(
+                        thumb_key = await save_image(
                             image_bytes=thumbnail_bytes,
                             mime="image/jpeg", 
                             filename="thumbnail.jpg",
@@ -835,6 +773,8 @@ class ImageCrawler:
                             source_video_url=image_info.video_url,
                             source_image_url=image_info.url,
                         )
+                        if thumb_key:
+                            saved_thumbnail_keys.append(thumb_key)
         
         # Get detailed cache statistics
         cache_stats = await self.cache_service.get_cache_stats()
@@ -1973,6 +1913,29 @@ class ImageCrawler:
                 enhanced_bytes, enhancement_scale = face_service.enhance_image_for_face_detection(image_bytes)
                 faces = face_service.detect_and_embed(enhanced_bytes, enhancement_scale, min_size=0)
                 
+                # Face deduplication temporarily disabled for performance
+                # TODO: Implement efficient face deduplication (e.g., using approximate nearest neighbors)
+                # if faces:
+                #     # Check each detected face for similarity
+                #     unique_faces = []
+                #     for face in faces:
+                #         # Check if this face is similar to any previously seen faces
+                #         from app.services import face as face_module
+                #         is_similar, similarity_score, similar_face_id = face_module.check_face_similarity(
+                #             face['embedding'], face
+                #         )
+                #         
+                #         if is_similar:
+                #             logger.info(f"Face similarity detected: {similarity_score:.3f} (similar to {similar_face_id})")
+                #             # Skip this face as it's too similar to a previously seen face
+                #             continue
+                #         else:
+                #             # This is a unique face, add it to the list
+                #             unique_faces.append(face)
+                #     
+                #     # Update faces list to only include unique faces
+                #     faces = unique_faces
+                
                 if self.crop_faces and faces:
                     # Use the first face for thumbnail creation
                     thumbnail_bytes = face_service.crop_face_and_create_thumbnail(
@@ -2072,7 +2035,7 @@ class ImageCrawler:
     
     async def fetch_page(self, url: str) -> Tuple[Optional[str], List[str]]:
         """Fetch a web page and return its content and any errors."""
-        if not self.session:
+        if not self.session or not self._http_service:
             raise RuntimeError("Crawler not initialized. Use 'async with' context manager.")
             
         errors = []
@@ -2087,8 +2050,10 @@ class ImageCrawler:
             
             logger.info(f"Fetching page: {_truncate_log_string(url)}")
             
-            # Use redirect utility for page fetching
-            content, fetch_reason = await fetch_html_with_redirects(url, self.session, max_hops=self.max_redirects)
+            # Use HTTP service for page fetching with JavaScript rendering for dynamic content
+            content, fetch_reason = await self._http_service.fetch_html(
+                url, self.session, use_js=True, max_redirects=self.max_redirects
+            )
             
             if content is None:
                 logger.warning(f"Failed to fetch page: {fetch_reason} - {_truncate_log_string(url)}")
@@ -2290,7 +2255,7 @@ class ImageCrawler:
                 )
         
         # Extract images using specified method
-        images, method_used = self.extract_images_by_method(html_content, url, method)
+        images, method_used = self._extractor.extract_images_by_method(html_content, url, method)
         
         if not images:
             end_time = datetime.utcnow()
@@ -2365,6 +2330,35 @@ class ImageCrawler:
         pages_crawled = 0
         total_cache_hits = 0
         total_cache_misses = 0
+        checked_urls = []  # Track all URLs that were checked
+        
+        # Use 3x3 depth mining if enabled
+        if self.use_3x3_mining and self._selector_mining_service:
+            logger.info("Using 3x3 depth mining approach for better selector discovery...")
+            try:
+                # Perform 3x3 depth mining to discover better URLs
+                mining_result = await self._selector_mining_service.mine_selectors_for_site(
+                    start_url, 
+                    self.session, 
+                    max_pages=9,  # 3 categories × 3 content pages each
+                    limits=None
+                )
+                
+                # Add discovered URLs to the crawl queue
+                discovered_urls = mining_result.checked_urls
+                logger.info(f"3x3 mining discovered {len(discovered_urls)} URLs for crawling")
+                
+                # Add discovered URLs to the queue (excluding the start URL)
+                for url in discovered_urls:
+                    if url != start_url and url not in visited_urls:
+                        urls_to_visit.append((url, 0))  # Start with depth 0 for discovered URLs
+                        logger.info(f"Added discovered URL to crawl queue: {_truncate_log_string(url)}")
+                
+                # Track URLs from mining
+                checked_urls.extend(discovered_urls)
+                
+            except Exception as e:
+                logger.warning(f"3x3 mining failed, falling back to standard crawling: {e}")
         
         while urls_to_visit and len(all_saved_thumbnail_keys) < self.max_total_images and pages_crawled < self.max_pages:
             # Get next URL to visit
@@ -2375,6 +2369,7 @@ class ImageCrawler:
                 continue
             
             visited_urls.add(current_url)
+            checked_urls.append(current_url)  # Track this URL
             pages_crawled += 1
             
             logger.info(f"Crawling page {pages_crawled}/{self.max_pages}: {_truncate_log_string(current_url)}")
@@ -2443,7 +2438,8 @@ class ImageCrawler:
             early_exit_count=int(getattr(self, "_early_exit_count", 0)),
             total_duration_seconds=total_duration,
             start_time=start_time,
-            end_time=end_time
+            end_time=end_time,
+            checked_urls=checked_urls
         )
         
         logger.info(f"Site crawl completed in {total_duration:.2f} seconds - Pages: {pages_crawled}, Found: {total_images_found}, Raw Images Saved: {total_raw_saved}, Thumbnails Saved: {total_thumbnails_saved}")

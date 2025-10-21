@@ -16,7 +16,7 @@ bash-backend:
 seed:
 	docker compose exec backend-cpu python scripts/seed_demo.py || true
 crawl:
-	@echo "Usage: make crawl URL=<url> [METHOD=<method>] [MIN_FACE_QUALITY=<score>] [REQUIRE_FACE=<true/false>] [CROP_FACES=<true/false>] [FACE_MARGIN=<margin>] [CRAWL_MODE=<single/site>] [MAX_TOTAL_IMAGES=<number>] [MAX_PAGES=<number>] [MAX_CONCURRENT_IMAGES=<number>] [BATCH_SIZE=<number>] [TENANT_ID=<tenant_id>]"
+	@echo "Usage: make crawl URL=<url> [METHOD=<method>] [MIN_FACE_QUALITY=<score>] [REQUIRE_FACE=<true/false>] [CROP_FACES=<true/false>] [FACE_MARGIN=<margin>] [CRAWL_MODE=<single/site>] [MAX_TOTAL_IMAGES=<number>] [MAX_PAGES=<number>] [MAX_CONCURRENT_IMAGES=<number>] [BATCH_SIZE=<number>] [TENANT_ID=<tenant_id>] [USE_3X3_MINING=<true/false>]"
 	@echo "Example: make crawl URL=https://example.com METHOD=smart MIN_FACE_QUALITY=0.7 CROP_FACES=true FACE_MARGIN=0.2 CRAWL_MODE=site MAX_TOTAL_IMAGES=50 MAX_PAGES=20 MAX_CONCURRENT_IMAGES=10 BATCH_SIZE=25 TENANT_ID=tenant_123"
 	@if [ -z "$(URL)" ]; then echo "Error: URL is required"; exit 1; fi
 	@METHOD=$${METHOD:-smart}; \
@@ -32,7 +32,9 @@ crawl:
 	if [ "$${REQUIRE_FACE:-true}" = "false" ]; then REQUIRE_FACE_FLAG="--no-require-face"; fi; \
 	CROP_FACES_FLAG=""; \
 	if [ "$${CROP_FACES:-true}" = "false" ]; then CROP_FACES_FLAG="--no-crop-faces"; fi; \
-	docker compose exec backend-cpu python scripts/crawl_images.py $(URL) --method $$METHOD --min-face-quality $$MIN_FACE_QUALITY --face-margin $$FACE_MARGIN --max-images $$MAX_TOTAL_IMAGES --max-pages $$MAX_PAGES --mode $$CRAWL_MODE --max-concurrent-images $$MAX_CONCURRENT_IMAGES --batch-size $$BATCH_SIZE --tenant-id $$TENANT_ID $$REQUIRE_FACE_FLAG $$CROP_FACES_FLAG
+	USE_3X3_MINING_FLAG=""; \
+	if [ "$${USE_3X3_MINING:-false}" = "true" ]; then USE_3X3_MINING_FLAG="--use-3x3-mining"; fi; \
+	docker compose exec backend-cpu python scripts/crawl_images.py $(URL) --method $$METHOD --min-face-quality $$MIN_FACE_QUALITY --face-margin $$FACE_MARGIN --max-images $$MAX_TOTAL_IMAGES --max-pages $$MAX_PAGES --mode $$CRAWL_MODE --max-concurrent-images $$MAX_CONCURRENT_IMAGES --batch-size $$BATCH_SIZE --tenant-id $$TENANT_ID $$REQUIRE_FACE_FLAG $$CROP_FACES_FLAG $$USE_3X3_MINING_FLAG
 
 
 restart:
@@ -68,6 +70,11 @@ reset-minio:
 	@echo "Clearing MinIO buckets..."
 	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing buckets: {s.s3_bucket_raw}, {s.s3_bucket_thumbs}')"
 	docker compose exec backend-cpu python scripts/clear_minio.py
+
+clean-downloads:
+	@echo "Removing flat and zips directories..."
+	rm -rf flat/ zips/
+	@echo "Flat and zips directories removed."
 
 reset-both: reset-cache reset-redis-docker reset-minio
 	@echo "Cache, Redis, and MinIO data cleared."
