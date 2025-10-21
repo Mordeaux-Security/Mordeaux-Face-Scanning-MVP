@@ -15,4 +15,3 @@ __version__ = "0.1.0"
 # from .storage import StorageManager
 # from .indexer import VectorIndexer
 # from .processor import FacePipelineProcessor
-

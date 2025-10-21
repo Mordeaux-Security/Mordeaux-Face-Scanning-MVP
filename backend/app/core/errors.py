@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class MordeauxError(Exception):
     """Base exception class for Mordeaux application errors."""
-    
+
     def __init__(self, message: str, error_code: str, details: Optional[Dict[str, Any]] = None):
         self.message = message
         self.error_code = error_code
@@ -104,13 +104,19 @@ ERROR_CODES = {
         "http_status": status.HTTP_400_BAD_REQUEST,
         "category": "validation"
     },
+    "INVALID_TOP_K": {
+        "code": "INVALID_TOP_K",
+        "message": "top_k parameter must be between 1 and 50.",
+        "http_status": status.HTTP_400_BAD_REQUEST,
+        "category": "validation"
+    },
     "WEBHOOK_NOT_FOUND": {
         "code": "WEBHOOK_NOT_FOUND",
         "message": "Webhook endpoint not found.",
         "http_status": status.HTTP_404_NOT_FOUND,
         "category": "not_found"
     },
-    
+
     # Authentication/Authorization errors (2000-2999)
     "TENANT_ACCESS_DENIED": {
         "code": "TENANT_ACCESS_DENIED",
@@ -124,7 +130,7 @@ ERROR_CODES = {
         "http_status": status.HTTP_403_FORBIDDEN,
         "category": "authorization"
     },
-    
+
     # Rate limiting errors (3000-3999)
     "RATE_LIMIT_EXCEEDED": {
         "code": "RATE_LIMIT_EXCEEDED",
@@ -132,7 +138,13 @@ ERROR_CODES = {
         "http_status": status.HTTP_429_TOO_MANY_REQUESTS,
         "category": "rate_limit"
     },
-    
+    "rate_limited": {
+        "code": "rate_limited",
+        "message": "Too many requests",
+        "http_status": status.HTTP_429_TOO_MANY_REQUESTS,
+        "category": "rate_limit"
+    },
+
     # Resource not found errors (4000-4999)
     "BATCH_NOT_FOUND": {
         "code": "BATCH_NOT_FOUND",
@@ -146,7 +158,7 @@ ERROR_CODES = {
         "http_status": status.HTTP_404_NOT_FOUND,
         "category": "not_found"
     },
-    
+
     # Storage errors (5000-5999)
     "STORAGE_UPLOAD_FAILED": {
         "code": "STORAGE_UPLOAD_FAILED",
@@ -166,7 +178,7 @@ ERROR_CODES = {
         "http_status": status.HTTP_503_SERVICE_UNAVAILABLE,
         "category": "storage"
     },
-    
+
     # Vector database errors (6000-6999)
     "VECTOR_DB_CONNECTION_FAILED": {
         "code": "VECTOR_DB_CONNECTION_FAILED",
@@ -186,7 +198,7 @@ ERROR_CODES = {
         "http_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
         "category": "vector_db"
     },
-    
+
     # Face processing errors (7000-7999)
     "FACE_DETECTION_FAILED": {
         "code": "FACE_DETECTION_FAILED",
@@ -212,7 +224,7 @@ ERROR_CODES = {
         "http_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
         "category": "face_processing"
     },
-    
+
     # Batch processing errors (8000-8999)
     "BATCH_CREATION_FAILED": {
         "code": "BATCH_CREATION_FAILED",
@@ -232,7 +244,7 @@ ERROR_CODES = {
         "http_status": status.HTTP_400_BAD_REQUEST,
         "category": "batch_processing"
     },
-    
+
     # Cache errors (9000-9999)
     "CACHE_OPERATION_FAILED": {
         "code": "CACHE_OPERATION_FAILED",
@@ -240,7 +252,7 @@ ERROR_CODES = {
         "http_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
         "category": "cache"
     },
-    
+
     # System errors (10000+)
     "INTERNAL_SERVER_ERROR": {
         "code": "INTERNAL_SERVER_ERROR",
@@ -256,71 +268,93 @@ ERROR_CODES = {
     }
 }
 
-def create_http_exception(error_code: str, details: Optional[Dict[str, Any]] = None) -> HTTPException:
-    """Create an HTTPException from an error code."""
+def create_http_exception(
+    error_code: str,
+    details: Optional[Dict[str, Any]] = None,
+    request_id: Optional[str] = None
+) -> HTTPException:
+    """Create an HTTPException from an error code with canonical format."""
     if error_code not in ERROR_CODES:
         error_code = "INTERNAL_SERVER_ERROR"
-    
+
     error_info = ERROR_CODES[error_code]
-    
+
     response_detail = {
-        "error_code": error_info["code"],
-        "message": error_info["message"],
-        "category": error_info["category"]
+        "code": error_info["code"].lower(),  # Convert to lowercase for canonical format
+        "message": error_info["message"]
     }
-    
+
+    if request_id:
+        response_detail["request_id"] = request_id
+
     if details:
         response_detail["details"] = details
-    
+
     return HTTPException(
         status_code=error_info["http_status"],
         detail=response_detail
     )
 
-def handle_mordeaux_error(error: MordeauxError) -> HTTPException:
-    """Convert a MordeauxError to an HTTPException."""
+def handle_mordeaux_error(error: MordeauxError, request_id: Optional[str] = None) -> HTTPException:
+    """Convert a MordeauxError to an HTTPException with canonical format."""
     response_detail = {
-        "error_code": error.error_code,
-        "message": error.message,
-        "details": error.details
+        "code": error.error_code.lower(),
+        "message": error.message
     }
-    
+
+    if request_id:
+        response_detail["request_id"] = request_id
+
+    if error.details:
+        response_detail["details"] = error.details
+
     # Get HTTP status from error code if available
     if error.error_code in ERROR_CODES:
         http_status = ERROR_CODES[error.error_code]["http_status"]
-        response_detail["category"] = ERROR_CODES[error.error_code]["category"]
     else:
         http_status = status.HTTP_500_INTERNAL_SERVER_ERROR
-        response_detail["category"] = "system"
-    
+
     return HTTPException(
         status_code=http_status,
         detail=response_detail
     )
 
-def handle_generic_error(error: Exception) -> HTTPException:
-    """Handle generic exceptions and convert to HTTPException."""
+def handle_generic_error(error: Exception, request_id: Optional[str] = None) -> HTTPException:
+    """Handle generic exceptions and convert to HTTPException with canonical format."""
     logger.error(f"Unhandled error: {error}", exc_info=True)
-    
+
     return create_http_exception(
         "INTERNAL_SERVER_ERROR",
-        {"original_error": str(error)}
+        {"original_error": str(error)},
+        request_id
     )
 
 # Error response model for API documentation
 class ErrorResponse:
-    """Standard error response model."""
-    
-    def __init__(self, error_code: str, message: str, category: str, details: Optional[Dict[str, Any]] = None):
-        self.error_code = error_code
+    """Standard error response model with canonical format."""
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        request_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        self.code = code
         self.message = message
-        self.category = category
+        self.request_id = request_id
         self.details = details or {}
-    
+
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "error_code": self.error_code,
-            "message": self.message,
-            "category": self.category,
-            "details": self.details
+        response = {
+            "code": self.code,
+            "message": self.message
         }
+
+        if self.request_id:
+            response["request_id"] = self.request_id
+
+        if self.details:
+            response["details"] = self.details
+
+        return response

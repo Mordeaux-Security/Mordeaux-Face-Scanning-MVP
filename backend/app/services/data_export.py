@@ -7,28 +7,30 @@ from datetime import datetime, timedelta
 import logging
 import psycopg
 from io import StringIO, BytesIO
+
+
 from ..core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
 class DataExportService:
     """Service for exporting data in various formats."""
-    
+
     def __init__(self):
         self.settings = get_settings()
-    
-    async def export_audit_logs(self, tenant_id: str = None, start_date: datetime = None, 
+
+    async def export_audit_logs(self, tenant_id: str = None, start_date: datetime = None,
                                end_date: datetime = None, format: str = "json") -> Dict[str, Any]:
         """Export audit logs in specified format."""
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
                         # Build query
                         query = """
-                            SELECT 
+                            SELECT
                                 id,
                                 request_id,
                                 tenant_id,
@@ -44,24 +46,24 @@ class DataExportService:
                             WHERE 1=1
                         """
                         params = []
-                        
+
                         if tenant_id:
                             query += " AND tenant_id = %s"
                             params.append(tenant_id)
-                        
+
                         if start_date:
                             query += " AND created_at >= %s"
                             params.append(start_date.timestamp())
-                        
+
                         if end_date:
                             query += " AND created_at <= %s"
                             params.append(end_date.timestamp())
-                        
+
                         query += " ORDER BY created_at DESC"
-                        
+
                         await cur.execute(query, params)
                         rows = await cur.fetchall()
-                        
+
                         # Convert to list of dictionaries
                         audit_logs = []
                         for row in rows:
@@ -78,7 +80,7 @@ class DataExportService:
                                 "response_size": row[9],
                                 "created_at": datetime.fromtimestamp(row[10]).isoformat()
                             })
-                        
+
                         # Export in requested format
                         if format.lower() == "csv":
                             return await self._export_to_csv(audit_logs, "audit_logs")
@@ -86,23 +88,23 @@ class DataExportService:
                             return await self._export_to_json(audit_logs, "audit_logs")
                         else:
                             raise ValueError(f"Unsupported format: {format}")
-        
+
         except Exception as e:
             logger.error(f"Error exporting audit logs: {e}")
             return {"error": str(e)}
-    
+
     async def export_search_audit_logs(self, tenant_id: str = None, start_date: datetime = None,
                                       end_date: datetime = None, format: str = "json") -> Dict[str, Any]:
         """Export search audit logs in specified format."""
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
                         # Build query
                         query = """
-                            SELECT 
+                            SELECT
                                 id,
                                 request_id,
                                 tenant_id,
@@ -115,24 +117,24 @@ class DataExportService:
                             WHERE 1=1
                         """
                         params = []
-                        
+
                         if tenant_id:
                             query += " AND tenant_id = %s"
                             params.append(tenant_id)
-                        
+
                         if start_date:
                             query += " AND created_at >= %s"
                             params.append(start_date.timestamp())
-                        
+
                         if end_date:
                             query += " AND created_at <= %s"
                             params.append(end_date.timestamp())
-                        
+
                         query += " ORDER BY created_at DESC"
-                        
+
                         await cur.execute(query, params)
                         rows = await cur.fetchall()
-                        
+
                         # Convert to list of dictionaries
                         search_logs = []
                         for row in rows:
@@ -146,7 +148,7 @@ class DataExportService:
                                 "vector_backend": row[6],
                                 "created_at": datetime.fromtimestamp(row[7]).isoformat()
                             })
-                        
+
                         # Export in requested format
                         if format.lower() == "csv":
                             return await self._export_to_csv(search_logs, "search_audit_logs")
@@ -154,32 +156,32 @@ class DataExportService:
                             return await self._export_to_json(search_logs, "search_audit_logs")
                         else:
                             raise ValueError(f"Unsupported format: {format}")
-        
+
         except Exception as e:
             logger.error(f"Error exporting search audit logs: {e}")
             return {"error": str(e)}
-    
+
     async def export_tenant_data(self, tenant_id: str, format: str = "json") -> Dict[str, Any]:
         """Export all data for a specific tenant."""
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
                         # Get tenant information
                         await cur.execute("""
-                            SELECT tenant_id, name, description, status, metadata, 
+                            SELECT tenant_id, name, description, status, metadata,
                                    EXTRACT(EPOCH FROM created_at) as created_at,
                                    EXTRACT(EPOCH FROM updated_at) as updated_at
-                            FROM tenants 
+                            FROM tenants
                             WHERE tenant_id = %s
                         """, (tenant_id,))
-                        
+
                         tenant_row = await cur.fetchone()
                         if not tenant_row:
                             return {"error": "Tenant not found"}
-                        
+
                         tenant_info = {
                             "tenant_id": tenant_row[0],
                             "name": tenant_row[1],
@@ -189,16 +191,16 @@ class DataExportService:
                             "created_at": datetime.fromtimestamp(tenant_row[5]).isoformat(),
                             "updated_at": datetime.fromtimestamp(tenant_row[6]).isoformat()
                         }
-                        
+
                         # Get images
                         await cur.execute("""
-                            SELECT id, tenant_id, raw_key, thumb_key, phash, 
+                            SELECT id, tenant_id, raw_key, thumb_key, phash,
                                    EXTRACT(EPOCH FROM created_at) as created_at
-                            FROM images 
+                            FROM images
                             WHERE tenant_id = %s
                             ORDER BY created_at DESC
                         """, (tenant_id,))
-                        
+
                         image_rows = await cur.fetchall()
                         images = []
                         for row in image_rows:
@@ -210,7 +212,7 @@ class DataExportService:
                                 "phash": row[4],
                                 "created_at": datetime.fromtimestamp(row[5]).isoformat()
                             })
-                        
+
                         # Get faces
                         await cur.execute("""
                             SELECT f.id, f.tenant_id, f.image_id, f.face_key, f.embedding_id,
@@ -221,7 +223,7 @@ class DataExportService:
                             WHERE f.tenant_id = %s
                             ORDER BY f.created_at DESC
                         """, (tenant_id,))
-                        
+
                         face_rows = await cur.fetchall()
                         faces = []
                         for row in face_rows:
@@ -235,17 +237,17 @@ class DataExportService:
                                 "image_raw_key": row[6],
                                 "image_thumb_key": row[7]
                             })
-                        
+
                         # Get audit logs
                         await cur.execute("""
                             SELECT id, request_id, method, path, status_code, process_time,
                                    user_agent, ip_address, response_size,
                                    EXTRACT(EPOCH FROM created_at) as created_at
-                            FROM audit_logs 
+                            FROM audit_logs
                             WHERE tenant_id = %s
                             ORDER BY created_at DESC
                         """, (tenant_id,))
-                        
+
                         audit_rows = await cur.fetchall()
                         audit_logs = []
                         for row in audit_rows:
@@ -261,16 +263,16 @@ class DataExportService:
                                 "response_size": row[8],
                                 "created_at": datetime.fromtimestamp(row[9]).isoformat()
                             })
-                        
+
                         # Get search audit logs
                         await cur.execute("""
                             SELECT id, request_id, operation_type, face_count, result_count,
                                    vector_backend, EXTRACT(EPOCH FROM created_at) as created_at
-                            FROM search_audit_logs 
+                            FROM search_audit_logs
                             WHERE tenant_id = %s
                             ORDER BY created_at DESC
                         """, (tenant_id,))
-                        
+
                         search_rows = await cur.fetchall()
                         search_logs = []
                         for row in search_rows:
@@ -283,7 +285,7 @@ class DataExportService:
                                 "vector_backend": row[5],
                                 "created_at": datetime.fromtimestamp(row[6]).isoformat()
                             })
-                        
+
                         # Combine all data
                         export_data = {
                             "export_info": {
@@ -301,7 +303,7 @@ class DataExportService:
                             "audit_logs": audit_logs,
                             "search_audit_logs": search_logs
                         }
-                        
+
                         # Export in requested format
                         if format.lower() == "csv":
                             return await self._export_tenant_to_csv(export_data)
@@ -309,17 +311,17 @@ class DataExportService:
                             return await self._export_to_json(export_data, f"tenant_{tenant_id}_export")
                         else:
                             raise ValueError(f"Unsupported format: {format}")
-        
+
         except Exception as e:
             logger.error(f"Error exporting tenant data for {tenant_id}: {e}")
             return {"error": str(e)}
-    
+
     async def export_system_metrics(self, start_date: datetime = None, end_date: datetime = None,
                                    format: str = "json") -> Dict[str, Any]:
         """Export system metrics and statistics."""
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
@@ -332,10 +334,10 @@ class DataExportService:
                         if end_date:
                             date_filter += " AND created_at <= %s"
                             params.append(end_date.timestamp())
-                        
+
                         # Get system-wide audit log statistics
                         await cur.execute(f"""
-                            SELECT 
+                            SELECT
                                 COUNT(*) as total_requests,
                                 COUNT(CASE WHEN status_code >= 400 THEN 1 END) as error_requests,
                                 AVG(process_time) as avg_process_time,
@@ -346,12 +348,12 @@ class DataExportService:
                             FROM audit_logs
                             WHERE 1=1 {date_filter}
                         """, params)
-                        
+
                         audit_stats = await cur.fetchone()
-                        
+
                         # Get search operation statistics
                         await cur.execute(f"""
-                            SELECT 
+                            SELECT
                                 operation_type,
                                 COUNT(*) as count,
                                 SUM(face_count) as total_faces,
@@ -362,12 +364,12 @@ class DataExportService:
                             WHERE 1=1 {date_filter}
                             GROUP BY operation_type
                         """, params)
-                        
+
                         search_stats = await cur.fetchall()
-                        
+
                         # Get tenant usage statistics
                         await cur.execute(f"""
-                            SELECT 
+                            SELECT
                                 tenant_id,
                                 COUNT(*) as request_count,
                                 COUNT(CASE WHEN status_code >= 400 THEN 1 END) as error_count,
@@ -377,12 +379,12 @@ class DataExportService:
                             GROUP BY tenant_id
                             ORDER BY request_count DESC
                         """, params)
-                        
+
                         tenant_stats = await cur.fetchall()
-                        
+
                         # Get hourly request distribution
                         await cur.execute(f"""
-                            SELECT 
+                            SELECT
                                 EXTRACT(HOUR FROM to_timestamp(created_at)) as hour,
                                 COUNT(*) as request_count
                             FROM audit_logs
@@ -390,9 +392,9 @@ class DataExportService:
                             GROUP BY EXTRACT(HOUR FROM to_timestamp(created_at))
                             ORDER BY hour
                         """, params)
-                        
+
                         hourly_stats = await cur.fetchall()
-                        
+
                         # Combine metrics
                         metrics_data = {
                             "export_info": {
@@ -439,7 +441,7 @@ class DataExportService:
                                 for row in hourly_stats
                             ]
                         }
-                        
+
                         # Export in requested format
                         if format.lower() == "csv":
                             return await self._export_metrics_to_csv(metrics_data)
@@ -447,16 +449,16 @@ class DataExportService:
                             return await self._export_to_json(metrics_data, "system_metrics")
                         else:
                             raise ValueError(f"Unsupported format: {format}")
-        
+
         except Exception as e:
             logger.error(f"Error exporting system metrics: {e}")
             return {"error": str(e)}
-    
+
     async def _export_to_json(self, data: Union[List[Dict], Dict], filename: str) -> Dict[str, Any]:
         """Export data to JSON format."""
         try:
             json_content = json.dumps(data, indent=2, ensure_ascii=False)
-            
+
             return {
                 "filename": f"{filename}_{int(time.time())}.json",
                 "content_type": "application/json",
@@ -468,7 +470,7 @@ class DataExportService:
         except Exception as e:
             logger.error(f"Error exporting to JSON: {e}")
             return {"error": str(e)}
-    
+
     async def _export_to_csv(self, data: List[Dict], filename: str) -> Dict[str, Any]:
         """Export data to CSV format."""
         try:
@@ -481,19 +483,19 @@ class DataExportService:
                     "format": "csv",
                     "export_timestamp": datetime.now().isoformat()
                 }
-            
+
             # Create CSV content
             output = StringIO()
             fieldnames = data[0].keys()
             writer = csv.DictWriter(output, fieldnames=fieldnames)
-            
+
             writer.writeheader()
             for row in data:
                 writer.writerow(row)
-            
+
             csv_content = output.getvalue()
             output.close()
-            
+
             return {
                 "filename": f"{filename}_{int(time.time())}.csv",
                 "content_type": "text/csv",
@@ -505,13 +507,13 @@ class DataExportService:
         except Exception as e:
             logger.error(f"Error exporting to CSV: {e}")
             return {"error": str(e)}
-    
+
     async def _export_tenant_to_csv(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Export tenant data to CSV format with multiple sheets."""
         try:
             # Create a ZIP-like structure with multiple CSV files
             csv_files = {}
-            
+
             # Export each section as separate CSV
             for section_name, section_data in data.items():
                 if isinstance(section_data, list) and section_data:
@@ -519,7 +521,7 @@ class DataExportService:
                 elif isinstance(section_data, dict):
                     # Convert single dict to list for CSV export
                     csv_files[f"{section_name}.csv"] = await self._export_to_csv([section_data], section_name)
-            
+
             # For now, return the first CSV file (in a real implementation, you'd create a ZIP)
             if csv_files:
                 first_file = list(csv_files.values())[0]
@@ -537,20 +539,20 @@ class DataExportService:
         except Exception as e:
             logger.error(f"Error exporting tenant data to CSV: {e}")
             return {"error": str(e)}
-    
+
     async def _export_metrics_to_csv(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Export metrics data to CSV format."""
         try:
             # Flatten the metrics data for CSV export
             flattened_data = []
-            
+
             # Add export info
             flattened_data.append({
                 "section": "export_info",
                 "key": "export_timestamp",
                 "value": data["export_info"]["export_timestamp"]
             })
-            
+
             # Add audit statistics
             for key, value in data["audit_statistics"].items():
                 flattened_data.append({
@@ -558,7 +560,7 @@ class DataExportService:
                     "key": key,
                     "value": value
                 })
-            
+
             # Add search operations
             for operation, stats in data["search_operations"].items():
                 for key, value in stats.items():
@@ -567,7 +569,7 @@ class DataExportService:
                         "key": key,
                         "value": value
                     })
-            
+
             # Add tenant usage
             for i, tenant in enumerate(data["tenant_usage"]):
                 for key, value in tenant.items():
@@ -576,7 +578,7 @@ class DataExportService:
                         "key": key,
                         "value": value
                     })
-            
+
             # Add hourly distribution
             for hour_data in data["hourly_distribution"]:
                 for key, value in hour_data.items():
@@ -585,7 +587,7 @@ class DataExportService:
                         "key": f"hour_{hour_data['hour']}_{key}",
                         "value": value
                     })
-            
+
             return await self._export_to_csv(flattened_data, "system_metrics")
         except Exception as e:
             logger.error(f"Error exporting metrics to CSV: {e}")

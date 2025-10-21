@@ -1,3 +1,19 @@
+import asyncio
+import hashlib
+import json
+import logging
+import os
+import time
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import redis
+from psycopg import connect, Connection
+
+            import gc
+
+from concurrent.futures import ThreadPoolExecutor
+from psycopg.rows import dict_row
+
 """
 Hybrid Cache Service V2
 
@@ -11,49 +27,36 @@ This provides the best of both worlds:
 - Cost efficiency for large datasets
 """
 
-import asyncio
-import hashlib
-import json
-import logging
-import os
-import time
-from typing import Any, Dict, List, Optional, Tuple, Union
-from concurrent.futures import ThreadPoolExecutor
-
-import redis
-from psycopg import connect, Connection
-from psycopg.rows import dict_row
-
 logger = logging.getLogger(__name__)
 
 
 class HybridCacheService:
     """
     Hybrid caching service that combines Redis and PostgreSQL.
-    
+
     Architecture:
     1. Redis (Primary): Fast, volatile cache for hot data
     2. PostgreSQL (Secondary): Persistent cache for reliable storage
     3. Automatic backfill: PostgreSQL data → Redis when accessed
     4. Graceful degradation: Works even if Redis is unavailable
     """
-    
+
     def __init__(self, redis_url: Optional[str] = None, postgres_config: Optional[Dict] = None):
         """
         Initialize hybrid cache service.
-        
+
         Args:
             redis_url: Redis connection URL (optional, will use env vars if not provided)
             postgres_config: PostgreSQL configuration dict (optional, will use env vars if not provided)
         """
         self.redis_enabled = True
         self.postgres_enabled = True
-        
+
         # Cache hit tracking
         self.redis_hits = 0
         self.postgres_hits = 0
         self.cache_misses = 0
-        
+
         # Initialize Redis
         try:
             if redis_url:
@@ -62,16 +65,16 @@ class HybridCacheService:
                 # Try to get Redis URL from environment
                 redis_url_env = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
                 self.redis_client = redis.from_url(redis_url_env, decode_responses=True)
-            
+
             # Test Redis connection
             self.redis_client.ping()
             logger.info("Redis cache initialized successfully")
-            
+
         except Exception as e:
             logger.warning(f"Redis cache unavailable: {e}. Falling back to PostgreSQL only.")
             self.redis_enabled = False
             self.redis_client = None
-        
+
         # Initialize PostgreSQL
         try:
             if postgres_config:
@@ -85,58 +88,58 @@ class HybridCacheService:
                     'user': os.getenv('POSTGRES_USER', 'mordeaux'),
                     'password': os.getenv('POSTGRES_PASSWORD', '')
                 }
-            
+
             # Test PostgreSQL connection
             with self._get_postgres_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1")
-            
+
             logger.info("PostgreSQL cache initialized successfully")
-            
+
         except Exception as e:
             logger.warning(f"PostgreSQL cache unavailable: {e}. Using Redis only.")
             self.postgres_enabled = False
-        
+
         # Cache TTL settings (Redis only)
         self.redis_ttl_settings = {
             'embedding_cache': 3600,      # 1 hour
-            'search_cache': 300,          # 5 minutes  
+            'search_cache': 300,          # 5 minutes
             'phash_cache': 7200,          # 2 hours
             'face_detection_cache': 3600, # 1 hour
             'crawl_cache': 86400,         # 24 hours
         }
-        
+
         # Thread pool for blocking operations
         self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="hybrid_cache")
-    
+
     def _get_postgres_connection(self) -> Connection:
         """Get PostgreSQL connection."""
         if not self.postgres_enabled:
             raise RuntimeError("PostgreSQL cache is disabled")
-        
+
         connection_string = (
             f"postgresql://{self.postgres_config['user']}:{self.postgres_config['password']}"
             f"@{self.postgres_config['host']}:{self.postgres_config['port']}"
             f"/{self.postgres_config['db']}"
         )
-        
+
         try:
             return connect(connection_string, row_factory=dict_row)
         except Exception as e:
             logger.error(f"Failed to connect to PostgreSQL: {e}")
             raise
-    
+
     def _generate_cache_key(self, prefix: str, content: bytes, tenant_id: str = "default", **kwargs) -> str:
         """Generate a cache key based on content hash and parameters."""
         content_hash = hashlib.sha256(content).hexdigest()[:16]
         key_parts = [prefix, tenant_id, content_hash]
-        
+
         if kwargs:
             for key, value in sorted(kwargs.items()):
                 key_parts.append(f"{key}:{value}")
-        
+
         return ":".join(key_parts)
-    
+
     def _serialize_data(self, data: Any) -> str:
         """Serialize data for storage."""
         try:
@@ -144,7 +147,7 @@ class HybridCacheService:
         except Exception as e:
             logger.error(f"Failed to serialize data: {e}")
             return None
-    
+
     def _deserialize_data(self, data: str) -> Any:
         """Deserialize data from storage."""
         try:
@@ -152,32 +155,32 @@ class HybridCacheService:
         except Exception as e:
             logger.error(f"Failed to deserialize data: {e}")
             return None
-    
+
     # ==================== FACE EMBEDDINGS CACHE ====================
-    
+
     async def cache_face_embeddings(self, content: bytes, tenant_id: str, embeddings: List[Dict]) -> bool:
         """Cache face embeddings in both Redis and PostgreSQL."""
         cache_key = self._generate_cache_key("embedding", content, tenant_id)
         serialized_data = self._serialize_data(embeddings)
-        
+
         if not serialized_data:
             return False
-        
+
         success = True
-        
+
         # Store in Redis (primary cache)
         if self.redis_enabled:
             try:
                 self.redis_client.setex(
-                    cache_key, 
-                    self.redis_ttl_settings['embedding_cache'], 
+                    cache_key,
+                    self.redis_ttl_settings['embedding_cache'],
                     serialized_data
                 )
                 logger.debug(f"Cached face embeddings in Redis for tenant {tenant_id}")
             except Exception as e:
                 logger.warning(f"Failed to cache face embeddings in Redis: {e}")
                 success = False
-        
+
         # Store in PostgreSQL (secondary cache)
         if self.postgres_enabled:
             try:
@@ -191,15 +194,15 @@ class HybridCacheService:
             except Exception as e:
                 logger.warning(f"Failed to cache face embeddings in PostgreSQL: {e}")
                 success = False
-        
+
         return success
-    
+
     def _store_embeddings_postgres(self, cache_key: str, content: bytes, tenant_id: str, embeddings: List[Dict]):
         """Store face embeddings in PostgreSQL."""
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO face_embeddings_cache 
+                    INSERT INTO face_embeddings_cache
                     (cache_key, tenant_id, content_hash, embeddings_data, created_at)
                     VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (cache_key) DO UPDATE SET
@@ -212,11 +215,11 @@ class HybridCacheService:
                     json.dumps(embeddings)
                 ))
                 conn.commit()
-    
+
     async def get_cached_face_embeddings(self, content: bytes, tenant_id: str) -> Optional[List[Dict]]:
         """Get cached face embeddings from Redis (primary) or PostgreSQL (secondary)."""
         cache_key = self._generate_cache_key("embedding", content, tenant_id)
-        
+
         # Try Redis first (primary cache)
         if self.redis_enabled:
             try:
@@ -228,7 +231,7 @@ class HybridCacheService:
                         return embeddings
             except Exception as e:
                 logger.warning(f"Redis lookup failed for face embeddings: {e}")
-        
+
         # Fall back to PostgreSQL (secondary cache)
         if self.postgres_enabled:
             try:
@@ -238,7 +241,7 @@ class HybridCacheService:
                     self._get_embeddings_postgres,
                     cache_key
                 )
-                
+
                 if result:
                     # Backfill Redis for future fast access
                     if self.redis_enabled:
@@ -252,13 +255,13 @@ class HybridCacheService:
                                 )
                         except Exception as e:
                             logger.warning(f"Failed to backfill Redis with embeddings: {e}")
-                    
+
                     logger.debug(f"Retrieved face embeddings from PostgreSQL for tenant {tenant_id}")
                     return result
-                    
+
             except Exception as e:
                 logger.warning(f"PostgreSQL lookup failed for face embeddings: {e}")
-        
+
         return None
 
     # ==================== FACE DETECTION CACHE ====================
@@ -299,7 +302,7 @@ class HybridCacheService:
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO face_embeddings_cache 
+                    INSERT INTO face_embeddings_cache
                     (cache_key, tenant_id, content_hash, embeddings_data, created_at)
                     VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (cache_key) DO UPDATE SET
@@ -356,7 +359,7 @@ class HybridCacheService:
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT embeddings_data FROM face_embeddings_cache 
+                    SELECT embeddings_data FROM face_embeddings_cache
                     WHERE cache_key = %s
                 """, (cache_key,))
                 row = cur.fetchone()
@@ -366,30 +369,30 @@ class HybridCacheService:
                     except Exception:
                         return None
         return None
-    
+
     def _get_embeddings_postgres(self, cache_key: str) -> Optional[List[Dict]]:
         """Get face embeddings from PostgreSQL."""
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT embeddings_data FROM face_embeddings_cache 
+                    SELECT embeddings_data FROM face_embeddings_cache
                     WHERE cache_key = %s
                 """, (cache_key,))
-                
+
                 result = cur.fetchone()
                 if result:
                     return json.loads(result['embeddings_data'])
-        
+
         return None
-    
+
     # ==================== PERCEPTUAL HASH CACHE ====================
-    
+
     async def cache_perceptual_hash(self, content: bytes, tenant_id: str, phash: str) -> bool:
         """Cache perceptual hash in both Redis and PostgreSQL."""
         cache_key = self._generate_cache_key("phash", content, tenant_id)
-        
+
         success = True
-        
+
         # Store in Redis (primary cache)
         if self.redis_enabled:
             try:
@@ -402,7 +405,7 @@ class HybridCacheService:
             except Exception as e:
                 logger.warning(f"Failed to cache perceptual hash in Redis: {e}")
                 success = False
-        
+
         # Store in PostgreSQL (secondary cache)
         if self.postgres_enabled:
             try:
@@ -416,15 +419,15 @@ class HybridCacheService:
             except Exception as e:
                 logger.warning(f"Failed to cache perceptual hash in PostgreSQL: {e}")
                 success = False
-        
+
         return success
-    
+
     def _store_phash_postgres(self, cache_key: str, content: bytes, tenant_id: str, phash: str):
         """Store perceptual hash in PostgreSQL."""
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO perceptual_hash_cache 
+                    INSERT INTO perceptual_hash_cache
                     (cache_key, tenant_id, content_hash, phash, created_at)
                     VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (cache_key) DO UPDATE SET
@@ -437,11 +440,11 @@ class HybridCacheService:
                     phash
                 ))
                 conn.commit()
-    
+
     async def get_cached_perceptual_hash(self, content: bytes, tenant_id: str) -> Optional[str]:
         """Get cached perceptual hash from Redis (primary) or PostgreSQL (secondary)."""
         cache_key = self._generate_cache_key("phash", content, tenant_id)
-        
+
         # Try Redis first (primary cache)
         if self.redis_enabled:
             try:
@@ -451,7 +454,7 @@ class HybridCacheService:
                     return cached_phash
             except Exception as e:
                 logger.warning(f"Redis lookup failed for perceptual hash: {e}")
-        
+
         # Fall back to PostgreSQL (secondary cache)
         if self.postgres_enabled:
             try:
@@ -461,7 +464,7 @@ class HybridCacheService:
                     self._get_phash_postgres,
                     cache_key
                 )
-                
+
                 if result:
                     # Backfill Redis for future fast access
                     if self.redis_enabled:
@@ -473,40 +476,40 @@ class HybridCacheService:
                             )
                         except Exception as e:
                             logger.warning(f"Failed to backfill Redis with phash: {e}")
-                    
+
                     logger.debug(f"Retrieved perceptual hash from PostgreSQL for tenant {tenant_id}")
                     return result
-                    
+
             except Exception as e:
                 logger.warning(f"PostgreSQL lookup failed for perceptual hash: {e}")
-        
+
         return None
-    
+
     def _get_phash_postgres(self, cache_key: str) -> Optional[str]:
         """Get perceptual hash from PostgreSQL."""
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT phash FROM perceptual_hash_cache 
+                    SELECT phash FROM perceptual_hash_cache
                     WHERE cache_key = %s
                 """, (cache_key,))
-                
+
                 result = cur.fetchone()
                 if result:
                     return result['phash']
-        
+
         return None
-    
+
     async def get_cache_stats(self) -> Dict[str, int]:
         """
         Get cache hit/miss statistics.
-        
+
         Returns:
             Dict with cache statistics
         """
         total_hits = self.redis_hits + self.postgres_hits
         total_requests = total_hits + self.cache_misses
-        
+
         return {
             'redis_hits': self.redis_hits,
             'postgres_hits': self.postgres_hits,
@@ -517,22 +520,22 @@ class HybridCacheService:
             'redis_hit_rate': (self.redis_hits / total_requests * 100) if total_requests > 0 else 0,
             'postgres_hit_rate': (self.postgres_hits / total_requests * 100) if total_requests > 0 else 0
         }
-    
+
     def reset_cache_stats(self):
         """Reset cache hit/miss counters."""
         self.redis_hits = 0
         self.postgres_hits = 0
         self.cache_misses = 0
-    
+
     # ==================== CRAWL CACHE (DUPLICATE PREVENTION) ====================
-    
+
     async def should_skip_crawled_image(self, url: str, image_bytes: bytes, tenant_id: str = "default") -> Tuple[bool, Optional[str]]:
         """
         Check if image should be skipped based on crawl cache.
         This is the main duplicate prevention for crawlers.
         """
         url_hash = hashlib.sha256(url.encode()).hexdigest()
-        
+
         # Try Redis first (primary cache)
         if self.redis_enabled:
             try:
@@ -545,7 +548,7 @@ class HybridCacheService:
                     return result.get('should_skip', False), result.get('raw_key')
             except Exception as e:
                 logger.warning(f"Redis crawl lookup failed: {e}")
-        
+
         # Fall back to PostgreSQL (secondary cache)
         if self.postgres_enabled:
             try:
@@ -555,11 +558,11 @@ class HybridCacheService:
                     self._check_crawl_cache_postgres,
                     url_hash, image_bytes
                 )
-                
+
                 if result:
                     should_skip, raw_key = result
                     self.postgres_hits += 1
-                    
+
                     # Backfill Redis for future fast access
                     if self.redis_enabled:
                         try:
@@ -572,51 +575,51 @@ class HybridCacheService:
                             self.redis_client.setex(redis_key, self.redis_ttl_settings['crawl_cache'], cache_data)
                         except Exception as e:
                             logger.warning(f"Failed to backfill Redis with crawl data: {e}")
-                    
+
                     logger.debug(f"Cache hit (PostgreSQL): {url[:100]}...")
                     return should_skip, raw_key
-                    
+
             except Exception as e:
                 logger.warning(f"PostgreSQL crawl lookup failed: {e}")
-        
+
         # Cache miss - increment counter
         self.cache_misses += 1
         return False, None
-    
+
     def _check_crawl_cache_postgres(self, url_hash: str, image_bytes: bytes) -> Optional[Tuple[bool, Optional[str]]]:
         """Check crawl cache in PostgreSQL."""
         content_hash = hashlib.sha256(image_bytes).hexdigest()
-        
+
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 # Check by URL hash first
                 cur.execute("""
-                    SELECT raw_image_key FROM crawl_cache 
+                    SELECT raw_image_key FROM crawl_cache
                     WHERE url_hash = %s
                 """, (url_hash,))
-                
+
                 result = cur.fetchone()
                 if result:
                     return True, result['raw_image_key']
-                
+
                 # Check by content hash for duplicates
                 cur.execute("""
-                    SELECT raw_image_key FROM crawl_cache 
+                    SELECT raw_image_key FROM crawl_cache
                     WHERE content_hash = %s
                 """, (content_hash,))
-                
+
                 result = cur.fetchone()
                 if result:
                     return True, result['raw_image_key']
-        
+
         return None
-    
-    async def store_crawled_image(self, url: str, image_bytes: bytes, raw_key: str, 
+
+    async def store_crawled_image(self, url: str, image_bytes: bytes, raw_key: str,
                                 thumbnail_key: Optional[str] = None, tenant_id: str = "default", source_url: Optional[str] = None) -> bool:
         """Store crawled image metadata (not image bytes) in both Redis and PostgreSQL."""
         url_hash = hashlib.sha256(url.encode()).hexdigest()
         content_hash = hashlib.sha256(image_bytes).hexdigest()
-        
+
         # Extract metadata only (no image bytes)
         metadata = {
             'hash': content_hash,
@@ -625,13 +628,13 @@ class HybridCacheService:
             'raw_key': raw_key,
             'thumb_key': thumbnail_key
         }
-        
+
         # Add source URL if provided
         if source_url:
             metadata['source_url'] = source_url
-        
+
         success = True
-        
+
         # Store in Redis (primary cache)
         if self.redis_enabled:
             try:
@@ -648,7 +651,7 @@ class HybridCacheService:
             except Exception as e:
                 logger.warning(f"Failed to cache crawled image metadata in Redis: {e}")
                 success = False
-        
+
         # Store in PostgreSQL (secondary cache)
         if self.postgres_enabled:
             try:
@@ -662,15 +665,15 @@ class HybridCacheService:
             except Exception as e:
                 logger.warning(f"Failed to cache crawled image metadata in PostgreSQL: {e}")
                 success = False
-        
+
         return success
-    
+
     def _store_crawl_cache_postgres(self, url_hash: str, content_hash: str, raw_key: str, thumbnail_key: Optional[str], metadata: Dict):
         """Store crawl cache with metadata in PostgreSQL."""
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO crawl_cache 
+                    INSERT INTO crawl_cache
                     (url_hash, content_hash, raw_image_key, thumbnail_key, metadata, processed_at)
                     VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ON CONFLICT (url_hash) DO UPDATE SET
@@ -681,13 +684,13 @@ class HybridCacheService:
                         processed_at = CURRENT_TIMESTAMP
                 """, (url_hash, content_hash, raw_key, thumbnail_key, json.dumps(metadata)))
                 conn.commit()
-    
+
     # ==================== CACHE MANAGEMENT ====================
-    
+
     async def invalidate_tenant_cache(self, tenant_id: str) -> int:
         """Invalidate all cached data for a specific tenant."""
         total_invalidated = 0
-        
+
         # Invalidate Redis cache
         if self.redis_enabled:
             try:
@@ -699,7 +702,7 @@ class HybridCacheService:
                     logger.info(f"Invalidated {deleted_count} Redis cache entries for tenant {tenant_id}")
             except Exception as e:
                 logger.warning(f"Failed to invalidate Redis cache for tenant {tenant_id}: {e}")
-        
+
         # Invalidate PostgreSQL cache
         if self.postgres_enabled:
             try:
@@ -713,9 +716,9 @@ class HybridCacheService:
                 logger.info(f"Invalidated {deleted_count} PostgreSQL cache entries for tenant {tenant_id}")
             except Exception as e:
                 logger.warning(f"Failed to invalidate PostgreSQL cache for tenant {tenant_id}: {e}")
-        
+
         return total_invalidated
-    
+
     def _invalidate_postgres_tenant(self, tenant_id: str) -> int:
         """Invalidate PostgreSQL cache for tenant."""
         with self._get_postgres_connection() as conn:
@@ -723,36 +726,36 @@ class HybridCacheService:
                 # Delete from all cache tables
                 tables = ['face_embeddings_cache', 'perceptual_hash_cache', 'crawl_cache']
                 total_deleted = 0
-                
+
                 for table in tables:
                     cur.execute(f"DELETE FROM {table} WHERE tenant_id = %s", (tenant_id,))
                     total_deleted += cur.rowcount
-                
+
                 conn.commit()
                 return total_deleted
-    
+
     def _calculate_redis_hit_rate(self, redis_info: Dict) -> Optional[float]:
         """Calculate Redis cache hit rate."""
         hits = redis_info.get('keyspace_hits', 0)
         misses = redis_info.get('keyspace_misses', 0)
-        
+
         if hits + misses > 0:
             return (hits / (hits + misses)) * 100
         return None
-    
+
     def _get_postgres_stats(self) -> Dict[str, Any]:
         """Get PostgreSQL cache statistics."""
         with self._get_postgres_connection() as conn:
             with conn.cursor() as cur:
                 stats = {}
-                
+
                 # Count entries in each cache table
                 tables = ['face_embeddings_cache', 'perceptual_hash_cache', 'crawl_cache']
                 for table in tables:
                     cur.execute(f"SELECT COUNT(*) as count FROM {table}")
                     result = cur.fetchone()
                     stats[f'{table}_count'] = result['count'] if result else 0
-                
+
                 # Get total size (approximate)
                 cur.execute("""
                     SELECT pg_size_pretty(pg_total_relation_size('face_embeddings_cache')) as embeddings_size,
@@ -762,13 +765,13 @@ class HybridCacheService:
                 size_result = cur.fetchone()
                 if size_result:
                     stats.update(size_result)
-                
+
                 return stats
-    
+
     async def clear_all_cache(self) -> bool:
         """Clear all cache data from both Redis and PostgreSQL."""
         success = True
-        
+
         # Clear Redis
         if self.redis_enabled:
             try:
@@ -777,7 +780,7 @@ class HybridCacheService:
             except Exception as e:
                 logger.error(f"Failed to clear Redis cache: {e}")
                 success = False
-        
+
         # Clear PostgreSQL
         if self.postgres_enabled:
             try:
@@ -790,9 +793,9 @@ class HybridCacheService:
             except Exception as e:
                 logger.error(f"Failed to clear PostgreSQL cache: {e}")
                 success = False
-        
+
         return success
-    
+
     def _clear_postgres_cache(self):
         """Clear all PostgreSQL cache data."""
         with self._get_postgres_connection() as conn:
@@ -801,11 +804,11 @@ class HybridCacheService:
                 for table in tables:
                     cur.execute(f"TRUNCATE TABLE {table}")
                 conn.commit()
-    
+
     def close_cache_resources(self):
         """
         Clean shutdown of cache service resources.
-        
+
         This function:
         1. Shuts down thread pools with wait=True
         2. Closes Redis connections if needed
@@ -813,7 +816,7 @@ class HybridCacheService:
         4. Forces garbage collection
         """
         logger.info("Closing cache service resources...")
-        
+
         try:
             # Shutdown thread pool if it exists
             if hasattr(self, '_thread_pool') and self._thread_pool is not None:
@@ -822,7 +825,7 @@ class HybridCacheService:
                 logger.info("Cache service thread pool shutdown complete")
         except Exception as e:
             logger.warning(f"Error shutting down cache service thread pool: {e}")
-        
+
         try:
             # Close Redis connection if it exists
             if self.redis_enabled and hasattr(self, 'redis_client') and self.redis_client is not None:
@@ -838,7 +841,7 @@ class HybridCacheService:
                 logger.info("Redis connection closed")
         except Exception as e:
             logger.warning(f"Error closing Redis connection: {e}")
-        
+
         try:
             # Reset cache statistics
             self.redis_hits = 0
@@ -847,10 +850,9 @@ class HybridCacheService:
             logger.info("Cache service statistics reset")
         except Exception as e:
             logger.warning(f"Error resetting cache statistics: {e}")
-        
+
         try:
             # Force garbage collection
-            import gc
             gc.collect()
             logger.info("Cache service cleanup complete - garbage collection triggered")
         except Exception as e:

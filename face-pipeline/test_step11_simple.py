@@ -1,56 +1,69 @@
+import sys
+
+
+        from PIL import Image
+        import numpy as np
+
+        # Test laplacian_variance
+        import traceback
+        from PIL import Image
+        import numpy as np
+
+        # Call embed with tiny PIL image
+        import traceback
+
+        # Pass valid message dict
+        import traceback
+        import traceback
+
 #!/usr/bin/env python3
+        from pipeline.quality import evaluate, laplacian_variance
+        from pipeline.embedder import embed
+        from pipeline.processor import process_image
+
 """
 Simple test script for Step 11 (no pytest dependency)
 
 Tests that all functions can be called and return correct shapes/types.
 """
 
-import sys
-
-
 def test_quality_module():
     """Test quality module functions."""
     print("✅ Testing quality module...")
-    
+
     try:
-        from pipeline.quality import evaluate, laplacian_variance
-        from PIL import Image
-        import numpy as np
-        
-        # Test laplacian_variance
         img_np = np.zeros((100, 100, 3), dtype=np.uint8)
         blur_result = laplacian_variance(img_np)
         assert isinstance(blur_result, float), "laplacian_variance should return float"
         print("  ✓ laplacian_variance() returns float")
-        
+
         # Test evaluate with tiny PIL image
         img_pil = Image.new('RGB', (112, 112), color='white')
         result = evaluate(img_pil, min_size=80, min_blur_var=120.0)
-        
+
         # Assert it returns dict
         assert isinstance(result, dict), "evaluate() should return dict"
         print("  ✓ evaluate() returns dict")
-        
+
         # Assert dict has required keys
         assert "pass" in result, "evaluate() should have 'pass' key"
         assert "reason" in result, "evaluate() should have 'reason' key"
         assert "blur" in result, "evaluate() should have 'blur' key"
         assert "size" in result, "evaluate() should have 'size' key"
         print("  ✓ evaluate() returns dict with keys: pass, reason, blur, size")
-        
+
         # Assert types
         assert isinstance(result["pass"], bool), "'pass' should be bool"
         assert isinstance(result["reason"], str), "'reason' should be str"
         assert isinstance(result["blur"], float), "'blur' should be float"
         assert isinstance(result["size"], tuple), "'size' should be tuple"
         print("  ✓ All values have correct types")
-        
+
         print("✅ Quality module tests passed!\n")
         return True
-        
+
     except Exception as e:
         print(f"  ✗ Quality module test failed: {e}")
-        import traceback
         traceback.print_exc()
         return False
 
@@ -58,34 +71,28 @@ def test_quality_module():
 def test_embedder_module():
     """Test embedder module functions."""
     print("✅ Testing embedder module...")
-    
+
     try:
-        from pipeline.embedder import embed
-        from PIL import Image
-        import numpy as np
-        
-        # Call embed with tiny PIL image
         img_pil = Image.new('RGB', (112, 112), color='white')
         result = embed(img_pil)
-        
+
         # Assert it returns numpy array
         assert isinstance(result, np.ndarray), "embed() should return np.ndarray"
         print("  ✓ embed() returns np.ndarray")
-        
+
         # Assert shape is (512,)
         assert result.shape == (512,), f"embed() should return shape (512,), got {result.shape}"
         print("  ✓ embed() returns shape (512,)")
-        
+
         # Assert dtype is float32
         assert result.dtype == np.float32, f"embed() should return dtype float32, got {result.dtype}"
         print("  ✓ embed() returns dtype float32")
-        
+
         print("✅ Embedder module tests passed!\n")
         return True
-        
+
     except Exception as e:
         print(f"  ✗ Embedder module test failed: {e}")
-        import traceback
         traceback.print_exc()
         return False
 
@@ -93,11 +100,8 @@ def test_embedder_module():
 def test_processor_module():
     """Test processor module functions."""
     print("✅ Testing processor module...")
-    
+
     try:
-        from pipeline.processor import process_image
-        
-        # Pass valid message dict
         message = {
             "image_sha256": "abc123def456",
             "bucket": "raw-images",
@@ -108,20 +112,20 @@ def test_processor_module():
             "image_phash": "0" * 16,
             "face_hints": None
         }
-        
+
         result = process_image(message)
-        
+
         # Assert it returns dict
         assert isinstance(result, dict), "process_image() should return dict"
         print("  ✓ process_image() returns dict")
-        
+
         # Assert keys in summary
         assert "image_sha256" in result, "Result should have 'image_sha256' key"
         assert "counts" in result, "Result should have 'counts' key"
         assert "artifacts" in result, "Result should have 'artifacts' key"
         assert "timings_ms" in result, "Result should have 'timings_ms' key"
         print("  ✓ process_image() returns dict with keys: image_sha256, counts, artifacts, timings_ms")
-        
+
         # Assert counts structure
         counts = result["counts"]
         assert isinstance(counts, dict), "'counts' should be dict"
@@ -130,7 +134,7 @@ def test_processor_module():
         assert "rejected" in counts, "'counts' should have 'rejected'"
         assert "dup_skipped" in counts, "'counts' should have 'dup_skipped'"
         print("  ✓ 'counts' has correct structure")
-        
+
         # Assert artifacts structure
         artifacts = result["artifacts"]
         assert isinstance(artifacts, dict), "'artifacts' should be dict"
@@ -141,7 +145,7 @@ def test_processor_module():
         assert isinstance(artifacts["thumbs"], list), "'thumbs' should be list"
         assert isinstance(artifacts["metadata"], list), "'metadata' should be list"
         print("  ✓ 'artifacts' has correct structure")
-        
+
         # Assert timings structure
         timings = result["timings_ms"]
         assert isinstance(timings, dict), "'timings_ms' should be dict"
@@ -152,13 +156,12 @@ def test_processor_module():
         for key in expected_keys:
             assert key in timings, f"'timings_ms' should have '{key}'"
         print("  ✓ 'timings_ms' has all expected keys")
-        
+
         print("✅ Processor module tests passed!\n")
         return True
-        
+
     except Exception as e:
         print(f"  ✗ Processor module test failed: {e}")
-        import traceback
         traceback.print_exc()
         return False
 
@@ -208,21 +211,21 @@ if __name__ == "__main__":
         print("\n" + "=" * 70)
         print("Testing Step 11: Tests & CI Placeholders")
         print("=" * 70 + "\n")
-        
+
         success = True
-        
+
         # Test quality module
         if not test_quality_module():
             success = False
-        
+
         # Test embedder module
         if not test_embedder_module():
             success = False
-        
+
         # Test processor module
         if not test_processor_module():
             success = False
-        
+
         if success:
             print_summary()
             print("✅ ALL STEP 11 TESTS PASSED!")
@@ -233,11 +236,8 @@ if __name__ == "__main__":
         else:
             print("\n❌ SOME TESTS FAILED")
             sys.exit(1)
-        
+
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
-
-

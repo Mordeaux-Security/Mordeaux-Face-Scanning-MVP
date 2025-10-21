@@ -1,3 +1,9 @@
+import logging
+from typing import List, Dict, Any, Optional, Callable
+import asyncio
+
+from pydantic import BaseModel, HttpUrl
+
 """
 Face Pipeline Processor
 
@@ -9,44 +15,38 @@ TODO: Implement error handling and retry logic
 TODO: Add pipeline metrics and monitoring
 """
 
-import logging
-from typing import List, Dict, Any, Optional, Callable
-import asyncio
-
-from pydantic import BaseModel, HttpUrl
-
 logger = logging.getLogger(__name__)
 
 
 class PipelineInput(BaseModel):
     """
     Input data contract for the face processing pipeline.
-    
+
     Represents an image that has been uploaded to object storage and is ready
     for face detection, quality assessment, embedding generation, and vector indexing.
     """
-    
+
     image_sha256: str
     """SHA-256 hash of the image content for deduplication and integrity verification."""
-    
+
     bucket: str
     """MinIO bucket name where the raw image is stored."""
-    
+
     key: str
     """Object key/path within the bucket for the raw image."""
-    
+
     tenant_id: str
     """Multi-tenant identifier for data isolation and access control."""
-    
+
     site: str
     """Site identifier (e.g., domain or source) where the image originated."""
-    
+
     url: HttpUrl
     """Original HTTP(S) URL where the image was sourced from."""
-    
+
     image_phash: str
     """Perceptual hash (pHash) of the image for near-duplicate detection."""
-    
+
     face_hints: Optional[List[Dict]]
     """
     Optional hints about face locations/attributes from upstream processing.
@@ -58,20 +58,20 @@ class PipelineInput(BaseModel):
 def process_image(message: dict) -> dict:
     """
     Process a single image through the face detection and embedding pipeline.
-    
+
     This is the main entrypoint for processing images. It orchestrates face detection,
     quality assessment, cropping, embedding generation, storage, and vector indexing.
-    
+
     Args:
         message: Raw dictionary containing pipeline input data (validated via PipelineInput)
-    
+
     Returns:
         Dictionary with processing results containing:
         - image_sha256: Image hash identifier
         - counts: Face processing statistics
         - artifacts: Generated storage artifacts (crops, thumbnails, metadata)
         - timings_ms: Performance timings for each pipeline stage
-    
+
     Pipeline stages:
         1. Validate input
         2. Download image from MinIO
@@ -91,13 +91,13 @@ def process_image(message: dict) -> dict:
     faces_accepted = 0
     faces_rejected = 0
     faces_dup_skipped = 0
-    
+
     artifact_crops = []
     artifact_thumbs = []
     artifact_metadata = []
-    
+
     timings = {}
-    
+
     # ========================================================================
     # STEP 1: VALIDATE INPUT
     # ========================================================================
@@ -106,7 +106,7 @@ def process_image(message: dict) -> dict:
     #
     msg = PipelineInput.model_validate(message)
     logger.info(f"Processing image: {msg.image_sha256} from {msg.site}")
-    
+
     # ========================================================================
     # STEP 2: DOWNLOAD IMAGE FROM MINIO
     # ========================================================================
@@ -130,11 +130,11 @@ def process_image(message: dict) -> dict:
     #         "timings_ms": timings,
     #         "error": f"Download failed: {e}"
     #     }
-    
+
     # Minimal wiring: no-op placeholder (no actual download)
     image_bytes = b''  # Placeholder empty bytes
     timings["download_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 3: DECODE IMAGE
     # ========================================================================
@@ -162,12 +162,12 @@ def process_image(message: dict) -> dict:
     #         "timings_ms": timings,
     #         "error": f"Decode failed: {e}"
     #     }
-    
+
     # Minimal wiring: no-op placeholder (no actual decode)
     img_pil = None  # Placeholder
     img_np = None  # Placeholder
     timings["decode_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 4: DETECT FACES (Use hints if available, otherwise run detector)
     # ========================================================================
@@ -206,12 +206,12 @@ def process_image(message: dict) -> dict:
     #         "artifacts": {"crops": [], "thumbs": [], "metadata": []},
     #         "timings_ms": timings,
     #     }
-    
+
     # Minimal wiring: no-op placeholder (no actual detection)
     face_detections = []  # Placeholder empty list
     faces_total = 0
     timings["detection_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 5: ALIGN AND CROP FACES
     # ========================================================================
@@ -226,7 +226,7 @@ def process_image(message: dict) -> dict:
     # for detection in face_detections:
     #     bbox = detection.get("bbox")
     #     landmarks = detection.get("landmarks")
-    #     
+    #
     #     if bbox and landmarks:
     #         crop = align_and_crop(img_np, bbox, landmarks)
     #         if crop is not None:
@@ -241,11 +241,11 @@ def process_image(message: dict) -> dict:
     #
     # timings["alignment_ms"] = (time.time() - t0) * 1000
     # logger.debug(f"Aligned and cropped {len(face_crops)} faces")
-    
+
     # Minimal wiring: no-op placeholder (no actual alignment)
     face_crops = []  # Placeholder empty list
     timings["alignment_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 6: QUALITY ASSESSMENT PER FACE
     # ========================================================================
@@ -260,16 +260,16 @@ def process_image(message: dict) -> dict:
     #
     # for face_data in face_crops:
     #     crop_pil = face_data["crop"]
-    #     
+    #
     #     # Evaluate quality
     #     quality_result = evaluate(
     #         img_pil=crop_pil,
     #         min_size=settings.min_face_size,
     #         min_blur_var=settings.blur_min_variance
     #     )
-    #     
+    #
     #     face_data["quality"] = quality_result
-    #     
+    #
     #     if quality_result["pass"]:
     #         quality_passed.append(face_data)
     #         faces_accepted += 1
@@ -287,11 +287,11 @@ def process_image(message: dict) -> dict:
     #         "artifacts": {"crops": [], "thumbs": [], "metadata": []},
     #         "timings_ms": timings,
     #     }
-    
+
     # Minimal wiring: no-op placeholder (no actual quality checks)
     quality_passed = []  # Placeholder empty list
     timings["quality_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 7: COMPUTE PHASH AND PREFIX
     # ========================================================================
@@ -305,12 +305,12 @@ def process_image(message: dict) -> dict:
     # p_hash_prefix_val = phash_prefix(p_hash, bits=16)
     # timings["phash_ms"] = (time.time() - t0) * 1000
     # logger.debug(f"pHash: {p_hash}, prefix: {p_hash_prefix_val}")
-    
+
     # Minimal wiring: no-op placeholder (use pHash from input)
     p_hash = msg.image_phash
     p_hash_prefix_val = p_hash[:4] if len(p_hash) >= 4 else p_hash
     timings["phash_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 8: DEDUP PRECHECK (Placeholder)
     # ========================================================================
@@ -323,7 +323,7 @@ def process_image(message: dict) -> dict:
     #
     # if settings.enable_deduplication:
     #     t0 = time.time()
-    #     
+    #
     #     # Search Qdrant for candidates with same prefix
     #     # Filter by: tenant_id (for isolation) and p_hash_prefix (for efficiency)
     #     candidates = search(
@@ -331,13 +331,13 @@ def process_image(message: dict) -> dict:
     #         top_k=100,
     #         filters={"tenant_id": msg.tenant_id, "p_hash_prefix": p_hash_prefix_val}
     #     )
-    #     
+    #
     #     # Compare full pHash Hamming distance with each candidate
     #     HAMMING_THRESHOLD = 8  # Distance ≤8 indicates near-duplicate
     #     for candidate in candidates:
     #         candidate_phash = candidate["payload"].get("p_hash", "")
     #         distance = hamming_distance_hex(p_hash, candidate_phash)
-    #         
+    #
     #         if distance <= HAMMING_THRESHOLD:
     #             # Near-duplicate found - skip processing
     #             timings["dedup_ms"] = (time.time() - t0) * 1000
@@ -354,13 +354,13 @@ def process_image(message: dict) -> dict:
     #                 "artifacts": {"crops": [], "thumbs": [], "metadata": []},
     #                 "timings_ms": timings,
     #             }
-    #     
+    #
     #     timings["dedup_ms"] = (time.time() - t0) * 1000
     #     logger.debug(f"No duplicates found among {len(candidates)} candidates")
-    
+
     # Minimal wiring: no-op placeholder (skip dedup check)
     timings["dedup_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 9: GENERATE EMBEDDINGS (Placeholder)
     # ========================================================================
@@ -373,19 +373,19 @@ def process_image(message: dict) -> dict:
     # t0 = time.time()
     # for face_data in quality_passed:
     #     crop_pil = face_data["crop"]
-    #     
+    #
     #     # Generate embedding
     #     embedding = embed(crop_pil)
     #     face_data["embedding"] = embedding.tolist()  # Convert to list for JSON serialization
-    #     
+    #
     #     logger.debug(f"Generated embedding with shape {embedding.shape}")
     #
     # timings["embedding_ms"] = (time.time() - t0) * 1000
     # logger.info(f"Generated {len(quality_passed)} embeddings")
-    
+
     # Minimal wiring: no-op placeholder (no embeddings to generate)
     timings["embedding_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 10: GENERATE ARTIFACT PATHS (No writes yet - just path planning)
     # ========================================================================
@@ -399,27 +399,27 @@ def process_image(message: dict) -> dict:
     #
     # for idx, face_data in enumerate(quality_passed):
     #     face_id = f"{msg.image_sha256}_{idx}_{uuid.uuid4().hex[:8]}"
-    #     
+    #
     #     # Generate artifact paths
     #     crop_key = f"{msg.tenant_id}/crops/{msg.image_sha256[:2]}/{msg.image_sha256}/{face_id}.jpg"
     #     thumb_key = f"{msg.tenant_id}/thumbs/{msg.image_sha256[:2]}/{msg.image_sha256}/{face_id}_thumb.jpg"
     #     meta_key = f"{msg.tenant_id}/metadata/{msg.image_sha256[:2]}/{msg.image_sha256}/{face_id}.json"
-    #     
+    #
     #     face_data["face_id"] = face_id
     #     face_data["crop_key"] = crop_key
     #     face_data["thumb_key"] = thumb_key
     #     face_data["meta_key"] = meta_key
-    #     
+    #
     #     # Add to artifact lists for response
     #     artifact_crops.append(crop_key)
     #     artifact_thumbs.append(thumb_key)
     #     artifact_metadata.append(meta_key)
     #
     # logger.debug(f"Generated {len(artifact_crops)} artifact paths")
-    
+
     # Minimal wiring: no-op placeholder (no artifacts since quality_passed is empty)
     # Artifacts remain as empty lists initialized at function start
-    
+
     # ========================================================================
     # STEP 11: BATCH UPSERT TO QDRANT (Placeholder)
     # ========================================================================
@@ -457,10 +457,10 @@ def process_image(message: dict) -> dict:
     #     upsert(points)
     #     timings["upsert_ms"] = (time.time() - t0) * 1000
     #     logger.info(f"Upserted {len(points)} points to Qdrant")
-    
+
     # Minimal wiring: no-op placeholder (no points to upsert)
     timings["upsert_ms"] = 0.0
-    
+
     # ========================================================================
     # STEP 12: RETURN SUMMARY
     # ========================================================================
@@ -485,7 +485,7 @@ def process_image(message: dict) -> dict:
 
 class PipelineResult:
     """Result of processing a single image through the pipeline."""
-    
+
     def __init__(self):
         # TODO: Define result fields
         # self.image_id: str
@@ -501,7 +501,7 @@ class PipelineResult:
 
 class FacePipelineProcessor:
     """Orchestrates the complete face processing pipeline."""
-    
+
     def __init__(
         self,
         detector=None,
@@ -514,7 +514,7 @@ class FacePipelineProcessor:
     ):
         """
         Initialize pipeline processor.
-        
+
         Args:
             detector: FaceDetector instance
             embedder: FaceEmbedder instance
@@ -523,7 +523,7 @@ class FacePipelineProcessor:
             indexer: VectorIndexer instance
             min_quality_score: Minimum quality score to process
             max_faces_per_image: Maximum faces to process per image
-        
+
         TODO: Initialize all pipeline components
         TODO: Set up thread pool for parallel processing
         """
@@ -534,7 +534,7 @@ class FacePipelineProcessor:
         self.indexer = indexer
         self.min_quality_score = min_quality_score
         self.max_faces_per_image = max_faces_per_image
-    
+
     async def process_image(
         self,
         image_bytes: bytes,
@@ -544,7 +544,7 @@ class FacePipelineProcessor:
     ) -> PipelineResult:
         """
         Process a single image through the complete pipeline.
-        
+
         Pipeline stages:
         1. Face detection
         2. Quality assessment
@@ -552,23 +552,23 @@ class FacePipelineProcessor:
         4. Embedding generation
         5. Storage (raw + crops)
         6. Vector indexing
-        
+
         Args:
             image_bytes: Input image data
             image_id: Optional image identifier
             metadata: Optional metadata to attach
             progress_callback: Optional callback for progress updates
-        
+
         Returns:
             PipelineResult with processing outcomes
-        
+
         TODO: Implement complete pipeline flow
         TODO: Add error handling for each stage
         TODO: Add progress tracking
         TODO: Add metrics collection
         """
         pass
-    
+
     async def process_batch(
         self,
         images: List[bytes],
@@ -579,75 +579,74 @@ class FacePipelineProcessor:
     ) -> List[PipelineResult]:
         """
         Process multiple images in parallel.
-        
+
         TODO: Implement parallel processing with semaphore
         TODO: Add batch optimization for detection/embedding
         TODO: Handle partial failures
         TODO: Add progress aggregation
         """
         pass
-    
+
     def _detect_faces(self, image_bytes: bytes):
         """
         Stage 1: Detect faces in image.
-        
+
         TODO: Convert bytes to numpy array
         TODO: Run face detection
         TODO: Handle no faces found
         """
         pass
-    
+
     def _assess_quality(self, face_crop, bbox, landmarks):
         """
         Stage 2: Assess face quality.
-        
+
         TODO: Run quality checks
         TODO: Filter by minimum quality
         """
         pass
-    
+
     def _crop_faces(self, image, detections):
         """
         Stage 3: Crop detected faces.
-        
+
         TODO: Extract face regions with margin
         TODO: Apply alignment if needed
         """
         pass
-    
+
     def _generate_embeddings(self, face_crops):
         """
         Stage 4: Generate face embeddings.
-        
+
         TODO: Run embedding model on crops
         TODO: Normalize embeddings
         """
         pass
-    
+
     async def _store_results(self, image_bytes, face_crops, metadata):
         """
         Stage 5: Store images and metadata.
-        
+
         TODO: Save raw image
         TODO: Save face crops
         TODO: Save metadata
         """
         pass
-    
+
     async def _index_embeddings(self, embeddings, face_ids, metadata):
         """
         Stage 6: Index embeddings for search.
-        
+
         TODO: Batch insert into vector database
         TODO: Attach metadata
         """
         pass
-    
+
     def get_pipeline_stats(self) -> Dict[str, Any]:
         """
         Get pipeline processing statistics.
-        
+
         TODO: Return metrics (throughput, error rate, avg time, etc.)
         """
         pass
-

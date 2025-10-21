@@ -4,36 +4,38 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 import logging
 import psycopg
+
+
 from ..core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
 class DatabaseOptimizationService:
     """Service for database optimization and maintenance tasks."""
-    
+
     def __init__(self):
         self.settings = get_settings()
-    
+
     async def analyze_query_performance(self) -> Dict[str, Any]:
         """Analyze query performance and identify slow queries."""
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
                         # Get slow queries from pg_stat_statements (if available)
                         slow_queries = await self._get_slow_queries(cur)
-                        
+
                         # Get index usage statistics
                         index_stats = await self._get_index_usage_stats(cur)
-                        
+
                         # Get table statistics
                         table_stats = await self._get_table_statistics(cur)
-                        
+
                         # Get connection statistics
                         connection_stats = await self._get_connection_stats(cur)
-                        
+
                         return {
                             "timestamp": time.time(),
                             "slow_queries": slow_queries,
@@ -44,23 +46,23 @@ class DatabaseOptimizationService:
         except Exception as e:
             logger.error(f"Error analyzing query performance: {e}")
             return {"error": str(e)}
-    
+
     async def optimize_audit_logs_table(self) -> Dict[str, Any]:
         """Optimize the audit logs table for better performance."""
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
                         # Analyze the audit_logs table
                         await cur.execute("ANALYZE audit_logs;")
-                        
+
                         # Update table statistics
                         await cur.execute("""
-                            SELECT 
-                                schemaname, 
-                                tablename, 
+                            SELECT
+                                schemaname,
+                                tablename,
                                 n_tup_ins as inserts,
                                 n_tup_upd as updates,
                                 n_tup_del as deletes,
@@ -70,27 +72,27 @@ class DatabaseOptimizationService:
                                 last_autovacuum,
                                 last_analyze,
                                 last_autoanalyze
-                            FROM pg_stat_user_tables 
+                            FROM pg_stat_user_tables
                             WHERE tablename = 'audit_logs'
                         """)
-                        
+
                         table_stats = await cur.fetchone()
-                        
+
                         # Get index statistics
                         await cur.execute("""
-                            SELECT 
+                            SELECT
                                 indexname,
                                 idx_tup_read,
                                 idx_tup_fetch,
                                 idx_scan,
                                 idx_tup_read / NULLIF(idx_scan, 0) as avg_tuples_per_scan
-                            FROM pg_stat_user_indexes 
+                            FROM pg_stat_user_indexes
                             WHERE schemaname = 'public' AND tablename = 'audit_logs'
                             ORDER BY idx_scan DESC
                         """)
-                        
+
                         index_stats = await cur.fetchall()
-                        
+
                         return {
                             "timestamp": time.time(),
                             "table_stats": {
@@ -116,15 +118,15 @@ class DatabaseOptimizationService:
         except Exception as e:
             logger.error(f"Error optimizing audit logs table: {e}")
             return {"error": str(e)}
-    
+
     async def cleanup_old_audit_logs(self, retention_days: int = 30) -> Dict[str, Any]:
         """Clean up old audit logs based on retention policy."""
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             cutoff_date = datetime.now() - timedelta(days=retention_days)
             cutoff_timestamp = cutoff_date.timestamp()
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
@@ -134,20 +136,20 @@ class DatabaseOptimizationService:
                             (cutoff_timestamp,)
                         )
                         audit_deleted = cur.rowcount
-                        
+
                         # Delete old search audit logs
                         await cur.execute(
                             "DELETE FROM search_audit_logs WHERE created_at < %s",
                             (cutoff_timestamp,)
                         )
                         search_audit_deleted = cur.rowcount
-                        
+
                         await conn.commit()
-                        
+
                         # Vacuum the tables to reclaim space
                         await cur.execute("VACUUM audit_logs;")
                         await cur.execute("VACUUM search_audit_logs;")
-                        
+
                         return {
                             "timestamp": time.time(),
                             "retention_days": retention_days,
@@ -160,56 +162,56 @@ class DatabaseOptimizationService:
         except Exception as e:
             logger.error(f"Error cleaning up old audit logs: {e}")
             return {"error": str(e)}
-    
+
     async def get_database_health_metrics(self) -> Dict[str, Any]:
         """Get comprehensive database health metrics."""
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
                         # Get database size
                         await cur.execute("SELECT pg_database_size(current_database())")
                         db_size = await cur.fetchone()
-                        
+
                         # Get table sizes
                         await cur.execute("""
-                            SELECT 
+                            SELECT
                                 schemaname,
                                 tablename,
                                 pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,
                                 pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
-                            FROM pg_tables 
+                            FROM pg_tables
                             WHERE schemaname = 'public'
                             ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
                         """)
-                        
+
                         table_sizes = await cur.fetchall()
-                        
+
                         # Get connection statistics
                         await cur.execute("""
-                            SELECT 
+                            SELECT
                                 count(*) as total_connections,
                                 count(*) FILTER (WHERE state = 'active') as active_connections,
                                 count(*) FILTER (WHERE state = 'idle') as idle_connections,
                                 count(*) FILTER (WHERE state = 'idle in transaction') as idle_in_transaction
                             FROM pg_stat_activity
                         """)
-                        
+
                         connection_stats = await cur.fetchone()
-                        
+
                         # Get lock statistics
                         await cur.execute("""
-                            SELECT 
+                            SELECT
                                 count(*) as total_locks,
                                 count(*) FILTER (WHERE granted = true) as granted_locks,
                                 count(*) FILTER (WHERE granted = false) as waiting_locks
                             FROM pg_locks
                         """)
-                        
+
                         lock_stats = await cur.fetchone()
-                        
+
                         return {
                             "timestamp": time.time(),
                             "database_size_bytes": db_size[0] if db_size else 0,
@@ -238,7 +240,7 @@ class DatabaseOptimizationService:
         except Exception as e:
             logger.error(f"Error getting database health metrics: {e}")
             return {"error": str(e)}
-    
+
     async def _get_slow_queries(self, cur) -> List[Dict[str, Any]]:
         """Get slow queries from pg_stat_statements."""
         try:
@@ -248,29 +250,29 @@ class DatabaseOptimizationService:
                     SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'
                 )
             """)
-            
+
             extension_exists = await cur.fetchone()
-            
+
             if not extension_exists[0]:
                 return []
-            
+
             # Get slow queries
             await cur.execute("""
-                SELECT 
+                SELECT
                     query,
                     calls,
                     total_time,
                     mean_time,
                     rows,
                     100.0 * shared_blks_hit / nullif(shared_blks_hit + shared_blks_read, 0) AS hit_percent
-                FROM pg_stat_statements 
+                FROM pg_stat_statements
                 WHERE mean_time > 100  -- Queries taking more than 100ms on average
-                ORDER BY mean_time DESC 
+                ORDER BY mean_time DESC
                 LIMIT 10
             """)
-            
+
             slow_queries = await cur.fetchall()
-            
+
             return [
                 {
                     "query": row[0][:200] + "..." if len(row[0]) > 200 else row[0],  # Truncate long queries
@@ -285,12 +287,12 @@ class DatabaseOptimizationService:
         except Exception as e:
             logger.warning(f"Could not get slow queries: {e}")
             return []
-    
+
     async def _get_index_usage_stats(self, cur) -> List[Dict[str, Any]]:
         """Get index usage statistics."""
         try:
             await cur.execute("""
-                SELECT 
+                SELECT
                     schemaname,
                     tablename,
                     indexname,
@@ -298,14 +300,14 @@ class DatabaseOptimizationService:
                     idx_tup_read,
                     idx_tup_fetch,
                     pg_size_pretty(pg_relation_size(indexrelid)) as index_size
-                FROM pg_stat_user_indexes 
+                FROM pg_stat_user_indexes
                 WHERE schemaname = 'public'
                 ORDER BY idx_scan DESC
                 LIMIT 20
             """)
-            
+
             index_stats = await cur.fetchall()
-            
+
             return [
                 {
                     "schema": row[0],
@@ -321,12 +323,12 @@ class DatabaseOptimizationService:
         except Exception as e:
             logger.error(f"Error getting index usage stats: {e}")
             return []
-    
+
     async def _get_table_statistics(self, cur) -> List[Dict[str, Any]]:
         """Get table statistics."""
         try:
             await cur.execute("""
-                SELECT 
+                SELECT
                     schemaname,
                     tablename,
                     n_tup_ins,
@@ -338,13 +340,13 @@ class DatabaseOptimizationService:
                     last_autovacuum,
                     last_analyze,
                     last_autoanalyze
-                FROM pg_stat_user_tables 
+                FROM pg_stat_user_tables
                 WHERE schemaname = 'public'
                 ORDER BY n_live_tup DESC
             """)
-            
+
             table_stats = await cur.fetchall()
-            
+
             return [
                 {
                     "schema": row[0],
@@ -364,12 +366,12 @@ class DatabaseOptimizationService:
         except Exception as e:
             logger.error(f"Error getting table statistics: {e}")
             return []
-    
+
     async def _get_connection_stats(self, cur) -> Dict[str, Any]:
         """Get connection statistics."""
         try:
             await cur.execute("""
-                SELECT 
+                SELECT
                     count(*) as total_connections,
                     count(*) FILTER (WHERE state = 'active') as active_connections,
                     count(*) FILTER (WHERE state = 'idle') as idle_connections,
@@ -377,9 +379,9 @@ class DatabaseOptimizationService:
                     count(*) FILTER (WHERE state = 'idle in transaction (aborted)') as idle_in_transaction_aborted
                 FROM pg_stat_activity
             """)
-            
+
             connection_stats = await cur.fetchone()
-            
+
             return {
                 "total": connection_stats[0] if connection_stats else 0,
                 "active": connection_stats[1] if connection_stats else 0,
@@ -390,7 +392,7 @@ class DatabaseOptimizationService:
         except Exception as e:
             logger.error(f"Error getting connection stats: {e}")
             return {}
-    
+
     def _format_bytes(self, bytes_value: int) -> str:
         """Format bytes into human readable format."""
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:

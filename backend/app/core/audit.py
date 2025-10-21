@@ -5,6 +5,8 @@ from fastapi import Request
 import logging
 import psycopg
 from contextlib import asynccontextmanager
+
+
 from .config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -25,8 +27,8 @@ def get_audit_db_pool():
 class AuditLogger:
     def __init__(self):
         self.db_pool = get_audit_db_pool()
-    
-    async def log_request(self, request: Request, response_status: int, process_time: float, 
+
+    async def log_request(self, request: Request, response_status: int, process_time: float,
                          response_data: Optional[Dict[str, Any]] = None):
         """Log API request to audit table."""
         try:
@@ -55,9 +57,9 @@ class AuditLogger:
                     await conn.commit()
         except Exception as e:
             logger.error(f"Failed to log audit entry: {e}")
-    
-    async def log_search_operation(self, tenant_id: str, operation_type: str, 
-                                  face_count: int, result_count: int, 
+
+    async def log_search_operation(self, tenant_id: str, operation_type: str,
+                                  face_count: int, result_count: int,
                                   vector_backend: str, request_id: str):
         """Log search-specific operations."""
         try:
@@ -96,17 +98,17 @@ def get_audit_logger() -> AuditLogger:
 async def audit_middleware(request: Request, call_next):
     """Middleware to log all API requests for audit purposes."""
     start_time = time.time()
-    
+
     response = await call_next(request)
-    
+
     # Calculate process time
     process_time = time.time() - start_time
-    
+
     # Log the request (async, don't wait for completion)
     audit_logger = get_audit_logger()
     try:
         await audit_logger.log_request(request, response.status_code, process_time)
     except Exception as e:
         logger.error(f"Audit logging failed: {e}")
-    
+
     return response

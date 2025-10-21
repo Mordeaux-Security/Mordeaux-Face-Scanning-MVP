@@ -1,120 +1,166 @@
-SHELL := /bin/bash
-PROFILE ?=
-copy-env:
-	@test -f .env || cp .env.example .env
-up: copy-env
-	docker compose up -d --build
-	docker compose ps
-logs:
-	docker compose logs -f --tail=200
-down:
-	docker compose down
-clean:
-	docker compose down -v
-bash-backend:
-	docker compose exec backend-cpu bash || true
-seed:
-	docker compose exec backend-cpu python scripts/seed_demo.py || true
-crawl:
-	@echo "Usage: make crawl URL=<url> [METHOD=<method>] [MIN_FACE_QUALITY=<score>] [REQUIRE_FACE=<true/false>] [CROP_FACES=<true/false>] [FACE_MARGIN=<margin>] [CRAWL_MODE=<single/site>] [MAX_TOTAL_IMAGES=<number>] [MAX_PAGES=<number>] [MAX_CONCURRENT_IMAGES=<number>] [BATCH_SIZE=<number>] [TENANT_ID=<tenant_id>]"
-	@echo "Example: make crawl URL=https://example.com METHOD=smart MIN_FACE_QUALITY=0.7 CROP_FACES=true FACE_MARGIN=0.2 CRAWL_MODE=site MAX_TOTAL_IMAGES=50 MAX_PAGES=20 MAX_CONCURRENT_IMAGES=10 BATCH_SIZE=25 TENANT_ID=tenant_123"
-	@if [ -z "$(URL)" ]; then echo "Error: URL is required"; exit 1; fi
-	@METHOD=$${METHOD:-smart}; \
-	MIN_FACE_QUALITY=$${MIN_FACE_QUALITY:-0.5}; \
-	FACE_MARGIN=$${FACE_MARGIN:-0.2}; \
-	MAX_TOTAL_IMAGES=$${MAX_TOTAL_IMAGES:-50}; \
-	MAX_PAGES=$${MAX_PAGES:-20}; \
-	CRAWL_MODE=$${CRAWL_MODE:-single}; \
-	MAX_CONCURRENT_IMAGES=$${MAX_CONCURRENT_IMAGES:-10}; \
-	BATCH_SIZE=$${BATCH_SIZE:-25}; \
-	TENANT_ID=$${TENANT_ID:-default}; \
-	REQUIRE_FACE_FLAG=""; \
-	if [ "$${REQUIRE_FACE:-true}" = "false" ]; then REQUIRE_FACE_FLAG="--no-require-face"; fi; \
-	CROP_FACES_FLAG=""; \
-	if [ "$${CROP_FACES:-true}" = "false" ]; then CROP_FACES_FLAG="--no-crop-faces"; fi; \
-	docker compose exec backend-cpu python scripts/crawl_images.py $(URL) --method $$METHOD --min-face-quality $$MIN_FACE_QUALITY --face-margin $$FACE_MARGIN --max-images $$MAX_TOTAL_IMAGES --max-pages $$MAX_PAGES --mode $$CRAWL_MODE --max-concurrent-images $$MAX_CONCURRENT_IMAGES --batch-size $$BATCH_SIZE --tenant-id $$TENANT_ID $$REQUIRE_FACE_FLAG $$CROP_FACES_FLAG
+# Mordeaux Face Scanning MVP - Makefile
+# Provides convenient commands for Docker operations
 
-crawl2:
-	@echo "V2 Crawler - Simplified image crawling with face detection and upscaling"
-	@echo "Usage: make crawl2 URL=<url> [MAX_FILE_SIZE=<size_mb>] [MAX_CONCURRENT=<number>] [MIN_FACE_SIZE=<pixels>] [FACE_MARGIN=<margin>] [MAX_PAGES=<number>] [MAX_TOTAL_IMAGES=<number>]"
-	@echo "Example: make crawl2 URL=https://example.com MAX_FILE_SIZE=10 MAX_CONCURRENT=10 MIN_FACE_SIZE=50 FACE_MARGIN=0.2 MAX_PAGES=3 MAX_TOTAL_IMAGES=150"
+.PHONY: help build start stop restart status logs cleanup test
+
+# Default target
+help:
+	@echo "🐳 Mordeaux Face Scanning MVP - Docker Commands"
+	@echo "=============================================="
 	@echo ""
-	@if [ -z "$(URL)" ]; then echo "Error: URL is required"; exit 1; fi
-	@echo "Starting V2 crawler for: $(URL)"
-	@MAX_FILE_SIZE=$${MAX_FILE_SIZE:-10}; \
-	MAX_CONCURRENT=$${MAX_CONCURRENT:-10}; \
-	MIN_FACE_SIZE=$${MIN_FACE_SIZE:-50}; \
-	FACE_MARGIN=$${FACE_MARGIN:-0.2}; \
-	MAX_PAGES=$${MAX_PAGES:-5}; \
-	MAX_TOTAL_IMAGES=$${MAX_TOTAL_IMAGES:-500}; \
-	docker compose exec backend-cpu python -c "\
-import asyncio; \
-import sys; \
-import logging; \
-sys.path.insert(0, '/app'); \
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s'); \
-from app.services.crawler_v2 import crawl_images_v2; \
-result = asyncio.run(crawl_images_v2('$(URL)', max_pages_to_visit=$(MAX_PAGES), max_total_images=$(MAX_TOTAL_IMAGES))); \
-print('\\n' + '='*60); \
-print('CRAWL RESULTS:'); \
-print('='*60); \
-print(f'URL: {result.url}'); \
-print(f'Images found: {result.images_found}'); \
-print(f'Raw images saved: {result.raw_images_saved}'); \
-print(f'Face crops saved: {result.face_crops_saved}'); \
-print(f'Upscaling factors: {result.upscaling_factors}'); \
-print(f'Errors: {len(result.errors)}'); \
-if result.errors: \
-    print('\\nErrors encountered:'); \
-    for error in result.errors: \
-        print(f'  - {error}'); \
-print('='*60);"
+	@echo "Available commands:"
+	@echo "  make build     - Build and start all services"
+	@echo "  make start     - Start all services"
+	@echo "  make stop      - Stop all services"
+	@echo "  make restart   - Restart all services"
+	@echo "  make status    - Show service status"
+	@echo "  make logs      - Show recent logs"
+	@echo "  make cleanup   - Stop services and clean up resources"
+	@echo "  make test      - Test Docker configuration"
+	@echo "  make health    - Quick health check"
+	@echo "  make smoketest - Comprehensive proxy smoke tests"
+	@echo "  make smoketest-quick - Quick smoke tests"
+	@echo "  make help      - Show this help message"
+	@echo ""
+	@echo "Service URLs:"
+	@echo "  Frontend:      http://localhost:3000"
+	@echo "  Backend API:   http://localhost:8000"
+	@echo "  Face Pipeline: http://localhost:8001"
+	@echo "  MinIO Console: http://localhost:9001"
+	@echo "  pgAdmin:       http://localhost:5050"
+	@echo "  Qdrant:        http://localhost:6333"
+	@echo "  Nginx:         http://localhost:80"
 
-restart:
-	docker compose restart
+# Build and start all services
+build:
+	@echo "🚀 Building and starting all services..."
+	docker-compose up --build -d
+	@echo "✅ All services started successfully!"
+	@echo ""
+	@echo "Service URLs:"
+	@echo "  🌐 Frontend:        http://localhost:3000"
+	@echo "  🔧 Backend API:     http://localhost:8000"
+	@echo "  🧠 Face Pipeline:   http://localhost:8001"
+	@echo "  🗄️  MinIO Console:   http://localhost:9001"
+	@echo "  📊 pgAdmin:         http://localhost:5050"
+	@echo "  🔍 Qdrant:          http://localhost:6333"
+	@echo "  🌍 Nginx (Main):    http://localhost:80"
 
-reset-cache:
-	@echo "Clearing crawl cache database..."
-	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing cache for db: {s.postgres_db}')"
-	docker compose exec postgres psql -U mordeaux -d mordeaux -c "DELETE FROM crawl_cache;"
+# Start all services
+start:
+	@echo "▶️  Starting all services..."
+	docker-compose up -d
+	@echo "✅ All services started!"
 
-reset-redis:
-	@echo "Clearing Redis cache..."
-	python backend/scripts/reset_redis_cache.py --all
+# Stop all services
+stop:
+	@echo "⏹️  Stopping all services..."
+	docker-compose down
+	@echo "✅ All services stopped!"
 
-reset-redis-docker:
-	@echo "Clearing Redis cache via Docker..."
-	docker compose exec redis redis-cli FLUSHDB
-	@echo "Redis cache cleared via Docker"
+# Restart all services
+restart: stop start
+	@echo "🔄 All services restarted!"
 
-reset-redis-test:
-	@echo "Clearing Redis test cache (DB 15)..."
-	python backend/scripts/reset_redis_cache.py --db 15 --all
+# Show service status
+status:
+	@echo "📊 Service Status:"
+	docker-compose ps
 
-reset-redis-info:
-	@echo "Redis cache information:"
-	python backend/scripts/reset_redis_cache.py --info
+# Show recent logs
+logs:
+	@echo "📋 Recent logs:"
+	docker-compose logs --tail=50
 
-reset-redis-all-methods:
-	@echo "Trying all Redis reset methods:"
-	bash backend/scripts/redis_reset_methods.sh
+# Clean up resources
+cleanup:
+	@echo "🧹 Cleaning up Docker resources..."
+	docker-compose down -v --remove-orphans
+	docker system prune -f
+	@echo "✅ Cleanup completed!"
 
-reset-minio:
-	@echo "Clearing MinIO buckets..."
-	docker compose exec backend-cpu python -c "from app.core.config import get_settings; s = get_settings(); print(f'Clearing buckets: {s.s3_bucket_raw}, {s.s3_bucket_thumbs}')"
-	docker compose exec backend-cpu python scripts/clear_minio.py
+# Test Docker configuration
+test:
+	@echo "🧪 Testing Docker configuration..."
+	docker-compose config --quiet
+	@echo "✅ Docker configuration is valid!"
 
-reset-both: reset-cache reset-redis-docker reset-minio
-	@echo "Cache, Redis, and MinIO data cleared."
+# Development helpers
+dev-logs:
+	@echo "📋 Following logs (Ctrl+C to stop):"
+	docker-compose logs -f
 
-reset-all: reset-both clean
-	@echo "All data cleared and containers stopped."
+dev-shell-backend:
+	@echo "🐚 Opening shell in backend container..."
+	docker-compose exec backend-cpu bash
 
-download-thumb:
-	@./scripts/download_images.sh thumbnails
+dev-shell-face-pipeline:
+	@echo "🐚 Opening shell in face-pipeline container..."
+	docker-compose exec face-pipeline bash
 
-download-raw:
-	@./scripts/download_images.sh raw-images
+dev-shell-worker:
+	@echo "🐚 Opening shell in worker container..."
+	docker-compose exec worker-cpu bash
 
-download-both:
-	@./scripts/download_images.sh both
+# Database helpers
+db-backup:
+	@echo "💾 Creating database backup..."
+	docker-compose exec postgres pg_dump -U mordeaux mordeaux > backup_$(shell date +%Y%m%d_%H%M%S).sql
+	@echo "✅ Database backup created!"
+
+db-restore:
+	@echo "📥 Restoring database from backup..."
+	@read -p "Enter backup filename: " backup; \
+	docker-compose exec -T postgres psql -U mordeaux mordeaux < $$backup
+	@echo "✅ Database restored!"
+
+# Monitoring
+monitor:
+	@echo "📊 Container resource usage:"
+	docker stats --no-stream
+
+# Quick health check
+health:
+	@echo "🏥 Health check:"
+	@echo "Backend API:"
+	@curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health || echo "❌ Backend not responding"
+	@echo ""
+	@echo "Face Pipeline:"
+	@curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/health || echo "❌ Face Pipeline not responding"
+	@echo ""
+	@echo "Frontend:"
+	@curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || echo "❌ Frontend not responding"
+
+# Comprehensive smoke tests
+smoketest:
+	@echo "🧪 Running comprehensive smoke tests..."
+	@echo "This will test Nginx routing, CORS headers, port mapping, and API endpoints."
+	@echo ""
+	@if [ -f "scripts/smoke_test.sh" ]; then \
+		bash scripts/smoke_test.sh; \
+	elif [ -f "scripts/smoke_test.ps1" ]; then \
+		powershell -ExecutionPolicy Bypass -File scripts/smoke_test.ps1; \
+	else \
+		echo "❌ No smoke test script found"; \
+		exit 1; \
+	fi
+
+# Quick smoke test (Windows PowerShell)
+smoketest-win:
+	@echo "🧪 Running smoke tests (Windows)..."
+	powershell -ExecutionPolicy Bypass -File scripts/smoke_test.ps1
+
+# Quick smoke test (Linux/Mac)
+smoketest-linux:
+	@echo "🧪 Running smoke tests (Linux/Mac)..."
+	bash scripts/smoke_test.sh
+
+# Quick smoke test (simplified)
+smoketest-quick:
+	@echo "🧪 Running quick smoke tests..."
+	@if [ -f "scripts/quick_smoke_test.ps1" ]; then \
+		powershell -ExecutionPolicy Bypass -File scripts/quick_smoke_test.ps1; \
+	else \
+		echo "❌ Quick smoke test script not found"; \
+		exit 1; \
+	fi

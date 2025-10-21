@@ -6,6 +6,9 @@ import logging
 from threading import Lock
 import json
 
+
+        from .config import get_settings
+
 logger = logging.getLogger(__name__)
 
 class PerformanceMetrics:
@@ -18,18 +21,18 @@ class PerformanceMetrics:
         self.rate_limit_violations = defaultdict(int)
         self.lock = Lock()
         self.start_time = time.time()
-    
-    def record_request(self, endpoint: str, tenant_id: str, duration: float, 
+
+    def record_request(self, endpoint: str, tenant_id: str, duration: float,
                       status_code: int, request_id: str = None):
         """Record a request metric."""
         with self.lock:
             self.request_times.append(duration)
             self.endpoint_metrics[endpoint].append(duration)
             self.tenant_metrics[tenant_id].append(duration)
-            
+
             if status_code >= 400:
                 self.error_counts[endpoint] += 1
-            
+
             # Log performance metrics
             logger.info(
                 f"Request completed",
@@ -41,12 +44,12 @@ class PerformanceMetrics:
                     "status_code": status_code
                 }
             )
-    
+
     def record_rate_limit_violation(self, tenant_id: str):
         """Record a rate limit violation."""
         with self.lock:
             self.rate_limit_violations[tenant_id] += 1
-    
+
     def get_p95_latency(self) -> float:
         """Get P95 latency across all requests."""
         with self.lock:
@@ -55,7 +58,7 @@ class PerformanceMetrics:
             sorted_times = sorted(self.request_times)
             p95_index = int(len(sorted_times) * 0.95)
             return sorted_times[p95_index] if p95_index < len(sorted_times) else sorted_times[-1]
-    
+
     def get_p99_latency(self) -> float:
         """Get P99 latency across all requests."""
         with self.lock:
@@ -64,28 +67,27 @@ class PerformanceMetrics:
             sorted_times = sorted(self.request_times)
             p99_index = int(len(sorted_times) * 0.99)
             return sorted_times[p99_index] if p99_index < len(sorted_times) else sorted_times[-1]
-    
+
     def get_avg_latency(self) -> float:
         """Get average latency across all requests."""
         with self.lock:
             if not self.request_times:
                 return 0.0
             return statistics.mean(self.request_times)
-    
+
     def get_median_latency(self) -> float:
         """Get median latency across all requests."""
         with self.lock:
             if not self.request_times:
                 return 0.0
             return statistics.median(self.request_times)
-    
+
     def is_p95_threshold_exceeded(self) -> bool:
         """Check if P95 latency exceeds the configured threshold."""
-        from .config import get_settings
         settings = get_settings()
         p95 = self.get_p95_latency()
         return p95 > settings.p95_latency_threshold_seconds
-    
+
     def get_endpoint_metrics(self, endpoint: str) -> Dict[str, Any]:
         """Get metrics for a specific endpoint."""
         with self.lock:
@@ -99,11 +101,11 @@ class PerformanceMetrics:
                     "error_count": 0,
                     "error_rate": 0.0
                 }
-            
+
             sorted_times = sorted(times)
             p95_index = int(len(sorted_times) * 0.95)
             p99_index = int(len(sorted_times) * 0.99)
-            
+
             return {
                 "request_count": len(times),
                 "avg_latency": statistics.mean(times),
@@ -112,7 +114,7 @@ class PerformanceMetrics:
                 "error_count": self.error_counts[endpoint],
                 "error_rate": self.error_counts[endpoint] / len(times) if times else 0.0
             }
-    
+
     def get_tenant_metrics(self, tenant_id: str) -> Dict[str, Any]:
         """Get metrics for a specific tenant."""
         with self.lock:
@@ -124,24 +126,24 @@ class PerformanceMetrics:
                     "p95_latency": 0.0,
                     "rate_limit_violations": 0
                 }
-            
+
             sorted_times = sorted(times)
             p95_index = int(len(sorted_times) * 0.95)
-            
+
             return {
                 "request_count": len(times),
                 "avg_latency": statistics.mean(times),
                 "p95_latency": sorted_times[p95_index] if p95_index < len(sorted_times) else sorted_times[-1],
                 "rate_limit_violations": self.rate_limit_violations[tenant_id]
             }
-    
+
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Get overall metrics summary."""
         with self.lock:
             total_requests = len(self.request_times)
             total_errors = sum(self.error_counts.values())
             total_rate_limit_violations = sum(self.rate_limit_violations.values())
-            
+
             return {
                 "timestamp": time.time(),
                 "uptime_seconds": time.time() - self.start_time,
@@ -163,7 +165,7 @@ class PerformanceMetrics:
                     for tenant_id in self.tenant_metrics.keys()
                 }
             }
-    
+
     def reset_metrics(self):
         """Reset all metrics (useful for testing)."""
         with self.lock:
@@ -184,7 +186,7 @@ def get_metrics() -> PerformanceMetrics:
         _metrics = PerformanceMetrics()
     return _metrics
 
-def record_request_metrics(endpoint: str, tenant_id: str, duration: float, 
+def record_request_metrics(endpoint: str, tenant_id: str, duration: float,
                           status_code: int, request_id: str = None):
     """Record request metrics."""
     metrics = get_metrics()

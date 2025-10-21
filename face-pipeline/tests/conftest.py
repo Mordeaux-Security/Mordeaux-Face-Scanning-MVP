@@ -1,3 +1,8 @@
+import pytest
+import numpy as np
+from pathlib import Path
+
+
 """
 Pytest Configuration and Fixtures
 
@@ -8,16 +13,11 @@ TODO: Add test database/storage fixtures
 TODO: Add cleanup hooks
 """
 
-import pytest
-import numpy as np
-from pathlib import Path
-
-
 @pytest.fixture
 def sample_image_bytes():
     """
     Provide sample image bytes for testing.
-    
+
     TODO: Load or generate sample image
     TODO: Include faces for testing
     """
@@ -28,7 +28,7 @@ def sample_image_bytes():
 def sample_face_crop():
     """
     Provide sample face crop as numpy array.
-    
+
     TODO: Create or load sample face crop
     """
     pass
@@ -38,7 +38,7 @@ def sample_face_crop():
 def sample_embedding():
     """
     Provide sample face embedding vector.
-    
+
     TODO: Generate realistic embedding (512-dim vector)
     """
     pass
@@ -48,7 +48,7 @@ def sample_embedding():
 def mock_detector():
     """
     Provide mock face detector for testing.
-    
+
     TODO: Create mock detector that returns predictable results
     """
     pass
@@ -58,7 +58,7 @@ def mock_detector():
 def mock_embedder():
     """
     Provide mock face embedder for testing.
-    
+
     TODO: Create mock embedder
     """
     pass
@@ -68,7 +68,7 @@ def mock_embedder():
 def mock_storage():
     """
     Provide mock storage manager for testing.
-    
+
     TODO: Create in-memory or temp file storage mock
     """
     pass
@@ -78,7 +78,7 @@ def mock_storage():
 def mock_indexer():
     """
     Provide mock vector indexer for testing.
-    
+
     TODO: Create in-memory vector index mock
     """
     pass
@@ -88,7 +88,7 @@ def mock_indexer():
 def test_data_dir():
     """
     Provide path to test data directory.
-    
+
     TODO: Create test data directory structure
     """
     pass
@@ -98,9 +98,8 @@ def test_data_dir():
 def cleanup_temp_files():
     """
     Cleanup temporary files after each test.
-    
+
     TODO: Implement cleanup logic
     """
     yield
     # TODO: Clean up any temporary files
-
