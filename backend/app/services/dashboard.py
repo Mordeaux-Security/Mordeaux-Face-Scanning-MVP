@@ -2,19 +2,21 @@ import time
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 import logging
+import psycopg
+
+
 from ..core.config import get_settings
 from ..core.metrics import get_metrics
 from ..services.health import get_health_service
 from ..services.cache import get_cache_service
 from ..services.webhook import get_webhook_service
 from ..services.batch import get_batch_processor
-import psycopg
 
 logger = logging.getLogger(__name__)
 
 class DashboardService:
     """Service for generating dashboard metrics and analytics."""
-    
+
     def __init__(self):
         self.settings = get_settings()
         self.metrics = get_metrics()
@@ -22,25 +24,25 @@ class DashboardService:
         self.cache_service = get_cache_service()
         self.webhook_service = get_webhook_service()
         self.batch_processor = get_batch_processor()
-    
+
     async def get_system_overview(self) -> Dict[str, Any]:
         """Get high-level system overview metrics."""
         try:
             # Get health status
             health_data = await self.health_service.get_comprehensive_health(use_cache=True)
-            
+
             # Get performance metrics
             performance_metrics = self.metrics.get_metrics_summary()
-            
+
             # Get cache stats
             cache_stats = await self.cache_service.get_cache_stats()
-            
+
             # Get webhook stats (aggregated across all tenants)
             webhook_stats = await self._get_aggregated_webhook_stats()
-            
+
             # Get batch processing stats
             batch_stats = await self._get_batch_processing_stats()
-            
+
             return {
                 "timestamp": time.time(),
                 "system_health": {
@@ -69,12 +71,12 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error generating system overview: {e}")
             return {"error": str(e)}
-    
+
     async def get_performance_metrics(self, time_range_hours: int = 24) -> Dict[str, Any]:
         """Get detailed performance metrics for the specified time range."""
         try:
             metrics_summary = self.metrics.get_metrics_summary()
-            
+
             # Get endpoint-specific metrics
             endpoint_metrics = {}
             for endpoint, data in metrics_summary.get("endpoints", {}).items():
@@ -85,7 +87,7 @@ class DashboardService:
                     "error_count": data["error_count"],
                     "error_rate": data["error_count"] / max(data["count"], 1)
                 }
-            
+
             # Get tenant-specific metrics
             tenant_metrics = {}
             for tenant, data in metrics_summary.get("tenants", {}).items():
@@ -94,7 +96,7 @@ class DashboardService:
                     "p95_latency": data["p95_latency"],
                     "rate_limit_violations": data["rate_limit_violations"]
                 }
-            
+
             return {
                 "timestamp": time.time(),
                 "time_range_hours": time_range_hours,
@@ -114,22 +116,22 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error generating performance metrics: {e}")
             return {"error": str(e)}
-    
+
     async def get_usage_analytics(self, time_range_hours: int = 24) -> Dict[str, Any]:
         """Get usage analytics and trends."""
         try:
             # Get database analytics
             db_analytics = await self._get_database_analytics(time_range_hours)
-            
+
             # Get cache analytics
             cache_analytics = await self._get_cache_analytics()
-            
+
             # Get webhook analytics
             webhook_analytics = await self._get_webhook_analytics()
-            
+
             # Get batch processing analytics
             batch_analytics = await self._get_batch_analytics()
-            
+
             return {
                 "timestamp": time.time(),
                 "time_range_hours": time_range_hours,
@@ -141,23 +143,23 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error generating usage analytics: {e}")
             return {"error": str(e)}
-    
+
     async def get_tenant_metrics(self, tenant_id: str) -> Dict[str, Any]:
         """Get metrics specific to a tenant."""
         try:
             # Get tenant-specific performance metrics
             metrics_summary = self.metrics.get_metrics_summary()
             tenant_data = metrics_summary.get("tenants", {}).get(tenant_id, {})
-            
+
             # Get tenant webhook stats
             webhook_stats = await self.webhook_service.get_webhook_stats(tenant_id)
-            
+
             # Get tenant batch stats
             batch_stats = await self._get_tenant_batch_stats(tenant_id)
-            
+
             # Get tenant cache stats (approximate)
             cache_stats = await self.cache_service.get_cache_stats()
-            
+
             return {
                 "tenant_id": tenant_id,
                 "timestamp": time.time(),
@@ -175,13 +177,13 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error generating tenant metrics for {tenant_id}: {e}")
             return {"error": str(e)}
-    
+
     async def get_health_dashboard(self) -> Dict[str, Any]:
         """Get comprehensive health dashboard data."""
         try:
             # Get detailed health data
             health_data = await self.health_service.get_comprehensive_health(use_cache=False)
-            
+
             # Get individual service health
             service_health = {}
             for service_name, service_data in health_data.get("services", {}).items():
@@ -190,7 +192,7 @@ class DashboardService:
                     "response_time_ms": service_data.get("response_time_ms"),
                     "details": {k: v for k, v in service_data.items() if k not in ["status", "response_time_ms"]}
                 }
-            
+
             return {
                 "timestamp": time.time(),
                 "overall_health": {
@@ -206,7 +208,7 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error generating health dashboard: {e}")
             return {"error": str(e)}
-    
+
     async def _get_aggregated_webhook_stats(self) -> Dict[str, Any]:
         """Get aggregated webhook statistics across all tenants."""
         try:
@@ -220,21 +222,21 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error getting aggregated webhook stats: {e}")
             return {"error": str(e)}
-    
+
     async def _get_batch_processing_stats(self) -> Dict[str, Any]:
         """Get batch processing statistics."""
         try:
             all_batches = self.batch_processor.list_batches()
-            
+
             total_batches = len(all_batches)
             active_batches = len([b for b in all_batches if b["status"] in ["created", "processing"]])
             completed_batches = len([b for b in all_batches if b["status"] == "completed"])
             failed_batches = len([b for b in all_batches if b["status"] == "failed"])
-            
+
             total_images = sum(b["total_images"] for b in all_batches)
             successful_images = sum(b["successful_images"] for b in all_batches)
             failed_images = sum(b["failed_images"] for b in all_batches)
-            
+
             return {
                 "total_batches": total_batches,
                 "active_batches": active_batches,
@@ -248,45 +250,45 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error getting batch processing stats: {e}")
             return {"error": str(e)}
-    
+
     async def _get_database_analytics(self, time_range_hours: int) -> Dict[str, Any]:
         """Get database analytics for the specified time range."""
         try:
             # Connect to database to get analytics
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
-            
+
             async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
                 async with pool.connection() as conn:
                     async with conn.cursor() as cur:
                         # Get audit log statistics
                         cutoff_time = time.time() - (time_range_hours * 3600)
-                        
+
                         await cur.execute("""
-                            SELECT 
+                            SELECT
                                 COUNT(*) as total_requests,
                                 COUNT(CASE WHEN status_code >= 400 THEN 1 END) as error_requests,
                                 AVG(process_time) as avg_process_time,
                                 COUNT(DISTINCT tenant_id) as unique_tenants
-                            FROM audit_logs 
+                            FROM audit_logs
                             WHERE created_at >= %s
                         """, (cutoff_time,))
-                        
+
                         audit_stats = await cur.fetchone()
-                        
+
                         # Get search audit statistics
                         await cur.execute("""
-                            SELECT 
+                            SELECT
                                 operation_type,
                                 COUNT(*) as count,
                                 SUM(face_count) as total_faces,
                                 SUM(result_count) as total_results
-                            FROM search_audit_logs 
+                            FROM search_audit_logs
                             WHERE created_at >= %s
                             GROUP BY operation_type
                         """, (cutoff_time,))
-                        
+
                         search_stats = await cur.fetchall()
-                        
+
                         return {
                             "audit_logs": {
                                 "total_requests": audit_stats[0] if audit_stats else 0,
@@ -306,12 +308,12 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error getting database analytics: {e}")
             return {"error": str(e)}
-    
+
     async def _get_cache_analytics(self) -> Dict[str, Any]:
         """Get cache analytics."""
         try:
             cache_stats = await self.cache_service.get_cache_stats()
-            
+
             return {
                 "total_items": cache_stats.get("cache_counts", {}).get("total_cached_items", 0),
                 "embedding_cache": cache_stats.get("cache_counts", {}).get("embedding_cache", 0),
@@ -324,7 +326,7 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error getting cache analytics: {e}")
             return {"error": str(e)}
-    
+
     async def _get_webhook_analytics(self) -> Dict[str, Any]:
         """Get webhook analytics."""
         try:
@@ -338,20 +340,20 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error getting webhook analytics: {e}")
             return {"error": str(e)}
-    
+
     async def _get_batch_analytics(self) -> Dict[str, Any]:
         """Get batch processing analytics."""
         try:
             all_batches = self.batch_processor.list_batches()
-            
+
             # Calculate trends over time
             now = time.time()
             last_24h = now - 86400
             last_7d = now - (7 * 86400)
-            
+
             batches_24h = [b for b in all_batches if b["created_at"] >= last_24h]
             batches_7d = [b for b in all_batches if b["created_at"] >= last_7d]
-            
+
             return {
                 "total_batches": len(all_batches),
                 "batches_24h": len(batches_24h),
@@ -362,12 +364,12 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error getting batch analytics: {e}")
             return {"error": str(e)}
-    
+
     async def _get_tenant_batch_stats(self, tenant_id: str) -> Dict[str, Any]:
         """Get batch processing stats for a specific tenant."""
         try:
             tenant_batches = self.batch_processor.list_batches(tenant_id=tenant_id)
-            
+
             return {
                 "total_batches": len(tenant_batches),
                 "active_batches": len([b for b in tenant_batches if b["status"] in ["created", "processing"]]),
@@ -379,21 +381,21 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error getting tenant batch stats: {e}")
             return {"error": str(e)}
-    
+
     def _calculate_cache_hit_rate(self, cache_stats: Dict[str, Any]) -> float:
         """Calculate cache hit rate from Redis info."""
         try:
             redis_info = cache_stats.get("redis_info", {})
             hits = redis_info.get("keyspace_hits", 0)
             misses = redis_info.get("keyspace_misses", 0)
-            
+
             if hits + misses == 0:
                 return 0.0
-            
+
             return hits / (hits + misses)
         except Exception:
             return 0.0
-    
+
     def _estimate_tenant_cache_usage(self, tenant_id: str, cache_stats: Dict[str, Any]) -> int:
         """Estimate cache usage for a specific tenant."""
         try:

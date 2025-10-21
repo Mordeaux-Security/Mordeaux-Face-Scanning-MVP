@@ -2,6 +2,8 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any
+
+
 from ..services.cleanup import get_cleanup_service
 from ..core.config import get_settings
 
@@ -13,16 +15,16 @@ class CleanupScheduler:
         self.cleanup_service = get_cleanup_service()
         self.running = False
         self.cleanup_interval_hours = 24  # Run cleanup daily
-    
+
     async def start_scheduler(self):
         """Start the cleanup scheduler."""
         if self.running:
             logger.warning("Cleanup scheduler is already running")
             return
-        
+
         self.running = True
         logger.info("Starting cleanup scheduler...")
-        
+
         while self.running:
             try:
                 await self.run_cleanup_cycle()
@@ -32,27 +34,27 @@ class CleanupScheduler:
                 logger.error(f"Error in cleanup scheduler: {e}")
                 # Wait a shorter time before retrying on error
                 await asyncio.sleep(3600)  # 1 hour
-    
+
     async def stop_scheduler(self):
         """Stop the cleanup scheduler."""
         self.running = False
         logger.info("Stopping cleanup scheduler...")
-    
+
     async def run_cleanup_cycle(self):
         """Run a complete cleanup cycle."""
         logger.info("Starting cleanup cycle...")
         start_time = datetime.now()
-        
+
         try:
             # Run all cleanup jobs
             results = await self.cleanup_service.run_all_cleanup_jobs()
-            
+
             # Log summary
             summary = results.get("summary", {})
             logger.info(
                 f"Cleanup cycle completed: {summary.get('successful_jobs', 0)}/{summary.get('total_jobs', 0)} jobs successful"
             )
-            
+
             # Log individual job results
             for job_name, job_result in results.get("jobs", {}).items():
                 status = job_result.get("status", "unknown")
@@ -60,26 +62,26 @@ class CleanupScheduler:
                     logger.info(f"Cleanup job '{job_name}' completed successfully")
                 else:
                     logger.error(f"Cleanup job '{job_name}' failed: {job_result.get('error', 'Unknown error')}")
-            
+
             # Calculate cycle duration
             duration = (datetime.now() - start_time).total_seconds()
             logger.info(f"Cleanup cycle took {duration:.2f} seconds")
-            
+
         except Exception as e:
             logger.error(f"Cleanup cycle failed: {e}")
             raise
-    
+
     async def run_immediate_cleanup(self, job_types: list = None) -> Dict[str, Any]:
         """Run cleanup jobs immediately (for manual triggers)."""
         logger.info(f"Running immediate cleanup for job types: {job_types or 'all'}")
-        
+
         if job_types is None:
             # Run all cleanup jobs
             return await self.cleanup_service.run_all_cleanup_jobs()
         else:
             # Run specific cleanup jobs
             results = {"timestamp": datetime.now().timestamp(), "jobs": {}}
-            
+
             for job_type in job_types:
                 try:
                     if job_type == "thumbnails":
@@ -92,14 +94,14 @@ class CleanupScheduler:
                         result = await self.cleanup_service.cleanup_orphaned_vectors()
                     else:
                         result = {"status": "error", "error": f"Unknown job type: {job_type}"}
-                    
+
                     results["jobs"][job_type] = result
                     logger.info(f"Immediate cleanup job '{job_type}' completed: {result.get('status', 'unknown')}")
-                    
+
                 except Exception as e:
                     logger.error(f"Immediate cleanup job '{job_type}' failed: {e}")
                     results["jobs"][job_type] = {"status": "error", "error": str(e)}
-            
+
             return results
 
 # Global cleanup scheduler instance

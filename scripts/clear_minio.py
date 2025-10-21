@@ -15,7 +15,7 @@ def clear_minio_buckets():
     """Clear all objects from MinIO buckets."""
     try:
         client = get_minio_client()
-        
+
         # Clear raw-images bucket
         try:
             objects = list(client.list_objects(BUCKET_RAW, recursive=True))
@@ -24,7 +24,7 @@ def clear_minio_buckets():
             print(f'Cleared {BUCKET_RAW} bucket ({len(objects)} objects)')
         except Exception as e:
             print(f'Error clearing {BUCKET_RAW}: {e}')
-        
+
         # Clear thumbnails bucket
         try:
             objects = list(client.list_objects(BUCKET_THUMBS, recursive=True))
@@ -33,9 +33,9 @@ def clear_minio_buckets():
             print(f'Cleared {BUCKET_THUMBS} bucket ({len(objects)} objects)')
         except Exception as e:
             print(f'Error clearing {BUCKET_THUMBS}: {e}')
-        
+
         print('MinIO buckets cleared.')
-        
+
     except Exception as e:
         print(f'Error connecting to MinIO: {e}')
         sys.exit(1)

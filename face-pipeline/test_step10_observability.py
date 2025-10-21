@@ -1,26 +1,36 @@
+import sys
+import time
+
+
+
+    # Test basic usage
+    from main import ready
+    import inspect
+
+    # Check function exists
+
+# Time a code section
+        import traceback
+
 #!/usr/bin/env python3
+    from pipeline.utils import timer
+from pipeline.utils import timer
+
 """
 Test script for Step 10: Observability & Health (Skeleton)
 
 Validates the timer context manager and /ready endpoint implementation.
 """
 
-import sys
-import time
-
-
 def test_timer_context_manager():
     """Test that the timer context manager works correctly."""
     print("✅ Testing timer context manager...")
-    
-    from pipeline.utils import timer
-    
-    # Test basic usage
+
     with timer("test_section"):
         time.sleep(0.1)  # Simulate work
-    
+
     print("  ✓ timer() context manager works")
-    
+
     # Test with exception
     try:
         with timer("test_with_exception"):
@@ -28,43 +38,39 @@ def test_timer_context_manager():
             raise ValueError("Test exception")
     except ValueError:
         pass  # Expected
-    
+
     print("  ✓ timer() handles exceptions correctly")
-    
+
     # Test multiple sections
     with timer("section_1"):
         time.sleep(0.02)
-    
+
     with timer("section_2"):
         time.sleep(0.03)
-    
+
     print("  ✓ timer() works with multiple sections")
-    
+
     print("✅ All timer tests passed!\n")
 
 
 def test_ready_endpoint_structure():
     """Test that /ready endpoint has the correct structure."""
     print("✅ Testing /ready endpoint structure...")
-    
+
     # We can't actually call the endpoint without starting the server,
     # but we can verify the function exists and has the right signature
-    from main import ready
-    import inspect
-    
-    # Check function exists
     assert callable(ready), "/ready endpoint function not found"
     print("  ✓ /ready endpoint function exists")
-    
+
     # Check it's async
     assert inspect.iscoroutinefunction(ready), "/ready should be async"
     print("  ✓ /ready endpoint is async")
-    
+
     # Check docstring
     assert ready.__doc__ is not None, "/ready should have docstring"
     assert "TODO" in ready.__doc__, "/ready should have TODO markers"
     print("  ✓ /ready endpoint has comprehensive docstring with TODOs")
-    
+
     print("✅ All /ready endpoint structure tests passed!\n")
 
 
@@ -74,14 +80,11 @@ def print_usage_examples():
     print("STEP 10: Observability & Health - Usage Examples")
     print("=" * 70)
     print()
-    
+
     print("📋 FEATURE 1: timer() Context Manager")
     print()
     print("Usage in pipeline code:")
     print("""
-from pipeline.utils import timer
-
-# Time a code section
 with timer("face_detection"):
     faces = detect_faces(image)
     # Logs: "⏱️  face_detection completed in 45.23ms"
@@ -98,11 +101,11 @@ with timer("risky_operation"):
     result = might_fail()
     # Timer still logs elapsed time even if this raises
 """)
-    
+
     print()
     print("=" * 70)
     print()
-    
+
     print("📋 FEATURE 2: /ready Endpoint")
     print()
     print("Kubernetes/Docker readiness probe:")
@@ -115,7 +118,7 @@ healthcheck:
   retries: 3
   start_period: 30s
 """)
-    
+
     print()
     print("Manual testing:")
     print("""
@@ -147,7 +150,7 @@ curl http://localhost:8000/ready
   }
 }
 """)
-    
+
     print()
     print("=" * 70)
     print()
@@ -159,7 +162,7 @@ def print_implementation_summary():
     print("STEP 10: Implementation Summary")
     print("=" * 70)
     print()
-    
+
     print("✅ COMPLETED:")
     print()
     print("1. pipeline/utils.py:")
@@ -178,21 +181,21 @@ def print_implementation_summary():
     print("   - TODO markers for checking models, storage, vector DB")
     print("   - Updated root endpoint to include /ready")
     print()
-    
+
     print("📊 STATS:")
     print("   - Lines added to utils.py: ~50 (timer implementation)")
     print("   - Lines added to main.py: ~70 (/ready endpoint)")
     print("   - Linter errors: 0")
     print("   - Acceptance criteria met: 2/2")
     print()
-    
+
     print("🎯 ACCEPTANCE CRITERIA:")
     print("   ✅ /ready endpoint exists")
     print("   ✅ Returns JSON with ready (boolean) and reason (string)")
     print("   ✅ timer() context manager implemented")
     print("   ✅ timer() yields and logs elapsed ms")
     print()
-    
+
     print("🚀 NEXT STEPS (DEV2):")
     print("   - Implement model loading checks in /ready")
     print("   - Implement MinIO connectivity checks in /ready")
@@ -209,25 +212,22 @@ if __name__ == "__main__":
         print("\n" + "=" * 70)
         print("Testing Step 10: Observability & Health (Skeleton)")
         print("=" * 70 + "\n")
-        
+
         test_timer_context_manager()
         test_ready_endpoint_structure()
         print_usage_examples()
         print_implementation_summary()
-        
+
         print("✅ ALL TESTS PASSED!")
         print("✅ Step 10 acceptance criteria met:")
         print("   ✓ /ready endpoint exists")
         print("   ✓ Returns JSON with ready boolean and reason string")
         print("   ✓ timer() context manager implemented and working")
         print()
-        
+
         sys.exit(0)
-        
+
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
-
-

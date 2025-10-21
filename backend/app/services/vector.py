@@ -1,16 +1,21 @@
 import uuid
 from typing import List, Dict, Any
-from ..core.config import get_settings
 
 # Lazy singletons
+    from qdrant_client import QdrantClient
+    from pinecone import Pinecone
+
+from ..core.config import get_settings
+    from qdrant_client.http import models as qm
+    from qdrant_client.http import models as qm
+    from qdrant_client.http import models as qm
+
 _qdrant_client = None
 _pinecone_index = None
 
 
 # ---------- Qdrant (local dev) ----------
 def _qdrant():
-    from qdrant_client import QdrantClient
-    from qdrant_client.http import models as qm
     global _qdrant_client
     if _qdrant_client is None:
         settings = get_settings()
@@ -26,7 +31,6 @@ def _qdrant():
 
 
 def _qdrant_upsert(items: List[Dict[str, Any]]) -> None:
-    from qdrant_client.http import models as qm
     cli = _qdrant()
     settings = get_settings()
     points = []
@@ -46,7 +50,6 @@ def _qdrant_search(vector: List[float], tenant_id: str, topk: int = 10) -> List[
     cli = _qdrant()
     settings = get_settings()
     # Filter by tenant_id using Qdrant filter
-    from qdrant_client.http import models as qm
     filter_condition = qm.Filter(
         must=[
             qm.FieldCondition(
@@ -56,9 +59,9 @@ def _qdrant_search(vector: List[float], tenant_id: str, topk: int = 10) -> List[
         ]
     )
     res = cli.search(
-        collection_name=settings.vector_index, 
-        query_vector=vector, 
-        limit=topk, 
+        collection_name=settings.vector_index,
+        query_vector=vector,
+        limit=topk,
         with_payload=True,
         query_filter=filter_condition
     )
@@ -70,7 +73,6 @@ def _qdrant_search(vector: List[float], tenant_id: str, topk: int = 10) -> List[
 
 # ---------- Pinecone (production) ----------
 def _pinecone_index():
-    from pinecone import Pinecone
     global _pinecone_index
     if _pinecone_index is None:
         settings = get_settings()
@@ -99,8 +101,8 @@ def _pinecone_search(vector: List[float], tenant_id: str, topk: int = 10) -> Lis
     # Filter by tenant_id using Pinecone metadata filter
     filter_condition = {"tenant_id": {"$eq": tenant_id}}
     res = idx.query(
-        vector=vector, 
-        top_k=topk, 
+        vector=vector,
+        top_k=topk,
         include_metadata=True,
         filter=filter_condition
     )
@@ -126,7 +128,7 @@ def upsert_embeddings(items: List[Dict[str, Any]], tenant_id: str) -> None:
         if "metadata" not in item:
             item["metadata"] = {}
         item["metadata"]["tenant_id"] = tenant_id
-    
+
     if using_pinecone():
         _pinecone_upsert(items)
     else:

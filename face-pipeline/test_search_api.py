@@ -1,4 +1,15 @@
+import sys
+from typing import Dict, Any
+
+# Test without actually starting the server
+    import inspect
+
+        import traceback
+
 #!/usr/bin/env python3
+    from services.search_api import (
+    from services.search_api import search_faces, get_face_by_id, get_pipeline_stats
+
 """
 Test script for Search API endpoints (Step 9 - DEV2)
 
@@ -6,22 +17,17 @@ Validates that all endpoints return correct schemas and stub responses.
 Run this script to verify the API contracts before starting the server.
 """
 
-import sys
-from typing import Dict, Any
-
-# Test without actually starting the server
 def test_models():
     """Test that all Pydantic models are correctly defined."""
-    from services.search_api import (
         SearchRequest,
         SearchHit,
         SearchResponse,
         FaceDetailResponse,
         StatsResponse,
     )
-    
+
     print("✅ Testing Pydantic models...")
-    
+
     # Test SearchRequest
     search_req = SearchRequest(
         vector=[0.1] * 512,
@@ -34,7 +40,7 @@ def test_models():
     assert search_req.threshold == 0.75
     assert len(search_req.vector) == 512
     print("  ✓ SearchRequest model works")
-    
+
     # Test SearchHit
     hit = SearchHit(
         face_id="face-123",
@@ -45,7 +51,7 @@ def test_models():
     assert hit.face_id == "face-123"
     assert hit.score == 0.95
     print("  ✓ SearchHit model works")
-    
+
     # Test SearchResponse
     response = SearchResponse(
         query={"tenant_id": "test", "top_k": 10},
@@ -55,7 +61,7 @@ def test_models():
     assert response.count == 1
     assert len(response.hits) == 1
     print("  ✓ SearchResponse model works")
-    
+
     # Test FaceDetailResponse
     detail = FaceDetailResponse(
         face_id="face-123",
@@ -64,7 +70,7 @@ def test_models():
     )
     assert detail.face_id == "face-123"
     print("  ✓ FaceDetailResponse model works")
-    
+
     # Test StatsResponse
     stats = StatsResponse(
         processed=100,
@@ -75,32 +81,29 @@ def test_models():
     assert stats.rejected == 5
     assert stats.dup_skipped == 3
     print("  ✓ StatsResponse model works")
-    
+
     print("✅ All Pydantic models validated!\n")
 
 
 def test_endpoint_contracts():
     """Test that endpoint signatures are correct."""
-    from services.search_api import search_faces, get_face_by_id, get_pipeline_stats
-    import inspect
-    
     print("✅ Testing endpoint signatures...")
-    
+
     # Test search_faces
     sig = inspect.signature(search_faces)
     assert 'request' in sig.parameters
     print("  ✓ POST /search has correct signature")
-    
+
     # Test get_face_by_id
     sig = inspect.signature(get_face_by_id)
     assert 'face_id' in sig.parameters
     print("  ✓ GET /faces/{face_id} has correct signature")
-    
+
     # Test get_pipeline_stats
     sig = inspect.signature(get_pipeline_stats)
     # No parameters expected
     print("  ✓ GET /stats has correct signature")
-    
+
     print("✅ All endpoint signatures validated!\n")
 
 
@@ -178,11 +181,11 @@ if __name__ == "__main__":
         print("\n" + "=" * 70)
         print("Testing Face Pipeline Search API (Step 9)")
         print("=" * 70 + "\n")
-        
+
         test_models()
         test_endpoint_contracts()
         print_api_summary()
-        
+
         print("✅ ALL TESTS PASSED!")
         print("✅ Step 9 acceptance criteria met:")
         print("   ✓ Pydantic models defined with correct schemas")
@@ -190,13 +193,10 @@ if __name__ == "__main__":
         print("   ✓ All handlers have TODO comments for DEV2")
         print("   ✓ Ready for OpenAPI docs rendering")
         print()
-        
+
         sys.exit(0)
-        
+
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
-
-

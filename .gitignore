@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.sqlite3
+venv/
 
 # Node
 node_modules/

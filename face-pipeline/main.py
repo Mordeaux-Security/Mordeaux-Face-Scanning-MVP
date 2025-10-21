@@ -1,22 +1,26 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, status
+
+
+# Configure logging
+    import uvicorn
+
+
 #!/usr/bin/env python3
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from config.settings import settings
+from services.search_api import router as search_router
+
 """
 Face Pipeline Main Entry Point
 
 FastAPI application for the face processing pipeline.
 """
 
-import asyncio
-import logging
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-
-from config.settings import settings
-from services.search_api import router as search_router
-
-# Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -32,7 +36,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Application lifespan context manager.
-    
+
     Handles startup and shutdown events.
     """
     # Startup
@@ -44,18 +48,18 @@ async def lifespan(app: FastAPI):
     logger.info(f"   - Max Concurrent: {settings.max_concurrent}")
     logger.info(f"   - Face Min Size: {settings.min_face_size}")
     logger.info(f"   - Blur Min Variance: {settings.blur_min_variance}")
-    
+
     # TODO: Initialize pipeline components
     # - Connect to vector database
     # - Verify storage connection
     # - Load ML models
     # - Set up async task pools
-    
+
     yield
-    
+
     # Shutdown
     logger.info("🛑 Face Pipeline shutting down...")
-    
+
     # TODO: Cleanup resources
     # - Close database connections
     # - Stop background tasks
@@ -67,16 +71,46 @@ async def lifespan(app: FastAPI):
 # ============================================================================
 
 app = FastAPI(
-    title="Face Processing Pipeline",
+    title="Face Processing Pipeline API v0.1",
     description=(
-        "Modular face detection, embedding, quality assessment, "
-        "and similarity search pipeline"
+        "**STABLE API v0.1** - Face detection, embedding, quality assessment, "
+        "and similarity search pipeline.\n\n"
+        "## API Contract Status: FROZEN ✅\n\n"
+        "This API v0.1 contract is **stable and frozen** for safe integration.\n"
+        "No breaking changes will be made to v0.1 endpoints.\n\n"
+        "## Features\n"
+        "- Face similarity search by image or vector\n"
+        "- Face metadata retrieval with presigned URLs\n"
+        "- Pipeline statistics and health monitoring\n"
+        "- Multi-tenant isolation\n\n"
+        "## Security\n"
+        "- Presigned URLs with 10-minute TTL\n"
+        "- Filtered metadata responses\n"
+        "- Tenant-scoped access control"
     ),
     version="0.1.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
+    openapi_tags=[
+        {
+            "name": "search",
+            "description": "Face similarity search operations"
+        },
+        {
+            "name": "faces",
+            "description": "Face metadata retrieval"
+        },
+        {
+            "name": "statistics",
+            "description": "Pipeline statistics and metrics"
+        },
+        {
+            "name": "health",
+            "description": "Health monitoring and status"
+        }
+    ]
 )
 
 # ============================================================================
@@ -111,7 +145,7 @@ app.include_router(search_router)
 async def root():
     """
     Root endpoint with API information.
-    
+
     Returns:
         API information and available endpoints
     """
@@ -135,11 +169,11 @@ async def root():
 async def health():
     """
     Health check endpoint.
-    
+
     Basic liveness check - returns OK if the application is running.
     Does not verify dependencies (MinIO, Qdrant, models).
     Use /ready for readiness checks.
-    
+
     Returns:
         Health status
     """
@@ -152,38 +186,38 @@ async def health():
 async def ready():
     """
     Readiness endpoint for Kubernetes/orchestration health checks.
-    
+
     Checks if the application is ready to serve requests by verifying:
     - ML models are loaded
     - MinIO storage is accessible
     - Qdrant vector database is connected
-    
+
     Returns 503 (Service Unavailable) if not ready, 200 OK when ready.
-    
+
     **TODO - DEV2 Implementation Steps**:
     1. Check if ML models are loaded:
        - Try to access pipeline.detector model
        - Try to access pipeline.embedder model
        - Return ready=False if models not initialized
-    
+
     2. Check MinIO connectivity:
        - Try to list buckets or check bucket exists
        - Use pipeline.storage.exists() with a test key
        - Return ready=False if MinIO unreachable
-    
+
     3. Check Qdrant connectivity:
        - Try to get collection info
        - Use pipeline.indexer client health check
        - Return ready=False if Qdrant unreachable
-    
+
     4. Return ready=True only if all checks pass
-    
+
     Returns:
         Dict with:
         - ready: bool - True if ready, False otherwise
         - reason: str - Explanation if not ready
         - checks: dict (optional) - Individual check statuses
-    
+
     Example response (not ready):
         {
             "ready": false,
@@ -194,7 +228,7 @@ async def ready():
                 "vector_db": false
             }
         }
-    
+
     Example response (ready):
         {
             "ready": true,
@@ -208,7 +242,7 @@ async def ready():
     """
     # TODO: Implement actual readiness checks
     # For now, always return not ready until models are loaded
-    
+
     # Placeholder response
     return {
         "ready": False,
@@ -225,7 +259,7 @@ async def ready():
 async def info():
     """
     Detailed application information.
-    
+
     Returns:
         Configuration and system information
     """
@@ -279,10 +313,8 @@ async def main():
     """Main entry point for the face pipeline."""
     # This is called when running: python main.py
     # For production, use: uvicorn main:app
-    import uvicorn
-    
     logger.info("Starting Face Pipeline in development mode...")
-    
+
     uvicorn.run(
         "main:app",
         host=settings.api_host,

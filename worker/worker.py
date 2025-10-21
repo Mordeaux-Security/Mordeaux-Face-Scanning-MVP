@@ -1,5 +1,7 @@
 import os
 from celery import Celery
+
+
 from insightface.app import FaceAnalysis
 
 app = Celery(

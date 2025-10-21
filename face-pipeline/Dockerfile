@@ -1,41 +1,53 @@
 # Face Pipeline Dockerfile
-# TODO: Create multi-stage build for smaller image size
-# TODO: Add InsightFace dependencies
-# TODO: Add OpenCV dependencies
-# TODO: Add vector database client libraries
-# TODO: Optimize for production deployment
+# Multi-stage build for optimized production deployment
 
-FROM python:3.11-slim
+FROM python:3.11-slim AS base
 
-# TODO: Install system dependencies
-# RUN apt-get update && apt-get install -y \
-#     libgomp1 \
-#     libglib2.0-0 \
-#     libsm6 \
-#     libxext6 \
-#     libxrender-dev \
-#     libgl1-mesa-glx \
-#     && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgl1 \
+    curl \
+    build-essential \
+    g++ \
+    gcc \
+    make \
+    && rm -rf /var/lib/apt/lists/*
 
-# TODO: Set working directory
-# WORKDIR /app
+# Set working directory
+WORKDIR /app
 
-# TODO: Copy requirements and install dependencies
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
 
-# TODO: Download InsightFace models
-# RUN python -c "from insightface.app import FaceAnalysis; FaceAnalysis(name='buffalo_l')"
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# TODO: Copy application code
-# COPY . .
+# Download InsightFace models (buffalo_l for best accuracy)
+RUN python -c "from insightface.app import FaceAnalysis; FaceAnalysis(name='buffalo_l')"
 
-# TODO: Set environment variables
-# ENV PYTHONUNBUFFERED=1
+# Copy application code
+COPY . .
 
-# TODO: Expose ports if needed
-# EXPOSE 8000
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash app && \
+    chown -R app:app /app
+USER app
 
-# TODO: Set entrypoint
-# CMD ["python", "main.py"]
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Set entrypoint
+CMD ["python", "main.py"]
 

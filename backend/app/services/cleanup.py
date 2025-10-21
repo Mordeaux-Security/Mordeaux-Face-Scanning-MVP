@@ -3,12 +3,14 @@ import time
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import logging
-from ..core.config import get_settings
-from ..services.storage import list_objects, get_object_from_storage
-from ..services.vector import get_vector_client
 import psycopg
 from psycopg_pool import AsyncConnectionPool
 from contextlib import asynccontextmanager
+
+
+from ..core.config import get_settings
+from ..services.storage import list_objects, get_object_from_storage
+from ..services.vector import get_vector_client
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +31,13 @@ class CleanupService:
         self.settings = get_settings()
         self.db_pool = get_cleanup_db_pool()
         self.vector_client = get_vector_client()
-    
+
     async def cleanup_old_thumbnails(self) -> Dict[str, Any]:
         """Clean up old thumbnails based on retention policy."""
         try:
             cutoff_date = datetime.now() - timedelta(days=self.settings.crawled_thumbs_retention_days)
             cutoff_timestamp = cutoff_date.timestamp()
-            
+
             # Get old thumbnail objects from storage
             old_objects = []
             try:
@@ -47,39 +49,39 @@ class CleanupService:
                     pass
             except Exception as e:
                 logger.warning(f"Could not list thumbnail objects: {e}")
-            
+
             # Clean up old database records
             deleted_count = 0
             async with self.db_pool.connection() as conn:
                 async with conn.cursor() as cur:
                     # Delete old image records (this will cascade to faces)
                     await cur.execute("""
-                        DELETE FROM images 
+                        DELETE FROM images
                         WHERE created_at < %s
                     """, (cutoff_timestamp,))
                     deleted_count = cur.rowcount
                     await conn.commit()
-            
+
             return {
                 "status": "success",
                 "deleted_images": deleted_count,
                 "retention_days": self.settings.crawled_thumbs_retention_days,
                 "cutoff_date": cutoff_date.isoformat()
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to cleanup old thumbnails: {e}")
             return {
                 "status": "error",
                 "error": str(e)
             }
-    
+
     async def cleanup_user_query_images(self) -> Dict[str, Any]:
         """Clean up user query images based on retention policy."""
         try:
             cutoff_date = datetime.now() - timedelta(hours=self.settings.user_query_images_retention_hours)
             cutoff_timestamp = cutoff_date.timestamp()
-            
+
             # Clean up old user query images from storage
             deleted_count = 0
             try:
@@ -92,60 +94,60 @@ class CleanupService:
                     pass
             except Exception as e:
                 logger.warning(f"Could not list raw image objects: {e}")
-            
+
             # Clean up old database records for user queries
             async with self.db_pool.connection() as conn:
                 async with conn.cursor() as cur:
                     # Delete old image records that are user queries
                     # You might want to add a field to distinguish user queries from crawled images
                     await cur.execute("""
-                        DELETE FROM images 
+                        DELETE FROM images
                         WHERE created_at < %s AND site IS NULL
                     """, (cutoff_timestamp,))
                     deleted_count = cur.rowcount
                     await conn.commit()
-            
+
             return {
                 "status": "success",
                 "deleted_user_queries": deleted_count,
                 "retention_hours": self.settings.user_query_images_retention_hours,
                 "cutoff_date": cutoff_date.isoformat()
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to cleanup user query images: {e}")
             return {
                 "status": "error",
                 "error": str(e)
             }
-    
+
     async def cleanup_old_audit_logs(self, retention_days: int = 30) -> Dict[str, Any]:
         """Clean up old audit logs based on retention policy."""
         try:
             cutoff_date = datetime.now() - timedelta(days=retention_days)
             cutoff_timestamp = cutoff_date.timestamp()
-            
+
             deleted_audit_logs = 0
             deleted_search_logs = 0
-            
+
             async with self.db_pool.connection() as conn:
                 async with conn.cursor() as cur:
                     # Delete old audit logs
                     await cur.execute("""
-                        DELETE FROM audit_logs 
+                        DELETE FROM audit_logs
                         WHERE created_at < %s
                     """, (cutoff_timestamp,))
                     deleted_audit_logs = cur.rowcount
-                    
+
                     # Delete old search audit logs
                     await cur.execute("""
-                        DELETE FROM search_audit_logs 
+                        DELETE FROM search_audit_logs
                         WHERE created_at < %s
                     """, (cutoff_timestamp,))
                     deleted_search_logs = cur.rowcount
-                    
+
                     await conn.commit()
-            
+
             return {
                 "status": "success",
                 "deleted_audit_logs": deleted_audit_logs,
@@ -153,14 +155,14 @@ class CleanupService:
                 "retention_days": retention_days,
                 "cutoff_date": cutoff_date.isoformat()
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to cleanup audit logs: {e}")
             return {
                 "status": "error",
                 "error": str(e)
             }
-    
+
     async def cleanup_orphaned_vectors(self) -> Dict[str, Any]:
         """Clean up orphaned vectors that don't have corresponding database records."""
         try:
@@ -168,30 +170,30 @@ class CleanupService:
             # 1. Getting all vector IDs from the vector database
             # 2. Checking which ones don't have corresponding database records
             # 3. Deleting the orphaned vectors
-            
+
             # For now, we'll return a placeholder
             return {
                 "status": "success",
                 "message": "Vector cleanup not implemented yet",
                 "deleted_vectors": 0
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to cleanup orphaned vectors: {e}")
             return {
                 "status": "error",
                 "error": str(e)
             }
-    
+
     async def run_all_cleanup_jobs(self) -> Dict[str, Any]:
         """Run all cleanup jobs and return combined results."""
         logger.info("Starting cleanup jobs...")
-        
+
         results = {
             "timestamp": time.time(),
             "jobs": {}
         }
-        
+
         # Run cleanup jobs in parallel
         cleanup_tasks = [
             ("thumbnails", self.cleanup_old_thumbnails()),
@@ -199,7 +201,7 @@ class CleanupService:
             ("audit_logs", self.cleanup_old_audit_logs()),
             ("orphaned_vectors", self.cleanup_orphaned_vectors())
         ]
-        
+
         for job_name, task in cleanup_tasks:
             try:
                 result = await task
@@ -211,18 +213,18 @@ class CleanupService:
                     "status": "error",
                     "error": str(e)
                 }
-        
+
         # Calculate summary
         total_successful = sum(1 for job in results["jobs"].values() if job.get("status") == "success")
         total_failed = len(results["jobs"]) - total_successful
-        
+
         results["summary"] = {
             "total_jobs": len(results["jobs"]),
             "successful_jobs": total_successful,
             "failed_jobs": total_failed,
             "overall_status": "success" if total_failed == 0 else "partial_failure"
         }
-        
+
         logger.info(f"Cleanup jobs completed: {total_successful}/{len(results['jobs'])} successful")
         return results
 
