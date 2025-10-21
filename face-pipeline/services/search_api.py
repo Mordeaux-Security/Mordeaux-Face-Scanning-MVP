@@ -4,20 +4,15 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Query, Path, HTTPException, status, File, UploadFile, Response, Depends
 from pydantic import BaseModel, Field
 
-    import numpy as np
+import numpy as np
+import io
+from PIL import Image
 
-            import io
-            from PIL import Image
-
-
-    from pipeline.detector import detect_faces
-    from pipeline.embedder import embed
-    from pipeline.indexer import get_qdrant_client
-    from pipeline.storage import presign
-    from config.settings import settings
-    from pipeline.indexer import get_qdrant_client
-    from pipeline.storage import presign
-    from config.settings import settings
+from pipeline.detector import detect_faces
+from pipeline.embedder import embed
+from pipeline.indexer import get_qdrant_client
+from pipeline.storage import presign
+from config.settings import settings
 
 """
 Search API Service
@@ -183,7 +178,7 @@ class StatsResponse(BaseModel):
     response_model=SearchResponse,
     status_code=status.HTTP_200_OK
 )
-async def search_faces(request: SearchRequest, response: Response = Depends(add_version_header)) -> SearchResponse:
+async def search_faces(request: SearchRequest) -> SearchResponse:
     """
     Search for similar faces by image or embedding vector.
 
@@ -327,8 +322,7 @@ async def search_faces(request: SearchRequest, response: Response = Depends(add_
 async def get_face_by_id(
     face_id: str = Path(
         ..., description="Unique face identifier (Qdrant point ID)"
-    ),
-    response: Response = Depends(add_version_header)
+    )
 ) -> FaceDetailResponse:
     """
     Retrieve detailed information about a specific face by ID.
@@ -385,7 +379,7 @@ async def get_face_by_id(
     response_model=StatsResponse,
     status_code=status.HTTP_200_OK
 )
-async def get_pipeline_stats(response: Response = Depends(add_version_header)) -> StatsResponse:
+async def get_pipeline_stats() -> StatsResponse:
     """
     Get pipeline processing statistics.
 
@@ -437,7 +431,7 @@ async def get_pipeline_stats(response: Response = Depends(add_version_header)) -
 # ============================================================================
 
 @router.get("/health", status_code=status.HTTP_200_OK)
-async def api_health(response: Response = Depends(add_version_header)) -> Dict[str, str]:
+async def api_health() -> Dict[str, str]:
     """
     API health check endpoint.
 

@@ -1,230 +1,107 @@
-import logging
-from typing import List, Dict, Any, Optional, TYPE_CHECKING
+from __future__ import annotations
+from typing import List, Dict, Tuple
+import os
+import threading
 
-    import numpy as np
-    import PIL.Image
+import numpy as np
+import cv2
 
-"""
-Face Detection Module
+from insightface.app import FaceAnalysis
+from insightface.utils import face_align
 
-TODO: Implement face detection using InsightFace
-TODO: Support multiple detection backends (InsightFace, MediaPipe, MTCNN)
-TODO: Add batch detection for performance
-TODO: Return bounding boxes, landmarks, and confidence scores
-TODO: Handle edge cases (no faces, multiple faces, occluded faces)
+from config.settings import settings
 
-POTENTIAL DUPLICATE: backend/app/services/face.py has similar detection logic
-"""
+# Thread-safe singleton loader
+_detector_lock = threading.Lock()
+_detector_app: FaceAnalysis | None = None
 
-if TYPE_CHECKING:
-logger = logging.getLogger(__name__)
+def _parse_det_size(det_size_str: str) -> Tuple[int, int]:
+    try:
+        w, h = det_size_str.split(",")
+        return (int(w), int(h))
+    except Exception:
+        return (640, 640)
 
+def load_detector() -> FaceAnalysis:
+    """Load InsightFace FaceAnalysis (SCRFD-based) once."""
+    global _detector_app
+    if _detector_app is not None:
+        return _detector_app
 
-# ============================================================================
-# Face Detection Functions
-# ============================================================================
+    with _detector_lock:
+        if _detector_app is not None:
+            return _detector_app
 
-def detect_faces(img_np: "np.ndarray") -> list[dict]:
+        det_size = _parse_det_size(settings.DET_SIZE)
+
+        # Providers hint for ONNXRuntime (FaceAnalysis respects env/provider availability)
+        providers = [p.strip() for p in settings.ONNX_PROVIDERS_CSV.split(",") if p.strip()]
+
+        # Create app; name 'buffalo_l' packs a detector+recognizer, but we'll
+        # still do embeddings in embedder.py for clean separation.
+        app = FaceAnalysis(name="buffalo_l", providers=providers)
+        # ctx_id: -1=CPU; >=0 GPU id. We'll let providers decide; set ctx_id=0 if CUDA is present.
+        # If CUDA provider is first, ctx_id=0 is okay; otherwise -1.
+        ctx_id = 0 if "CUDAExecutionProvider" in providers else -1
+        app.prepare(ctx_id=ctx_id, det_size=det_size)
+
+        _detector_app = app
+        return _detector_app
+
+def detect_faces(img_np_bgr: np.ndarray) -> List[Dict]:
     """
-    Detect faces in an image using InsightFace or similar detector.
-
-    Args:
-        img_np: Input image as numpy array in BGR or RGB format.
-                Expected shape: (height, width, channels)
-
-    Returns:
-        List of face detection dictionaries, each containing:
-        - bbox: [x, y, w, h] - Face bounding box coordinates and dimensions
-        - score: float - Detection confidence score (0.0 to 1.0)
-        - landmarks: [[x, y], ...] - Facial landmark coordinates (e.g., 5 points:
-                     left_eye, right_eye, nose, left_mouth, right_mouth)
-
-        Example return value:
-        [
-            {
-                "bbox": [100, 150, 200, 250],
-                "score": 0.99,
-                "landmarks": [
-                    [120, 180], [180, 180], [150, 210],
-                    [130, 240], [170, 240]
-                ]
-            },
-            ...
-        ]
-
-    TODO: Load and initialize InsightFace model (buffalo_l)
-    TODO: Run detection with det_size from settings
-    TODO: Convert model output to standard dict format
-    TODO: Filter by minimum score threshold
-    TODO: Sort by score (highest confidence first)
-    TODO: Handle no faces found (return empty list)
+    Run detector -> return list of dicts:
+      { "bbox": [x1,y1,x2,y2], "landmarks": [[x,y],...5], "confidence": float }
     """
-    pass
+    app = load_detector()
+    # InsightFace expects BGR; we keep that convention throughout.
+    faces = app.get(img_np_bgr)
+    out: List[Dict] = []
+    thresh = settings.DET_SCORE_THRESH
+    for f in faces:
+        # f.bbox: ndarray [x1,y1,x2,y2], f.kps: (5,2), f.det_score
+        score = float(getattr(f, "det_score", 1.0))
+        if score < thresh:
+            continue
+        bbox = [float(v) for v in f.bbox.tolist()]
+        kps = f.kps.tolist() if hasattr(f, "kps") else []
+        out.append({
+            "bbox": [int(round(b)) for b in bbox],
+            "landmarks": [[float(x), float(y)] for x, y in kps],
+            "confidence": score,
+        })
+    return out
 
-
-def validate_hint(img_shape: tuple[int, int, int], bbox: list[int]) -> bool:
+def align_and_crop(img_np_bgr: np.ndarray, landmarks: List[List[float]], image_size: int | None = None) -> "np.ndarray":
     """
-    Validate that a bounding box hint is within image boundaries.
-
-    Used to check face_hints from upstream processing before using them
-    to optimize detection or skip processing.
-
-    Args:
-        img_shape: Image shape tuple (height, width, channels)
-        bbox: Bounding box as [x, y, w, h]
-              - x, y: top-left corner coordinates
-              - w, h: width and height
-
-    Returns:
-        True if bbox is valid and within image bounds, False otherwise
-
-    Validates:
-    - bbox has exactly 4 elements
-    - All values are non-negative
-    - x + w <= image width
-    - y + h <= image height
-    - w and h are greater than 0
-
-    TODO: Implement boundary checks
-    TODO: Add validation for degenerate boxes (zero area)
-    TODO: Add optional minimum size validation
-    TODO: Log validation failures for debugging
+    Align using 5-point landmarks and return a BGR 112x112 (or configured) crop ndarray.
     """
-    # Validate bbox format
-    if not bbox or len(bbox) != 4:
-        logger.debug(f"Invalid bbox format: {bbox} (expected 4 elements)")
-        return False
+    if not landmarks or len(landmarks) < 5:
+        raise ValueError("Need 5-point landmarks for alignment")
+    if image_size is None:
+        image_size = settings.IMAGE_SIZE
+    kps = np.array(landmarks, dtype=np.float32)
+    # norm_crop returns an aligned BGR ndarray
+    crop = face_align.norm_crop(img_np_bgr, landmark=kps, image_size=image_size)
+    return crop
 
-    x, y, w, h = bbox
-
-    # Check for non-negative values
-    if x < 0 or y < 0 or w <= 0 or h <= 0:
-        logger.debug(f"Invalid bbox values: {bbox} (negative or zero dimensions)")
-        return False
-
-    # Check image boundaries
-    img_height, img_width = img_shape[:2]
-
-    if x + w > img_width or y + h > img_height:
-        logger.debug(f"Bbox out of bounds: {bbox} for image shape {img_shape}")
-        return False
-
-    # Validation passed
-    return True
-
-
-def align_and_crop(
-    img_np: "np.ndarray",
-    bbox: list[int],
-    landmarks: list[list[float]]
-) -> Optional["PIL.Image.Image"]:
+def to_bgr(np_img: np.ndarray | None) -> np.ndarray:
     """
-    Align and crop a face region using landmarks for normalization.
-
-    Performs facial alignment to normalize pose and rotation before cropping.
-    This improves embedding quality and search accuracy by standardizing
-    face orientation.
-
-    Args:
-        img_np: Input image as numpy array (BGR or RGB format)
-                Shape: (height, width, channels)
-        bbox: Bounding box as [x, y, w, h]
-              - x, y: top-left corner
-              - w, h: width and height
-        landmarks: Facial landmarks as list of [x, y] coordinates
-                   Typically 5 points: [left_eye, right_eye, nose,
-                   left_mouth, right_mouth]
-                   Example: [[120.5, 180.2], [180.3, 179.8], ...]
-
-    Returns:
-        Aligned and cropped face as PIL Image, or None if alignment fails
-
-    Alignment process:
-    1. Calculate alignment transformation from landmarks (similarity transform)
-    2. Align eyes to horizontal line (rotation normalization)
-    3. Scale to standard face size
-    4. Crop with margin around bbox
-    5. Convert to PIL Image for consistency
-
-    TODO: Implement similarity transform using eye landmarks
-    TODO: Apply affine transformation (cv2.warpAffine or PIL transform)
-    TODO: Add margin around bbox (e.g., 20% padding)
-    TODO: Resize to standard size (e.g., 112x112 or 224x224)
-    TODO: Convert numpy array (BGR) to PIL.Image (RGB)
-    TODO: Handle edge cases (landmarks too close, out of bounds)
-    TODO: Add fallback to simple crop if alignment fails
+    Ensure BGR np.ndarray. Accepts:
+      - already BGR
+      - RGB (heuristic channel flip)
+      - grayscale
     """
-    pass
-
-
-class FaceDetector:
-    """Face detection service."""
-
-    def __init__(
-        self,
-        model_name: str = "buffalo_l",
-        ctx_id: int = -1,
-        det_size: tuple = (640, 640)
-    ):
-        """
-        Initialize face detector.
-
-        Args:
-            model_name: InsightFace model name
-            ctx_id: Context ID (-1 for CPU, 0+ for GPU)
-            det_size: Detection size (width, height)
-
-        TODO: Load model lazily
-        TODO: Add model caching
-        """
-        self.model_name = model_name
-        self.ctx_id = ctx_id
-        self.det_size = det_size
-        self._app = None
-
-    def _load_model(self):
-        """
-        Load the face detection model.
-
-        TODO: Implement lazy loading
-        TODO: Add error handling for model loading
-        TODO: Support multiple model backends
-        """
-        pass
-
-    def detect(self, image: "np.ndarray") -> List[Dict[str, Any]]:
-        """
-        Detect faces in an image.
-
-        Args:
-            image: Input image as numpy array (BGR format)
-
-        Returns:
-            List of detected faces with bbox, landmarks, score
-
-        TODO: Implement detection logic
-        TODO: Add NMS for overlapping detections
-        TODO: Filter by confidence threshold
-        """
-        pass
-
-    async def detect_async(self, image: "np.ndarray") -> List[Dict[str, Any]]:
-        """
-        Async wrapper for face detection.
-
-        TODO: Run detection in thread pool
-        TODO: Handle cancellation
-        """
-        pass
-
-    def detect_batch(
-        self, images: List["np.ndarray"]
-    ) -> List[List[Dict[str, Any]]]:
-        """
-        Batch face detection for multiple images.
-
-        TODO: Implement efficient batch processing
-        TODO: Use GPU batching if available
-        TODO: Add progress tracking
-        """
-        pass
+    if np_img is None:
+        raise ValueError("Empty image")
+    if np_img.ndim == 2:
+        return cv2.cvtColor(np_img, cv2.COLOR_GRAY2BGR)
+    if np_img.shape[2] == 3:
+        # Assume RGB if mean(B-G) differs more than mean(G-R)? Safer: expose as config later.
+        # For now, caller must pass BGR; if they pass RGB, swap here:
+        # return cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
+        return np_img
+    if np_img.shape[2] == 4:
+        bgr = cv2.cvtColor(np_img, cv2.COLOR_BGRA2BGR)
+        return bgr
+    raise ValueError(f"Unexpected image shape {np_img.shape}")

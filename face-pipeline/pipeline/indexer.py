@@ -1,21 +1,10 @@
 import logging
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
-    import numpy as np
-
-        from qdrant_client import QdrantClient
-
-        from qdrant_client import QdrantClient
-
-        from qdrant_client import QdrantClient
-
-
-        from qdrant_client.models import Distance, VectorParams
-        from config.settings import settings
-        from qdrant_client.models import PointStruct
-        from config.settings import settings
-        from qdrant_client.models import Filter, FieldCondition, MatchValue
-        from config.settings import settings
+import numpy as np
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+from config.settings import settings
 
 """
 Vector Indexing Module
@@ -60,12 +49,26 @@ TODO: Add metadata filtering
 # ============================================================================
 
 if TYPE_CHECKING:
+    pass
+
 logger = logging.getLogger(__name__)
 
 
 # ============================================================================
 # Qdrant Indexer Functions
 # ============================================================================
+
+def get_qdrant_client() -> QdrantClient:
+    """
+    Get Qdrant client instance.
+    
+    Returns:
+        QdrantClient instance configured with settings
+    """
+    return QdrantClient(
+        url=settings.qdrant_url,
+        api_key=settings.qdrant_api_key
+    )
 
 def ensure_collection() -> None:
     """

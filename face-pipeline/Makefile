@@ -126,6 +126,25 @@ ci: clean install test lint ## Run CI pipeline (clean, install, test, lint)
 pre-commit: format lint test ## Run pre-commit checks (format, lint, test)
 
 # ============================================================================
+# Phase 1 Helpers
+# ============================================================================
+
+phase1-install: ## Install Phase 1 dependencies
+	pip install -r requirements.txt
+
+phase1-validate: ## Validate Phase 1 models with test image
+	python scripts/validate_models.py samples/face1.jpg
+
+phase1-test: ## Run Phase 1 unit tests (shapes only)
+	python -m pytest -q tests/test_phase1_models.py
+
+phase1-warm: ## Warm model cache for faster subsequent runs
+	python scripts/warm_models.py
+
+phase1-ready: ## Check Phase 1 readiness (models loaded)
+	python -c "from main import app; from fastapi.testclient import TestClient; client = TestClient(app); response = client.get('/ready'); print('Ready:', response.json()['ready'])"
+
+# ============================================================================
 # Quick shortcuts
 # ============================================================================
 

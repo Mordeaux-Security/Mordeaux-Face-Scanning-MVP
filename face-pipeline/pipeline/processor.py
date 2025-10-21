@@ -1,6 +1,11 @@
 import logging
 from typing import List, Dict, Any, Optional, Callable
 import asyncio
+import time
+import numpy as np
+import cv2
+from PIL import Image
+import io
 
 from pydantic import BaseModel, HttpUrl
 
@@ -138,35 +143,26 @@ def process_image(message: dict) -> dict:
     # ========================================================================
     # STEP 3: DECODE IMAGE
     # ========================================================================
-    # Convert image bytes to numpy array for processing
-    # Also create PIL Image for embedding and storage operations
+    # Convert image bytes to BGR numpy array for processing
+    # Direct OpenCV decode ensures proper BGR format for face detection
     #
-    # from PIL import Image
-    # import numpy as np
-    # import io
-    #
-    # t0 = time.time()
-    # try:
-    #     # Decode to PIL Image
-    #     img_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    #     # Convert to numpy for detection
-    #     img_np = np.array(img_pil)
-    #     timings["decode_ms"] = (time.time() - t0) * 1000
-    #     logger.debug(f"Decoded image: {img_pil.size}")
-    # except Exception as e:
-    #     logger.error(f"Failed to decode image {msg.image_sha256}: {e}")
-    #     return {
-    #         "image_sha256": msg.image_sha256,
-    #         "counts": {"faces_total": 0, "accepted": 0, "rejected": 0, "dup_skipped": 0},
-    #         "artifacts": {"crops": [], "thumbs": [], "metadata": []},
-    #         "timings_ms": timings,
-    #         "error": f"Decode failed: {e}"
-    #     }
-
-    # Minimal wiring: no-op placeholder (no actual decode)
-    img_pil = None  # Placeholder
-    img_np = None  # Placeholder
-    timings["decode_ms"] = 0.0
+    t0 = time.time()
+    try:
+        # Direct decode to BGR using OpenCV
+        arr = np.frombuffer(image_bytes, dtype=np.uint8)
+        img_bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)  # BGR
+        assert img_bgr is not None, "Decode failed"
+        timings["decode_ms"] = (time.time() - t0) * 1000
+        logger.debug(f"Decoded image: {img_bgr.shape}")
+    except Exception as e:
+        logger.error(f"Failed to decode image {msg.image_sha256}: {e}")
+        return {
+            "image_sha256": msg.image_sha256,
+            "counts": {"faces_total": 0, "accepted": 0, "rejected": 0, "dup_skipped": 0},
+            "artifacts": {"crops": [], "thumbs": [], "metadata": []},
+            "timings_ms": timings,
+            "error": f"Decode failed: {e}"
+        }
 
     # ========================================================================
     # STEP 4: DETECT FACES (Use hints if available, otherwise run detector)
@@ -175,122 +171,87 @@ def process_image(message: dict) -> dict:
     # Option B: Run face detector if no hints provided
     # Returns list of face detections with bbox, landmarks, score
     #
-    # from pipeline.detector import detect_faces, validate_hint
-    #
-    # t0 = time.time()
-    # face_detections = []
-    #
-    # if msg.face_hints and len(msg.face_hints) > 0:
-    #     # Validate and use hints from upstream
-    #     logger.debug(f"Using {len(msg.face_hints)} face hints from upstream")
-    #     img_shape = img_np.shape  # (height, width, channels)
-    #     for hint in msg.face_hints:
-    #         bbox = hint.get("bbox")
-    #         if bbox and validate_hint(img_shape, bbox):
-    #             face_detections.append(hint)
-    #         else:
-    #             logger.warning(f"Invalid face hint: {hint}")
-    # else:
-    #     # Run face detector
-    #     logger.debug("Running face detector")
-    #     face_detections = detect_faces(img_np)
-    #
-    # faces_total = len(face_detections)
-    # timings["detection_ms"] = (time.time() - t0) * 1000
-    # logger.info(f"Detected {faces_total} faces")
-    #
-    # if faces_total == 0:
-    #     return {
-    #         "image_sha256": msg.image_sha256,
-    #         "counts": {"faces_total": 0, "accepted": 0, "rejected": 0, "dup_skipped": 0},
-    #         "artifacts": {"crops": [], "thumbs": [], "metadata": []},
-    #         "timings_ms": timings,
-    #     }
-
-    # Minimal wiring: no-op placeholder (no actual detection)
-    face_detections = []  # Placeholder empty list
-    faces_total = 0
-    timings["detection_ms"] = 0.0
+    from pipeline.detector import detect_faces
+    
+    t0 = time.time()
+    face_detections = []
+    
+    if msg.face_hints and len(msg.face_hints) > 0:
+        # Use face hints from upstream processing
+        logger.debug(f"Using {len(msg.face_hints)} face hints from upstream")
+        face_detections = msg.face_hints
+    else:
+        # Run face detector
+        logger.debug("Running face detector")
+        face_detections = detect_faces(img_bgr)
+    
+    faces_total = len(face_detections)
+    timings["detection_ms"] = (time.time() - t0) * 1000
+    logger.info(f"Detected {faces_total} faces")
+    
+    if faces_total == 0:
+        return {
+            "image_sha256": msg.image_sha256,
+            "counts": {"faces_total": 0, "accepted": 0, "rejected": 0, "dup_skipped": 0},
+            "artifacts": {"crops": [], "thumbs": [], "metadata": []},
+            "timings_ms": timings,
+        }
 
     # ========================================================================
-    # STEP 5: ALIGN AND CROP FACES
+    # STEP 5: ALIGN AND CROP FACES + STEP 6: QUALITY ASSESSMENT
     # ========================================================================
     # For each detected face, align using landmarks and crop with margin
-    # Returns PIL Image crops ready for quality assessment and embedding
+    # Then evaluate quality and filter out low-quality faces
     #
-    # from pipeline.detector import align_and_crop
-    #
-    # t0 = time.time()
-    # face_crops = []
-    #
-    # for detection in face_detections:
-    #     bbox = detection.get("bbox")
-    #     landmarks = detection.get("landmarks")
-    #
-    #     if bbox and landmarks:
-    #         crop = align_and_crop(img_np, bbox, landmarks)
-    #         if crop is not None:
-    #             face_crops.append({
-    #                 "crop": crop,
-    #                 "bbox": bbox,
-    #                 "landmarks": landmarks,
-    #                 "score": detection.get("score", 0.0)
-    #             })
-    #         else:
-    #             logger.warning(f"Failed to crop face with bbox {bbox}")
-    #
-    # timings["alignment_ms"] = (time.time() - t0) * 1000
-    # logger.debug(f"Aligned and cropped {len(face_crops)} faces")
-
-    # Minimal wiring: no-op placeholder (no actual alignment)
-    face_crops = []  # Placeholder empty list
-    timings["alignment_ms"] = 0.0
-
-    # ========================================================================
-    # STEP 6: QUALITY ASSESSMENT PER FACE
-    # ========================================================================
-    # Evaluate each face crop for quality (blur, size, brightness, etc.)
-    # Filter out low-quality faces before expensive embedding generation
-    #
-    # from pipeline.quality import evaluate
-    # from config.settings import settings
-    #
-    # t0 = time.time()
-    # quality_passed = []
-    #
-    # for face_data in face_crops:
-    #     crop_pil = face_data["crop"]
-    #
-    #     # Evaluate quality
-    #     quality_result = evaluate(
-    #         img_pil=crop_pil,
-    #         min_size=settings.min_face_size,
-    #         min_blur_var=settings.blur_min_variance
-    #     )
-    #
-    #     face_data["quality"] = quality_result
-    #
-    #     if quality_result["pass"]:
-    #         quality_passed.append(face_data)
-    #         faces_accepted += 1
-    #     else:
-    #         faces_rejected += 1
-    #         logger.debug(f"Rejected face: {quality_result['reason']}")
-    #
-    # timings["quality_ms"] = (time.time() - t0) * 1000
-    # logger.info(f"Quality check: {faces_accepted} passed, {faces_rejected} rejected")
-    #
-    # if faces_accepted == 0:
-    #     return {
-    #         "image_sha256": msg.image_sha256,
-    #         "counts": {"faces_total": faces_total, "accepted": 0, "rejected": faces_rejected, "dup_skipped": 0},
-    #         "artifacts": {"crops": [], "thumbs": [], "metadata": []},
-    #         "timings_ms": timings,
-    #     }
-
-    # Minimal wiring: no-op placeholder (no actual quality checks)
-    quality_passed = []  # Placeholder empty list
-    timings["quality_ms"] = 0.0
+    from pipeline.detector import align_and_crop
+    from pipeline.quality import evaluate
+    from config.settings import settings
+    
+    t0 = time.time()
+    quality_passed = []
+    
+    for i, fd in enumerate(face_detections):
+        lmk = fd.get("landmarks") or []
+        if len(lmk) < 5:
+            continue
+            
+        try:
+            # Align and crop face
+            crop = align_and_crop(img_bgr, lmk, image_size=settings.IMAGE_SIZE)
+            
+            # Optional Quality check in Phase 1
+            q = evaluate(crop)
+            if not q["pass"]:
+                faces_rejected += 1
+                logger.debug(f"Rejected face {i}: {q['reason']}")
+                continue
+                
+            # Store face data for embedding
+            quality_passed.append({
+                "crop": crop,
+                "bbox": fd.get("bbox"),
+                "landmarks": lmk,
+                "confidence": fd.get("confidence", 0.0),
+                "quality": q
+            })
+            faces_accepted += 1
+            
+        except Exception as e:
+            faces_rejected += 1
+            logger.warning(f"Failed to process face {i}: {e}")
+            continue
+    
+    timings["alignment_ms"] = (time.time() - t0) * 1000
+    timings["quality_ms"] = 0.0  # Combined with alignment timing
+    logger.info(f"Quality check: {faces_accepted} passed, {faces_rejected} rejected")
+    
+    if faces_accepted == 0:
+        return {
+            "image_sha256": msg.image_sha256,
+            "counts": {"faces_total": faces_total, "accepted": 0, "rejected": faces_rejected, "dup_skipped": 0},
+            "artifacts": {"crops": [], "thumbs": [], "metadata": []},
+            "timings_ms": timings,
+        }
 
     # ========================================================================
     # STEP 7: COMPUTE PHASH AND PREFIX
@@ -362,29 +323,31 @@ def process_image(message: dict) -> dict:
     timings["dedup_ms"] = 0.0
 
     # ========================================================================
-    # STEP 9: GENERATE EMBEDDINGS (Placeholder)
+    # STEP 9: GENERATE EMBEDDINGS
     # ========================================================================
     # Generate 512-dimensional face embeddings for each accepted face crop
     # Embeddings are L2-normalized for cosine similarity search
     #
-    # from pipeline.embedder import embed
-    # import time
-    #
-    # t0 = time.time()
-    # for face_data in quality_passed:
-    #     crop_pil = face_data["crop"]
-    #
-    #     # Generate embedding
-    #     embedding = embed(crop_pil)
-    #     face_data["embedding"] = embedding.tolist()  # Convert to list for JSON serialization
-    #
-    #     logger.debug(f"Generated embedding with shape {embedding.shape}")
-    #
-    # timings["embedding_ms"] = (time.time() - t0) * 1000
-    # logger.info(f"Generated {len(quality_passed)} embeddings")
-
-    # Minimal wiring: no-op placeholder (no embeddings to generate)
-    timings["embedding_ms"] = 0.0
+    from pipeline.embedder import embed
+    
+    t0 = time.time()
+    for face_data in quality_passed:
+        crop_bgr = face_data["crop"]
+        
+        try:
+            # Generate embedding
+            embedding = embed(crop_bgr)
+            face_data["embedding"] = embedding.tolist()  # Convert to list for JSON serialization
+            logger.debug(f"Generated embedding with shape {embedding.shape}")
+        except Exception as e:
+            logger.warning(f"Failed to generate embedding for face: {e}")
+            # Remove this face from processing
+            quality_passed.remove(face_data)
+            faces_accepted -= 1
+            faces_rejected += 1
+    
+    timings["embedding_ms"] = (time.time() - t0) * 1000
+    logger.info(f"Generated {len(quality_passed)} embeddings")
 
     # ========================================================================
     # STEP 10: GENERATE ARTIFACT PATHS (No writes yet - just path planning)
