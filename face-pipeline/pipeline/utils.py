@@ -2,18 +2,10 @@ import logging
 import time
 from contextlib import contextmanager
 from typing import Tuple, Optional, TYPE_CHECKING
-
-    import numpy as np
-    import PIL.Image
-
+import numpy as np
+from PIL import Image
+import imagehash
 from io import BytesIO
-
-    import numpy as np
-
-        import imagehash
-
-
-        from pipeline.utils import timer
 
 """
 Pipeline Utility Functions
@@ -26,6 +18,8 @@ TODO: Add timing/profiling decorators
 """
 
 if TYPE_CHECKING:
+    pass
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,107 +51,26 @@ def l2_normalize(vec: "np.ndarray") -> "np.ndarray":
     return vec
 
 
-def compute_phash(img_pil: "PIL.Image.Image") -> str:
-    """
-    Compute perceptual hash (pHash) of an image for near-duplicate detection.
-
-    Perceptual hashes are robust to minor modifications (resize, compression,
-    color changes) and can detect visually similar images by comparing hash
-    Hamming distance.
-
-    Args:
-        img_pil: Input image as PIL Image
-
-    Returns:
-        Hexadecimal string representing the perceptual hash (typically 16 chars)
-        Example: "8f373c9c3c9c3c1e"
-
-    TODO: Implement using imagehash library
-    TODO: Use imagehash.phash(img_pil) or imagehash.average_hash(img_pil)
-    TODO: Convert to hex string
-    TODO: Add error handling for invalid images
-    TODO: Consider different hash algorithms (average_hash, dhash, whash)
-
-    Example implementation:
-        hash_obj = imagehash.phash(img_pil)
-        return str(hash_obj)
-    """
-    # Placeholder: return 16 zeros
-    return "0" * 16
+def compute_phash(pil_img: Image.Image) -> str:
+    # 64-bit pHash -> 16 hex chars
+    return imagehash.phash(pil_img, hash_size=8).__str__()
 
 
 def hamming_distance_hex(a: str, b: str) -> int:
-    """
-    Calculate Hamming distance between two hexadecimal hash strings.
-
-    Hamming distance is the number of bit positions where two hashes differ.
-    Used for near-duplicate detection with perceptual hashes - lower distance
-    indicates more similar images.
-
-    Args:
-        a: First hex hash string (e.g., "8f373c9c3c9c3c1e")
-        b: Second hex hash string (e.g., "8f373c9c3c9c3c1f")
-
-    Returns:
-        Number of differing bits (0 to 64 for 16-char hex = 64 bits)
-
-    Typical thresholds:
-    - Distance 0-5: Very similar (likely duplicates)
-    - Distance 6-10: Similar (near-duplicates)
-    - Distance 11-20: Somewhat similar
-    - Distance >20: Different images
-
-    TODO: Implement bitwise XOR comparison
-    TODO: Convert hex strings to integers (int(a, 16) ^ int(b, 16))
-    TODO: Count set bits using bin().count('1')
-    TODO: Add length validation (both strings same length)
-    TODO: Handle invalid hex characters
-    TODO: Optimize for performance (use lookup table or built-in popcount)
-
-    Example implementation:
-        if len(a) != len(b):
-            return max(len(a), len(b)) * 4  # Max possible distance
-        xor_result = int(a, 16) ^ int(b, 16)
-        return bin(xor_result).count('1')
-    """
-    # Placeholder: length-safe comparison
-    if len(a) != len(b):
-        # Max possible distance (4 bits per hex char)
-        return max(len(a), len(b)) * 4
-
-    # TODO: Implement bitwise Hamming distance
-    return 0
+    # length-safe: pad shorter
+    a = a.strip().lower()
+    b = b.strip().lower()
+    maxlen = max(len(a), len(b))
+    a = a.zfill(maxlen); b = b.zfill(maxlen)
+    x = int(a, 16) ^ int(b, 16)
+    # count bits
+    return x.bit_count()
 
 
 def phash_prefix(hex_str: str, bits: int = 16) -> str:
-    """
-    Extract prefix from perceptual hash for efficient filtering.
-
-    Returns the first N bits of a pHash as hex string, used to create
-    indexed filters in vector databases for faster duplicate lookups.
-
-    Args:
-        hex_str: Full perceptual hash (e.g., "8f373c9c3c9c3c1e")
-        bits: Number of bits to use for prefix (default 16 = 4 hex chars)
-
-    Returns:
-        Hex prefix string (e.g., "8f37" for 16 bits)
-
-    Usage:
-        Store p_hash_prefix in Qdrant payload for efficient filtering.
-        Query candidates with same prefix before computing full Hamming distance.
-
-    TODO: Compute prefix by extracting exact number of bits
-    TODO: Convert bits parameter to hex character count (bits // 4)
-    TODO: Handle edge cases (bits > hash length, bits not divisible by 4)
-    TODO: Add validation for hex_str format
-
-    Example implementation:
-        hex_chars = bits // 4
-        return hex_str[:hex_chars]
-    """
-    # Placeholder: return first 4 hex chars (16 bits)
-    return hex_str[:4] if len(hex_str) >= 4 else hex_str
+    # first 16 bits = first 4 hex chars
+    n_hex = bits // 4
+    return hex_str[:n_hex]
 
 
 def bytes_to_numpy(image_bytes: bytes) -> "np.ndarray":
@@ -321,3 +234,7 @@ def profile_async(func):
     TODO: Log execution time and memory usage
     """
     pass
+
+
+def now_iso() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

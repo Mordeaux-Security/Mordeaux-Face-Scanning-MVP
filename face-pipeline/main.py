@@ -267,7 +267,7 @@ async def not_found_handler(request, exc):
 # Main Entry Point
 # ============================================================================
 
-async def main():
+def main():
     """Main entry point for the face pipeline."""
     # This is called when running: python main.py
     # For production, use: uvicorn main:app
@@ -283,4 +283,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

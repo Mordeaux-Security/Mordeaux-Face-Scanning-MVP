@@ -1,59 +1,20 @@
 from __future__ import annotations
-from typing import List, Dict, Tuple
-import os
-import threading
+from typing import List, Dict
 
 import numpy as np
 import cv2
 
-from insightface.app import FaceAnalysis
 from insightface.utils import face_align
 
 from config.settings import settings
-
-# Thread-safe singleton loader
-_detector_lock = threading.Lock()
-_detector_app: FaceAnalysis | None = None
-
-def _parse_det_size(det_size_str: str) -> Tuple[int, int]:
-    try:
-        w, h = det_size_str.split(",")
-        return (int(w), int(h))
-    except Exception:
-        return (640, 640)
-
-def load_detector() -> FaceAnalysis:
-    """Load InsightFace FaceAnalysis (SCRFD-based) once."""
-    global _detector_app
-    if _detector_app is not None:
-        return _detector_app
-
-    with _detector_lock:
-        if _detector_app is not None:
-            return _detector_app
-
-        det_size = _parse_det_size(settings.DET_SIZE)
-
-        # Providers hint for ONNXRuntime (FaceAnalysis respects env/provider availability)
-        providers = [p.strip() for p in settings.ONNX_PROVIDERS_CSV.split(",") if p.strip()]
-
-        # Create app; name 'buffalo_l' packs a detector+recognizer, but we'll
-        # still do embeddings in embedder.py for clean separation.
-        app = FaceAnalysis(name="buffalo_l", providers=providers)
-        # ctx_id: -1=CPU; >=0 GPU id. We'll let providers decide; set ctx_id=0 if CUDA is present.
-        # If CUDA provider is first, ctx_id=0 is okay; otherwise -1.
-        ctx_id = 0 if "CUDAExecutionProvider" in providers else -1
-        app.prepare(ctx_id=ctx_id, det_size=det_size)
-
-        _detector_app = app
-        return _detector_app
+from pipeline.models import load_insightface_app
 
 def detect_faces(img_np_bgr: np.ndarray) -> List[Dict]:
     """
     Run detector -> return list of dicts:
       { "bbox": [x1,y1,x2,y2], "landmarks": [[x,y],...5], "confidence": float }
     """
-    app = load_detector()
+    app = load_insightface_app()
     # InsightFace expects BGR; we keep that convention throughout.
     faces = app.get(img_np_bgr)
     out: List[Dict] = []

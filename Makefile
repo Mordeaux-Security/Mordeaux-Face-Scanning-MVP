@@ -20,6 +20,12 @@ help:
 	@echo "  make health    - Quick health check"
 	@echo "  make smoketest - Comprehensive proxy smoke tests"
 	@echo "  make smoketest-quick - Quick smoke tests"
+	@echo ""
+	@echo "Phase 2 Face Pipeline:"
+	@echo "  make phase2-setup    - Install Phase 2 dependencies"
+	@echo "  make phase2-ensure   - Ensure MinIO buckets & Qdrant collection ready"
+	@echo "  make process-samples - Process sample images through face pipeline"
+	@echo ""
 	@echo "  make help      - Show this help message"
 	@echo ""
 	@echo "Service URLs:"
@@ -164,3 +170,22 @@ smoketest-quick:
 		echo "❌ Quick smoke test script not found"; \
 		exit 1; \
 	fi
+
+# Phase 2 Face Pipeline Quality of Life targets
+phase2-setup:
+	@echo "🧠 Setting up Phase 2 Face Pipeline dependencies..."
+	cd face-pipeline && python -m pip install -r requirements.txt
+	@echo "✅ Phase 2 dependencies installed!"
+
+phase2-ensure:
+	@echo "🔧 Ensuring MinIO buckets & Qdrant collection are ready..."
+	cd face-pipeline && python - <<'PY'
+from pipeline.storage import ensure_buckets
+from pipeline.indexer import ensure_collection
+ensure_buckets(); ensure_collection()
+print("✓ MinIO buckets & Qdrant collection ready")
+PY
+
+process-samples:
+	@echo "📸 Processing sample images through the face pipeline..."
+	cd face-pipeline && export MINIO_ACCESS_KEY=changeme && export MINIO_SECRET_KEY=changeme && python scripts/process_folder.py --path ./samples --tenant demo --site local
