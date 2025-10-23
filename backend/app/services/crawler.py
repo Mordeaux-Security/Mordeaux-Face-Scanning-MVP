@@ -24,7 +24,10 @@ from urllib.parse import urljoin, urlparse, parse_qs
 from dataclasses import dataclass, field
 from .crawler_modules.types import CrawlResult, ImageInfo
 from .crawler_modules.memory import MemoryMonitor
-from .crawler_modules.extraction import ImageExtractor, extract_style_bg_url, extract_jsonld_thumbnails
+from .crawler_modules.extraction import ImageExtractor, extract_style_bg_url, extract_jsonld_thumbnails, pick_from_srcset
+from .crawler_modules.processing import ImageProcessingService
+from .crawler_modules.storage_facade import StorageFacade
+from .crawler_modules.caching_facade import CachingFacade
 from datetime import datetime
 
 import httpx
@@ -43,11 +46,11 @@ from PIL import Image, ImageFile
 Image.MAX_IMAGE_PIXELS = 50_000_000
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-from .storage import save_raw_and_thumb_with_precreated_thumb, save_raw_image_only, save_raw_and_thumb_content_addressed_async, save_raw_image_content_addressed, get_storage_cleanup_function, save_image, _minio
+from .storage import get_storage_cleanup_function
 from . import storage
 from .face import get_face_service, close_face_service
 from . import face
-from .cache import get_hybrid_cache_service, close_cache_service
+# Cache service is now handled by CachingFacade
 from urllib.parse import urljoin, urlparse
 
 # ============================================================================
@@ -188,186 +191,6 @@ def validate_redirect_security(redirect_url: str, redirect_count: int, max_redir
 # THUMBNAIL EXTRACTION HELPERS
 # ============================================================================
 
-def pick_from_srcset(srcset: str, base_url: str, preferred_width: int = 640) -> Optional[str]:
-    """
-    Pick the best image URL from a srcset attribute.
-    
-    Args:
-        srcset: The srcset attribute value (e.g., "image1.jpg 320w, image2.jpg 640w")
-        base_url: Base URL for resolving relative URLs
-        preferred_width: Preferred width in pixels
-        
-    Returns:
-        Best matching image URL or None if no valid srcset
-    """
-    if not srcset:
-        return None
-    
-    try:
-        # Parse srcset format: "url1 width1, url2 width2, ..."
-        candidates = []
-        for entry in srcset.split(','):
-            entry = entry.strip()
-            if not entry:
-                continue
-                
-            parts = entry.split()
-            if len(parts) < 2:
-                continue
-                
-            url = parts[0].strip()
-            descriptor = parts[1].strip()
-            
-            # Parse width descriptor (e.g., "640w")
-            if descriptor.endswith('w'):
-                try:
-                    width = int(descriptor[:-1])
-                    absolute_url = urljoin(base_url, url)
-                    candidates.append((width, absolute_url))
-                except ValueError:
-                    continue
-        
-        if not candidates:
-            return None
-        
-        # Find the closest width to preferred_width
-        candidates.sort(key=lambda x: abs(x[0] - preferred_width))
-        return candidates[0][1]
-        
-    except Exception as e:
-        logger.debug(f"Error parsing srcset '{srcset}': {e}")
-        return None
-
-def extract_style_bg_url(style_attr: str, base_url: str) -> Optional[str]:
-    """
-    Extract background image URL from CSS style attribute.
-    
-    Args:
-        style_attr: The style attribute value
-        base_url: Base URL for resolving relative URLs
-        
-    Returns:
-        Extracted background image URL or None
-    """
-    if not style_attr:
-        return None
-    
-    try:
-        # Look for background-image: url(...) patterns
-        patterns = [
-            r'background-image:\s*url\(["\']?([^"\']+)["\']?\)',
-            r'background:\s*[^;]*url\(["\']?([^"\']+)["\']?\)',
-            r'background-image:\s*url\(([^)]+)\)',
-            r'background:\s*[^;]*url\(([^)]+)\)'
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, style_attr, re.IGNORECASE)
-            if match:
-                url = match.group(1).strip()
-                if url and not url.startswith('data:'):
-                    return urljoin(base_url, url)
-        
-        return None
-        
-    except Exception as e:
-        logger.debug(f"Error extracting background URL from style '{style_attr}': {e}")
-        return None
-
-def extract_jsonld_thumbnails(html_content: str, base_url: str) -> List[str]:
-    """
-    Extract thumbnail URLs from JSON-LD structured data.
-    
-    Args:
-        html_content: The HTML content to parse
-        base_url: Base URL for resolving relative URLs
-        
-    Returns:
-        List of extracted thumbnail URLs
-    """
-    thumbnails = []
-    
-    try:
-        soup = BeautifulSoup(html_content, 'html.parser')
-        
-        # Find all script tags with type="application/ld+json"
-        json_scripts = soup.find_all('script', type='application/ld+json')
-        
-        for script in json_scripts:
-            try:
-                # Parse JSON-LD
-                json_data = json.loads(script.string or '')
-                
-                # Handle both single objects and arrays
-                if isinstance(json_data, dict):
-                    json_data = [json_data]
-                elif not isinstance(json_data, list):
-                    continue
-                
-                for item in json_data:
-                    if not isinstance(item, dict):
-                        continue
-                    
-                    # Look for thumbnailUrl or image fields
-                    thumbnail_fields = ['thumbnailUrl', 'image', 'contentUrl']
-                    
-                    for field in thumbnail_fields:
-                        if field in item:
-                            value = item[field]
-                            
-                            # Handle different formats
-                            if isinstance(value, str):
-                                # Direct URL string
-                                if value and not value.startswith('data:'):
-                                    thumbnails.append(urljoin(base_url, value))
-                            elif isinstance(value, dict):
-                                # Object with url field
-                                if 'url' in value and isinstance(value['url'], str):
-                                    url = value['url']
-                                    if url and not url.startswith('data:'):
-                                        thumbnails.append(urljoin(base_url, url))
-                            elif isinstance(value, list):
-                                # Array of URLs or objects
-                                for item_url in value:
-                                    if isinstance(item_url, str):
-                                        if item_url and not item_url.startswith('data:'):
-                                            thumbnails.append(urljoin(base_url, item_url))
-                                    elif isinstance(item_url, dict) and 'url' in item_url:
-                                        url = item_url['url']
-                                        if url and not url.startswith('data:'):
-                                            thumbnails.append(urljoin(base_url, url))
-                    
-                    # Also check for nested objects (e.g., video.thumbnailUrl)
-                    if '@type' in item:
-                        # Check for VideoObject thumbnailUrl
-                        if item.get('@type') == 'VideoObject' and 'thumbnailUrl' in item:
-                            url = item['thumbnailUrl']
-                            if url and not url.startswith('data:'):
-                                thumbnails.append(urljoin(base_url, url))
-                        
-                        # Check for ImageObject contentUrl
-                        if item.get('@type') == 'ImageObject' and 'contentUrl' in item:
-                            url = item['contentUrl']
-                            if url and not url.startswith('data:'):
-                                thumbnails.append(urljoin(base_url, url))
-                
-            except (json.JSONDecodeError, ValueError) as e:
-                logger.debug(f"Error parsing JSON-LD: {e}")
-                continue
-        
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_thumbnails = []
-        for thumbnail in thumbnails:
-            if thumbnail not in seen:
-                seen.add(thumbnail)
-                unique_thumbnails.append(thumbnail)
-        
-        return unique_thumbnails
-        
-    except Exception as e:
-        logger.debug(f"Error extracting JSON-LD thumbnails: {e}")
-        return []
 
 # ============================================================================
 # MEMORY MANAGEMENT
@@ -501,7 +324,7 @@ class ImageCrawler:
         self.session: Optional[httpx.AsyncClient] = None
         self._http_service: Optional[HttpService] = None
         self._selector_mining_service: Optional[SelectorMiningService] = None
-        self.cache_service = get_hybrid_cache_service()  # Hybrid caching service
+        # Cache service is now handled by CachingFacade
         self.pending_cache_entries = []  # Batch cache writes
         
     async def __aenter__(self):
@@ -511,6 +334,25 @@ class ImageCrawler:
         
         # Create selector mining service for 3x3 depth approach
         self._selector_mining_service = SelectorMiningService()
+        
+        # Create image processing service for face detection and processing
+        self._image_processing_service = ImageProcessingService(
+            min_face_quality=self.min_face_quality,
+            require_face=self.require_face,
+            crop_faces=self.crop_faces,
+            face_margin=self.face_margin,
+            min_dimension=100
+        )
+        
+        # Create storage facade for clean storage operations
+        self._storage_facade = StorageFacade()
+        
+        # Create caching facade for clean cache operations
+        self._caching_facade = CachingFacade()
+        
+        # Create image extractor for validation in smart fallback
+        from .crawler_modules.extraction import ImageExtractor
+        self._image_extractor = ImageExtractor()
         
         # Create HTTP client using the service
         self.session = await self._http_service.create_client(
@@ -561,6 +403,13 @@ class ImageCrawler:
             logger.warning(f"Error shutting down crawler thread pools: {e}")
         
         try:
+            # Clean up image processing service
+            if hasattr(self, '_image_processing_service'):
+                self._image_processing_service.cleanup()
+        except Exception as e:
+            logger.warning(f"Error cleaning up image processing service: {e}")
+        
+        try:
             # Clean up service resources
             logger.info("Cleaning up service resources...")
             close_storage_resources = get_storage_cleanup_function()
@@ -578,12 +427,11 @@ class ImageCrawler:
             logger.warning(f"Error cleaning up face service resources: {e}")
         
         try:
-            # Clean up cache service resources
-            logger.info("Cleaning up cache service resources...")
-            close_cache_service()
-            logger.info("Cache service resources cleaned up")
+            # Clean up caching facade resources
+            if hasattr(self, '_caching_facade'):
+                await self._caching_facade.close()
         except Exception as e:
-            logger.warning(f"Error cleaning up cache service resources: {e}")
+            logger.warning(f"Error cleaning up caching facade resources: {e}")
         
         try:
             # Final memory cleanup
@@ -735,49 +583,25 @@ class ImageCrawler:
                 cache_misses += 1
 
                 if image_bytes:
-                    # Extract site for storage organization
-                    parsed_url = urlparse(url)
-                    site = parsed_url.netloc.replace('www.', '')  # Remove www prefix
-                    
-                    # Get MinIO client
-                    minio_client = _minio()
-                    
                     # Debug logging for video URL
                     logger.info(f"Processing image with video URL: {image_info.video_url}")
                     
-                    # Store raw image with sidecar metadata
-                    raw_key = await save_image(
+                    # Use storage facade to save image and thumbnail
+                    raw_key, thumb_key = await self._storage_facade.save_raw_and_thumbnail(
                         image_bytes=image_bytes,
-                        mime="image/jpeg",
-                        filename="image.jpg",
-                        bucket="raw-images",
-                        client=minio_client,
-                        site=site,
-                        page_url=url,
-                        source_video_url=image_info.video_url,
-                        source_image_url=image_info.url,
+                        thumbnail_bytes=thumbnail_bytes,
+                        image_info=image_info,
+                        page_url=url
                     )
+                    
+                    # Add keys to results
                     if raw_key:
                         saved_raw_keys.append(raw_key)
-                    
-                    # Store thumbnail if available
-                    if thumbnail_bytes is not None:
-                        thumb_key = await save_image(
-                            image_bytes=thumbnail_bytes,
-                            mime="image/jpeg", 
-                            filename="thumbnail.jpg",
-                            bucket="thumbnails",
-                            client=minio_client,
-                            site=site,
-                            page_url=url,
-                            source_video_url=image_info.video_url,
-                            source_image_url=image_info.url,
-                        )
-                        if thumb_key:
-                            saved_thumbnail_keys.append(thumb_key)
+                    if thumb_key:
+                        saved_thumbnail_keys.append(thumb_key)
         
         # Get detailed cache statistics
-        cache_stats = await self.cache_service.get_cache_stats()
+        cache_stats = await self._caching_facade.get_cache_statistics()
         
         result = CrawlResult(
             url=url,
@@ -834,7 +658,7 @@ class ImageCrawler:
         await asyncio.gather(*workers, return_exceptions=True)
         
         # Get detailed cache statistics
-        cache_stats = await self.cache_service.get_cache_stats()
+        cache_stats = await self._caching_facade.get_cache_statistics()
         
         result = CrawlResult(
             url=url,
@@ -971,42 +795,22 @@ class ImageCrawler:
         """Store a single item and update cache."""
         try:
             async with self._storage_semaphore:
-                # Extract site for storage organization
-                parsed_url = urlparse(url)
-                site = parsed_url.netloc.replace('www.', '')  # Remove www prefix
-                
-                # Get MinIO client
-                minio_client = _minio()
-                
                 # Debug logging for video URL
                 logger.info(f"Processing image with video URL: {image_info.video_url}")
                 
-                # Store raw image with sidecar metadata
-                await save_image(
+                # Use storage facade to save image and thumbnail
+                raw_key, thumb_key = await self._storage_facade.save_raw_and_thumbnail(
                     image_bytes=image_bytes,
-                    mime="image/jpeg",
-                    filename="image.jpg",
-                    bucket="raw-images",
-                    client=minio_client,
-                    site=site,
-                    page_url=url,
-                    source_video_url=image_info.video_url,
-                    source_image_url=image_info.url,
+                    thumbnail_bytes=thumbnail_bytes,
+                    image_info=image_info,
+                    page_url=url
                 )
                 
-                # Store thumbnail if available
-                if thumbnail_bytes is not None:
-                    await save_image(
-                        image_bytes=thumbnail_bytes,
-                        mime="image/jpeg", 
-                        filename="thumbnail.jpg",
-                        bucket="thumbnails",
-                        client=minio_client,
-                        site=site,
-                        page_url=url,
-                        source_video_url=image_info.video_url,
-                        source_image_url=image_info.url,
-                    )
+                # Add keys to results
+                if raw_key:
+                    results['saved_raw_keys'].append(raw_key)
+                if thumb_key:
+                    results['saved_thumbnail_keys'].append(thumb_key)
                         
         except Exception as e:
             logger.error(f"Storage error for {_truncate_log_string(image_info.url)}: {e}")
@@ -1902,63 +1706,13 @@ class ImageCrawler:
     
     async def _async_face_detection(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[List, Optional[bytes]]:
         """
-        Run face detection in thread pool to avoid blocking async loop.
+        Run face detection using the ImageProcessingService.
         """
-        def _run_face_detection():
-            """Synchronous face detection function to run in thread pool."""
-            try:
-                face_service = get_face_service()
-                
-                # Enhance image for better face detection
-                enhanced_bytes, enhancement_scale = face_service.enhance_image_for_face_detection(image_bytes)
-                faces = face_service.detect_and_embed(enhanced_bytes, enhancement_scale, min_size=0)
-                
-                # Face deduplication temporarily disabled for performance
-                # TODO: Implement efficient face deduplication (e.g., using approximate nearest neighbors)
-                # if faces:
-                #     # Check each detected face for similarity
-                #     unique_faces = []
-                #     for face in faces:
-                #         # Check if this face is similar to any previously seen faces
-                #         from app.services import face as face_module
-                #         is_similar, similarity_score, similar_face_id = face_module.check_face_similarity(
-                #             face['embedding'], face
-                #         )
-                #         
-                #         if is_similar:
-                #             logger.info(f"Face similarity detected: {similarity_score:.3f} (similar to {similar_face_id})")
-                #             # Skip this face as it's too similar to a previously seen face
-                #             continue
-                #         else:
-                #             # This is a unique face, add it to the list
-                #             unique_faces.append(face)
-                #     
-                #     # Update faces list to only include unique faces
-                #     faces = unique_faces
-                
-                if self.crop_faces and faces:
-                    # Use the first face for thumbnail creation
-                    thumbnail_bytes = face_service.crop_face_and_create_thumbnail(
-                        image_bytes, faces[0], self.face_margin
-                    )
-                elif self.crop_faces and not faces:
-                    # Don't create thumbnail for images without faces when CROP_FACES=true
-                    # Only crop faces that are actually detected
-                    thumbnail_bytes = None
-                # If CROP_FACES=false, no thumbnail is created regardless of face detection
-                
-                return faces, thumbnail_bytes
-            except Exception as e:
-                logger.error(f"Error in face detection thread: {e}")
-                return [], None
-        
-        # Run face detection in thread pool
-        loop = asyncio.get_event_loop()
-        faces, thumbnail_bytes = await loop.run_in_executor(
-            self._face_detection_thread_pool, _run_face_detection
-        )
-        
-        return faces, thumbnail_bytes
+        if hasattr(self, '_image_processing_service'):
+            return await self._image_processing_service.async_face_detection(image_bytes, image_info)
+        else:
+            logger.error("ImageProcessingService not available")
+            return [], None
     
     async def _process_single_image(self, image_info: ImageInfo, index: int, total: int) -> Tuple[Optional[str], Optional[str], bool, List[str]]:
         """
@@ -1982,13 +1736,13 @@ class ImageCrawler:
                     logger.warning(f"Failed to download image: {_truncate_log_string(image_info.url)}")
                     return None, None, False, download_errors, []
 
-                # Check image dimensions - skip if any dimension is below 100px
-                if not self._check_image_dimensions(image_bytes, min_dimension=100):
+                # Check image dimensions using ImageProcessingService
+                if hasattr(self, '_image_processing_service') and not self._image_processing_service.check_image_dimensions(image_bytes):
                     logger.info(f"Image dimensions too small, skipping: {_truncate_log_string(image_info.url)}")
                     return None, None, False, download_errors + ["Image dimensions below minimum threshold"], []
 
-                # Check cache
-                should_skip, cached_key = await self.cache_service.should_skip_crawled_image(image_info.url, image_bytes, self.tenant_id)
+                # Check cache using caching facade
+                should_skip, cached_key = await self._caching_facade.should_skip_image(image_info.url, image_bytes, self.tenant_id)
                 if should_skip and cached_key:
                     logger.info(f"Image {_truncate_log_string(image_info.url)} found in cache. Key: {_truncate_log_string(cached_key)}")
                     return cached_key, cached_key, True, download_errors, []
@@ -2048,16 +1802,12 @@ class ImageCrawler:
                 errors.append(f"Page URL rejected: {reason}")
                 return None, errors
             
-            logger.info(f"Fetching page: {_truncate_log_string(url)}")
-            
-            # Use HTTP service for page fetching with JavaScript rendering for dynamic content
-            content, fetch_reason = await self._http_service.fetch_html(
-                url, self.session, use_js=True, max_redirects=self.max_redirects
-            )
+            # Use smart fallback: HTML-first, JS if < 3 images found
+            content, fetch_errors = await self._fetch_page_with_smart_fallback(url)
+            errors.extend(fetch_errors)
             
             if content is None:
-                logger.warning(f"Failed to fetch page: {fetch_reason} - {_truncate_log_string(url)}")
-                errors.append(f"Fetch failed: {fetch_reason}")
+                logger.error(f"Failed to fetch page with smart fallback: {_truncate_log_string(url)}")
                 return None, errors
             
             return content, errors
@@ -2206,6 +1956,208 @@ class ImageCrawler:
         
         return self._per_host_semaphores[host]
     
+    async def _fetch_page_with_smart_fallback(
+        self, url: str
+    ) -> Tuple[Optional[str], List[str]]:
+        """
+        Fetch page with intelligent HTML-first, JS fallback strategy.
+        
+        Strategy:
+        1. Fetch with HTML-only
+        2. Extract images using 3x3 selector mining
+        3. If < 3 images found, try JavaScript rendering
+        4. Cache HTML content if memory allows
+        
+        Returns:
+            Tuple of (html_content, errors)
+        """
+        errors = []
+        
+        # Step 1: Fetch with HTML-only
+        logger.info(f"Fetching {_truncate_log_string(url)} with HTML-only first")
+        html_content, fetch_reason = await self._http_service.fetch_html(
+            url, self.session, use_js=False, max_redirects=self.max_redirects
+        )
+        
+        if html_content is None:
+            logger.warning(f"HTML fetch failed: {fetch_reason} - {_truncate_log_string(url)}")
+            # Try JS immediately if HTML fetch fails
+            return await self._fetch_with_javascript(url, errors)
+        
+        # Step 2: Quick extraction test to see if HTML is sufficient
+        images, method_used = await self._extract_and_validate_images(
+            html_content, url, method="smart"
+        )
+        
+        # Step 3: Check if we have enough images (threshold: 3 images)
+        if len(images) >= 3:
+            logger.info(f"HTML-only successful for {_truncate_log_string(url)}: {len(images)} images found")
+            return html_content, errors
+        
+        # Step 4: HTML didn't find enough images, try JavaScript fallback
+        logger.warning(f"HTML found only {len(images)} images for {_truncate_log_string(url)}, trying JS fallback")
+        
+        # Check memory pressure before proceeding
+        memory_status = self._memory_monitor.get_memory_status()
+        if memory_status['pressure_level'] in ['high', 'critical']:
+            logger.warning(f"Memory pressure {memory_status['pressure_level']} ({memory_status['percent']:.1f}%) during JS fallback decision")
+        
+        js_content, js_errors = await self._fetch_with_javascript(url, errors)
+        
+        if js_content:
+            # Validate JS results
+            js_images, _ = await self._extract_and_validate_images(
+                js_content, url, method="smart"
+            )
+            
+            if len(js_images) >= len(images):
+                logger.info(f"JS fallback successful for {_truncate_log_string(url)}: {len(js_images)} images found (HTML had {len(images)})")
+                return js_content, js_errors
+            else:
+                logger.info(f"JS fallback found {len(js_images)} images vs HTML {len(images)}, using HTML")
+                return html_content, errors
+        
+        # JS failed, return HTML results anyway
+        logger.warning(f"JS fallback failed for {_truncate_log_string(url)}, using HTML results with {len(images)} images")
+        return html_content, errors
+    
+    async def _fetch_with_javascript(
+        self, url: str, existing_errors: List[str]
+    ) -> Tuple[Optional[str], List[str]]:
+        """Fetch page with JavaScript rendering."""
+        errors = existing_errors.copy()
+        
+        logger.info(f"Attempting JavaScript rendering for {_truncate_log_string(url)}")
+        js_content, fetch_reason = await self._http_service.fetch_html(
+            url, self.session, use_js=True, max_redirects=self.max_redirects
+        )
+        
+        if js_content is None:
+            logger.error(f"JS fallback failed: {fetch_reason} - {_truncate_log_string(url)}")
+            errors.append(f"Both HTML and JS failed: {fetch_reason}")
+        
+        return js_content, errors
+    
+    async def _extract_and_validate_images(
+        self, html_content: str, base_url: str, method: str
+    ) -> Tuple[List[ImageInfo], str]:
+        """
+        Quick extraction to validate if content has enough images.
+        Returns extracted images and method used.
+        """
+        try:
+            # Use the existing extraction infrastructure
+            if hasattr(self, '_image_extractor'):
+                extractor = self._image_extractor
+            else:
+                from .crawler_modules.extraction import ImageExtractor
+                extractor = ImageExtractor()
+            
+            images, method_used = extractor.extract_images_by_method(
+                html_content, base_url, method
+            )
+            
+            return images, method_used
+        except Exception as e:
+            logger.error(f"Error in quick extraction for {_truncate_log_string(base_url)}: {e}")
+            return [], method
+    
+    async def crawl_site_list(
+        self, 
+        urls: List[str], 
+        method: str = "smart",
+        max_images_per_site: int = 50,
+        concurrent_sites: int = 3
+    ) -> List[CrawlResult]:
+        """
+        Crawl multiple sites concurrently with controlled concurrency.
+        
+        Args:
+            urls: List of URLs to crawl
+            method: Extraction method to use
+            max_images_per_site: Maximum images to process per site
+            concurrent_sites: Maximum number of sites to crawl concurrently
+            
+        Returns:
+            List of CrawlResult objects for each site
+        """
+        logger.info(f"Starting crawl of {len(urls)} sites with {concurrent_sites} concurrent workers")
+        
+        # Create semaphore to limit concurrent site crawling
+        site_semaphore = asyncio.Semaphore(concurrent_sites)
+        
+        async def crawl_single_site(url: str) -> CrawlResult:
+            """Crawl a single site with semaphore control."""
+            async with site_semaphore:
+                logger.info(f"Starting crawl of {url}")
+                try:
+                    # Use crawl_site method to continue until target thumbnails are saved
+                    result = await self.crawl_site(url, method)
+                    logger.info(f"Completed crawl of {url}: {result.images_found} images, {result.raw_images_saved} saved")
+                    return result
+                except Exception as e:
+                    logger.error(f"Error crawling {url}: {e}")
+                    # Return error result
+                    return CrawlResult(
+                        url=url,
+                        images_found=0,
+                        raw_images_saved=0,
+                        thumbnails_saved=0,
+                        pages_crawled=0,
+                        saved_raw_keys=[],
+                        saved_thumbnail_keys=[],
+                        errors=[str(e)],
+                        targeting_method=method,
+                        cache_hits=0,
+                        cache_misses=0,
+                        redis_hits=0,
+                        postgres_hits=0,
+                        tenant_id=self.tenant_id,
+                        early_exit_count=0
+                    )
+        
+        # Crawl all sites concurrently
+        start_time = datetime.utcnow()
+        results = await asyncio.gather(*[crawl_single_site(url) for url in urls], return_exceptions=True)
+        end_time = datetime.utcnow()
+        
+        # Handle any exceptions that occurred
+        processed_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.error(f"Exception in crawl for {urls[i]}: {result}")
+                # Create error result
+                processed_results.append(CrawlResult(
+                    url=urls[i],
+                    images_found=0,
+                    raw_images_saved=0,
+                    thumbnails_saved=0,
+                    pages_crawled=0,
+                    saved_raw_keys=[],
+                    saved_thumbnail_keys=[],
+                    errors=[str(result)],
+                    targeting_method=method,
+                    cache_hits=0,
+                    cache_misses=0,
+                    redis_hits=0,
+                    postgres_hits=0,
+                    tenant_id=self.tenant_id,
+                    early_exit_count=0
+                ))
+            else:
+                processed_results.append(result)
+        
+        # Log summary
+        total_images = sum(r.images_found for r in processed_results)
+        total_saved = sum(r.raw_images_saved for r in processed_results)
+        total_errors = sum(len(r.errors) for r in processed_results)
+        total_time = (end_time - start_time).total_seconds()
+        
+        logger.info(f"Site list crawl completed: {len(urls)} sites, {total_images} images found, "
+                   f"{total_saved} saved, {total_errors} errors, {total_time:.2f}s total")
+        
+        return processed_results
+
     async def crawl_page(self, url: str, method: str = "smart") -> CrawlResult:
         """Crawl a single page for images using the specified method."""
         start_time = datetime.utcnow()
@@ -2219,7 +2171,7 @@ class ImageCrawler:
         
         async with host_semaphore:
             # Reset cache statistics for this crawl
-            self.cache_service.reset_cache_stats()
+            self._caching_facade.reset_cache_statistics()
             
             saved_raw_keys = []
             saved_thumbnail_keys = []

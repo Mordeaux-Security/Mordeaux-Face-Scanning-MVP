@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     # ========================================================================
     # Quality Thresholds
     # ========================================================================
-    min_face_quality: float = Field(default=0.5, description="Minimum detection score")
-    min_face_size: int = Field(default=80, description="Minimum face size in pixels")
+    min_face_quality: float = Field(default=0.7, description="Minimum detection score")
+    min_face_size: int = Field(default=30, description="Minimum face size in pixels")
     blur_min_variance: float = Field(default=120.0, description="Minimum Laplacian variance (higher = sharper)")
     min_sharpness: float = Field(default=100.0, description="Minimum sharpness score")
     min_brightness: float = Field(default=30.0, description="Minimum average brightness")

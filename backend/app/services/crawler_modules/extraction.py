@@ -18,6 +18,57 @@ from ...config.site_recipes import get_recipe_for_url
 logger = logging.getLogger(__name__)
 
 
+def pick_from_srcset(srcset: str, base_url: str, preferred_width: int = 640) -> Optional[str]:
+    """
+    Pick the best image URL from a srcset attribute.
+    
+    Args:
+        srcset: The srcset attribute value (e.g., "image1.jpg 320w, image2.jpg 640w")
+        base_url: Base URL for resolving relative URLs
+        preferred_width: Preferred width in pixels
+        
+    Returns:
+        Best matching image URL or None if no valid srcset
+    """
+    if not srcset:
+        return None
+    
+    try:
+        # Parse srcset format: "url1 width1, url2 width2, ..."
+        candidates = []
+        for entry in srcset.split(','):
+            entry = entry.strip()
+            if not entry:
+                continue
+                
+            parts = entry.split()
+            if len(parts) < 2:
+                continue
+                
+            url = parts[0].strip()
+            descriptor = parts[1].strip()
+            
+            # Parse width descriptor (e.g., "640w")
+            if descriptor.endswith('w'):
+                try:
+                    width = int(descriptor[:-1])
+                    absolute_url = urljoin(base_url, url)
+                    candidates.append((width, absolute_url))
+                except ValueError:
+                    continue
+        
+        if not candidates:
+            return None
+        
+        # Find the closest width to preferred_width
+        candidates.sort(key=lambda x: abs(x[0] - preferred_width))
+        return candidates[0][1]
+        
+    except Exception as e:
+        logger.debug(f"Error parsing srcset '{srcset}': {e}")
+        return None
+
+
 def extract_style_bg_url(style_attr: str, base_url: str) -> Optional[str]:
     """
     Extract background image URL from CSS style attribute.
@@ -75,44 +126,79 @@ def extract_jsonld_thumbnails(html_content: str, base_url: str) -> List[str]:
         
         for script in json_scripts:
             try:
-                data = json.loads(script.string)
+                # Parse JSON-LD
+                json_data = json.loads(script.string or '')
                 
                 # Handle both single objects and arrays
-                if isinstance(data, list):
-                    for item in data:
-                        thumbnails.extend(_extract_thumbnails_from_jsonld(item, base_url))
-                else:
-                    thumbnails.extend(_extract_thumbnails_from_jsonld(data, base_url))
-                    
-            except (json.JSONDecodeError, AttributeError):
-                continue
+                if isinstance(json_data, dict):
+                    json_data = [json_data]
+                elif not isinstance(json_data, list):
+                    continue
                 
+                for item in json_data:
+                    if not isinstance(item, dict):
+                        continue
+                    
+                    # Look for thumbnailUrl or image fields
+                    thumbnail_fields = ['thumbnailUrl', 'image', 'contentUrl']
+                    
+                    for field in thumbnail_fields:
+                        if field in item:
+                            value = item[field]
+                            
+                            # Handle different formats
+                            if isinstance(value, str):
+                                # Direct URL string
+                                if value and not value.startswith('data:'):
+                                    thumbnails.append(urljoin(base_url, value))
+                            elif isinstance(value, dict):
+                                # Object with url field
+                                if 'url' in value and isinstance(value['url'], str):
+                                    url = value['url']
+                                    if url and not url.startswith('data:'):
+                                        thumbnails.append(urljoin(base_url, url))
+                            elif isinstance(value, list):
+                                # Array of URLs or objects
+                                for item_url in value:
+                                    if isinstance(item_url, str):
+                                        if item_url and not item_url.startswith('data:'):
+                                            thumbnails.append(urljoin(base_url, item_url))
+                                    elif isinstance(item_url, dict) and 'url' in item_url:
+                                        url = item_url['url']
+                                        if url and not url.startswith('data:'):
+                                            thumbnails.append(urljoin(base_url, url))
+                    
+                    # Also check for nested objects (e.g., video.thumbnailUrl)
+                    if '@type' in item:
+                        # Check for VideoObject thumbnailUrl
+                        if item.get('@type') == 'VideoObject' and 'thumbnailUrl' in item:
+                            url = item['thumbnailUrl']
+                            if url and not url.startswith('data:'):
+                                thumbnails.append(urljoin(base_url, url))
+                        
+                        # Check for ImageObject contentUrl
+                        if item.get('@type') == 'ImageObject' and 'contentUrl' in item:
+                            url = item['contentUrl']
+                            if url and not url.startswith('data:'):
+                                thumbnails.append(urljoin(base_url, url))
+                
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.debug(f"Error parsing JSON-LD: {e}")
+                continue
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_thumbnails = []
+        for thumbnail in thumbnails:
+            if thumbnail not in seen:
+                seen.add(thumbnail)
+                unique_thumbnails.append(thumbnail)
+        
+        return unique_thumbnails
+        
     except Exception as e:
         logger.debug(f"Error extracting JSON-LD thumbnails: {e}")
-    
-    return thumbnails
-
-
-def _extract_thumbnails_from_jsonld(data: Dict, base_url: str) -> List[str]:
-    """Extract thumbnail URLs from JSON-LD data structure."""
-    thumbnails = []
-    
-    # Common thumbnail fields in JSON-LD
-    thumbnail_fields = ['thumbnail', 'thumbnailUrl', 'image', 'url']
-    
-    for field in thumbnail_fields:
-        if field in data:
-            value = data[field]
-            if isinstance(value, str):
-                thumbnails.append(urljoin(base_url, value))
-            elif isinstance(value, list):
-                for item in value:
-                    if isinstance(item, str):
-                        thumbnails.append(urljoin(base_url, item))
-                    elif isinstance(item, dict) and 'url' in item:
-                        thumbnails.append(urljoin(base_url, item['url']))
-    
-    return thumbnails
+        return []
 
 
 class ImageExtractor:
@@ -333,8 +419,9 @@ class ImageExtractor:
         
         # Srcset attribute
         if img_tag.get('srcset'):
-            srcset_urls = self._parse_srcset(img_tag['srcset'], base_url)
-            urls.extend(srcset_urls)
+            srcset_url = pick_from_srcset(img_tag['srcset'], base_url)
+            if srcset_url:
+                urls.append(srcset_url)
         
         # Data attributes (common in lazy loading)
         data_attrs = ['data-src', 'data-lazy-src', 'data-original', 'data-medium', 'data-large']
@@ -344,17 +431,6 @@ class ImageExtractor:
         
         return urls
     
-    def _parse_srcset(self, srcset: str, base_url: str) -> List[str]:
-        """Parse srcset attribute and return list of URLs."""
-        urls = []
-        try:
-            for src in srcset.split(','):
-                url = src.strip().split()[0]
-                if url:
-                    urls.append(urljoin(base_url, url))
-        except Exception as e:
-            self.logger.debug(f"Error parsing srcset: {e}")
-        return urls
     
     def _parse_dimension(self, value) -> Optional[int]:
         """Parse dimension value to integer."""

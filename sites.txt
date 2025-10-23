@@ -1,0 +1,11 @@
+# Sample sites file for multisite crawling
+# One URL per line, lines starting with # are comments
+
+# Test sites that work well with our refactored architecture
+https://wikifeet.com
+https://candidteens.net
+https://forum.candidgirls.io
+
+# Add more sites here as needed
+# https://example1.com
+# https://example2.com
