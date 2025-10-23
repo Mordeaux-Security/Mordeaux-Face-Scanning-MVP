@@ -144,10 +144,10 @@ def _check_memory_usage() -> bool:
 
 def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_size: int = 0) -> List[Dict]:
     """
-    Detect faces using multiple scales for better small face detection.
+    Detect faces using single-pass upscaled detection for optimal performance.
     
-    This function combines the advanced multi-scale detection from basic_crawler1.1
-    with memory management and error handling for production use.
+    This function uses tiered upscaling based on image dimensions to achieve
+    better face detection while maintaining performance.
     
     Args:
         image_bytes: Image data (already enhanced)
@@ -174,129 +174,99 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
     original_height = int(height / enhancement_scale)
     original_width = int(width / enhancement_scale)
     
+    # Determine upscale factor based on image dimensions
+    if width <= 150 or height <= 150:
+        upscale_factor = 4.0
+    elif width <= 250 or height <= 250:
+        upscale_factor = 3.0
+    elif width <= 600 or height <= 600:
+        upscale_factor = 2.0
+    else:
+        upscale_factor = 1.0  # No upscaling for large images
+    
+    # Upscale image once for optimal face detection
+    t_upscale_start = time.perf_counter()
+    if upscale_factor != 1.0:
+        new_width = int(width * upscale_factor)
+        new_height = int(height * upscale_factor)
+        upscaled_img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+        t_upscale_ms = (time.perf_counter() - t_upscale_start) * 1000.0
+        logger.info(f"Upscaling {width}x{height} by {upscale_factor}x completed in {t_upscale_ms:.1f} ms")
+    else:
+        upscaled_img = img
+        t_upscale_ms = (time.perf_counter() - t_upscale_start) * 1000.0
+        logger.info(f"No upscaling needed for {width}x{height} image (upscale_factor=1.0) in {t_upscale_ms:.1f} ms")
+    
+    # Apply enhancement once to upscaled image
+    t_enhance_start = time.perf_counter()
+    try:
+        success, encoded = cv2.imencode('.jpg', upscaled_img)
+        if success:
+            enhanced_bytes, _ = enhance_image_for_face_detection(encoded.tobytes())
+            arr = np.frombuffer(enhanced_bytes, dtype=np.uint8)
+            enhanced_img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            if enhanced_img is not None:
+                upscaled_img = enhanced_img
+    except Exception as _:
+        # If enhancement fails, proceed with the upscaled image
+        pass
+    
+    t_enhance_ms = (time.perf_counter() - t_enhance_start) * 1000.0
+    logger.info(f"Enhancement of upscaled image completed in {t_enhance_ms:.1f} ms")
+    
+    # Detect faces once on upscaled+enhanced image
+    t_detect_start = time.perf_counter()
+    faces = app.get(upscaled_img)
+    t_detect_ms = (time.perf_counter() - t_detect_start) * 1000.0
+    logger.info(f"Single-pass face detection completed in {t_detect_ms:.1f} ms (found {len(faces) if faces is not None else 0} raw detections)")
+    
     all_faces = []
     
-    # Try detection at multiple scales
-    scales = [1.0, 2.0, 4.0]  # Original and 2x and 4x
-    
-    for scale in scales:
-        try:
-            t_scale_start = time.perf_counter()
-            if scale != 1.0:
-                # Scale image for detection
-                new_width = int(width * scale)
-                new_height = int(height * scale)
-                scaled_img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
-                # Apply enhancement after upscaling to maximize effect on resized data
-                try:
-                    success, encoded = cv2.imencode('.jpg', scaled_img)
-                    if success:
-                        enhanced_bytes, _local_enh_scale = enhance_image_for_face_detection(encoded.tobytes())
-                        # Read enhanced image back into ndarray
-                        arr = np.frombuffer(enhanced_bytes, dtype=np.uint8)
-                        enhanced_img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-                        if enhanced_img is not None:
-                            scaled_img = enhanced_img
-                except Exception as _:
-                    # If enhancement fails, proceed with the resized image
-                    pass
-            else:
-                scaled_img = img
-            
-            # Detect faces at this scale
-            faces = app.get(scaled_img)
-            t_scale_ms = (time.perf_counter() - t_scale_start) * 1000.0
-            logger.debug(f"Face detection at scale {scale:.1f} completed in {t_scale_ms:.1f} ms (found {len(faces) if faces is not None else 0} raw detections)")
-            
-            strong_face_found = False
-            for face in faces:
-                if not hasattr(face, "embedding") or face.embedding is None:
-                    continue
-                
-                # Convert bounding box back to original image coordinates
-                # First convert from detection scale back to enhanced image scale
-                x1, y1, x2, y2 = face.bbox
-                if scale != 1.0:
-                    x1, y1, x2, y2 = x1/scale, y1/scale, x2/scale, y2/scale
-                
-                # Then convert from enhanced image scale back to original image coordinates
-                x1, y1, x2, y2 = x1/enhancement_scale, y1/enhancement_scale, x2/enhancement_scale, y2/enhancement_scale
-                
-                # Clamp coordinates to original image boundaries
-                x1 = max(0, min(x1, original_width))
-                y1 = max(0, min(y1, original_height))
-                x2 = max(0, min(x2, original_width))
-                y2 = max(0, min(y2, original_height))
-                
-                # Calculate face size in original image coordinates
-                face_width = x2 - x1
-                face_height = y2 - y1
-                
-                # Skip very small faces (in original image coordinates)
-                if face_width < min_size or face_height < min_size:
-                    continue
-                
-                # Store face data
-                face_data = {
-                    "bbox": [float(x1), float(y1), float(x2), float(y2)],
-                    "embedding": face.embedding.astype(np.float32).tolist(),
-                    "det_score": float(getattr(face, "det_score", 0.0)),
-                    "scale": scale,
-                    "enhancement_scale": enhancement_scale,
-                    "face_size": (face_width, face_height)
-                }
-                
-                
-                # Check for duplicates (same face detected at multiple scales)
-                is_duplicate = False
-                for existing_face in all_faces:
-                    existing_bbox = existing_face["bbox"]
-                    # Calculate overlap
-                    overlap_x = max(0, min(x2, existing_bbox[2]) - max(x1, existing_bbox[0]))
-                    overlap_y = max(0, min(y2, existing_bbox[3]) - max(y1, existing_bbox[1]))
-                    overlap_area = overlap_x * overlap_y
-                    
-                    # Calculate areas
-                    face_area = face_width * face_height
-                    existing_area = (existing_bbox[2] - existing_bbox[0]) * (existing_bbox[3] - existing_bbox[1])
-                    
-                    # If overlap is more than 50% of either face, consider it a duplicate
-                    if overlap_area > 0.5 * min(face_area, existing_area):
-                        # Keep the detection with higher confidence
-                        if face_data["det_score"] > existing_face["det_score"]:
-                            all_faces.remove(existing_face)
-                            break
-                        else:
-                            is_duplicate = True
-                            break
-                
-                if not is_duplicate:
-                    all_faces.append(face_data)
-                    # Early exit condition: if a strong detection is found, stop further scaling
-                    # Threshold chosen to balance precision/recall; adjust via config later if needed
-                    if face_data["det_score"] >= 0.8:
-                        strong_face_found = True
-                        break
-            if strong_face_found:
-                logger.debug(f"Strong face found at scale {scale:.1f} (det_score>=0.9); early-exiting multi-scale loop")
-                # Mark early-exit flag for external consumers (e.g., crawler audit)
-                global _early_exit_flag
-                _early_exit_flag = True
-                break
-                    
-        except Exception as e:
-            logger.warning(f"Failed face detection at scale {scale}: {str(e)}")
+    # Process detected faces
+    for face in faces:
+        if not hasattr(face, "embedding") or face.embedding is None:
             continue
+        
+        # Convert bounding box back to original image coordinates
+        # First convert from upscaled scale back to enhanced image scale
+        x1, y1, x2, y2 = face.bbox
+        if upscale_factor != 1.0:
+            x1, y1, x2, y2 = x1/upscale_factor, y1/upscale_factor, x2/upscale_factor, y2/upscale_factor
+        
+        # Then convert from enhanced image scale back to original image coordinates
+        x1, y1, x2, y2 = x1/enhancement_scale, y1/enhancement_scale, x2/enhancement_scale, y2/enhancement_scale
+        
+        # Clamp coordinates to original image boundaries
+        x1 = max(0, min(x1, original_width))
+        y1 = max(0, min(y1, original_height))
+        x2 = max(0, min(x2, original_width))
+        y2 = max(0, min(y2, original_height))
+        
+        # Calculate face size in original image coordinates
+        face_width = x2 - x1
+        face_height = y2 - y1
+        
+        # Skip very small faces (in original image coordinates)
+        if face_width < min_size or face_height < min_size:
+            continue
+        
+        # Store face data
+        face_data = {
+            "bbox": [float(x1), float(y1), float(x2), float(y2)],
+            "embedding": face.embedding.astype(np.float32).tolist(),
+            "det_score": float(getattr(face, "det_score", 0.0)),
+            "scale": upscale_factor,
+            "enhancement_scale": enhancement_scale,
+            "face_size": (face_width, face_height)
+        }
+        
+        # Since we're using single-pass detection, no duplicate checking needed
+        all_faces.append(face_data)
     
-    # Sort by detection confidence
-    all_faces.sort(key=lambda x: x["det_score"], reverse=True)
-    
-    # Clean up memory
-    del img
-    gc.collect()
-    
+    # Log total processing time
     t_total_ms = (time.perf_counter() - t_total_start) * 1000.0
-    logger.info(f"Multi-scale detection found {len(all_faces)} faces in {t_total_ms:.1f} ms (scales: {scales}, enhancement_scale: {enhancement_scale})")
+    logger.info(f"Single-pass face detection completed in {t_total_ms:.1f} ms total (found {len(all_faces)} faces)")
+    
     return all_faces
 
 def consume_early_exit_flag() -> bool:

@@ -92,7 +92,7 @@ class ImageProcessingService:
             # Check image dimensions - skip if any dimension is below minimum
             if not self.check_image_dimensions(image_bytes):
                 self.logger.info(f"Image dimensions too small, skipping: {self._truncate_log_string(image_info.url)}")
-                return [], None, ["Image dimensions below minimum threshold"]
+                return [], None, []
             
             # Strip EXIF data for privacy
             image_bytes = self.strip_exif_data(image_bytes)

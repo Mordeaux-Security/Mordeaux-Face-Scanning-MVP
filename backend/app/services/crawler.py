@@ -1739,7 +1739,7 @@ class ImageCrawler:
                 # Check image dimensions using ImageProcessingService
                 if hasattr(self, '_image_processing_service') and not self._image_processing_service.check_image_dimensions(image_bytes):
                     logger.info(f"Image dimensions too small, skipping: {_truncate_log_string(image_info.url)}")
-                    return None, None, False, download_errors + ["Image dimensions below minimum threshold"], []
+                    return None, None, False, download_errors, []
 
                 # Check cache using caching facade
                 should_skip, cached_key = await self._caching_facade.should_skip_image(image_info.url, image_bytes, self.tenant_id)
@@ -2238,7 +2238,7 @@ class ImageCrawler:
             logger.info(f"Processing all {len(images_to_process)} images found")
             
         # Use streaming pipeline only for larger workloads to avoid overhead
-        if len(images_to_process) <= 10:
+        if len(images_to_process) <= 30:
             logger.info(f"Using batch processing for {len(images_to_process)} images (streaming overhead not worth it)")
             result = await self._process_images_batch(images_to_process, all_errors, cache_hits, cache_misses, method_used, url)
         else:

@@ -42,6 +42,7 @@ crawl-multisite:
 	@echo "  make crawl-multisite SITES=\"https://wikifeet.com,https://candidteens.net,https://forum.candidgirls.io\""
 	@echo "  make crawl-multisite SITES_FILE=sites.txt MAX_IMAGES_PER_SITE=30 CONCURRENT_SITES=2"
 	@echo "  make crawl-multisite SITES=\"https://site1.com,https://site2.com\" REQUIRE_FACE=true CROP_FACES=true MIN_FACE_QUALITY=0.7"
+	@echo "Exit codes: 0=success, 1=partial success with errors, 2=<50% success, 3=complete failure"
 	@if [ -z "$(SITES)" ] && [ -z "$(SITES_FILE)" ]; then echo "Error: Either SITES or SITES_FILE is required"; exit 1; fi
 	@METHOD=$${METHOD:-smart}; \
 	MAX_IMAGES_PER_SITE=$${MAX_IMAGES_PER_SITE:-20}; \
@@ -74,7 +75,18 @@ crawl-multisite:
 		$$CROP_FACES_FLAG \
 		$$USE_3X3_MINING_FLAG \
 		$$VERBOSE_FLAG \
-		$$QUIET_FLAG
+		$$QUIET_FLAG; \
+	EXIT_CODE=$$?; \
+	if [ $$EXIT_CODE -eq 0 ]; then \
+		echo "✅ Crawl completed successfully"; \
+	elif [ $$EXIT_CODE -eq 1 ]; then \
+		echo "⚠️  Crawl completed with some errors (non-critical)"; \
+	elif [ $$EXIT_CODE -eq 2 ]; then \
+		echo "⚠️  Warning: Less than 50% of sites successful"; \
+	else \
+		echo "❌ Error: Crawl failed"; \
+	fi; \
+	exit $$EXIT_CODE
 
 
 restart:
@@ -121,6 +133,14 @@ reset-both: reset-cache reset-redis-docker reset-minio
 
 reset-all: reset-both clean
 	@echo "All data cleared and containers stopped."
+
+test-integration:
+	@echo "Running integration tests..."
+	docker compose exec backend-cpu python -m pytest tests/test_crawler_integration.py -v
+
+test-quick:
+	@echo "Running quick integration tests (excluding slow tests)..."
+	docker compose exec backend-cpu python -m pytest tests/test_crawler_integration.py -v -m "not slow"
 
 download-thumb:
 	@./scripts/download_images.sh thumbnails

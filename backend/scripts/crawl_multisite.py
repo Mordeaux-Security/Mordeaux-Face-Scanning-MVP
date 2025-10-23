@@ -258,13 +258,18 @@ Site list file format (one URL per line):
         
         # Return exit code based on success
         if successful_sites == 0:
-            return 3  # No sites successful
+            print("\n❌ Exit code 3: No sites were successfully crawled")
+            return 3
         elif successful_sites < len(sites) / 2:
-            return 2  # Less than half successful
-        elif total_errors > len(sites) * 5:
-            return 1  # Too many errors
+            print(f"\n⚠️  Exit code 2: Only {successful_sites}/{len(sites)} sites successful (less than 50%)")
+            return 2
+        elif (len(sites) - successful_sites) > 0:
+            failed_sites = len(sites) - successful_sites
+            print(f"\n⚠️  Exit code 1: All sites crawled but {failed_sites} had failures")
+            return 1
         else:
-            return 0  # Success
+            print("\n✅ Exit code 0: All sites successfully crawled")
+            return 0
     
     # Run the multisite crawler
     exit_code = asyncio.run(run_multisite_crawler())
