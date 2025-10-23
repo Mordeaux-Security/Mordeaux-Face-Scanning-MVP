@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional, Dict, Any
 
-from fastapi import APIRouter, Query, Path, HTTPException, status, File, UploadFile, Response, Depends
+from fastapi import APIRouter, Query, Path, HTTPException, status, File, UploadFile, Response, Depends, Request
 from pydantic import BaseModel, Field
 
 import numpy as np
@@ -231,8 +231,29 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
         # Extract embedding
         if request.image:
             # Decode image bytes and detect faces
+            import cv2
+            
+            # Convert PIL to numpy array for OpenCV
             image = Image.open(io.BytesIO(request.image))
-            faces = detect_faces(image)
+            img_array = np.array(image)
+            
+            # Handle different image formats (RGB, RGBA, Grayscale)
+            if len(img_array.shape) == 3:
+                if img_array.shape[2] == 4:  # RGBA
+                    # Convert RGBA to RGB
+                    img_rgb = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
+                elif img_array.shape[2] == 3:  # RGB
+                    img_rgb = img_array
+                else:
+                    raise HTTPException(400, f"Unsupported image format with {img_array.shape[2]} channels")
+                
+                # Convert RGB to BGR for OpenCV
+                img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+            else:
+                # Grayscale image
+                img_bgr = cv2.cvtColor(img_array, cv2.COLOR_GRAY2BGR)
+            
+            faces = detect_faces(img_bgr)
             if not faces:
                 return SearchResponse(
                     query={
@@ -244,8 +265,11 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
                     hits=[],
                     count=0
                 )
-            # Use first detected face
-            face_crop = faces[0]
+            
+            # Use first detected face - align and crop
+            from pipeline.detector import align_and_crop
+            face_data = faces[0]
+            face_crop = align_and_crop(img_bgr, face_data["landmarks"])
             embedding = embed(face_crop)
         else:
             # Validate vector dimension (must be 512)
@@ -257,20 +281,22 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
             if norm > 0:
                 embedding = embedding / norm
 
-        # Query Qdrant
-        client = get_qdrant_client()
-        search_results = client.search(
-            collection_name=settings.qdrant_collection,
-            query_vector=embedding.tolist(),
-            limit=request.top_k,
-            score_threshold=request.threshold,
-            query_filter={"must": [{"key": "tenant_id", "match": {"value": request.tenant_id}}]}
+        # Query Qdrant using our indexer module
+        from pipeline.indexer import search
+        
+        search_results = search(
+            vector=embedding.tolist(),
+            top_k=request.top_k,
+            filters={"tenant_id": request.tenant_id}
         )
+        
+        # Filter by threshold
+        search_results = [r for r in search_results if r["score"] >= request.threshold]
 
         # Process results with presigned URLs and filtered metadata
         hits = []
         for result in search_results:
-            original_payload = result.payload or {}
+            original_payload = result.get("payload", {})
 
             # Filter metadata to only include allowed fields
             filtered_payload = {}
@@ -290,8 +316,8 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
                 )
 
             hits.append(SearchHit(
-                face_id=str(result.id),
-                score=float(result.score),
+                face_id=str(result["id"]),
+                score=float(result["score"]),
                 payload=filtered_payload,
                 thumb_url=thumb_url
             ))
@@ -311,6 +337,49 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
         raise
     except Exception as e:
         logger.error(f"Error in search: {e}")
+        raise HTTPException(500, f"Internal server error: {str(e)}")
+
+
+@router.post(
+    "/search/file",
+    response_model=SearchResponse,
+    status_code=status.HTTP_200_OK
+)
+async def search_faces_by_file(
+    file: UploadFile = File(...),
+    tenant_id: str = Query(..., description="Tenant ID for multi-tenant filtering"),
+    top_k: int = Query(default=10, ge=1, le=100, description="Maximum number of results to return"),
+    threshold: float = Query(default=0.75, ge=0.0, le=1.0, description="Minimum similarity score threshold")
+) -> SearchResponse:
+    """
+    Search for similar faces by uploading an image file.
+    
+    This endpoint accepts multipart/form-data file uploads and processes them
+    for face detection and similarity search.
+    """
+    logger.info(
+        f"File search request: tenant_id={tenant_id}, "
+        f"top_k={top_k}, threshold={threshold}, "
+        f"filename={file.filename}, content_type={file.content_type}"
+    )
+    
+    try:
+        # Read file bytes
+        file_bytes = await file.read()
+        
+        # Create SearchRequest with file bytes
+        request = SearchRequest(
+            image=file_bytes,
+            tenant_id=tenant_id,
+            top_k=top_k,
+            threshold=threshold
+        )
+        
+        # Call the main search function
+        return await search_faces(request)
+        
+    except Exception as e:
+        logger.error(f"Error in file search: {e}")
         raise HTTPException(500, f"Internal server error: {str(e)}")
 
 
@@ -428,6 +497,65 @@ async def get_pipeline_stats() -> StatsResponse:
 
 # ============================================================================
 # Health Check Endpoint
+# ============================================================================
+# Processing Endpoint (Temporary - for testing)
+# ============================================================================
+
+@router.post("/process", status_code=status.HTTP_200_OK)
+async def process_image(request: Request) -> Dict[str, Any]:
+    """
+    Process and index an image for face search.
+    
+    This is a temporary endpoint to add faces to the database for testing.
+    """
+    try:
+        # Get the uploaded file
+        form = await request.form()
+        file = form.get("file")
+        
+        if not file:
+            raise HTTPException(400, "No file uploaded")
+        
+        # Read image bytes
+        image_bytes = await file.read()
+        
+        # Process the image
+        from pipeline.processor import process_image
+        import uuid
+        from datetime import datetime
+        
+        # Create a message for the processor
+        message = {
+            "tenant_id": "demo-tenant",
+            "site": "test-site",
+            "url": "http://test.com/image.jpg",
+            "image_sha256": "test-hash-" + str(uuid.uuid4().hex[:8]),
+            "image_bytes": image_bytes
+        }
+        
+        # Process the image
+        result = process_image(message)
+        
+        # Check if faces were found and processed
+        if result.get("faces_accepted", 0) > 0:
+            return {
+                "status": "success",
+                "message": f"Processed {result['faces_accepted']} faces",
+                "faces_accepted": result["faces_accepted"],
+                "faces_rejected": result.get("faces_rejected", 0)
+            }
+        else:
+            return {
+                "status": "success",
+                "message": "No faces detected in image",
+                "faces_accepted": 0,
+                "faces_rejected": result.get("faces_rejected", 0)
+            }
+            
+    except Exception as e:
+        logger.error(f"Error processing image: {e}")
+        raise HTTPException(500, f"Error processing image: {str(e)}")
+
 # ============================================================================
 
 @router.get("/health", status_code=status.HTTP_200_OK)
