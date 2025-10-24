@@ -6,7 +6,8 @@ Configuration management for the face scanning application with GPU support.
 
 import os
 from typing import Optional, Dict, Any
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -248,6 +249,111 @@ class Settings(BaseSettings):
         default={"image/svg+xml"},
         env="BLOCKED_CONTENT_TYPES",
         description="Blocked content types"
+    )
+    
+    # ============================================================================
+    # Dynamic Resource Management Configuration
+    # ============================================================================
+    enable_dynamic_resources: bool = Field(
+        default=True,
+        env="ENABLE_DYNAMIC_RESOURCES",
+        description="Enable dynamic resource management"
+    )
+    resource_monitor_interval_ms: int = Field(
+        default=100,
+        env="RESOURCE_MONITOR_INTERVAL_MS",
+        description="Resource monitoring interval in milliseconds"
+    )
+    adjustment_interval_s: float = Field(
+        default=2.0,
+        env="ADJUSTMENT_INTERVAL_S",
+        description="Minimum time between resource adjustments in seconds"
+    )
+    
+    # Target Utilization (0-100)
+    target_cpu_utilization: float = Field(
+        default=85.0,
+        env="TARGET_CPU_UTILIZATION",
+        description="Target CPU utilization percentage"
+    )
+    target_gpu_utilization: float = Field(
+        default=90.0,
+        env="TARGET_GPU_UTILIZATION",
+        description="Target GPU utilization percentage"
+    )
+    target_memory_utilization: float = Field(
+        default=75.0,
+        env="TARGET_MEMORY_UTILIZATION",
+        description="Target memory utilization percentage"
+    )
+    
+    # Concurrency Bounds
+    min_concurrent_downloads: int = Field(
+        default=5,
+        env="MIN_CONCURRENT_DOWNLOADS",
+        description="Minimum concurrent downloads"
+    )
+    max_concurrent_downloads: int = Field(
+        default=100,
+        env="MAX_CONCURRENT_DOWNLOADS",
+        description="Maximum concurrent downloads"
+    )
+    min_batch_size: int = Field(
+        default=1,
+        env="MIN_BATCH_SIZE",
+        description="Minimum batch size"
+    )
+    max_batch_size: int = Field(
+        default=128,
+        env="MAX_BATCH_SIZE",
+        description="Maximum batch size"
+    )
+    min_concurrent_sites: int = Field(
+        default=1,
+        env="MIN_CONCURRENT_SITES",
+        description="Minimum concurrent sites"
+    )
+    max_concurrent_sites: int = Field(
+        default=20,
+        env="MAX_CONCURRENT_SITES",
+        description="Maximum concurrent sites"
+    )
+    
+    # Adjustment Behavior (Conservative Settings)
+    aggressive_scaling: bool = Field(
+        default=False,
+        env="AGGRESSIVE_SCALING",
+        description="Use aggressive scaling (not recommended)"
+    )
+    smoothing_factor: float = Field(
+        default=0.3,
+        env="SMOOTHING_FACTOR",
+        description="Exponential smoothing factor (0.2-0.4 recommended)"
+    )
+    adjustment_step_size: int = Field(
+        default=1,
+        env="ADJUSTMENT_STEP_SIZE",
+        description="Small additive step size"
+    )
+    adjustment_step_percent: float = Field(
+        default=5.0,
+        env="ADJUSTMENT_STEP_PERCENT",
+        description="Small multiplicative step percentage"
+    )
+    utilization_deadband: float = Field(
+        default=5.0,
+        env="UTILIZATION_DEADBAND",
+        description="Don't adjust within +/-5% of target"
+    )
+    warmup_period_s: float = Field(
+        default=30.0,
+        env="WARMUP_PERIOD_S",
+        description="Initial warmup period for stability"
+    )
+    max_adjustment_per_minute: int = Field(
+        default=10,
+        env="MAX_ADJUSTMENT_PER_MINUTE",
+        description="Maximum adjustments per minute to prevent oscillation"
     )
     
     # ============================================================================

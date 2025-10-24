@@ -26,6 +26,14 @@ except ImportError:
     get_face_service = None
     face_module = None
 
+# Import adaptive resource manager for dynamic batch sizing
+try:
+    from ..adaptive_resource_manager import get_adaptive_resource_manager
+    ADAPTIVE_MANAGER_AVAILABLE = True
+except ImportError:
+    ADAPTIVE_MANAGER_AVAILABLE = False
+    get_adaptive_resource_manager = None
+
 # Configure PIL for better performance
 Image.MAX_IMAGE_PIXELS = 50_000_000
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -71,6 +79,111 @@ class ImageProcessingService:
             max_workers=min(psutil.cpu_count() or 4, 8),  # Limit to CPU cores but cap at 8
             thread_name_prefix="face_detection"
         )
+        
+        # Dynamic resource management
+        self._adaptive_manager = get_adaptive_resource_manager() if ADAPTIVE_MANAGER_AVAILABLE else None
+        self._last_batch_size_update = 0
+        self._batch_size_update_interval = 2.0  # Update every 2 seconds
+    
+    def _get_dynamic_batch_size(self, base_batch_size: int = 32) -> int:
+        """Get optimal batch size based on resource utilization."""
+        if not self._adaptive_manager or not ADAPTIVE_MANAGER_AVAILABLE:
+            return base_batch_size
+        
+        import time
+        current_time = time.time()
+        
+        # Only update batch size periodically
+        if current_time - self._last_batch_size_update < self._batch_size_update_interval:
+            return base_batch_size
+        
+        try:
+            # Get optimal batch size from adaptive manager
+            optimal_batch_size = self._adaptive_manager.get_optimal_batch_size(
+                'gpu_processing', base_batch_size
+            )
+            
+            self._last_batch_size_update = current_time
+            return optimal_batch_size
+            
+        except Exception as e:
+            self.logger.warning(f"Error getting dynamic batch size: {e}")
+            return base_batch_size
+    
+    async def process_images_batch(self, image_infos: List[ImageInfo], image_bytes_list: List[bytes]) -> List[Tuple[List, Optional[bytes], List[str]]]:
+        """
+        Process multiple images in batch for better GPU utilization.
+        
+        Args:
+            image_infos: List of ImageInfo objects
+            image_bytes_list: List of image bytes
+            
+        Returns:
+            List of processing results (faces, thumbnail_bytes, errors)
+        """
+        if not FACE_SERVICE_AVAILABLE:
+            self.logger.warning("Face service not available, skipping batch face detection")
+            return [([], None, ["Face service not available"]) for _ in image_infos]
+        
+        try:
+            face_service = get_face_service()
+            
+            # Get dynamic batch size
+            batch_size = self._get_dynamic_batch_size(32)
+            self.logger.debug(f"Processing batch of {len(image_infos)} images with batch size {batch_size}")
+            
+            # Process in batches
+            results = []
+            for i in range(0, len(image_bytes_list), batch_size):
+                batch_images = image_bytes_list[i:i + batch_size]
+                batch_infos = image_infos[i:i + batch_size]
+                
+                # Enhance images for better face detection
+                enhanced_batch = []
+                enhancement_scales = []
+                for image_bytes in batch_images:
+                    enhanced_bytes, scale = face_service.enhance_image_for_face_detection(image_bytes)
+                    enhanced_batch.append(enhanced_bytes)
+                    enhancement_scales.append(scale)
+                
+                # Batch face detection and embedding
+                if hasattr(face_service, 'detect_and_embed_batch_async'):
+                    # Use GPU batch processing if available
+                    batch_faces = await face_service.detect_and_embed_batch_async(enhanced_batch, batch_size)
+                else:
+                    # Fallback to individual processing
+                    batch_faces = []
+                    for enhanced_bytes in enhanced_batch:
+                        faces = face_service.detect_and_embed(enhanced_bytes, 1.0, min_size=0)
+                        batch_faces.append(faces)
+                
+                # Process results for each image in the batch
+                for j, (image_info, image_bytes, faces, enhancement_scale) in enumerate(zip(batch_infos, batch_images, batch_faces, enhancement_scales)):
+                    # Apply face quality filtering
+                    filtered_faces = []
+                    for face in faces:
+                        if face.get('det_score', 0) >= self.min_face_quality:
+                            filtered_faces.append(face)
+                    
+                    # Check if face is required
+                    if self.require_face and not filtered_faces:
+                        results.append(([], None, ["No faces detected or quality too low"]))
+                        continue
+                    
+                    # Create thumbnail if requested
+                    thumbnail_bytes = None
+                    if self.crop_faces and filtered_faces:
+                        thumbnail_bytes = face_service.crop_face_and_create_thumbnail(
+                            image_bytes, filtered_faces[0], self.face_margin
+                        )
+                    
+                    results.append((filtered_faces, thumbnail_bytes, []))
+            
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Error in batch processing: {e}")
+            return [([], None, [f"Batch processing error: {str(e)}"]) for _ in image_infos]
     
     async def process_single_image(self, image_info: ImageInfo, image_bytes: bytes, 
                                  index: int, total: int) -> Tuple[List, Optional[bytes], List[str]]:

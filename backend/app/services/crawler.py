@@ -23,7 +23,9 @@ from typing import List, Optional, Tuple, Set, Dict
 from urllib.parse import urljoin, urlparse, parse_qs
 from dataclasses import dataclass, field
 from .crawler_modules.types import CrawlResult, ImageInfo
-from .crawler_modules.memory import MemoryMonitor
+from .crawler_modules.resources import ResourceMonitor
+from .adaptive_resource_manager import get_adaptive_resource_manager
+from .pipeline_orchestrator import get_pipeline_orchestrator
 from .crawler_modules.extraction import ImageExtractor, extract_style_bg_url, extract_jsonld_thumbnails, pick_from_srcset
 from .crawler_modules.processing import ImageProcessingService
 from .crawler_modules.storage_facade import StorageFacade
@@ -293,12 +295,16 @@ class ImageCrawler:
         self.max_redirects = 3
         self._redirect_counts = {}  # Track redirect counts per URL
         
-        # Concurrency control with semaphores and per-host limits
+        # Dynamic concurrency control with adaptive resource management
         self._processing_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self._storage_semaphore = asyncio.Semaphore(self.max_concurrent_images)
         self._download_semaphore = asyncio.Semaphore(min(self.max_concurrent_images * 2, 50))  # Allow more downloads
         self._per_host_semaphores = {}  # Per-host concurrency control
         self._per_host_limits = {}  # Track per-host limits
+        
+        # Dynamic concurrency tracking
+        self._last_concurrency_update = time.time()
+        self._concurrency_update_interval = 2.0  # Update every 2 seconds
         
         # Thread pool for CPU-intensive face detection
         self._face_detection_thread_pool = concurrent.futures.ThreadPoolExecutor(
@@ -312,8 +318,19 @@ class ImageCrawler:
             thread_name_prefix="storage"
         )
         
-        # Memory monitoring and management
-        self._memory_monitor = MemoryMonitor()
+        # Dynamic resource management
+        self._resource_monitor = ResourceMonitor()
+        self._adaptive_manager = get_adaptive_resource_manager()
+        self._pipeline_orchestrator = get_pipeline_orchestrator()
+        
+        # Initialize resource monitoring
+        if self._adaptive_manager.settings.enable_dynamic_resources:
+            self._resource_monitor.start_monitoring(
+                interval_ms=self._adaptive_manager.settings.resource_monitor_interval_ms
+            )
+        
+        # Legacy memory monitoring (for backward compatibility)
+        self._memory_monitor = self._resource_monitor  # Alias for compatibility
         self._active_tasks = weakref.WeakSet()  # Track active tasks for memory cleanup
         self._memory_pressure_threshold = 75  # Memory pressure threshold
         self._gc_frequency = 10  # Force GC every N operations
@@ -326,6 +343,42 @@ class ImageCrawler:
         self._selector_mining_service: Optional[SelectorMiningService] = None
         # Cache service is now handled by CachingFacade
         self.pending_cache_entries = []  # Batch cache writes
+    
+    def _update_dynamic_concurrency(self):
+        """Update concurrency limits based on resource utilization."""
+        if not self._adaptive_manager.settings.enable_dynamic_resources:
+            return
+        
+        current_time = time.time()
+        if current_time - self._last_concurrency_update < self._concurrency_update_interval:
+            return
+        
+        try:
+            # Get optimal concurrency from adaptive manager
+            optimal_processing = self._adaptive_manager.get_optimal_concurrency(
+                'processing', self.max_concurrent_images
+            )
+            optimal_downloads = self._adaptive_manager.get_optimal_concurrency(
+                'downloads', min(self.max_concurrent_images * 2, 50)
+            )
+            
+            # Update semaphores if values changed
+            if optimal_processing != self.max_concurrent_images:
+                old_processing = self.max_concurrent_images
+                self.max_concurrent_images = optimal_processing
+                self._processing_semaphore = asyncio.Semaphore(optimal_processing)
+                self._storage_semaphore = asyncio.Semaphore(optimal_processing)
+                
+                logger.debug(f"Dynamic concurrency update: processing {old_processing} → {optimal_processing}")
+            
+            if optimal_downloads != self._download_semaphore._value:
+                self._download_semaphore = asyncio.Semaphore(optimal_downloads)
+                logger.debug(f"Dynamic concurrency update: downloads → {optimal_downloads}")
+            
+            self._last_concurrency_update = current_time
+            
+        except Exception as e:
+            logger.warning(f"Error updating dynamic concurrency: {e}")
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -1724,6 +1777,9 @@ class ImageCrawler:
             self._active_tasks.add(task)
         
         try:
+            # Update dynamic concurrency before processing
+            self._update_dynamic_concurrency()
+            
             async with self._processing_semaphore:
                 # Proactive memory management
                 self._manage_memory_pressure()
