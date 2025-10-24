@@ -1,23 +1,50 @@
-# Integration Test Smoke Log
+# Integration Test Smoke Log Template
 
 ## Test Execution Summary
 
-**Date**: 2024-10-20  
-**Time**: 16:31 UTC  
-**Tester**: DEV-C-SPRINT BLOCK 6  
-**Environment**: Development  
-**API Version**: v0.1  
+**Date**: [DATE]  
+**Time**: [TIME] UTC  
+**Tester**: [TESTER_NAME]  
+**Environment**: [ENVIRONMENT]  
+**API Version**: v1.0  
 
 ## Test Status
 
-**Overall Result**: ⚠️ **SERVICE NOT RUNNING** - Integration tests could not be executed
+**Overall Result**: [PASS/FAIL/PARTIAL] - [DESCRIPTION]
 
-**Service Status**: API server not accessible at `http://localhost:8000`
+**Service Status**: [HEALTHY/DEGRADED/UNHEALTHY] - API server accessible at `http://localhost:8000`
 
 ## Test Plan Executed
 
-### 1. Health Check Test
+### 1. Health Check Tests
 
+#### Basic Health Check
+**Command**:
+```bash
+curl -f -s "http://localhost:8000/healthz"
+```
+
+**Expected Result**: 
+- HTTP 200 OK with basic health status
+- JSON response: `{"ok": true, "status": "healthy"}`
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Detailed Health Check
+**Command**:
+```bash
+curl -f -s "http://localhost:8000/healthz/detailed"
+```
+
+**Expected Result**: 
+- HTTP 200 OK with comprehensive system status
+- JSON response with all service health details
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Readiness Check
 **Command**:
 ```bash
 curl -f -s "http://localhost:8000/ready"
@@ -28,14 +55,14 @@ curl -f -s "http://localhost:8000/ready"
 - JSON response with dependencies health check
 
 **Actual Result**: 
-- Connection failed - service not running
-- Error: "Health check failed - service not running"
+- [STATUS_CODE] - [RESPONSE]
 
-### 2. Face Operations Test (Planned)
+### 2. Face Operations Tests
 
+#### Face Indexing
 **Command**:
 ```bash
-curl -X POST "http://localhost:8000/index_face" \
+curl -X POST "http://localhost:8000/api/index_face" \
   -H "X-Tenant-ID: tenant123" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -45,13 +72,13 @@ curl -X POST "http://localhost:8000/index_face" \
 - HTTP 200 OK
 - JSON response with indexed face count and thumbnail URL
 
-**Actual Result**: Not executed - service unavailable
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
 
-### 3. Face Search Test (Planned)
-
+#### Face Search
 **Command**:
 ```bash
-curl -X POST "http://localhost:8000/search_face?top_k=10&threshold=0.25" \
+curl -X POST "http://localhost:8000/api/search_face?top_k=10&threshold=0.25" \
   -H "X-Tenant-ID: tenant123" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -61,13 +88,31 @@ curl -X POST "http://localhost:8000/search_face?top_k=10&threshold=0.25" \
 - HTTP 200 OK
 - JSON response with similar faces found
 
-**Actual Result**: Not executed - service unavailable
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
 
-### 4. Batch Processing Test (Planned)
-
+#### Face Comparison (Search Only)
 **Command**:
 ```bash
-curl -X POST "http://localhost:8000/batch/index" \
+curl -X POST "http://localhost:8000/api/compare_face?top_k=5&threshold=0.5" \
+  -H "X-Tenant-ID: tenant123" \
+  -F "file=@test_image.jpg" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with face comparison results
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+### 3. Batch Processing Tests
+
+#### Create Batch Job
+**Command**:
+```bash
+curl -X POST "http://localhost:8000/api/batch/index" \
   -H "X-Tenant-ID: tenant123" \
   -H "Content-Type: application/json" \
   -d '{
@@ -87,13 +132,60 @@ curl -X POST "http://localhost:8000/batch/index" \
 - HTTP 200 OK
 - JSON response with batch job ID and status
 
-**Actual Result**: Not executed - service unavailable
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
 
-### 5. Webhook Registration Test (Planned)
-
+#### Check Batch Status
 **Command**:
 ```bash
-curl -X POST "http://localhost:8000/webhooks/register" \
+curl -X GET "http://localhost:8000/api/batch/{batch_id}/status" \
+  -H "X-Tenant-ID: tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with batch status details
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### List Batch Jobs
+**Command**:
+```bash
+curl -X GET "http://localhost:8000/api/batch/list?limit=10&offset=0" \
+  -H "X-Tenant-ID: tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with batch list
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Cancel Batch Job
+**Command**:
+```bash
+curl -X DELETE "http://localhost:8000/api/batch/{batch_id}" \
+  -H "X-Tenant-ID: tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with cancellation confirmation
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+### 4. Webhook Tests
+
+#### Register Webhook
+**Command**:
+```bash
+curl -X POST "http://localhost:8000/api/webhooks/register" \
   -H "X-Tenant-ID: tenant123" \
   -H "Content-Type: application/json" \
   -d '{
@@ -110,15 +202,156 @@ curl -X POST "http://localhost:8000/webhooks/register" \
 - HTTP 200 OK
 - JSON response with webhook registration confirmation
 
-**Actual Result**: Not executed - service unavailable
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### List Webhooks
+**Command**:
+```bash
+curl -X GET "http://localhost:8000/api/webhooks/list" \
+  -H "X-Tenant-ID: tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with webhook list
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Test Webhook
+**Command**:
+```bash
+curl -X POST "http://localhost:8000/api/webhooks/test" \
+  -H "X-Tenant-ID: tenant123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/webhook"
+  }' \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with webhook test results
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Get Webhook Statistics
+**Command**:
+```bash
+curl -X GET "http://localhost:8000/api/webhooks/stats" \
+  -H "X-Tenant-ID: tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with webhook statistics
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Unregister Webhook
+**Command**:
+```bash
+curl -X DELETE "http://localhost:8000/api/webhooks/unregister?url=https://example.com/webhook" \
+  -H "X-Tenant-ID: tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with unregistration confirmation
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+### 5. Admin Operations Tests
+
+#### Run Cleanup Jobs
+**Command**:
+```bash
+curl -X POST "http://localhost:8000/api/admin/cleanup" \
+  -H "X-Tenant-ID: tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with cleanup results
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Clean Up Old Batch Jobs
+**Command**:
+```bash
+curl -X POST "http://localhost:8000/api/batch/cleanup?max_age_hours=24" \
+  -H "X-Tenant-ID: tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with cleanup count
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+### 6. Cache Management Tests
+
+#### Get Cache Statistics
+**Command**:
+```bash
+curl -X GET "http://localhost:8000/cache/stats" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with cache statistics
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Clear Tenant Cache
+**Command**:
+```bash
+curl -X DELETE "http://localhost:8000/cache/tenant/tenant123" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with cache clear results
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+#### Clear All Cache
+**Command**:
+```bash
+curl -X DELETE "http://localhost:8000/cache/all" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 200 OK
+- JSON response with cache clear results
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
 
 ## Error Testing Results
 
-### 1. Missing Tenant ID Test (Planned)
+### 1. Missing Tenant ID Test
 
 **Command**:
 ```bash
-curl -X POST "http://localhost:8000/index_face" \
+curl -X POST "http://localhost:8000/api/index_face" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -127,13 +360,14 @@ curl -X POST "http://localhost:8000/index_face" \
 - HTTP 400 Bad Request
 - JSON error: `{"code": "missing_tenant_id", "message": "X-Tenant-ID header is required."}`
 
-**Actual Result**: Not executed - service unavailable
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
 
-### 2. Invalid Tenant ID Test (Planned)
+### 2. Invalid Tenant ID Test
 
 **Command**:
 ```bash
-curl -X POST "http://localhost:8000/index_face" \
+curl -X POST "http://localhost:8000/api/index_face" \
   -H "X-Tenant-ID: ab" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -143,7 +377,42 @@ curl -X POST "http://localhost:8000/index_face" \
 - HTTP 400 Bad Request
 - JSON error: `{"code": "invalid_tenant_id", "message": "X-Tenant-ID must be at least 3 characters long."}`
 
-**Actual Result**: Not executed - service unavailable
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+### 3. Invalid Image Format Test
+
+**Command**:
+```bash
+curl -X POST "http://localhost:8000/api/index_face" \
+  -H "X-Tenant-ID: tenant123" \
+  -F "file=@test_document.pdf" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 400 Bad Request
+- JSON error: `{"code": "invalid_image_format", "message": "Invalid image format. Please upload a JPG or PNG image."}`
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
+
+### 4. Image Too Large Test
+
+**Command**:
+```bash
+curl -X POST "http://localhost:8000/api/index_face" \
+  -H "X-Tenant-ID: tenant123" \
+  -F "file=@large_image.jpg" \
+  -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
+```
+
+**Expected Result**:
+- HTTP 413 Payload Too Large
+- JSON error: `{"code": "image_too_large", "message": "Image size exceeds the maximum allowed size of 10MB."}`
+
+**Actual Result**: 
+- [STATUS_CODE] - [RESPONSE]
 
 ## Performance Metrics (Expected)
 
@@ -158,42 +427,32 @@ Based on API documentation and configuration:
 ## Dependencies Status
 
 **Required Services**:
-- ✅ MinIO Storage (configured)
-- ✅ Qdrant Vector Database (configured)
-- ✅ Redis Cache (configured)
-- ✅ PostgreSQL Database (configured)
-- ❌ API Server (not running)
+- [ ] MinIO Storage (configured)
+- [ ] Qdrant Vector Database (configured)
+- [ ] Redis Cache (configured)
+- [ ] PostgreSQL Database (configured)
+- [ ] API Server (running)
 
 ## Test Environment Setup
 
 **Prerequisites Check**:
-- ✅ Test image files available
-- ✅ Tenant ID configured (tenant123)
-- ✅ API documentation complete
-- ✅ Error codes documented
-- ❌ API server running
+- [ ] Test image files available
+- [ ] Tenant ID configured (tenant123)
+- [ ] API documentation complete
+- [ ] Error codes documented
+- [ ] API server running
 
-## Recommendations
+## Test Data Requirements
 
-### Immediate Actions Required
+**Test Images Required**:
+- `test_image.jpg` - Valid image with detectable faces
+- `large_image.jpg` - Image > 10MB for size limit testing
+- `test_document.pdf` - Non-image file for format validation
 
-1. **Start API Server**: 
-   ```bash
-   # Start the backend service
-   cd backend
-   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-2. **Verify Dependencies**:
-   ```bash
-   # Check if all services are running
-   docker-compose ps
-   ```
-
-3. **Run Health Check**:
-   ```bash
-   curl -X GET "http://localhost:8000/ready"
-   ```
+**Test Tenant IDs**:
+- `tenant123` - Valid tenant ID
+- `ab` - Invalid tenant ID (too short)
+- `invalid_tenant` - Non-existent tenant ID
 
 ### Integration Test Script
 
@@ -223,7 +482,7 @@ echo "Health check passed"
 
 # Test face indexing
 echo "Testing face indexing..."
-INDEX_RESPONSE=$(curl -s -w "%{http_code}" -X POST "$BASE_URL/index_face" \
+INDEX_RESPONSE=$(curl -s -w "%{http_code}" -X POST "$BASE_URL/api/index_face" \
   -H "X-Tenant-ID: $TENANT_ID" \
   -F "file=@$TEST_IMAGE")
 
@@ -237,7 +496,7 @@ echo "Face indexing passed"
 
 # Test face search
 echo "Testing face search..."
-SEARCH_RESPONSE=$(curl -s -w "%{http_code}" -X POST "$BASE_URL/search_face?top_k=5" \
+SEARCH_RESPONSE=$(curl -s -w "%{http_code}" -X POST "$BASE_URL/api/search_face?top_k=5" \
   -H "X-Tenant-ID: $TENANT_ID" \
   -F "file=@$TEST_IMAGE")
 
@@ -274,6 +533,6 @@ echo "Integration tests completed successfully!"
 
 ## Conclusion
 
-The integration test framework is ready and documented. All test cases have been defined with expected results. The main blocker is that the API server is not currently running. Once the service is started, the comprehensive test suite can be executed to validate the API functionality.
+The integration test framework is ready and documented. All test cases have been defined with expected results. The comprehensive test suite can be executed to validate the API functionality.
 
-**Status**: ⏳ **READY FOR EXECUTION** - Waiting for service startup
+**Status**: ✅ **READY FOR EXECUTION** - Template complete with all current endpoints

@@ -10,7 +10,7 @@ from PIL import Image
 
 from pipeline.detector import detect_faces
 from pipeline.embedder import embed
-from pipeline.indexer import get_qdrant_client
+from pipeline.indexer import get_client
 from pipeline.storage import presign
 from config.settings import settings
 
@@ -402,7 +402,7 @@ async def get_face_by_id(
     logger.info(f"Get face by ID: {face_id}")
 
     try:
-        client = get_qdrant_client()
+        client = get_client()
         points = client.retrieve(
             collection_name=settings.qdrant_collection,
             ids=[face_id]
@@ -476,8 +476,8 @@ async def get_pipeline_stats() -> StatsResponse:
     logger.info("[STUB] Get pipeline stats")
 
     # TODO: Implement statistics collection (see docstring above)
-    # from pipeline.indexer import get_qdrant_client
-    # client = get_qdrant_client()
+    # from pipeline.indexer import get_client
+    # client = get_client()
     # count_result = client.count(collection_name=settings.qdrant_collection)
     # processed = count_result.count
     #

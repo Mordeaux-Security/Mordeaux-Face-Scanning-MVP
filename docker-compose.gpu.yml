@@ -1,4 +1,3 @@
-
 x-common-env: &common-env
   ENVIRONMENT: ${ENVIRONMENT:-development}
   TZ: ${TZ:-America/Los_Angeles}
@@ -72,15 +71,17 @@ services:
       timeout: 3s
       retries: 20
 
-  backend-cpu:
+  backend-gpu:
     build:
       context: ./backend
       args:
-        ENABLE_GPU: 0
+        ENABLE_GPU: 1
     env_file: [.env]
     environment:
       <<: *common-env
       ASGI_WORKERS: ${ASGI_WORKERS:-2}
+      CUDA_VISIBLE_DEVICES: 0
+      ONNX_PROVIDERS: CUDAExecutionProvider,CPUExecutionProvider
     depends_on:
       postgres:
         condition: service_healthy
@@ -94,32 +95,52 @@ services:
       - insightface_models:/root/.insightface
     ports:
       - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
-  worker-cpu:
+  worker-gpu:
     build:
       context: ./worker
       args:
-        ENABLE_GPU: 0
+        ENABLE_GPU: 1
     env_file: [.env]
     environment:
       <<: *common-env
+      CUDA_VISIBLE_DEVICES: 0
+      ONNX_PROVIDERS: CUDAExecutionProvider,CPUExecutionProvider
     depends_on:
-      backend-cpu:
+      backend-gpu:
         condition: service_started
       redis:
         condition: service_started
     command: ["celery", "-A", "worker", "worker", "--loglevel=INFO", "-Q", "faces,ingest"]
     volumes:
       - insightface_models:/root/.insightface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
-  face-pipeline:
+  face-pipeline-gpu:
     build:
       context: ./face-pipeline
+      args:
+        ENABLE_GPU: 1
     env_file: [.env]
     environment:
       <<: *common-env
       API_HOST: 0.0.0.0
       API_PORT: 8001
+      CUDA_VISIBLE_DEVICES: 0
+      ONNX_PROVIDERS: CUDAExecutionProvider,CPUExecutionProvider
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,15 +151,22 @@ services:
       redis:
         condition: service_started
     ports:
-      - "8001:8001"
+      - "8001:8000"
     volumes:
       - insightface_models:/root/.insightface
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   frontend:
     build:
@@ -146,7 +174,7 @@ services:
     environment:
       VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
     depends_on:
-      - backend-cpu
+      - backend-gpu
     ports:
       - "3000:80"
 
@@ -165,7 +193,7 @@ services:
     build: ./nginx
     depends_on:
       - frontend
-      - backend-cpu
+      - backend-gpu
     ports:
       - "80:80"
     environment:
