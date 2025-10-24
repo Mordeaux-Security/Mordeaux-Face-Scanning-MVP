@@ -98,6 +98,55 @@ services:
       - 8.8.8.8
       - 8.8.4.4
 
+  backend-gpu:
+    build:
+      context: ./backend
+      args:
+        ENABLE_GPU: 1
+    env_file: [.env]
+    environment:
+      <<: *common-env
+      ASGI_WORKERS: ${ASGI_WORKERS:-2}
+      # GPU configuration
+      ALL_GPU: ${ALL_GPU:-false}
+      FACE_DETECTION_GPU: ${FACE_DETECTION_GPU:-true}
+      FACE_EMBEDDING_GPU: ${FACE_EMBEDDING_GPU:-true}
+      IMAGE_PROCESSING_GPU: ${IMAGE_PROCESSING_GPU:-false}
+      IMAGE_ENHANCEMENT_GPU: ${IMAGE_ENHANCEMENT_GPU:-false}
+      QUALITY_CHECKS_GPU: ${QUALITY_CHECKS_GPU:-false}
+      GPU_BACKEND: ${GPU_BACKEND:-auto}
+      GPU_DEVICE_ID: ${GPU_DEVICE_ID:-0}
+      GPU_MEMORY_LIMIT_GB: ${GPU_MEMORY_LIMIT_GB:-8}
+      GPU_BATCH_SIZE: ${GPU_BATCH_SIZE:-32}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      minio:
+        condition: service_started
+    command: ["/bin/sh", "-c", "python -m app.prestart || true && gunicorn -k uvicorn.workers.UvicornWorker -c uvicorn_gunicorn_config.py app.main:app"]
+    volumes:
+      - ./backend:/app
+      - insightface_models:/root/.insightface
+    ports:
+      - "8001:8000"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    # GPU runtime configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Alternative for AMD ROCm
+    # runtime: rocm
+    # Alternative for Apple Silicon (not supported in Docker)
+    # platform: linux/arm64
+
   worker-cpu:
     build:
       context: ./worker

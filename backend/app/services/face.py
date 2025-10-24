@@ -15,6 +15,10 @@ import psutil
 import threading
 import atexit
 
+# Import GPU manager and settings
+from .gpu_manager import get_gpu_manager
+from ..core.settings import get_settings
+
 # Image safety configuration - set once on import
 Image.MAX_IMAGE_PIXELS = 50_000_000
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -44,18 +48,39 @@ def _load_app() -> FaceAnalysis:
     """
     Load face analysis model with thread-safe singleton pattern.
     Prevents race condition where multiple threads load the model simultaneously.
+    Now supports GPU acceleration based on configuration.
     """
     global _face_app
     with _model_lock:
         if _face_app is None:
             logger.info("Loading face analysis model (first time)")
+            
+            # Get GPU configuration
+            gpu_manager = get_gpu_manager()
+            settings = get_settings()
+            
+            # Determine if GPU should be used
+            use_gpu = gpu_manager.is_operation_gpu_enabled('face_detection')
+            ctx_id = gpu_manager.get_gpu_context_id()
+            
             home = os.path.expanduser("~/.insightface")
             os.makedirs(home, exist_ok=True)
-            app = FaceAnalysis(name="buffalo_l", root=home)
-            # CPU default (onnxruntime)
-            app.prepare(ctx_id=-1, det_size=(640, 640))
+            app = FaceAnalysis(name=settings.face_model_name, root=home)
+            
+            # Prepare with GPU context if available
+            det_size = settings.face_detection_size
+            app.prepare(ctx_id=ctx_id, det_size=det_size)
+            
             _face_app = app
-            logger.info("Face analysis model loaded successfully")
+            
+            if use_gpu:
+                device = gpu_manager.get_preferred_device()
+                if device:
+                    logger.info(f"Face analysis model loaded with GPU acceleration: {device}")
+                else:
+                    logger.warning("GPU requested but no device available, using CPU")
+            else:
+                logger.info("Face analysis model loaded with CPU")
         else:
             logger.debug("Using existing face analysis model")
         return _face_app
@@ -81,7 +106,7 @@ def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
     Enhance image quality for better face detection, especially for low-resolution images.
     
     This function combines the advanced image enhancement from basic_crawler1.1
-    with robust error handling for production use.
+    with robust error handling for production use. Now supports GPU acceleration.
     
     Args:
         image_bytes: Original image data
@@ -90,6 +115,16 @@ def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
         Tuple of (enhanced_image_bytes, scale_factor)
         scale_factor is 1.0 if no enhancement was applied
     """
+    gpu_manager = get_gpu_manager()
+    
+    # Check if GPU enhancement is enabled
+    if gpu_manager.is_operation_gpu_enabled('image_enhancement'):
+        try:
+            return _enhance_image_gpu(image_bytes)
+        except Exception as e:
+            logger.warning(f"GPU image enhancement failed, falling back to CPU: {e}")
+    
+    # CPU enhancement (original implementation)
     try:
         t_start = time.perf_counter()
         # Load image
@@ -126,6 +161,92 @@ def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
     except Exception as e:
         logger.warning(f"Failed to enhance image, using original: {str(e)}")
         return image_bytes, 1.0
+
+
+def _enhance_image_gpu(image_bytes: bytes) -> Tuple[bytes, float]:
+    """
+    GPU-accelerated image enhancement.
+    
+    Args:
+        image_bytes: Original image data
+        
+    Returns:
+        Tuple of (enhanced_image_bytes, scale_factor)
+    """
+    try:
+        import torch
+        import torchvision.transforms as transforms
+        from torchvision.transforms.functional import adjust_contrast, adjust_sharpness
+        
+        t_start = time.perf_counter()
+        
+        # Load image
+        pil_image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        width, height = pil_image.size
+        
+        # Determine if this is a low-resolution image
+        is_low_res = width < 500 or height < 400
+        
+        if is_low_res:
+            logger.info(f"GPU enhancing low-resolution image ({width}x{height}) for better face detection")
+            
+            # Convert to tensor and move to GPU
+            transform = transforms.Compose([
+                transforms.ToTensor(),
+            ])
+            
+            # Get GPU device
+            gpu_manager = get_gpu_manager()
+            device = gpu_manager.get_preferred_device()
+            
+            if device and device.backend.value != 'cpu':
+                if device.backend == GPUBackend.CUDA:
+                    torch_device = torch.device('cuda')
+                elif device.backend == GPUBackend.ROCM:
+                    torch_device = torch.device('cuda')  # ROCm uses CUDA API
+                elif device.backend == GPUBackend.MPS:
+                    torch_device = torch.device('mps')
+                else:
+                    torch_device = torch.device('cpu')
+            else:
+                torch_device = torch.device('cpu')
+            
+            # Convert to tensor
+            tensor = transform(pil_image).unsqueeze(0).to(torch_device)
+            
+            # Apply GPU-accelerated enhancements
+            # Contrast enhancement
+            enhanced_tensor = adjust_contrast(tensor, 1.15)
+            
+            # Sharpness enhancement
+            enhanced_tensor = adjust_sharpness(enhanced_tensor, 1.1)
+            
+            # Convert back to PIL
+            enhanced_tensor = enhanced_tensor.squeeze(0).cpu()
+            enhanced_pil = transforms.ToPILImage()(enhanced_tensor)
+            
+            # Apply unsharp mask (CPU operation as it's not easily GPU-accelerated)
+            enhanced_pil = enhanced_pil.filter(ImageFilter.UnsharpMask(radius=1, percent=120, threshold=3))
+            
+            output = io.BytesIO()
+            enhanced_pil.save(output, format='JPEG', quality=95, optimize=True)
+            elapsed_ms = (time.perf_counter() - t_start) * 1000.0
+            logger.debug(f"GPU image enhancement completed in {elapsed_ms:.1f} ms (scale=1.0)")
+            return output.getvalue(), 1.0
+        else:
+            # For high-resolution images, just ensure good quality
+            output = io.BytesIO()
+            pil_image.save(output, format='JPEG', quality=95, optimize=True)
+            elapsed_ms = (time.perf_counter() - t_start) * 1000.0
+            logger.debug(f"GPU image enhancement (hi-res passthrough) completed in {elapsed_ms:.1f} ms (scale=1.0)")
+            return output.getvalue(), 1.0
+            
+    except ImportError:
+        logger.warning("PyTorch not available for GPU image enhancement, falling back to CPU")
+        raise
+    except Exception as e:
+        logger.warning(f"GPU image enhancement failed: {e}")
+        raise
 
 def _check_memory_usage() -> bool:
     """Check if memory usage is within acceptable limits."""
@@ -444,6 +565,108 @@ async def detect_and_embed_async(content: bytes):
         logger.error(f"Error in async face detection: {e}")
         raise
 
+
+def detect_and_embed_batch_gpu(images: List[bytes], batch_size: int = 32) -> List[List[Dict]]:
+    """
+    GPU-accelerated batch face detection and embedding.
+    
+    Args:
+        images: List of image bytes
+        batch_size: Number of images to process in each batch
+        
+    Returns:
+        List of face detection results for each image
+    """
+    gpu_manager = get_gpu_manager()
+    
+    if not gpu_manager.is_operation_gpu_enabled('face_detection'):
+        # Fallback to CPU batch processing
+        logger.info("GPU not enabled for face detection, using CPU batch processing")
+        return [detect_and_embed(img) for img in images]
+    
+    try:
+        app = _load_app()
+        results = []
+        
+        # Process images in batches
+        for i in range(0, len(images), batch_size):
+            batch_images = images[i:i + batch_size]
+            batch_results = []
+            
+            # Convert batch to numpy arrays
+            batch_arrays = []
+            for img_bytes in batch_images:
+                img_array = _read_image(img_bytes)
+                if img_array is not None:
+                    batch_arrays.append(img_array)
+                else:
+                    batch_arrays.append(None)
+            
+            # Process batch on GPU
+            for img_array in batch_arrays:
+                if img_array is not None:
+                    try:
+                        faces = app.get(img_array)
+                        face_data = []
+                        
+                        for face in faces:
+                            if hasattr(face, "embedding") and face.embedding is not None:
+                                face_info = {
+                                    "bbox": face.bbox.tolist(),
+                                    "embedding": face.embedding.astype(np.float32).tolist(),
+                                    "det_score": float(getattr(face, "det_score", 0.0)),
+                                    "scale": 1.0,
+                                    "enhancement_scale": 1.0,
+                                    "face_size": (face.bbox[2] - face.bbox[0], face.bbox[3] - face.bbox[1])
+                                }
+                                face_data.append(face_info)
+                        
+                        batch_results.append(face_data)
+                    except Exception as e:
+                        logger.warning(f"Error processing image in GPU batch: {e}")
+                        batch_results.append([])
+                else:
+                    batch_results.append([])
+            
+            results.extend(batch_results)
+            
+            # GPU memory cleanup
+            if hasattr(app, 'clear_memory'):
+                app.clear_memory()
+        
+        logger.info(f"GPU batch processing completed: {len(images)} images, {len(results)} results")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error in GPU batch face detection: {e}")
+        # Fallback to CPU processing
+        logger.info("Falling back to CPU batch processing")
+        return [detect_and_embed(img) for img in images]
+
+
+async def detect_and_embed_batch_async(images: List[bytes], batch_size: int = 32) -> List[List[Dict]]:
+    """
+    Async wrapper for GPU batch face detection.
+    
+    Args:
+        images: List of image bytes
+        batch_size: Number of images to process in each batch
+        
+    Returns:
+        List of face detection results for each image
+    """
+    loop = asyncio.get_event_loop()
+    thread_pool = _get_thread_pool()
+    
+    try:
+        result = await loop.run_in_executor(
+            thread_pool, detect_and_embed_batch_gpu, images, batch_size
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error in async batch face detection: {e}")
+        raise
+
 async def compute_phash_async(content: bytes):
     """Async wrapper for perceptual hash computation."""
     loop = asyncio.get_event_loop()
@@ -580,6 +803,8 @@ def get_face_service():
     class _FaceSvc:
         detect_and_embed = staticmethod(detect_and_embed)
         detect_and_embed_async = staticmethod(detect_and_embed_async)
+        detect_and_embed_batch_gpu = staticmethod(detect_and_embed_batch_gpu)
+        detect_and_embed_batch_async = staticmethod(detect_and_embed_batch_async)
         compute_phash = staticmethod(compute_phash)
         compute_phash_async = staticmethod(compute_phash_async)
         crop_face_from_image = staticmethod(crop_face_from_image)
