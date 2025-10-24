@@ -3,8 +3,6 @@ from fastapi import FastAPI, HTTPException, Request
 
 # Setup structured logging
 
-    # Get request ID from request state if available
-
 
 
 
@@ -35,67 +33,29 @@ import time
 
 
 
-    from datetime import datetime
-
-    # Parse dates
-    from datetime import datetime
-
-    # Parse dates
-
-    from datetime import datetime
-
-    # Parse dates
+from datetime import datetime
 
 from fastapi.responses import JSONResponse
 from .api.routes import router
-from .core.middleware import (
 from .core.rate_limiter import rate_limit_middleware
 from .core.audit import audit_middleware
 from .core.config import get_settings, validate_configuration
 from .core.metrics import get_metrics
 from .core.logging_config import setup_logging, get_logger
 from .tasks.cleanup_tasks import start_cleanup_scheduler, stop_cleanup_scheduler
-    from .core.errors import handle_generic_error
-    from ..core.logging_config import get_logger
-    from app.services.health import get_health_service
-    from app.services.health import get_health_service
-    from app.services.health import get_health_service
-    from app.services.health import get_health_service
-    from app.services.health import get_health_service
-    from app.services.health import get_health_service
-    from app.services.health import get_health_service
-    from app.services.performance import get_performance_optimizer
-    from app.services.performance import get_performance_optimizer
-    from app.services.cache import get_cache_service
-    from app.services.cache import get_cache_service
-    from app.services.cache import get_cache_service
-    from app.services.dashboard import get_dashboard_service
-    from app.services.dashboard import get_dashboard_service
-    from app.services.dashboard import get_dashboard_service
-    from app.services.dashboard import get_dashboard_service
-    from app.services.dashboard import get_dashboard_service
-    from app.services.db_optimization import get_db_optimization_service
-    from app.services.db_optimization import get_db_optimization_service
-    from app.services.db_optimization import get_db_optimization_service
-    from app.services.db_optimization import get_db_optimization_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.tenant_management import get_tenant_management_service
-    from app.services.data_export import get_data_export_service
-    from app.services.data_export import get_data_export_service
-    from app.services.data_export import get_data_export_service
-    from app.services.data_export import get_data_export_service
-
+from .core.errors import handle_generic_error
+from .services.tenant_management import get_tenant_management_service
+from .core.middleware import (
     tenant_middleware,
     performance_middleware,
     request_size_middleware
 )
+from .services.health import get_health_service
+from .services.performance import get_performance_optimizer
+from .services.cache import get_cache_service
+from .services.dashboard import get_dashboard_service
+from .services.db_optimization import get_db_optimization_service
+from .services.data_export import get_data_export_service
 setup_logging()
 logger = get_logger(__name__)
 
@@ -463,7 +423,7 @@ async def face_health():
                                     "dimension": 512,
                                     "distance_metric": "Cosine",
                                     "points_count": 1250,
-                                    "error": null
+                                    "error": None
                                 }
                             }
                         },

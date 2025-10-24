@@ -1,15 +1,11 @@
-import asyncio
 import time
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime, timedelta
 import logging
-import psycopg
 from psycopg_pool import AsyncConnectionPool
-from contextlib import asynccontextmanager
-
 
 from ..core.config import get_settings
-from ..services.storage import list_objects, get_object_from_storage
+from ..services.storage import list_objects
 from ..services.vector import get_vector_client
 
 logger = logging.getLogger(__name__)
@@ -39,7 +35,6 @@ class CleanupService:
             cutoff_timestamp = cutoff_date.timestamp()
 
             # Get old thumbnail objects from storage
-            old_objects = []
             try:
                 all_objects = list_objects(self.settings.s3_bucket_thumbs)
                 for obj_key in all_objects:

@@ -1,7 +1,8 @@
 import time
 import uuid
+import json
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 import psycopg
 
@@ -82,27 +83,27 @@ class TenantManagementService:
 
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
 
-            async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
-                async with pool.connection() as conn:
-                    async with conn.cursor() as cur:
-                        # Insert new tenant
-                        await cur.execute("""
-                            INSERT INTO tenants (tenant_id, name, description, metadata, created_at, updated_at)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                        """, (tenant_id, name, description, metadata or {}, current_time, current_time))
+            with psycopg.connect(connection_string) as conn:
+                with conn.cursor() as cur:
+                    # Insert new tenant
+                    cur.execute("""
+                        INSERT INTO tenants (tenant_id, name, description, metadata, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (tenant_id, name, description, json.dumps(metadata or {}),
+                          datetime.fromtimestamp(current_time), datetime.fromtimestamp(current_time)))
 
-                        await conn.commit()
+                    conn.commit()
 
-                        logger.info(f"Created new tenant: {tenant_id} ({name})")
+                    logger.info(f"Created new tenant: {tenant_id} ({name})")
 
-                        return TenantInfo(
-                            tenant_id=tenant_id,
-                            name=name,
-                            description=description,
-                            created_at=current_time,
-                            updated_at=current_time,
-                            metadata=metadata or {}
-                        )
+                    return TenantInfo(
+                        tenant_id=tenant_id,
+                        name=name,
+                        description=description,
+                        created_at=current_time,
+                        updated_at=current_time,
+                        metadata=metadata or {}
+                    )
         except Exception as e:
             logger.error(f"Error creating tenant: {e}")
             raise
@@ -112,31 +113,30 @@ class TenantManagementService:
         try:
             connection_string = f"postgresql://{self.settings.postgres_user}:{self.settings.postgres_password}@{self.settings.postgres_host}:{self.settings.postgres_port}/{self.settings.postgres_db}"
 
-            async with psycopg.AsyncConnectionPool(connection_string, min_size=1, max_size=2) as pool:
-                async with pool.connection() as conn:
-                    async with conn.cursor() as cur:
-                        await cur.execute("""
-                            SELECT tenant_id, name, description, status, metadata,
-                                   EXTRACT(EPOCH FROM created_at) as created_at,
-                                   EXTRACT(EPOCH FROM updated_at) as updated_at
-                            FROM tenants
-                            WHERE tenant_id = %s AND status != 'deleted'
-                        """, (tenant_id,))
+            with psycopg.connect(connection_string) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT tenant_id, name, description, status, metadata,
+                               EXTRACT(EPOCH FROM created_at) as created_at,
+                               EXTRACT(EPOCH FROM updated_at) as updated_at
+                        FROM tenants
+                        WHERE tenant_id = %s AND status != 'deleted'
+                    """, (tenant_id,))
 
-                        row = await cur.fetchone()
+                    row = cur.fetchone()
 
-                        if row:
-                            return TenantInfo(
-                                tenant_id=row[0],
-                                name=row[1],
-                                description=row[2],
-                                status=row[3],
-                                metadata=row[4] or {},
-                                created_at=float(row[5]),
-                                updated_at=float(row[6])
-                            )
+                    if row:
+                        return TenantInfo(
+                            tenant_id=row[0],
+                            name=row[1],
+                            description=row[2],
+                            status=row[3],
+                            metadata=row[4] or {},
+                            created_at=float(row[5]),
+                            updated_at=float(row[6])
+                        )
 
-                        return None
+                    return None
         except Exception as e:
             logger.error(f"Error getting tenant {tenant_id}: {e}")
             raise

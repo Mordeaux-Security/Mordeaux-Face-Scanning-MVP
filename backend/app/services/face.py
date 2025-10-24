@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageFile
 import imagehash
 import asyncio
-from typing import Tuple, Optional, List, Dict
+from typing import Tuple, List, Dict
 import logging
 import gc
 import psutil
@@ -14,12 +14,6 @@ import threading
 import atexit
 
 # Image safety configuration - set once on import
-    import io
-
-    # Load image
-    import io
-
-    # Load image
 
 from insightface.app import FaceAnalysis
 from concurrent.futures import ThreadPoolExecutor
@@ -34,12 +28,14 @@ _thread_pool = None
 _model_lock = threading.Lock()  # Thread synchronization for model loading
 _early_exit_flag = False  # Tracks whether last detection used early exit
 
+
 def _get_thread_pool() -> ThreadPoolExecutor:
     """Get thread pool for CPU-intensive operations."""
     global _thread_pool
     if _thread_pool is None:
         _thread_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="face_processing")
     return _thread_pool
+
 
 def _load_app() -> FaceAnalysis:
     """
@@ -61,6 +57,7 @@ def _load_app() -> FaceAnalysis:
             logger.debug("Using existing face analysis model")
         return _face_app
 
+
 def _read_image(b: bytes) -> np.ndarray:
     """Read image with memory optimization."""
     try:
@@ -76,6 +73,7 @@ def _read_image(b: bytes) -> np.ndarray:
     except Exception as e:
         logger.warning(f"Failed to read image: {str(e)}")
         return None
+
 
 def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
     """
@@ -128,6 +126,7 @@ def enhance_image_for_face_detection(image_bytes: bytes) -> Tuple[bytes, float]:
         logger.warning(f"Failed to enhance image, using original: {str(e)}")
         return image_bytes, 1.0
 
+
 def _check_memory_usage() -> bool:
     """Check if memory usage is within acceptable limits."""
     try:
@@ -142,6 +141,7 @@ def _check_memory_usage() -> bool:
         return True
     except Exception:
         return True  # If we can't check memory, assume it's OK
+
 
 def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_size: int = 0) -> List[Dict]:
     """
@@ -198,7 +198,7 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
                         enhanced_img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
                         if enhanced_img is not None:
                             scaled_img = enhanced_img
-                except Exception as _:
+                except Exception:
                     # If enhancement fails, proceed with the resized image
                     pass
             else:
@@ -207,7 +207,8 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
             # Detect faces at this scale
             faces = app.get(scaled_img)
             t_scale_ms = (time.perf_counter() - t_scale_start) * 1000.0
-            logger.debug(f"Face detection at scale {scale:.1f} completed in {t_scale_ms:.1f} ms (found {len(faces) if faces is not None else 0} raw detections)")
+            logger.debug(f"Face detection at scale {scale:.1f} completed in {t_scale_ms:.1f} ms "
+                         f"(found {len(faces) if faces is not None else 0} raw detections)")
 
             strong_face_found = False
             for face in faces:
@@ -246,7 +247,6 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
                     "enhancement_scale": enhancement_scale,
                     "face_size": (face_width, face_height)
                 }
-
 
                 # Check for duplicates (same face detected at multiple scales)
                 is_duplicate = False
@@ -297,8 +297,10 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
     gc.collect()
 
     t_total_ms = (time.perf_counter() - t_total_start) * 1000.0
-    logger.info(f"Multi-scale detection found {len(all_faces)} faces in {t_total_ms:.1f} ms (scales: {scales}, enhancement_scale: {enhancement_scale})")
+    logger.info(f"Multi-scale detection found {len(all_faces)} faces in {t_total_ms:.1f} ms "
+                f"(scales: {scales}, enhancement_scale: {enhancement_scale})")
     return all_faces
+
 
 def consume_early_exit_flag() -> bool:
     """Return and reset the early-exit flag set during the last detection call."""
@@ -307,12 +309,11 @@ def consume_early_exit_flag() -> bool:
     _early_exit_flag = False
     return value
 
+
 def compute_phash(b: bytes) -> str:
     """Compute perceptual hash for image content."""
     pil = Image.open(io.BytesIO(b)).convert("RGB")
     return str(imagehash.phash(pil))
-
-
 
 
 async def detect_and_embed_async(content: bytes):
@@ -328,6 +329,7 @@ async def detect_and_embed_async(content: bytes):
         logger.error(f"Error in async face detection: {e}")
         raise
 
+
 async def compute_phash_async(content: bytes):
     """Async wrapper for perceptual hash computation."""
     loop = asyncio.get_event_loop()
@@ -339,6 +341,7 @@ async def compute_phash_async(content: bytes):
     except Exception as e:
         logger.error(f"Error in async phash computation: {e}")
         raise
+
 
 def crop_face_from_image(image_bytes: bytes, bbox: list, margin: float = 0.2) -> bytes:
     """
@@ -427,6 +430,7 @@ def crop_face_and_create_thumbnail(image_bytes: bytes, face_data: dict, margin: 
     # Create thumbnail from cropped face
     return create_thumbnail(cropped_face)
 
+
 def create_thumbnail(image_bytes: bytes, size: tuple = (150, 150)) -> bytes:
     """
     Create a thumbnail from image bytes.
@@ -453,6 +457,7 @@ def create_thumbnail(image_bytes: bytes, size: tuple = (150, 150)) -> bytes:
     pil_image.save(output, format='JPEG', quality=95)
     return output.getvalue()
 
+
 def get_face_service():
     """Get face service instance with all available methods."""
     class _FaceSvc:
@@ -478,7 +483,7 @@ def close_face_service():
     3. Resets global variables to None
     4. Forces garbage collection
     """
-    global _face_app, _thread_pool, _model_lock, _early_exit_flag
+    global _face_app, _thread_pool, _early_exit_flag
 
     logger.info("Closing face service resources...")
 

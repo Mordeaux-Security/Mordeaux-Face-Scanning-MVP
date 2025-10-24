@@ -11,10 +11,9 @@ from typing import Dict, Any, List, Optional
 from concurrent.futures import ThreadPoolExecutor
 from ..core.config import get_settings
 from ..core.metrics import get_metrics
-            from ..services.face import get_face_service
-            from ..services.storage import save_raw_and_thumb_async
-            from ..services.vector import get_vector_client
-            from ..services.vector import get_vector_client
+from ..services.face import get_face_service
+from ..services.storage import save_raw_and_thumb_async
+from ..services.vector import get_vector_client
 
 logger = logging.getLogger(__name__)
 

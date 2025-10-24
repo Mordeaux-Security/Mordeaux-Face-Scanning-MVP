@@ -2,27 +2,19 @@ import asyncio
 import time
 from typing import Dict, Any, Optional
 import logging
-
-            import redis
-                from minio import Minio
-
-                                from datetime import timedelta
-                import boto3
-
-                from pinecone import Pinecone
-
-                from qdrant_client import QdrantClient
-
-
-            import numpy as np
-            from PIL import Image
-            import io
-
-
+import redis
+from minio import Minio
+from datetime import timedelta
+import boto3
+from pinecone import Pinecone
+from qdrant_client import QdrantClient
+import numpy as np
+from PIL import Image
+import io
 from ..core.config import get_settings
-                from minio.error import S3Error
-                from botocore.exceptions import ClientError
-            from ..services.face import _load_app, _read_image
+from minio.error import S3Error
+from botocore.exceptions import ClientError
+from ..services.face import _load_app, _read_image
 
 logger = logging.getLogger(__name__)
 
