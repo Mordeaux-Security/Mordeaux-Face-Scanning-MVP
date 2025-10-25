@@ -1,0 +1,32 @@
+# Windows GPU Worker Dependencies
+# Optimized for AMD GPU with DirectML support
+
+# Core API framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# ONNX Runtime with DirectML support for AMD GPU
+onnxruntime-directml>=1.20.0
+
+# Face detection and embedding
+insightface>=0.7.3
+
+# Image processing
+opencv-python>=4.8.0
+numpy>=1.24.0
+pillow>=10.0.0
+
+# HTTP client for health checks
+httpx>=0.25.0
+
+# Process management
+psutil>=5.9.0
+
+# Windows-specific modules
+pywin32>=306
+
+# Async support
+asyncio-mqtt>=0.16.0
+
+# Development and monitoring
+python-multipart>=0.0.6

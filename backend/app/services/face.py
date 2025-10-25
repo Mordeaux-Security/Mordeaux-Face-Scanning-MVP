@@ -15,6 +15,10 @@ import psutil
 import threading
 import atexit
 
+# Import GPU client for Windows worker integration
+from .gpu_client import get_gpu_client, close_gpu_client
+from ..core.settings import get_settings
+
 # Image safety configuration - set once on import
 Image.MAX_IMAGE_PIXELS = 50_000_000
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -59,6 +63,146 @@ def _load_app() -> FaceAnalysis:
         else:
             logger.debug("Using existing face analysis model")
         return _face_app
+
+async def _try_gpu_worker_batch(
+    image_bytes_list: List[bytes],
+    min_face_quality: float = 0.5,
+    require_face: bool = True,
+    crop_faces: bool = True,
+    face_margin: float = 0.2
+) -> Optional[List[List[Dict]]]:
+    """
+    Try to process images using GPU worker.
+
+    Returns:
+        List of face detection results for each image, or None if GPU worker unavailable
+    """
+    try:
+        settings = get_settings()
+        if not settings.gpu_worker_enabled:
+            logger.info("[CPU-FALLBACK] GPU worker disabled in settings")
+            return None
+
+        logger.info(f"[GPU-WORKER-ATTEMPT] Processing {len(image_bytes_list)} images with GPU worker")
+        start_time = time.time()
+        
+        gpu_client = await get_gpu_client()
+        results = await gpu_client.detect_faces_batch_async(
+            image_bytes_list, min_face_quality, require_face, crop_faces, face_margin
+        )
+
+        processing_time = time.time() - start_time
+        
+        # Convert GPU client results to our format
+        converted_results = []
+        total_faces = 0
+        for image_results in results:
+            face_detections = []
+            for detection in image_results:
+                face_detection = {
+                    'bbox': detection.bbox,
+                    'landmarks': detection.landmarks,
+                    'embedding': detection.embedding,
+                    'quality': detection.quality,
+                    'age': detection.age,
+                    'gender': detection.gender
+                }
+                face_detections.append(face_detection)
+                total_faces += 1
+            converted_results.append(face_detections)
+
+        logger.info(f"[GPU-WORKER-SUCCESS] Processed {len(image_bytes_list)} images in {processing_time:.3f}s, found {total_faces} faces")
+        return converted_results
+
+    except Exception as e:
+        logger.warning(f"[GPU-WORKER-FAIL] GPU worker processing failed: {e}")
+        return None
+
+def _try_gpu_worker_sync(
+    image_bytes_list: List[bytes],
+    min_face_quality: float = 0.5,
+    require_face: bool = True,
+    crop_faces: bool = True,
+    face_margin: float = 0.2
+) -> Optional[List[List[Dict]]]:
+    """
+    Synchronous version of GPU worker processing to avoid event loop conflicts.
+    
+    Returns:
+        List of face detection results for each image, or None if GPU worker unavailable
+    """
+    try:
+        settings = get_settings()
+        if not settings.gpu_worker_enabled:
+            logger.info("[CPU-FALLBACK] GPU worker disabled in settings")
+            return None
+
+        logger.info(f"[GPU-WORKER-ATTEMPT] Processing {len(image_bytes_list)} images with GPU worker (sync)")
+        start_time = time.time()
+        
+        # Use synchronous HTTP client for GPU worker communication
+        import httpx
+        
+        # Encode images for GPU worker
+        encoded_images = []
+        for i, image_bytes in enumerate(image_bytes_list):
+            import base64
+            encoded_data = base64.b64encode(image_bytes).decode('utf-8')
+            encoded_images.append({
+                "data": encoded_data,
+                "image_id": f"sync_{i}"
+            })
+        
+        # Prepare request payload
+        payload = {
+            "images": encoded_images,
+            "min_face_quality": min_face_quality,
+            "require_face": require_face,
+            "crop_faces": crop_faces,
+            "face_margin": face_margin
+        }
+        
+        # Make synchronous HTTP request to GPU worker
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(
+                f"{settings.gpu_worker_url}/detect_faces_batch",
+                json=payload
+            )
+            
+            if response.status_code == 200:
+                gpu_response = response.json()
+                processing_time = time.time() - start_time
+                
+                # Extract results from GPU worker response
+                gpu_results = gpu_response.get('results', [])
+                
+                # Convert GPU worker results to our format
+                converted_results = []
+                total_faces = 0
+                for image_results in gpu_results:
+                    face_detections = []
+                    for detection in image_results:
+                        face_detection = {
+                            'bbox': detection['bbox'],
+                            'landmarks': detection['landmarks'],
+                            'embedding': detection['embedding'],
+                            'quality': detection['quality'],
+                            'age': detection.get('age'),
+                            'gender': detection.get('gender')
+                        }
+                        face_detections.append(face_detection)
+                        total_faces += 1
+                    converted_results.append(face_detections)
+
+                logger.info(f"[GPU-WORKER-SUCCESS] Processed {len(image_bytes_list)} images in {processing_time:.3f}s, found {total_faces} faces")
+                return converted_results
+            else:
+                logger.warning(f"[GPU-WORKER-FAIL] GPU worker returned status {response.status_code}")
+                return None
+
+    except Exception as e:
+        logger.warning(f"[GPU-WORKER-FAIL] GPU worker processing failed: {e}")
+        return None
 
 def _read_image(b: bytes) -> np.ndarray:
     """Read image with memory optimization."""
@@ -157,6 +301,46 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
     Returns:
         List of detected faces with metadata (coordinates in original image space)
     """
+    # Try GPU worker first if enabled (single-image batch)
+    try:
+        settings = get_settings()
+        if settings.gpu_worker_enabled:
+            logger.info(f"[GPU-WORKER-ATTEMPT] Processing single image with GPU worker")
+            
+            # Use synchronous GPU worker call to avoid event loop conflicts
+            results = _try_gpu_worker_sync(
+                [image_bytes], 
+                min_face_quality=0.5,  # Use default quality
+                require_face=False,
+                crop_faces=False,
+                face_margin=0.2
+            )
+            
+            if results is not None and len(results) > 0:
+                # GPU worker succeeded, return first result
+                faces = results[0]
+                logger.info(f"[GPU-WORKER-SUCCESS] Detected {len(faces)} faces via GPU worker")
+                
+                # Convert GPU worker format to detect_and_embed format
+                converted_faces = []
+                for face in faces:
+                    converted_face = {
+                        'bbox': face['bbox'],
+                        'kps': face['landmarks'],
+                        'det_score': face['quality'],
+                        'embedding': face['embedding'],
+                        'age': face.get('age'),
+                        'gender': face.get('gender')
+                    }
+                    converted_faces.append(converted_face)
+                
+                return converted_faces
+    except Exception as e:
+        logger.warning(f"[GPU-WORKER-FAIL] GPU worker failed, falling back to CPU: {e}")
+
+    # CPU fallback processing (existing code continues below)
+    logger.debug("[CPU-FALLBACK] Processing with CPU")
+    
     # Check memory usage before processing
     _check_memory_usage()
     
@@ -639,6 +823,152 @@ def close_face_service():
     except Exception as e:
         logger.warning(f"Error during face service garbage collection: {e}")
 
+
+def detect_faces_batch(
+    image_bytes_list: List[bytes], 
+    min_face_quality: float = 0.5,
+    require_face: bool = True,
+    crop_faces: bool = True,
+    face_margin: float = 0.2
+) -> List[List[Dict]]:
+    """
+    Detect faces in a batch of images with GPU acceleration fallback.
+    
+    Args:
+        image_bytes_list: List of image bytes
+        min_face_quality: Minimum face quality threshold
+        require_face: Whether to require at least one face
+        crop_faces: Whether to crop face regions
+        face_margin: Margin around face as fraction of face size
+        
+    Returns:
+        List of face detection results for each image
+    """
+    if not image_bytes_list:
+        return []
+    
+    # Try GPU worker first if enabled
+    try:
+        settings = get_settings()
+        if settings.gpu_worker_enabled:
+            # Run GPU worker in thread pool to avoid blocking
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                results = loop.run_until_complete(
+                    _try_gpu_worker_batch(
+                        image_bytes_list, min_face_quality, require_face, crop_faces, face_margin
+                    )
+                )
+                if results is not None:
+                    return results
+            finally:
+                loop.close()
+    except Exception as e:
+        logger.warning(f"GPU worker attempt failed: {e}")
+    
+    # Fallback to CPU processing
+    logger.info(f"Processing {len(image_bytes_list)} images with CPU fallback")
+    
+    # Load model
+    app = _load_app()
+    
+    # Process images in batches to manage memory
+    batch_size = 8  # Smaller batches for CPU processing
+    results = []
+    
+    for i in range(0, len(image_bytes_list), batch_size):
+        batch = image_bytes_list[i:i + batch_size]
+        batch_results = []
+        
+        for image_bytes in batch:
+            try:
+                # Read image
+                image = _read_image(image_bytes)
+                if image is None:
+                    batch_results.append([])
+                    continue
+                
+                # Detect faces
+                faces = app.get(image)
+                
+                # Convert to our format
+                face_detections = []
+                for face in faces:
+                    if face.det_score >= min_face_quality:
+                        face_detection = {
+                            'bbox': face.bbox.tolist(),
+                            'landmarks': face.kps.tolist() if hasattr(face, 'kps') else [],
+                            'embedding': face.embedding.tolist() if hasattr(face, 'embedding') else None,
+                            'quality': float(face.det_score),
+                            'age': int(face.age) if hasattr(face, 'age') else None,
+                            'gender': str(face.gender) if hasattr(face, 'gender') else None
+                        }
+                        face_detections.append(face_detection)
+                
+                batch_results.append(face_detections)
+                
+            except Exception as e:
+                logger.error(f"Error processing image: {e}")
+                batch_results.append([])
+        
+        results.extend(batch_results)
+    
+    return results
+
+async def detect_faces_batch_async(
+    image_bytes_list: List[bytes], 
+    min_face_quality: float = 0.5,
+    require_face: bool = True,
+    crop_faces: bool = True,
+    face_margin: float = 0.2
+) -> List[List[Dict]]:
+    """
+    Async version of detect_faces_batch with GPU worker support.
+    
+    Args:
+        image_bytes_list: List of image bytes
+        min_face_quality: Minimum face quality threshold
+        require_face: Whether to require at least one face
+        crop_faces: Whether to crop face regions
+        face_margin: Margin around face as fraction of face size
+        
+    Returns:
+        List of face detection results for each image
+    """
+    if not image_bytes_list:
+        return []
+    
+    # Try GPU worker first if enabled
+    try:
+        settings = get_settings()
+        if settings.gpu_worker_enabled:
+            results = await _try_gpu_worker_batch(
+                image_bytes_list, min_face_quality, require_face, crop_faces, face_margin
+            )
+            if results is not None:
+                return results
+    except Exception as e:
+        logger.warning(f"GPU worker attempt failed: {e}")
+    
+    # Fallback to CPU processing in thread pool
+    logger.info(f"Processing {len(image_bytes_list)} images with CPU fallback (async)")
+    
+    loop = asyncio.get_event_loop()
+    thread_pool = _get_thread_pool()
+    
+    # Run CPU processing in thread pool
+    results = await loop.run_in_executor(
+        thread_pool,
+        detect_faces_batch,
+        image_bytes_list,
+        min_face_quality,
+        require_face,
+        crop_faces,
+        face_margin
+    )
+    
+    return results
 
 # Register cleanup function with atexit
 atexit.register(close_face_service)

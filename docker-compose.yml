@@ -81,6 +81,13 @@ services:
     environment:
       <<: *common-env
       ASGI_WORKERS: ${ASGI_WORKERS:-2}
+      # GPU Worker Configuration
+      GPU_WORKER_ENABLED: ${GPU_WORKER_ENABLED:-true}
+      GPU_WORKER_URL: ${GPU_WORKER_URL:-http://host.docker.internal:8765}
+      GPU_WORKER_TIMEOUT: ${GPU_WORKER_TIMEOUT:-60}
+      GPU_WORKER_MAX_RETRIES: ${GPU_WORKER_MAX_RETRIES:-5}
+      GPU_WORKER_BATCH_SIZE: ${GPU_WORKER_BATCH_SIZE:-32}
+      GPU_WORKER_HEALTH_CHECK_INTERVAL: ${GPU_WORKER_HEALTH_CHECK_INTERVAL:-10}
     depends_on:
       postgres:
         condition: service_healthy
@@ -94,6 +101,8 @@ services:
       - insightface_models:/root/.insightface
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     dns:
       - 8.8.8.8
       - 8.8.4.4
