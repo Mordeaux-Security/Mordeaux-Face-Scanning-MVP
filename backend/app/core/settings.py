@@ -126,7 +126,7 @@ class Settings(BaseSettings):
         description="Maximum GPU memory to use in GB"
     )
     gpu_batch_size: int = Field(
-        default=32,
+        default=1024,
         env="GPU_BATCH_SIZE",
         description="Batch size for GPU operations"
     )
@@ -153,7 +153,7 @@ class Settings(BaseSettings):
         description="Maximum retries for GPU worker requests"
     )
     gpu_worker_batch_size: int = Field(
-        default=32,
+        default=1024,
         env="GPU_WORKER_BATCH_SIZE",
         description="Initial batch size for GPU worker requests"
     )
@@ -161,6 +161,62 @@ class Settings(BaseSettings):
         default=10,
         env="GPU_WORKER_HEALTH_CHECK_INTERVAL",
         description="Health check interval in seconds"
+    )
+    
+    # GPU Resource Monitor Configuration
+    gpu_resource_monitor_enabled: bool = Field(
+        default=True,
+        env="GPU_RESOURCE_MONITOR_ENABLED",
+        description="Enable dynamic GPU resource monitoring"
+    )
+    gpu_resource_monitor_interval: float = Field(
+        default=0.3,
+        env="GPU_RESOURCE_MONITOR_INTERVAL",
+        description="GPU resource monitor polling interval in seconds"
+    )
+    gpu_target_utilization: float = Field(
+        default=0.90,
+        env="GPU_TARGET_UTILIZATION",
+        description="Target GPU utilization (0.0-1.0)"
+    )
+    gpu_memory_threshold: float = Field(
+        default=0.85,
+        env="GPU_MEMORY_THRESHOLD",
+        description="Memory threshold for backing off (0.0-1.0)"
+    )
+    gpu_batch_increment: int = Field(
+        default=4,
+        env="GPU_BATCH_INCREMENT",
+        description="Batch size increment amount"
+    )
+    gpu_batch_decrement: int = Field(
+        default=3,
+        env="GPU_BATCH_DECREMENT",
+        description="Batch size decrement amount"
+    )
+    
+    # ============================================================================
+    # Batch Queue Configuration
+    # ============================================================================
+    batch_queue_enabled: bool = Field(
+        default=True,
+        env="BATCH_QUEUE_ENABLED",
+        description="Enable batch queue for GPU processing"
+    )
+    batch_queue_size: int = Field(
+        default=64,
+        env="BATCH_QUEUE_SIZE",
+        description="Number of images per batch"
+    )
+    batch_queue_max_depth: int = Field(
+        default=10,
+        env="BATCH_QUEUE_MAX_DEPTH",
+        description="Maximum number of batches in queue"
+    )
+    batch_queue_flush_timeout: float = Field(
+        default=2.0,
+        env="BATCH_QUEUE_FLUSH_TIMEOUT",
+        description="Timeout in seconds before flushing partial batch"
     )
     
     # ============================================================================

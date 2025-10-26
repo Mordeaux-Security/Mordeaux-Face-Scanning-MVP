@@ -157,11 +157,6 @@ class GPUClient:
         self._latency_history = []
         self._last_metrics_log = 0
         
-        # Batch size adaptation
-        self._current_batch_size = 16  # Start conservative
-        self._max_batch_size = 64
-        self._min_batch_size = 4
-        self._batch_success_rate = 1.0
         
         # Connection management
         self._connection_lock = asyncio.Lock()
@@ -339,7 +334,6 @@ class GPUClient:
             self._latency_history = self._latency_history[-100:]
         
         self._circuit_breaker.record_success()
-        self._adapt_batch_size()
         self._log_metrics()
     
     def _record_failure(self):
@@ -347,24 +341,8 @@ class GPUClient:
         self._request_count += 1
         self._failure_count += 1
         self._circuit_breaker.record_failure()
-        self._adapt_batch_size()
         self._log_metrics()
     
-    def _adapt_batch_size(self):
-        """Adapt batch size based on success rate."""
-        if self._request_count < 10:
-            return
-        
-        success_rate = self._success_count / self._request_count
-        
-        if success_rate > 0.95 and self._current_batch_size < self._max_batch_size:
-            # Increase batch size on high success rate
-            self._current_batch_size = min(self._current_batch_size * 2, self._max_batch_size)
-            logger.info(f"Increased batch size to {self._current_batch_size} (success rate: {success_rate:.2f})")
-        elif success_rate < 0.8 and self._current_batch_size > self._min_batch_size:
-            # Decrease batch size on low success rate
-            self._current_batch_size = max(self._current_batch_size // 2, self._min_batch_size)
-            logger.info(f"Decreased batch size to {self._current_batch_size} (success rate: {success_rate:.2f})")
     
     def _log_metrics(self):
         """Log connection health metrics."""
@@ -459,16 +437,12 @@ class GPUClient:
             logger.debug("GPU worker disabled, returning empty results")
             return [[] for _ in image_bytes_list]
         
-        # Limit batch size to current adaptive size
-        batch_size = min(len(image_bytes_list), self._current_batch_size)
-        batch_images = image_bytes_list[:batch_size]
-        
-        logger.info(f"Attempting GPU worker processing for {len(batch_images)} images "
-                   f"(batch size: {batch_size}) at {self.settings.gpu_worker_url}")
+        logger.info(f"Attempting GPU worker processing for {len(image_bytes_list)} images "
+                   f"at {self.settings.gpu_worker_url}")
         
         # Prepare request data
         images_data = []
-        for i, image_bytes in enumerate(batch_images):
+        for i, image_bytes in enumerate(image_bytes_list):
             images_data.append({
                 "data": self._encode_image(image_bytes),
                 "image_id": f"image_{i}"
@@ -535,6 +509,43 @@ class GPUClient:
         return await self.detect_faces_batch_async(
             image_bytes_list, min_face_quality, require_face, crop_faces, face_margin
         )
+    
+    async def get_gpu_info(self) -> Optional[Dict[str, Any]]:
+        """Get GPU worker information and metrics."""
+        try:
+            client = await self._get_client()
+            response = await client.get("/gpu_info", timeout=10.0)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.warning(f"Failed to get GPU info: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting GPU info: {e}")
+            return None
+    
+    async def set_batch_size(self, batch_size: int) -> bool:
+        """Set GPU worker batch size."""
+        try:
+            client = await self._get_client()
+            response = await client.post(
+                "/batch_config",
+                json={"batch_size": batch_size},
+                timeout=10.0
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("success", False)
+            else:
+                logger.warning(f"Failed to set batch size: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error setting batch size: {e}")
+            return False
     
     async def close(self):
         """Close the HTTP client."""

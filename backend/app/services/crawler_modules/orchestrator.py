@@ -137,59 +137,84 @@ class CrawlOrchestrator:
         page_url: str,
         tenant_id: str
     ) -> Dict[str, Any]:
-        """Process images through the complete pipeline."""
+        """Process images through the complete pipeline concurrently."""
         saved_raw_keys = []
         saved_thumbnail_keys = []
         all_errors = []
         cache_hits = 0
         cache_misses = 0
         
-        for i, image_info in enumerate(images, 1):
-            try:
-                # Download image
-                image_bytes, download_errors = await self._download_image(image_info)
-                if not image_bytes:
-                    all_errors.extend(download_errors)
-                    continue
-                
-                # Check cache
-                should_skip, cached_key = await self.caching_facade.should_skip_image(
-                    image_info.url, image_bytes, tenant_id
-                )
-                
-                if should_skip and cached_key:
-                    self.logger.info(f"Image {self._truncate_log_string(image_info.url)} found in cache")
-                    cache_hits += 1
-                    saved_raw_keys.append(cached_key)
-                    continue
-                
-                cache_misses += 1
-                
-                # Process image (face detection, filtering)
-                faces, thumbnail_bytes, processing_errors = await self.image_processing_service.process_single_image(
-                    image_info, image_bytes, i, len(images)
-                )
-                
-                if processing_errors:
-                    all_errors.extend(processing_errors)
-                    continue
-                
-                # Save to storage
-                raw_key, thumb_key = await self.storage_facade.save_raw_and_thumbnail(
-                    image_bytes=image_bytes,
-                    thumbnail_bytes=thumbnail_bytes,
-                    image_info=image_info,
-                    page_url=page_url
-                )
-                
-                if raw_key:
-                    saved_raw_keys.append(raw_key)
-                if thumb_key:
-                    saved_thumbnail_keys.append(thumb_key)
+        # Semaphore to limit concurrent downloads
+        semaphore = asyncio.Semaphore(100)
+        
+        async def process_one_image(image_info: ImageInfo, index: int):
+            """Process a single image."""
+            async with semaphore:
+                try:
+                    # Download image
+                    image_bytes, download_errors = await self._download_image(image_info)
+                    if not image_bytes:
+                        return {'errors': download_errors}
                     
-            except Exception as e:
-                self.logger.error(f"Error processing image {image_info.url}: {e}")
-                all_errors.append(f"Error processing image {image_info.url}: {e}")
+                    # Check cache
+                    should_skip, cached_key = await self.caching_facade.should_skip_image(
+                        image_info.url, image_bytes, tenant_id
+                    )
+                    
+                    if should_skip and cached_key:
+                        self.logger.info(f"Image {self._truncate_log_string(image_info.url)} found in cache")
+                        return {'cache_hit': True, 'key': cached_key}
+                    
+                    # Process image (face detection, filtering)
+                    faces, thumbnail_bytes, processing_errors = await self.image_processing_service.process_single_image(
+                        image_info, image_bytes, index, len(images)
+                    )
+                    
+                    if processing_errors:
+                        return {'errors': processing_errors}
+                    
+                    # Save to storage
+                    raw_key, thumb_key = await self.storage_facade.save_raw_and_thumbnail(
+                        image_bytes=image_bytes,
+                        thumbnail_bytes=thumbnail_bytes,
+                        image_info=image_info,
+                        page_url=page_url
+                    )
+                    
+                    return {
+                        'raw_key': raw_key,
+                        'thumb_key': thumb_key
+                    }
+                    
+                except Exception as e:
+                    self.logger.error(f"Error processing image {image_info.url}: {e}")
+                    return {'errors': [str(e)]}
+        
+        # Process all images concurrently
+        tasks = [process_one_image(img, i+1) for i, img in enumerate(images)]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Aggregate results
+        for result in results:
+            if isinstance(result, Exception):
+                all_errors.append(str(result))
+                continue
+            
+            if 'errors' in result:
+                all_errors.extend(result['errors'])
+                continue
+            
+            if 'cache_hit' in result:
+                cache_hits += 1
+                if 'key' in result:
+                    saved_raw_keys.append(result['key'])
+                continue
+            
+            cache_misses += 1
+            if 'raw_key' in result and result['raw_key']:
+                saved_raw_keys.append(result['raw_key'])
+            if 'thumb_key' in result and result['thumb_key']:
+                saved_thumbnail_keys.append(result['thumb_key'])
         
         return {
             'saved_raw_keys': saved_raw_keys,

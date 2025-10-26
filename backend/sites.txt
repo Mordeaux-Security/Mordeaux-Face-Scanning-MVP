@@ -4,11 +4,8 @@
 # Test sites that work well with our refactored architecture
 https://wikifeet.com
 https://candidteens.net
-https://motherless.com/
-https://candidshiny.com/
-https://www.voyeurshd.com/
-https://thecandidforum.online/
-https://www.voyeurstyle.com/
-
-# Add more sites here as needed
-
+https://forum.candidgirls.io
+https://motherless.com
+https://www.voyeurshd.com
+https://www.voyeurstyle.com
+https://candidshiny.com

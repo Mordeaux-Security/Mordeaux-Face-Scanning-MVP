@@ -30,12 +30,6 @@ _thread_pool = None
 _model_lock = threading.Lock()  # Thread synchronization for model loading
 _early_exit_flag = False  # Tracks whether last detection used early exit
 
-# Face similarity cache for deduplication
-_face_similarity_cache = {}  # face_id -> face_metadata
-_face_embeddings_cache = []  # List of normalized embeddings
-_face_ids_cache = []  # Corresponding face IDs
-_similarity_lock = threading.Lock()  # Thread synchronization for similarity cache
-_similarity_threshold = 0.7  # Cosine similarity threshold for considering faces similar
 
 def _get_thread_pool() -> ThreadPoolExecutor:
     """Get thread pool for CPU-intensive operations."""
@@ -286,6 +280,62 @@ def _check_memory_usage() -> bool:
     except Exception:
         return True  # If we can't check memory, assume it's OK
 
+def detect_and_embed_batch_optimized(image_bytes_list: List[bytes], 
+                                   min_face_quality: float = 0.5,
+                                   require_face: bool = True,
+                                   crop_faces: bool = True,
+                                   face_margin: float = 0.2) -> List[List[Dict]]:
+    """
+    Optimized batch face detection that sends multiple images to GPU worker at once.
+    
+    Args:
+        image_bytes_list: List of image bytes
+        min_face_quality: Minimum face quality threshold
+        require_face: Whether to require at least one face
+        crop_faces: Whether to crop face regions
+        face_margin: Margin around face as fraction of face size
+        
+    Returns:
+        List of face detection results for each image
+    """
+    if not image_bytes_list:
+        return []
+    
+    # Try GPU worker batch processing
+    try:
+        settings = get_settings()
+        if settings.gpu_worker_enabled:
+            logger.info(f"[GPU-WORKER-BATCH] Processing {len(image_bytes_list)} images with GPU worker")
+            
+            # Use synchronous GPU worker call for batch processing
+            results = _try_gpu_worker_sync(
+                image_bytes_list,
+                min_face_quality=min_face_quality,
+                require_face=require_face,
+                crop_faces=crop_faces,
+                face_margin=face_margin
+            )
+            
+            if results is not None:
+                logger.info(f"[GPU-WORKER-BATCH-SUCCESS] Processed {len(image_bytes_list)} images via GPU worker")
+                return results
+    except Exception as e:
+        logger.warning(f"[GPU-WORKER-BATCH-FAIL] GPU worker batch processing failed: {e}")
+    
+    # Fallback to individual processing
+    logger.info(f"[CPU-FALLBACK-BATCH] Processing {len(image_bytes_list)} images with CPU fallback")
+    results = []
+    for image_bytes in image_bytes_list:
+        try:
+            faces = detect_and_embed(image_bytes)
+            results.append(faces)
+        except Exception as e:
+            logger.error(f"Error processing image in batch: {e}")
+            results.append([])
+    
+    return results
+
+
 def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_size: int = 0) -> List[Dict]:
     """
     Detect faces using single-pass upscaled detection for optimal performance.
@@ -305,7 +355,7 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
     try:
         settings = get_settings()
         if settings.gpu_worker_enabled:
-            logger.info(f"[GPU-WORKER-ATTEMPT] Processing single image with GPU worker")
+            logger.warning(f"[GPU-WORKER-SINGLE] Processing single image with GPU worker (inefficient - consider using batch queue)")
             
             # Use synchronous GPU worker call to avoid event loop conflicts
             results = _try_gpu_worker_sync(
@@ -460,152 +510,7 @@ def consume_early_exit_flag() -> bool:
     _early_exit_flag = False
     return value
 
-def _normalize_embedding(embedding: List[float]) -> np.ndarray:
-    """
-    Normalize face embedding to unit vector for cosine similarity.
-    
-    Args:
-        embedding: Raw face embedding from InsightFace
-        
-    Returns:
-        Normalized embedding as numpy array
-    """
-    embedding_array = np.array(embedding, dtype=np.float32)
-    norm = np.linalg.norm(embedding_array)
-    if norm == 0:
-        raise ValueError("Zero-norm embedding detected")
-    return embedding_array / norm
 
-def _cosine_similarity(embedding1: np.ndarray, embedding2: np.ndarray) -> float:
-    """
-    Calculate cosine similarity between two normalized embeddings.
-    
-    Args:
-        embedding1: First normalized embedding
-        embedding2: Second normalized embedding
-        
-    Returns:
-        Cosine similarity score (0.0-1.0, higher = more similar)
-    """
-    return float(np.dot(embedding1, embedding2))
-
-def _find_most_similar_face(embedding: np.ndarray) -> Tuple[Optional[str], float]:
-    """
-    Find the most similar face in the cache.
-    
-    Args:
-        embedding: Normalized face embedding to compare
-        
-    Returns:
-        Tuple of (face_id, similarity_score) or (None, 0.0) if no similar face found
-    """
-    global _face_embeddings_cache, _face_ids_cache, _similarity_threshold
-    
-    if not _face_embeddings_cache:
-        return None, 0.0
-    
-    # Calculate similarities with all cached faces
-    similarities = np.dot(_face_embeddings_cache, embedding)
-    max_similarity_idx = np.argmax(similarities)
-    max_similarity = similarities[max_similarity_idx]
-    
-    if max_similarity >= _similarity_threshold:
-        face_id = _face_ids_cache[max_similarity_idx]
-        return face_id, float(max_similarity)
-    
-    return None, 0.0
-
-def _generate_face_id(face_metadata: Dict) -> str:
-    """
-    Generate a unique ID for a face based on its metadata.
-    
-    Args:
-        face_metadata: Face metadata including bbox, det_score, etc.
-        
-    Returns:
-        Unique face ID string
-    """
-    # Use a combination of bbox coordinates and detection score for ID
-    bbox = face_metadata.get('bbox', [0, 0, 0, 0])
-    det_score = face_metadata.get('det_score', 0.0)
-    
-    # Create a hash-based ID from key face characteristics
-    import hashlib
-    face_data = f"{bbox[0]:.2f},{bbox[1]:.2f},{bbox[2]:.2f},{bbox[3]:.2f},{det_score:.3f}"
-    return hashlib.md5(face_data.encode()).hexdigest()[:16]
-
-def check_face_similarity(face_embedding: List[float], face_metadata: Dict) -> Tuple[bool, float, Optional[str]]:
-    """
-    Check if a face is similar to any previously seen faces.
-    
-    Args:
-        face_embedding: Raw face embedding from InsightFace
-        face_metadata: Additional metadata about the face (bbox, det_score, etc.)
-        
-    Returns:
-        Tuple of (is_similar, similarity_score, similar_face_id)
-    """
-    global _face_similarity_cache, _face_embeddings_cache, _face_ids_cache, _similarity_lock
-    
-    try:
-        # Normalize the embedding
-        normalized_embedding = _normalize_embedding(face_embedding)
-        
-        # Check for similar faces in cache
-        with _similarity_lock:
-            similar_face_id, similarity_score = _find_most_similar_face(normalized_embedding)
-        
-        if similar_face_id:
-            # Found a similar face
-            logger.debug(f"Found similar face: {similar_face_id} (similarity: {similarity_score:.3f})")
-            return True, similarity_score, similar_face_id
-        else:
-            # No similar face found, add to cache
-            face_id = _generate_face_id(face_metadata)
-            
-            with _similarity_lock:
-                _face_similarity_cache[face_id] = face_metadata.copy()
-                _face_embeddings_cache.append(normalized_embedding)
-                _face_ids_cache.append(face_id)
-            
-            logger.debug(f"New unique face added to similarity cache: {face_id}")
-            return False, 0.0, None
-            
-    except Exception as e:
-        logger.error(f"Error checking face similarity: {e}")
-        return False, 0.0, None
-
-def get_face_similarity_stats() -> Dict:
-    """
-    Get statistics about the face similarity cache.
-    
-    Returns:
-        Dictionary with cache statistics
-    """
-    global _face_similarity_cache, _similarity_threshold
-    
-    with _similarity_lock:
-        return {
-            'total_faces': len(_face_similarity_cache),
-            'similarity_threshold': _similarity_threshold,
-            'cache_size_mb': len(str(_face_similarity_cache)) / (1024 * 1024)
-        }
-
-def clear_face_similarity_cache():
-    """Clear the face similarity cache."""
-    global _face_similarity_cache, _face_embeddings_cache, _face_ids_cache
-    
-    with _similarity_lock:
-        _face_similarity_cache.clear()
-        _face_embeddings_cache.clear()
-        _face_ids_cache.clear()
-    logger.info("Face similarity cache cleared")
-
-def set_similarity_threshold(threshold: float):
-    """Set the similarity threshold for face comparison."""
-    global _similarity_threshold
-    _similarity_threshold = max(0.0, min(1.0, threshold))
-    logger.info(f"Face similarity threshold set to {_similarity_threshold}")
 
 def compute_phash(b: bytes) -> str:
     """Compute perceptual hash for image content."""

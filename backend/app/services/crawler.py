@@ -48,8 +48,10 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from .storage import get_storage_cleanup_function
 from . import storage
+from .gpu_resource_monitor import start_gpu_resource_monitor, stop_gpu_resource_monitor
 from .face import get_face_service, close_face_service
 from . import face
+from .batch_queue_manager import start_batch_queue, stop_batch_queue
 # Cache service is now handled by CachingFacade
 from urllib.parse import urljoin, urlparse
 
@@ -257,7 +259,7 @@ class ImageCrawler:
         max_pages: int = 20,
         same_domain_only: bool = True,
         similarity_threshold: int = 5,
-        max_concurrent_images: int = 20,  # Maximum concurrent image processing
+        max_concurrent_images: int = 100,  # Maximum concurrent image processing
         batch_size: int = 50,
         enable_audit_logging: bool = True,
         use_3x3_mining: bool = False,  # Enable 3x3 depth mining for better selector discovery
@@ -2270,6 +2272,18 @@ class ImageCrawler:
         start_time = datetime.utcnow()
         logger.info(f"Starting site crawl from: {_truncate_log_string(start_url)} (tenant: {self.tenant_id}, max_images: {self.max_total_images}, max_pages: {self.max_pages}, max_depth: {self.max_depth})")
         
+        # Start GPU resource monitor if enabled
+        from ..core.settings import get_settings
+        settings = get_settings()
+        if settings.gpu_worker_enabled and settings.gpu_resource_monitor_enabled:
+            start_gpu_resource_monitor()
+            logger.info("GPU resource monitor started")
+        
+        # Start batch queue for GPU processing
+        if settings.gpu_worker_enabled and settings.batch_queue_enabled:
+            start_batch_queue()
+            logger.info("Batch queue started")
+        
         # Initialize crawling state
         visited_urls = set()
         urls_to_visit = [(start_url, 0)]  # (url, depth)
@@ -2395,6 +2409,17 @@ class ImageCrawler:
         )
         
         logger.info(f"Site crawl completed in {total_duration:.2f} seconds - Pages: {pages_crawled}, Found: {total_images_found}, Raw Images Saved: {total_raw_saved}, Thumbnails Saved: {total_thumbnails_saved}")
+        
+        # Stop GPU resource monitor if it was started
+        if settings.gpu_worker_enabled and settings.gpu_resource_monitor_enabled:
+            stop_gpu_resource_monitor()
+            logger.info("GPU resource monitor stopped")
+        
+        # Stop batch queue if it was started
+        if settings.gpu_worker_enabled and settings.batch_queue_enabled:
+            stop_batch_queue()
+            logger.info("Batch queue stopped")
+        
         return result
 
 

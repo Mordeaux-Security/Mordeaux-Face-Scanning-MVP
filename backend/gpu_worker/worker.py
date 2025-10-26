@@ -57,6 +57,11 @@ _worker_id = str(uuid.uuid4())[:8]
 # Thread pool for CPU operations
 _thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="gpu_worker")
 
+# Dynamic batch size management
+_current_batch_size = 128  # Start aggressive for better GPU utilization
+_max_batch_size = 1024     # Allow large batches (computers like powers of 2)
+_min_batch_size = 4       # Minimum batch size
+
 # Metrics tracking
 _metrics = {
     'requests_processed': 0,
@@ -64,7 +69,11 @@ _metrics = {
     'total_processing_time': 0.0,
     'gpu_utilization': 0.0,
     'start_time': time.time(),
-    'last_health_check': time.time()
+    'last_health_check': time.time(),
+    'throughput_rps': 0.0,
+    'avg_latency_ms': 0.0,
+    'recent_requests': [],
+    'recent_latencies': []
 }
 
 # Pydantic models for API
@@ -102,6 +111,16 @@ class BatchResponse(BaseModel):
     processing_time_ms: float = Field(..., description="Total processing time in milliseconds")
     gpu_used: bool = Field(..., description="Whether GPU was used for processing")
     worker_id: str = Field(..., description="Worker instance ID")
+
+class BatchConfigRequest(BaseModel):
+    batch_size: int = Field(..., description="New batch size", ge=1, le=128)
+
+class BatchConfigResponse(BaseModel):
+    current_batch_size: int = Field(..., description="Current batch size")
+    max_batch_size: int = Field(..., description="Maximum allowed batch size")
+    min_batch_size: int = Field(..., description="Minimum allowed batch size")
+    success: bool = Field(..., description="Whether the update was successful")
+    message: str = Field(..., description="Status message")
 
 # FastAPI app
 app = FastAPI(
@@ -288,46 +307,59 @@ def _decode_image(image_data: str) -> np.ndarray:
         raise ValueError(f"Failed to decode image: {e}")
 
 def _detect_faces_batch(images: List[np.ndarray], min_quality: float = 0.5) -> List[List[FaceDetection]]:
-    """Detect faces in a batch of images."""
+    """Detect faces in a batch of images using dynamic batch sizing."""
     face_app = _load_face_model()
     results = []
     
-    for image in images:
-        try:
-            # Detect faces
-            faces = face_app.get(image)
-            
-            # Convert to our format
-            face_detections = []
-            for face in faces:
-                if face.det_score >= min_quality:
-                    # Convert numpy types to Python types for Pydantic validation
-                    gender_value = getattr(face, 'gender', None)
-                    if gender_value is not None:
-                        if isinstance(gender_value, np.integer):
-                            gender_value = str(int(gender_value))
-                        else:
-                            gender_value = str(gender_value)
-                    
-                    age_value = getattr(face, 'age', None)
-                    if age_value is not None and isinstance(age_value, np.integer):
-                        age_value = int(age_value)
-                    
-                    face_detection = FaceDetection(
-                        bbox=face.bbox.tolist(),
-                        landmarks=face.kps.tolist() if hasattr(face, 'kps') else [],
-                        embedding=face.embedding.tolist() if hasattr(face, 'embedding') else None,
-                        quality=float(face.det_score),
-                        age=age_value,
-                        gender=gender_value
-                    )
-                    face_detections.append(face_detection)
-            
-            results.append(face_detections)
-            
-        except Exception as e:
-            logger.error(f"Error detecting faces in image: {e}")
-            results.append([])
+    # Process images in chunks based on current batch size
+    batch_size = _current_batch_size
+    total_images = len(images)
+    
+    logger.debug(f"Processing {total_images} images in batches of {batch_size}")
+    
+    for i in range(0, total_images, batch_size):
+        chunk = images[i:i + batch_size]
+        chunk_results = []
+        
+        for image in chunk:
+            try:
+                # Detect faces
+                faces = face_app.get(image)
+                
+                # Convert to our format
+                face_detections = []
+                for face in faces:
+                    if face.det_score >= min_quality:
+                        # Convert numpy types to Python types for Pydantic validation
+                        gender_value = getattr(face, 'gender', None)
+                        if gender_value is not None:
+                            if isinstance(gender_value, np.integer):
+                                gender_value = str(int(gender_value))
+                            else:
+                                gender_value = str(gender_value)
+                        
+                        age_value = getattr(face, 'age', None)
+                        if age_value is not None and isinstance(age_value, np.integer):
+                            age_value = int(age_value)
+                        
+                        face_detection = FaceDetection(
+                            bbox=face.bbox.tolist(),
+                            landmarks=face.kps.tolist() if hasattr(face, 'kps') else [],
+                            embedding=face.embedding.tolist() if hasattr(face, 'embedding') else None,
+                            quality=float(face.det_score),
+                            age=age_value,
+                            gender=gender_value
+                        )
+                        face_detections.append(face_detection)
+                
+                chunk_results.append(face_detections)
+                
+            except Exception as e:
+                logger.error(f"Error detecting faces in image: {e}")
+                chunk_results.append([])
+        
+        # Add chunk results to overall results
+        results.extend(chunk_results)
     
     return results
 
@@ -380,6 +412,18 @@ def _process_request_queue():
                 processing_time = time.time() - start_time
                 _metrics['requests_processed'] += 1
                 _metrics['total_processing_time'] += processing_time
+                
+                # Track recent requests and latencies for throughput calculation
+                current_time = time.time()
+                _metrics['recent_requests'].append(current_time)
+                _metrics['recent_latencies'].append({
+                    'timestamp': current_time,
+                    'latency': processing_time
+                })
+                
+                # Clean up old metrics (keep last 100 entries)
+                _metrics['recent_requests'] = [req_time for req_time in _metrics['recent_requests'] if current_time - req_time < 300.0]  # Last 5 minutes
+                _metrics['recent_latencies'] = [lat for lat in _metrics['recent_latencies'] if current_time - lat['timestamp'] < 300.0]  # Last 5 minutes
                 
                 # Put result back in request
                 request_data['result'] = results
@@ -545,15 +589,74 @@ async def get_gpu_info():
                     'using_gpu': providers[0] == 'DmlExecutionProvider' if providers else False
                 }
     
+    # Calculate recent throughput and latency
+    current_time = time.time()
+    recent_requests = [req_time for req_time in _metrics['recent_requests'] if current_time - req_time < 60.0]  # Last 60 seconds
+    recent_latencies = [lat for lat in _metrics['recent_latencies'] if current_time - lat['timestamp'] < 60.0]  # Last 60 seconds
+    
+    throughput_rps = len(recent_requests) / 60.0 if recent_requests else 0.0
+    avg_latency_ms = sum(lat['latency'] for lat in recent_latencies) / len(recent_latencies) * 1000 if recent_latencies else 0.0
+    
+    # Get system memory usage
+    system_memory_percent = psutil.virtual_memory().percent
+    
     return {
         'directml_available': directml_available,
         'gpu_actually_used': gpu_actually_used,
         'model_info': model_info,
         'worker_id': _worker_id,
         'queue_size': _request_queue.qsize(),
+        'current_batch_size': _current_batch_size,
+        'max_batch_size': _max_batch_size,
+        'min_batch_size': _min_batch_size,
+        'throughput_rps': throughput_rps,
+        'avg_latency_ms': avg_latency_ms,
+        'system_memory_percent': system_memory_percent,
         'metrics': _metrics.copy(),
-        'timestamp': time.time()
+        'timestamp': current_time
     }
+
+@app.get("/batch_config", response_model=BatchConfigResponse)
+async def get_batch_config():
+    """Get current batch size configuration."""
+    return BatchConfigResponse(
+        current_batch_size=_current_batch_size,
+        max_batch_size=_max_batch_size,
+        min_batch_size=_min_batch_size,
+        success=True,
+        message="Batch configuration retrieved successfully"
+    )
+
+@app.post("/batch_config", response_model=BatchConfigResponse)
+async def set_batch_config(request: BatchConfigRequest):
+    """Update batch size configuration."""
+    global _current_batch_size
+    
+    new_batch_size = request.batch_size
+    
+    # Validate batch size
+    if new_batch_size < _min_batch_size or new_batch_size > _max_batch_size:
+        return BatchConfigResponse(
+            current_batch_size=_current_batch_size,
+            max_batch_size=_max_batch_size,
+            min_batch_size=_min_batch_size,
+            success=False,
+            message=f"Batch size must be between {_min_batch_size} and {_max_batch_size}"
+        )
+    
+    # Update batch size
+    old_batch_size = _current_batch_size
+    _current_batch_size = new_batch_size
+    
+    logger.info(f"Batch size updated: {old_batch_size} -> {new_batch_size}")
+    
+    return BatchConfigResponse(
+        current_batch_size=_current_batch_size,
+        max_batch_size=_max_batch_size,
+        min_batch_size=_min_batch_size,
+        success=True,
+        message=f"Batch size updated from {old_batch_size} to {new_batch_size}"
+    )
 
 @app.post("/detect_and_embed_batch", response_model=BatchResponse)
 async def detect_and_embed_batch(request: BatchRequest):
