@@ -26,7 +26,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def batch_processor(worker_id: int, redis_url: str, batch_queue: Queue, batch_size: int = 64, site_results_list = None):
+def batch_processor(worker_id: int, redis_url: str, batch_queue: Queue, batch_size: int = 64, site_results_dict = None):
     """
     Batch processor worker process main loop.
     
@@ -35,7 +35,7 @@ def batch_processor(worker_id: int, redis_url: str, batch_queue: Queue, batch_si
         redis_url: Redis connection URL
         batch_queue: Queue for batched images (from multiprocessing.Manager)
         batch_size: Size of batches to create
-        site_results_list: Shared list of SiteResult objects to update
+        site_results_dict: Shared dict of SiteResult objects to update
     """
     logger.info(f"[Batch Processor {worker_id}] Starting process")
     
@@ -67,6 +67,7 @@ def batch_processor(worker_id: int, redis_url: str, batch_queue: Queue, batch_si
             if should_flush:
                 if current_batch:
                     logger.info(f"[Batch Processor {worker_id}] Flushing batch of {len(current_batch)} items")
+                    logger.info(f"[DATAFLOW] BatchProcessor {worker_id} ← BatchQueue: BatchSize={len(current_batch)}")
                     
                     try:
                         batch_queue.put(current_batch, timeout=1.0)
@@ -82,12 +83,12 @@ def batch_processor(worker_id: int, redis_url: str, batch_queue: Queue, batch_si
                             
                             # Update site results
                             for site, count in site_counts.items():
-                                for site_result in site_results_list:
-                                    if site_result.url == site:
-                                        # This represents images that went through GPU processing
-                                        # (closer to "thumbnails saved" concept)
-                                        site_result.images_processed = site_result.images_processed + count
-                                        break
+                                if site_results_dict and site in site_results_dict:
+                                    stats = site_results_dict[site]
+                                    # This represents images that went through GPU processing
+                                    # (closer to "thumbnails saved" concept)
+                                    stats['images_processed'] += count
+                                    site_results_dict[site] = stats  # Explicit reassignment for sync
                         
                     except Exception as e:
                         logger.warning(f"[Batch Processor {worker_id}] Failed to queue batch: {e}")

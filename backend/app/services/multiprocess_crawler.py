@@ -33,6 +33,11 @@ class SiteResult:
     pages_crawled: int = 0
     errors: List[str] = None
     processing_time: float = 0.0
+    raw_images_saved: int = 0
+    thumbnails_saved: int = 0
+    cache_hits: int = 0
+    cache_misses: int = 0
+    targeting_method: str = ''
     
     def __post_init__(self):
         if self.errors is None:
@@ -117,7 +122,7 @@ class MultiprocessCrawler:
         
         logger.info(f"MultiprocessCrawler initialized with {num_crawlers} crawlers, {num_extractors} extractors, {num_batch_processors} batch processors")
     
-    def start_workers(self, site_results_list):
+    def start_workers(self, site_results_dict):
         """Start all worker processes."""
         logger.info("Starting worker processes...")
         
@@ -128,7 +133,7 @@ class MultiprocessCrawler:
             flush_timeout=2.0,
             enabled=True,
             shared_queue=self.batch_queue,
-            max_images_per_site=self.max_images_per_site
+            site_results_dict=site_results_dict
         )
         self.batch_manager.start()
         logger.info("Batch queue manager started")
@@ -137,7 +142,7 @@ class MultiprocessCrawler:
         for i in range(self.num_crawlers):
             process = multiprocessing.Process(
                 target=crawling_worker,
-                args=(i, self.redis_url, self.use_3x3_mining, self.max_pages, site_results_list),
+                args=(i, self.redis_url, self.use_3x3_mining, self.max_pages, site_results_dict),
                 name=f"Crawler-{i}"
             )
             process.start()
@@ -148,7 +153,7 @@ class MultiprocessCrawler:
         for i in range(self.num_extractors):
             process = multiprocessing.Process(
                 target=extraction_worker,
-                args=(i, self.redis_url, self.batch_manager, self.max_images_per_site, site_results_list),
+                args=(i, self.redis_url, self.batch_manager, self.max_images_per_site, site_results_dict),
                 name=f"Extractor-{i}"
             )
             process.start()
@@ -159,7 +164,7 @@ class MultiprocessCrawler:
         for i in range(self.num_batch_processors):
             process = multiprocessing.Process(
                 target=batch_processor,
-                args=(i, self.redis_url, self.batch_queue, self.batch_size, site_results_list),
+                args=(i, self.redis_url, self.batch_queue, self.batch_size, site_results_dict),
                 name=f"Batch-Processor-{i}"
             )
             process.start()
@@ -201,7 +206,21 @@ class MultiprocessCrawler:
         
         # Initialize results
         manager = multiprocessing.Manager()
-        site_results_list = manager.list([SiteResult(url=site) for site in sites])
+        site_results_dict = manager.dict()
+        for site in sites:
+            site_results_dict[site] = {
+                'url': site,
+                'images_found': 0,
+                'images_processed': 0,
+                'pages_crawled': 0,
+                'raw_images_saved': 0,
+                'thumbnails_saved': 0,
+                'cache_hits': 0,
+                'cache_misses': 0,
+                'targeting_method': '',
+                'processing_time': 0.0,
+                'errors': []
+            }
         
         # Setup Redis queues
         redis_client = get_redis_client(self.redis_url)
@@ -209,6 +228,15 @@ class MultiprocessCrawler:
         # Clear Redis queues first (BEFORE pushing sites)
         logger.info("Clearing Redis queues...")
         setup_redis_queues(redis_client)
+        
+        # NEW: Clear crawl cache to force fresh processing
+        logger.info("Clearing Redis crawl cache...")
+        crawl_cache_keys = redis_client.keys('crawl:*')
+        if crawl_cache_keys:
+            deleted = redis_client.delete(*crawl_cache_keys)
+            logger.info(f"Cleared {deleted} crawl cache entries")
+        else:
+            logger.info("No crawl cache entries to clear")
         
         # Push sites to queue
         logger.info(f"Pushing {len(sites)} sites to queue...")
@@ -219,19 +247,30 @@ class MultiprocessCrawler:
         logger.info(f"Redis queue 'sites_to_crawl' length: {queue_length}")
         
         # Start workers
-        self.start_workers(site_results_list)
+        self.start_workers(site_results_dict)
         
         logger.info("Crawl started. Workers are processing sites...")
         
         try:
             # Wait for all sites to be processed
             while True:
-                queue_length = redis_client.llen('sites_to_crawl')
-                if queue_length == 0:
-                    logger.info("All sites processed")
-                    break
+                sites_remaining = redis_client.llen('sites_to_crawl')
+                pages_remaining = redis_client.llen('crawled_pages')
                 
-                time.sleep(5)  # Check every 5 seconds
+                logger.info(f"[DATAFLOW] Queue Status: SitesToCrawl={sites_remaining}, CrawledPages={pages_remaining}")
+                
+                # Check if all work is complete
+                if sites_remaining == 0 and pages_remaining == 0:
+                    # Give workers time to finish processing current batches
+                    logger.info("All queues empty, waiting for workers to finish...")
+                    time.sleep(10)  # Increased from 3 to 10 seconds for large batches
+                    
+                    # Double-check queues are still empty
+                    if redis_client.llen('sites_to_crawl') == 0 and redis_client.llen('crawled_pages') == 0:
+                        logger.info("All sites and pages processed")
+                        break
+                
+                time.sleep(2)  # Check every 2 seconds
                 
         except KeyboardInterrupt:
             logger.info("Crawl interrupted by user")
@@ -247,9 +286,9 @@ class MultiprocessCrawler:
         if self.batch_manager:
             batch_stats = self.batch_manager.get_stats()
         
-        # Convert manager.list to regular list for return
+        # Convert manager.dict to regular list for return
         results = CrawlResults(
-            sites=list(site_results_list),
+            sites=[SiteResult(**site_results_dict[site]) for site in sites],
             total_time=total_time,
             batch_stats=batch_stats
         )

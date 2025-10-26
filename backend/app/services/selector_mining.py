@@ -19,7 +19,7 @@ from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup, Tag
 
-from .http_service import HttpService, fetch_html_with_redirects
+from .http_service import HttpService, fetch_html_with_redirects, fetch_html_with_js_rendering
 from .crawler_modules.selector_core import (
     MinerNetworkError, MinerSchemaError, emit_recipe_yaml_block,
     Limits, MinedResult, CandidateSelector,
@@ -503,6 +503,31 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: http
                 logger.debug(f"Failed to fetch category page {category_url}: {e}")
                 continue
     
+    # If no candidates and JS is enabled, try JavaScript rendering
+    if len(selector_candidates) == 0 and use_js:
+        logger.info("No static candidates found, trying JavaScript rendering")
+        try:
+            from app.services.http_service import fetch_html_with_js_rendering
+            js_html, js_errors = await fetch_html_with_js_rendering(
+                url, 
+                timeout=10.0, 
+                wait_for_network_idle=True
+            )
+            if js_html:
+                js_soup = BeautifulSoup(js_html, 'html.parser')
+                js_candidates = _selector_pass(js_soup, base_url, limits)
+                stats['js_candidates'] = len(js_candidates)
+                
+                if len(js_candidates) > 0:
+                    selector_candidates = js_candidates
+                    logger.info(f"JavaScript rendering found {len(js_candidates)} candidates")
+                else:
+                    logger.info("JavaScript rendering found no additional candidates")
+            else:
+                logger.warning(f"JavaScript rendering failed: {js_errors}")
+        except Exception as e:
+            logger.warning(f"JavaScript rendering failed: {e}")
+    
     # Extra sources pass: extract and validate extra sources
     logger.info("Starting extra sources pass")
     extra_candidates = await _extra_sources_pass(soup, base_url, client, limits)
@@ -542,19 +567,21 @@ class SelectorMiningService:
     
     async def mine_selectors_for_page(
         self, 
-        html: str, 
-        url: str, 
-        client: httpx.AsyncClient,
-        limits: Optional[Limits] = None
+        html: str = None,
+        url: str = None, 
+        client: httpx.AsyncClient = None,
+        limits: Optional[Limits] = None,
+        use_js_rendering: bool = False
     ) -> MinedResult:
         """
-        Mine selectors from a single page.
+        Mine selectors from a page with optional JS rendering.
         
         Args:
-            html: HTML content of the page
-            url: URL of the page
+            html: HTML content of the page (optional)
+            url: URL of the page (required if html is None)
             client: HTTP client for validation
             limits: Configuration limits
+            use_js_rendering: Whether to use JS rendering if static mining fails
             
         Returns:
             MinedResult with candidates and metadata
@@ -562,7 +589,22 @@ class SelectorMiningService:
         if limits is None:
             limits = Limits()
         
-        return await mine_page(url, html, use_js=False, client=client, limits=limits)
+        # If use_js_rendering is True and we have a URL, fetch with JS
+        if use_js_rendering and url and not html:
+            logger.info(f"Using JS rendering for {url}")
+            html, errors = await fetch_html_with_js_rendering(url, timeout=5.0)
+            if not html:
+                logger.warning(f"JS rendering failed for {url}: {errors}")
+                # Fall back to regular fetch
+                if client:
+                    html, errors = await fetch_html_with_redirects(url, client)
+                    if not html:
+                        logger.error(f"Both JS and regular fetch failed for {url}: {errors}")
+                        return MinedResult(candidates=[], status="FETCH_FAILED", stats={}, checked_urls=[url])
+            else:
+                logger.info(f"JS rendering successful for {url}")
+        
+        return await mine_page(url, html, use_js=use_js_rendering, client=client, limits=limits)
     
     async def mine_selectors_for_site(
         self, 

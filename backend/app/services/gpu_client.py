@@ -156,7 +156,7 @@ class GPUClient:
         self._total_latency = 0.0
         self._latency_history = []
         self._last_metrics_log = 0
-        
+        self._current_batch_size = 0  # Track current batch size for metrics
         
         # Connection management
         self._connection_lock = asyncio.Lock()
@@ -440,6 +440,9 @@ class GPUClient:
         logger.info(f"Attempting GPU worker processing for {len(image_bytes_list)} images "
                    f"at {self.settings.gpu_worker_url}")
         
+        # Update batch size for metrics
+        self._current_batch_size = len(image_bytes_list)
+        
         # Prepare request data
         images_data = []
         for i, image_bytes in enumerate(image_bytes_list):
@@ -486,7 +489,7 @@ class GPUClient:
             gpu_used = result_data.get('gpu_used', False)
             worker_id = result_data.get('worker_id', 'unknown')
             
-            logger.info(f"✓ GPU worker successfully processed {len(batch_images)} images in "
+            logger.info(f"✓ GPU worker successfully processed {len(image_bytes_list)} images in "
                        f"{processing_time:.1f}ms (GPU: {gpu_used}, worker: {worker_id})")
             return results
             

@@ -467,6 +467,24 @@ def extract_extra_sources(soup: BeautifulSoup, base_url: str) -> List[str]:
     if has_background_image:
         extra_sources.append("::style(background-image)")
     
+    # NEW: Check for data-* attributes commonly used for lazy loading
+    lazy_load_attrs = ['data-src', 'data-lazy', 'data-original', 'data-image', 'data-bg']
+    for attr in lazy_load_attrs:
+        if soup.find(attrs={attr: True}):
+            extra_sources.append(f"[{attr}]::attr({attr})")
+    
+    # NEW: Check for picture elements with source tags
+    if soup.find('picture'):
+        extra_sources.append("picture source::attr(srcset)")
+    
+    # NEW: Check for CSS background images in inline styles
+    elements_with_style = soup.find_all(attrs={'style': True})
+    for elem in elements_with_style[:10]:  # Check first 10
+        style = elem.get('style', '')
+        if 'background-image' in style or 'background:' in style:
+            extra_sources.append("[style*='background']::attr(style)")
+            break
+    
     return extra_sources
 
 
@@ -580,8 +598,13 @@ def _detect_structural_bonus(nodes: List[Tag]) -> int:
     if list_structures >= len(nodes) * 0.7:  # 70% or more in list structures
         bonus += 2
     
-    # Check for grid-like class patterns
-    grid_patterns = ['grid', 'masonry', 'gallery', 'list', 'row', 'column']
+    # Check for grid-like class patterns (EXPANDED)
+    grid_patterns = [
+        'grid', 'masonry', 'gallery', 'list', 'row', 'column',
+        'album', 'collection', 'flex', 'container', 'items', 'entries',
+        'tiles', 'cards', 'posts', 'content', 'feed', 'stream',
+        'results', 'thumbs', 'images', 'photos'  # Added more patterns
+    ]
     grid_indicators = 0
     for node in nodes:
         # Check node's own classes
@@ -598,6 +621,27 @@ def _detect_structural_bonus(nodes: List[Tag]) -> int:
     
     if grid_indicators >= len(nodes) * 0.6:  # 60% or more have grid indicators
         bonus += 1
+    
+    # Check parent containers for grid/gallery indicators
+    parent_classes = set()
+    parent_ids = set()
+    for node in nodes:
+        if node.parent and node.parent.get('class'):
+            parent_classes.update(node.parent.get('class'))
+        if node.parent and node.parent.get('id'):
+            parent_ids.add(node.parent.get('id'))
+    
+    # Check for grid indicators in parent classes
+    for pattern in grid_patterns:
+        if any(pattern in cls.lower() for cls in parent_classes):
+            bonus += 1
+            break
+    
+    # Check for grid indicators in parent IDs
+    for pattern in grid_patterns:
+        if any(pattern in id_str.lower() for id_str in parent_ids):
+            bonus += 1
+            break
     
     return min(5, bonus)  # Cap at 5
 
@@ -635,7 +679,12 @@ def gather_evidence(nodes: List[Tag]) -> Dict[str, int]:
     positive_class_hints = {
         'thumb', 'thumbnail', 'preview', 'poster', 'image', 'img', 
         'pic', 'picture', 'cover', 'artwork', 'screenshot', 'still',
-        'frame', 'snapshot', 'gallery', 'media', 'visual', 'display'
+        'frame', 'snapshot', 'gallery', 'media', 'visual', 'display',
+        'photo', 'album', 'grid', 'tile', 'card', 'item', 'entry',
+        'content', 'post', 'article', 'figure', 'attachment',
+        # Domain-specific hints
+        'feet', 'foot', 'sole', 'toe',  # For wikifeet
+        'candid', 'teen', 'girl', 'woman'  # For other sites
     }
     
     # Negative class name hints (likely not target images)

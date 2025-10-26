@@ -717,31 +717,61 @@ def detect_faces_batch(
     if not image_bytes_list:
         return []
     
+    logger.info(f"[FACE-DETECTION] Processing {len(image_bytes_list)} images")
+    
     # Try GPU worker first if enabled
     try:
         settings = get_settings()
         if settings.gpu_worker_enabled:
-            # Run GPU worker in thread pool to avoid blocking
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            logger.info(f"[FACE-DETECTION] GPU worker enabled, attempting GPU processing")
+            # Check if we're already in an event loop
             try:
-                results = loop.run_until_complete(
-                    _try_gpu_worker_batch(
-                        image_bytes_list, min_face_quality, require_face, crop_faces, face_margin
+                loop = asyncio.get_running_loop()
+                # We're in an event loop, need to run in a thread
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        lambda: asyncio.run(_try_gpu_worker_batch(
+                            image_bytes_list, min_face_quality, require_face, crop_faces, face_margin
+                        ))
                     )
-                )
-                if results is not None:
-                    return results
-            finally:
-                loop.close()
+                    results = future.result(timeout=30)  # 30 second timeout
+                    if results is not None:
+                        images_with_faces = sum(1 for faces in results if len(faces) > 0)
+                        logger.info(f"[FACE-DETECTION] GPU worker returned results: {images_with_faces}/{len(results)} images with faces")
+                        return results
+            except RuntimeError:
+                # No event loop running, check if we have an event loop set
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_closed():
+                        # Loop is closed, create a new one
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
+                    results = loop.run_until_complete(
+                        _try_gpu_worker_batch(
+                            image_bytes_list, min_face_quality, require_face, crop_faces, face_margin
+                        )
+                    )
+                    if results is not None:
+                        images_with_faces = sum(1 for faces in results if len(faces) > 0)
+                        logger.info(f"[FACE-DETECTION] GPU worker returned results: {images_with_faces}/{len(results)} images with faces")
+                        return results
+                except Exception as e:
+                    logger.warning(f"Event loop error: {e}")
+                    # Fall through to CPU processing
+        else:
+            logger.warning(f"[FACE-DETECTION] GPU worker disabled, using CPU fallback")
     except Exception as e:
-        logger.warning(f"GPU worker attempt failed: {e}")
+        logger.warning(f"[FACE-DETECTION] GPU worker attempt failed: {e}")
     
     # Fallback to CPU processing
-    logger.info(f"Processing {len(image_bytes_list)} images with CPU fallback")
+    logger.info(f"[FACE-DETECTION] Using CPU fallback for {len(image_bytes_list)} images")
     
     # Load model
     app = _load_app()
+    logger.info(f"[CPU-FALLBACK] Face detection model loaded")
     
     # Process images in batches to manage memory
     batch_size = 8  # Smaller batches for CPU processing
@@ -751,16 +781,22 @@ def detect_faces_batch(
         batch = image_bytes_list[i:i + batch_size]
         batch_results = []
         
-        for image_bytes in batch:
+        logger.info(f"[CPU-FALLBACK] Processing batch {i//batch_size + 1} ({len(batch)} images)")
+        
+        for j, image_bytes in enumerate(batch):
             try:
                 # Read image
                 image = _read_image(image_bytes)
                 if image is None:
+                    logger.warning(f"[CPU-FALLBACK] Failed to read image {i+j}")
                     batch_results.append([])
                     continue
                 
+                logger.debug(f"[CPU-FALLBACK] Image {i+j} shape: {image.shape}")
+                
                 # Detect faces
                 faces = app.get(image)
+                logger.debug(f"[CPU-FALLBACK] Image {i+j} detected {len(faces)} faces")
                 
                 # Convert to our format
                 face_detections = []
@@ -779,11 +815,13 @@ def detect_faces_batch(
                 batch_results.append(face_detections)
                 
             except Exception as e:
-                logger.error(f"Error processing image: {e}")
+                logger.error(f"[CPU-FALLBACK] Error detecting faces in image {i+j}: {e}", exc_info=True)
                 batch_results.append([])
         
         results.extend(batch_results)
+        logger.info(f"[CPU-FALLBACK] Batch {i//batch_size + 1} complete: {sum(len(r) for r in batch_results)} faces found")
     
+    logger.info(f"[CPU-FALLBACK] Total faces found: {sum(len(r) for r in results)}")
     return results
 
 async def detect_faces_batch_async(

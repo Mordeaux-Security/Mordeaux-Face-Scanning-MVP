@@ -484,6 +484,75 @@ class HttpService:
             self._browser_pool = None
 
 
+async def fetch_html_with_js_rendering(
+    url: str,
+    timeout: float = 10.0,  # Increased from 5.0
+    wait_for_selector: str = None,
+    wait_for_network_idle: bool = True  # NEW parameter
+) -> tuple[str, list]:
+    """
+    Fetch HTML with JavaScript rendering using Playwright.
+    
+    Args:
+        url: URL to fetch
+        timeout: Maximum time to wait (seconds)
+        wait_for_selector: Optional selector to wait for
+        wait_for_network_idle: Whether to wait for network idle
+        
+    Returns:
+        Tuple of (html, errors)
+    """
+    errors = []
+    
+    if not PLAYWRIGHT_AVAILABLE:
+        errors.append("PLAYWRIGHT_NOT_AVAILABLE")
+        return None, errors
+    
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
+                java_script_enabled=True,
+                # NOTE: Do NOT block images - we need them to load so we can extract their URLs!
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            )
+            page = await context.new_page()
+            page.set_default_timeout(timeout * 1000)
+            
+            try:
+                # Navigate with appropriate wait strategy
+                if wait_for_network_idle:
+                    await page.goto(url, wait_until='networkidle', timeout=timeout * 1000)
+                else:
+                    await page.goto(url, wait_until='domcontentloaded', timeout=timeout * 1000)
+                
+                # CRITICAL: Wait for dynamic content to load (3 seconds for JS execution)
+                await page.wait_for_timeout(3000)
+                
+                # Optionally wait for specific selector
+                if wait_for_selector:
+                    await page.wait_for_selector(wait_for_selector, timeout=timeout * 1000)
+                
+                # Get rendered HTML
+                html = await page.content()
+                
+                await browser.close()
+                logger.info(f"JS rendering completed for {url} ({len(html)} chars)")
+                return html, errors
+                
+            except Exception as e:
+                if "Timeout" in str(e):
+                    errors.append(f"JS_RENDER_TIMEOUT - Page load exceeded {timeout}s")
+                else:
+                    errors.append(f"JS_RENDER_ERROR - {str(e)}")
+                await browser.close()
+                return None, errors
+                
+    except Exception as e:
+        errors.append(f"BROWSER_LAUNCH_ERROR - {str(e)}")
+        return None, errors
+
+
 # Convenience functions for backward compatibility
 async def create_safe_client(**kwargs) -> httpx.AsyncClient:
     """

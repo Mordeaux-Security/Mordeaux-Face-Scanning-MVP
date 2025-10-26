@@ -654,15 +654,34 @@ def save_raw_image_content_addressed(image_bytes: bytes, tenant_id: str, source_
         logger.warning(f"Error checking for existing object {raw_key}: {e}")
     
     # Upload the object with source URL and video URL metadata
-    save_image(
-        image_bytes=image_bytes,
-        mime="image/jpeg",
-        filepath=raw_key,
-        source_image_url=source_url,
-        source_video_url=video_url,
-        bucket=settings.s3_bucket_raw,
-        tenant_id=tenant_id
-    )
+    if settings.using_minio:
+        cli = _minio()
+        import io
+        cli.put_object(
+            bucket_name=settings.s3_bucket_raw,
+            object_name=raw_key,
+            data=io.BytesIO(image_bytes),
+            length=len(image_bytes),
+            content_type="image/jpeg",
+            metadata={
+                "source_url": source_url or "",
+                "video_url": video_url or "",
+                "tenant_id": tenant_id
+            }
+        )
+    else:
+        s3 = _boto3_s3()
+        s3.put_object(
+            Bucket=settings.s3_bucket_raw,
+            Key=raw_key,
+            Body=image_bytes,
+            ContentType="image/jpeg",
+            Metadata={
+                "source_url": source_url or "",
+                "video_url": video_url or "",
+                "tenant_id": tenant_id
+            }
+        )
     
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""
     metadata = _get_content_metadata(image_bytes, raw_key, source_url=source_url)
@@ -721,26 +740,38 @@ def save_raw_and_thumb_content_addressed(image_bytes: bytes, thumbnail_bytes: by
     
     # Upload objects only if they don't exist
     if not raw_exists:
-        save_image(
-            image_bytes=image_bytes,
-            mime="image/jpeg",
-            filepath=raw_key,
-            source_image_url=source_url,
-            source_video_url=video_url,
+        # Get the appropriate client
+        if settings.using_minio:
+            client = _minio()
+        else:
+            client = _boto3_s3()
+        
+        # Use synchronous put_object instead of async save_image
+        put_object(
             bucket=settings.s3_bucket_raw,
-            tenant_id=tenant_id
+            key=raw_key,
+            data=image_bytes,
+            content_type="image/jpeg",
+            tags={
+                "source-image-url": source_url or "",
+                "source-video-url": video_url or "",
+                "tenant-id": tenant_id
+            }
         )
     
     if not thumb_exists:
         # For thumbnails, we don't store video URL metadata (it's already on the raw image)
-        save_image(
-            image_bytes=thumbnail_bytes,
-            mime="image/jpeg",
-            filepath=thumb_key,
-            source_image_url=source_url,
-            source_video_url=None,  # No video URL for thumbnails
+        # Use synchronous put_object instead of async save_image
+        put_object(
             bucket=settings.s3_bucket_thumbs,
-            tenant_id=tenant_id
+            key=thumb_key,
+            data=thumbnail_bytes,
+            content_type="image/jpeg",
+            tags={
+                "source-image-url": source_url or "",
+                "source-video-url": "",  # No video URL for thumbnails
+                "tenant-id": tenant_id
+            }
         )
     
     raw_url = get_presigned_url(settings.s3_bucket_raw, raw_key, "GET") or ""

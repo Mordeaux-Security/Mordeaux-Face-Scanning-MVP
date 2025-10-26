@@ -48,7 +48,7 @@ class BatchQueueManager:
         flush_timeout: float = 2.0,
         enabled: bool = True,
         shared_queue: Optional[Any] = None,
-        max_images_per_site: Optional[int] = None
+        site_results_dict: Optional[Any] = None
     ):
         """
         Initialize the batch queue manager.
@@ -59,14 +59,14 @@ class BatchQueueManager:
             flush_timeout: Time in seconds before flushing incomplete batches
             enabled: Whether batching is enabled
             shared_queue: Shared multiprocessing queue (if in multiprocessing mode)
-            max_images_per_site: Maximum images to process per site (None = unlimited)
+            site_results_dict: Shared dictionary for updating site statistics
         """
         self.batch_size = batch_size
         self.max_queue_depth = max_queue_depth
         self.flush_timeout = flush_timeout
         self.enabled = enabled
-        self.max_images_per_site = max_images_per_site
         self._is_multiprocess = shared_queue is not None
+        self._site_results_dict = site_results_dict
         
         # Current batch being built
         self._current_batch: List[QueuedImage] = []
@@ -93,9 +93,6 @@ class BatchQueueManager:
             'images_processed': 0,
             'timeout_flushes': 0
         }
-        
-        # Site thumbnail counters (for limiting)
-        self._site_thumbnail_counts = {}
     
     def start(self):
         """Start the batch queue worker thread."""
@@ -131,7 +128,9 @@ class BatchQueueManager:
                     continue
                 
                 # Process batch (send to GPU worker)
+                logger.info(f"[DATAFLOW] BatchQueueManager: QueueSize={self._batch_queue.qsize()}, Processing batch of {len(batch)}")
                 self._process_batch(batch)
+                logger.info(f"[DATAFLOW] BatchQueueManager: Batch processed, QueueSize={self._batch_queue.qsize()}")
                 self._batch_queue.task_done()
                 
             except Exception as e:
@@ -139,13 +138,6 @@ class BatchQueueManager:
         
         logger.info("Batch queue worker stopped")
     
-    def _get_site_thumbnail_count(self, site: str) -> int:
-        """Get the current thumbnail count for a site."""
-        return self._site_thumbnail_counts.get(site, 0)
-    
-    def _increment_site_thumbnail_count(self, site: str, count: int = 1):
-        """Increment the thumbnail count for a site."""
-        self._site_thumbnail_counts[site] = self._site_thumbnail_counts.get(site, 0) + count
     
     def _process_batch(self, batch: List[QueuedImage]):
         """
@@ -171,20 +163,154 @@ class BatchQueueManager:
             )
             
             if results:
-                # Store results back with image info
+                # Process results and save to MinIO
+                raw_images_saved = 0
+                thumbnails_saved = 0
+                
                 for i, (result, queued_img) in enumerate(zip(results, batch)):
                     queued_img.image_info['faces'] = result
-                logger.info(f"GPU worker processed batch successfully: {len(results)} results")
+                    
+                    # Save raw image and face thumbnails to MinIO with proper bucket separation
+                    try:
+                        from .storage import save_raw_and_thumb_content_addressed, save_image, _minio, _boto3_s3, get_settings
+                        from PIL import Image
+                        import io
+                        import asyncio
+                        
+                        # Create a new event loop for this thread
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        
+                        try:
+                            # Process each image and its detected faces
+                            if result and len(result) > 0:
+                                # Load the image once
+                                image = Image.open(io.BytesIO(queued_img.image_bytes))
+                                
+                                # Crop and save each face as a separate thumbnail
+                                for face_idx, face in enumerate(result):
+                                    try:
+                                        # Extract bounding box
+                                        bbox = face.get('bbox', [])
+                                        if len(bbox) >= 4:
+                                            x1, y1, x2, y2 = bbox[:4]
+                                            
+                                            # Convert to integers and ensure valid bounds
+                                            x1, y1 = max(0, int(x1)), max(0, int(y1))
+                                            x2, y2 = min(image.width, int(x2)), min(image.height, int(y2))
+                                            
+                                            if x2 > x1 and y2 > y1:
+                                                # Crop face
+                                                face_crop = image.crop((x1, y1, x2, y2))
+                                                
+                                                # Resize to thumbnail size
+                                                face_crop.thumbnail((256, 256), Image.Resampling.LANCZOS)
+                                                
+                                                # Convert to bytes
+                                                face_bytes = io.BytesIO()
+                                                face_crop.save(face_bytes, format='JPEG', quality=85)
+                                                face_bytes_data = face_bytes.getvalue()
+                                                
+                                                # Save raw image and thumbnail with matching hash names
+                                                # This saves:
+                                                # - Raw: s3_bucket_raw/default/<hash>.jpg
+                                                # - Thumb: s3_bucket_thumbs/default/<hash>_thumb.jpg
+                                                raw_key, raw_url, thumb_key, thumb_url, metadata = loop.run_until_complete(
+                                                    asyncio.get_event_loop().run_in_executor(
+                                                        None,
+                                                        save_raw_and_thumb_content_addressed,
+                                                        queued_img.image_bytes,
+                                                        face_bytes_data,
+                                                        'default',  # tenant_id
+                                                        queued_img.image_info.get('url'),  # source_url
+                                                        None  # video_url
+                                                    )
+                                                )
+                                                
+                                                raw_images_saved += 1
+                                                thumbnails_saved += 1
+                                                
+                                                # Also save JSON metadata sidecar using save_image()
+                                                # This creates the meta.json file next to the image
+                                                site = queued_img.image_info.get('site', 'unknown')
+                                                settings = get_settings()
+                                                client = _minio() if settings.using_minio else _boto3_s3()
+                                                
+                                                loop.run_until_complete(
+                                                    save_image(
+                                                        image_bytes=queued_img.image_bytes,
+                                                        mime="image/jpeg",
+                                                        filename=raw_key.split('/')[-1],  # Extract filename from key
+                                                        bucket=settings.s3_bucket_raw,
+                                                        client=client,
+                                                        site=site,
+                                                        page_url=queued_img.image_info.get('url'),
+                                                        source_image_url=queued_img.image_info.get('url')
+                                                    )
+                                                )
+                                                
+                                                logger.info(f"Saved raw image to {raw_key} and thumbnail to {thumb_key}")
+                                                
+                                    except Exception as face_error:
+                                        logger.error(f"Error cropping face {face_idx}: {face_error}")
+                            else:
+                                # No faces detected, just save the raw image
+                                # Use save_image() to get proper metadata sidecars
+                                site = queued_img.image_info.get('site', 'unknown')
+                                settings = get_settings()
+                                client = _minio() if settings.using_minio else _boto3_s3()
+                                
+                                result_dict = loop.run_until_complete(
+                                    save_image(
+                                        image_bytes=queued_img.image_bytes,
+                                        mime="image/jpeg",
+                                        filename=f"image_{i}.jpg",
+                                        bucket=settings.s3_bucket_raw,
+                                        client=client,
+                                        site=site,
+                                        page_url=queued_img.image_info.get('url'),
+                                        source_image_url=queued_img.image_info.get('url')
+                                    )
+                                )
+                                raw_images_saved += 1
+                                logger.info(f"Saved raw image (no faces) to {result_dict['image_key']}")
+                                        
+                        finally:
+                            loop.close()
+                            
+                    except Exception as e:
+                        logger.error(f"Error saving image to MinIO: {e}")
                 
-                # Increment thumbnail counts for each site in this batch
-                site_counts = {}
-                for queued_img in batch:
-                    site = queued_img.image_info.get('site', 'unknown')
-                    site_counts[site] = site_counts.get(site, 0) + 1
+                logger.info(f"GPU worker processed batch successfully: {len(results)} results, {raw_images_saved} raw images saved, {thumbnails_saved} thumbnails saved")
                 
-                for site, count in site_counts.items():
-                    self._increment_site_thumbnail_count(site, count)
-                    logger.info(f"Site {site} thumbnail count: {self._get_site_thumbnail_count(site)}")
+                # Update stats with MinIO saves
+                with self._batch_lock:
+                    self._stats['raw_images_saved'] = self._stats.get('raw_images_saved', 0) + raw_images_saved
+                    self._stats['thumbnails_saved'] = self._stats.get('thumbnails_saved', 0) + thumbnails_saved
+                
+                # Update site results if available
+                if self._site_results_dict:
+                    # Track saves per site
+                    site_saves = {}
+                    for queued_img in batch:
+                        site = queued_img.image_info.get('site', 'unknown')
+                        if site not in site_saves:
+                            site_saves[site] = {'raw': 0, 'thumbs': 0}
+                        # Each image in the batch contributes to raw saves
+                        site_saves[site]['raw'] += 1
+                        # Thumbnails depend on face detection results
+                        faces = queued_img.image_info.get('faces', [])
+                        if faces:
+                            site_saves[site]['thumbs'] += len(faces)
+                    
+                    # Update site results
+                    for site, saves in site_saves.items():
+                        if site in self._site_results_dict:
+                            stats = self._site_results_dict[site]
+                            stats['raw_images_saved'] += saves['raw']
+                            stats['thumbnails_saved'] += saves['thumbs']
+                            self._site_results_dict[site] = stats
+                    
             else:
                 logger.warning("GPU worker returned no results for batch")
             
@@ -211,15 +337,6 @@ class BatchQueueManager:
             return False
         
         try:
-            # Check thumbnail limit per site if specified
-            if self.max_images_per_site:
-                site = image_info.get('site', 'unknown')
-                current_thumbnails = self._get_site_thumbnail_count(site)
-                
-                if current_thumbnails >= self.max_images_per_site:
-                    logger.info(f"Site {site} already has {current_thumbnails} thumbnails (limit: {self.max_images_per_site}), rejecting image")
-                    return False
-            
             queued_image = QueuedImage(
                 image_bytes=image_bytes,
                 image_info=image_info,

@@ -184,6 +184,10 @@ def main():
         total_images = 0
         total_processed = 0
         total_pages = 0
+        total_raw_saved = 0
+        total_thumbnails_saved = 0
+        total_cache_hits = 0
+        total_cache_misses = 0
         successful_sites = 0
         total_errors = 0
         
@@ -193,8 +197,12 @@ def main():
             print(f"\n{status} SITE {i}: {result.url}")
             print(f"  📊 Images found: {result.images_found}")
             print(f"  🔄 Images processed: {result.images_processed}")
+            print(f"  💾 Raw images saved: {result.raw_images_saved}")
+            print(f"  🖼️  Thumbnails saved: {result.thumbnails_saved}")
             print(f"  📄 Pages crawled: {result.pages_crawled}")
             print(f"  ⏱️  Processing time: {result.processing_time:.2f}s")
+            if result.targeting_method:
+                print(f"  🎯 Targeting method: {result.targeting_method}")
             
             if result.errors:
                 print(f"  ⚠️  Errors ({len(result.errors)}):")
@@ -204,6 +212,10 @@ def main():
             total_images += result.images_found
             total_processed += result.images_processed
             total_pages += result.pages_crawled
+            total_raw_saved += result.raw_images_saved
+            total_thumbnails_saved += result.thumbnails_saved
+            total_cache_hits += result.cache_hits
+            total_cache_misses += result.cache_misses
             total_errors += len(result.errors)
             
             if result.images_found > 0:
@@ -218,6 +230,8 @@ def main():
         print(f"❌ Failed sites: {len(sites) - successful_sites}")
         print(f"📊 Total images found: {total_images}")
         print(f"🔄 Total images processed: {total_processed}")
+        print(f"💾 Total raw images saved: {total_raw_saved}")
+        print(f"🖼️  Total thumbnails saved: {total_thumbnails_saved}")
         print(f"📄 Total pages crawled: {total_pages}")
         print(f"⏱️  Total processing time: {results.total_time:.2f}s")
         
@@ -225,11 +239,22 @@ def main():
             print(f"🚀 Average processing rate: {total_images / results.total_time:.2f} img/s")
             print(f"📄 Average page rate: {total_pages / results.total_time:.2f} pages/s")
         
+        # Storage stats
+        if total_cache_hits > 0 or total_cache_misses > 0:
+            print(f"\n💾 STORAGE STATS")
+            print(f"  🎯 Cache hits: {total_cache_hits}")
+            print(f"  ❌ Cache misses: {total_cache_misses}")
+            if total_cache_hits + total_cache_misses > 0:
+                hit_rate = total_cache_hits / (total_cache_hits + total_cache_misses) * 100
+                print(f"  📈 Cache hit rate: {hit_rate:.1f}%")
+        
         # Batch processing stats
         if results.batch_stats:
             print(f"\n🔧 BATCH PROCESSING STATS")
             print(f"  📦 Batches sent: {results.batch_stats.get('batches_sent', 0)}")
             print(f"  🖼️  Images processed: {results.batch_stats.get('images_processed', 0)}")
+            print(f"  💾 Raw images saved to MinIO: {results.batch_stats.get('raw_images_saved', 0)}")
+            print(f"  🖼️  Face thumbnails saved to MinIO: {results.batch_stats.get('thumbnails_saved', 0)}")
             print(f"  ⚡ Average batch size: {results.batch_stats.get('avg_batch_size', 0):.1f}")
         
         print(f"⚠️  Total errors: {total_errors}")
