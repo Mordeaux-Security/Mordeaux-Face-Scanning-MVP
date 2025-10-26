@@ -1,8 +1,8 @@
 """
 Windows GPU Worker Service
 
-Robust FastAPI service for GPU-accelerated face detection using DirectML.
-Features process management, health monitoring, and graceful degradation.
+FastAPI service that runs natively on Windows with DirectML support for GPU-accelerated
+face detection and embedding operations. Provides REST API endpoints for batch processing.
 """
 
 import asyncio
@@ -10,15 +10,11 @@ import base64
 import io
 import logging
 import os
+import sys
 import threading
 import time
-import uuid
 from typing import List, Optional, Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor
-from queue import Queue, Empty
-import signal
-import sys
-import atexit
 
 import cv2
 import numpy as np
@@ -29,16 +25,11 @@ from PIL import Image
 import insightface
 from insightface.app import FaceAnalysis
 import onnxruntime as ort
-import psutil
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('gpu_worker.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -47,34 +38,32 @@ _face_app = None
 _model_lock = threading.Lock()
 _initialization_lock = threading.Lock()
 _is_initialized = False
-_shutdown_event = threading.Event()
-
-# Request queue for batch processing
-_request_queue = Queue(maxsize=1000)
-_processing_thread = None
-_worker_id = str(uuid.uuid4())[:8]
 
 # Thread pool for CPU operations
 _thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="gpu_worker")
 
-# Dynamic batch size management
-_current_batch_size = 128  # Start aggressive for better GPU utilization
-_max_batch_size = 1024     # Allow large batches (computers like powers of 2)
-_min_batch_size = 4       # Minimum batch size
-
-# Metrics tracking
-_metrics = {
-    'requests_processed': 0,
-    'requests_failed': 0,
-    'total_processing_time': 0.0,
-    'gpu_utilization': 0.0,
-    'start_time': time.time(),
-    'last_health_check': time.time(),
-    'throughput_rps': 0.0,
-    'avg_latency_ms': 0.0,
-    'recent_requests': [],
-    'recent_latencies': []
-}
+# Resource management (optional, won't block startup if it fails)
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+    
+    _last_inference_time = time.time()
+    _total_inferences = 0
+    _memory_cleanup_threshold = 100
+    _max_memory_mb = 2048
+    _warmup_interval = 300
+    _cleanup_task = None
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    logger.warning("psutil not available - resource management features disabled")
+    
+    # Set defaults for when psutil is not available
+    _last_inference_time = time.time()
+    _total_inferences = 0
+    _memory_cleanup_threshold = 100
+    _max_memory_mb = 2048
+    _warmup_interval = 300
+    _cleanup_task = None
 
 # Pydantic models for API
 class HealthResponse(BaseModel):
@@ -83,9 +72,6 @@ class HealthResponse(BaseModel):
     directml_available: bool
     model_loaded: bool
     uptime_seconds: float
-    worker_id: str
-    queue_size: int
-    metrics: Dict[str, Any]
 
 class ImageData(BaseModel):
     data: str = Field(..., description="Base64-encoded image data")
@@ -110,23 +96,22 @@ class BatchResponse(BaseModel):
     results: List[List[FaceDetection]] = Field(..., description="Face detection results for each image")
     processing_time_ms: float = Field(..., description="Total processing time in milliseconds")
     gpu_used: bool = Field(..., description="Whether GPU was used for processing")
-    worker_id: str = Field(..., description="Worker instance ID")
 
-class BatchConfigRequest(BaseModel):
-    batch_size: int = Field(..., description="New batch size", ge=1, le=128)
+class EnhanceImageRequest(BaseModel):
+    image_data: str = Field(..., description="Base64-encoded image data")
+    scale_factor: float = Field(default=2.0, description="Upscaling factor")
 
-class BatchConfigResponse(BaseModel):
-    current_batch_size: int = Field(..., description="Current batch size")
-    max_batch_size: int = Field(..., description="Maximum allowed batch size")
-    min_batch_size: int = Field(..., description="Minimum allowed batch size")
-    success: bool = Field(..., description="Whether the update was successful")
-    message: str = Field(..., description="Status message")
+class EnhanceImageResponse(BaseModel):
+    enhanced_data: str = Field(..., description="Base64-encoded enhanced image")
+    original_size: Tuple[int, int] = Field(..., description="Original image dimensions")
+    enhanced_size: Tuple[int, int] = Field(..., description="Enhanced image dimensions")
+    processing_time_ms: float = Field(..., description="Processing time in milliseconds")
 
 # FastAPI app
 app = FastAPI(
     title="GPU Worker Service",
-    description="Windows GPU worker for face detection and embedding with DirectML",
-    version="2.0.0"
+    description="Windows GPU worker for face detection and embedding",
+    version="1.0.0"
 )
 
 # Add CORS middleware
@@ -138,14 +123,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Startup time for uptime calculation
+_startup_time = time.time()
+
 def _check_directml_availability() -> bool:
     """Check if DirectML execution provider is available."""
     try:
         available_providers = ort.get_available_providers()
-        directml_available = 'DmlExecutionProvider' in available_providers
-        logger.info(f"Available ONNX providers: {available_providers}")
-        logger.info(f"DirectML available: {directml_available}")
-        return directml_available
+        return 'DmlExecutionProvider' in available_providers
     except Exception as e:
         logger.error(f"Error checking DirectML availability: {e}")
         return False
@@ -161,6 +146,7 @@ def _check_actual_gpu_usage() -> bool:
             for model_name, model in _face_app.models.items():
                 if hasattr(model, 'session'):
                     providers = model.session.get_providers()
+                    # If the first provider is DirectML, GPU is being used
                     if providers and providers[0] == 'DmlExecutionProvider':
                         return True
         
@@ -239,6 +225,47 @@ def _patch_insightface_for_directml():
     except Exception as e:
         logger.error(f"Failed to patch InsightFace: {e}")
 
+def _cleanup_gpu_resources():
+    """Force cleanup of GPU resources to prevent memory leaks."""
+    if not PSUTIL_AVAILABLE:
+        logger.debug("psutil not available, skipping cleanup")
+        return None
+    
+    import gc
+    
+    try:
+        logger.info("Performing GPU resource cleanup...")
+        gc.collect()
+        
+        import psutil
+        process = psutil.Process()
+        memory_mb = process.memory_info().rss / 1024 / 1024
+        logger.info(f"Memory after cleanup: {memory_mb:.1f}MB")
+        return memory_mb
+        
+    except Exception as e:
+        logger.error(f"Error during GPU cleanup: {e}", exc_info=True)
+        return None
+
+def _check_memory_pressure() -> bool:
+    """Check if memory pressure requires cleanup."""
+    if not PSUTIL_AVAILABLE:
+        return False
+    
+    try:
+        import psutil
+        process = psutil.Process()
+        memory_mb = process.memory_info().rss / 1024 / 1024
+        
+        if memory_mb > _max_memory_mb:
+            logger.warning(f"Memory pressure detected: {memory_mb:.1f}MB > {_max_memory_mb}MB")
+            return True
+        
+        return False
+    except Exception as e:
+        logger.debug(f"Could not check memory pressure: {e}")
+        return False
+
 def _load_face_model() -> FaceAnalysis:
     """Load InsightFace model with DirectML support."""
     global _face_app
@@ -269,6 +296,66 @@ def _load_face_model() -> FaceAnalysis:
                         logger.info(f"Model '{model_name}' using providers: {providers}")
     
     return _face_app
+
+def _warmup_inference():
+    """Perform dummy inference to keep GPU resources active."""
+    global _last_inference_time
+    
+    try:
+        logger.debug("Performing warmup inference to keep GPU active...")
+        
+        # Create a small dummy image (100x100 RGB)
+        dummy_image = np.zeros((100, 100, 3), dtype=np.uint8)
+        dummy_image[:] = (128, 128, 128)  # Gray image
+        
+        # Run inference
+        face_app = _load_face_model()
+        _ = face_app.get(dummy_image)
+        
+        _last_inference_time = time.time()
+        logger.debug("Warmup inference completed successfully")
+        
+    except Exception as e:
+        logger.warning(f"Warmup inference failed: {e}")
+
+async def _background_maintenance():
+    """Background task for GPU maintenance and warmup."""
+    global _last_inference_time, _total_inferences
+    
+    if not PSUTIL_AVAILABLE:
+        logger.info("psutil not available, skipping background maintenance")
+        return
+    
+    logger.info("Starting background maintenance task...")
+    
+    while True:
+        try:
+            await asyncio.sleep(60)  # Check every minute
+            
+            current_time = time.time()
+            time_since_inference = current_time - _last_inference_time
+            
+            # Warmup if idle for too long
+            if time_since_inference > _warmup_interval:
+                logger.info(f"GPU idle for {time_since_inference:.1f}s, performing warmup...")
+                _warmup_inference()
+            
+            # Periodic cleanup based on inference count
+            if _total_inferences > 0 and _total_inferences % _memory_cleanup_threshold == 0:
+                logger.info(f"Reached {_total_inferences} inferences, performing cleanup...")
+                _cleanup_gpu_resources()
+            
+            # Force cleanup on memory pressure
+            if _check_memory_pressure():
+                logger.warning("Memory pressure detected, forcing cleanup...")
+                _cleanup_gpu_resources()
+                
+        except asyncio.CancelledError:
+            logger.info("Background maintenance task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in background maintenance: {e}", exc_info=True)
+            await asyncio.sleep(60)
 
 def _decode_image(image_data: str) -> np.ndarray:
     """Decode base64 image data to numpy array with better error handling."""
@@ -306,23 +393,37 @@ def _decode_image(image_data: str) -> np.ndarray:
         logger.error(f"Base64 data preview: {image_data[:50] if image_data else 'None'}...")
         raise ValueError(f"Failed to decode image: {e}")
 
-def _detect_faces_batch(images: List[np.ndarray], min_quality: float = 0.5) -> List[List[FaceDetection]]:
-    """Detect faces in a batch of images using dynamic batch sizing."""
-    face_app = _load_face_model()
-    results = []
-    
-    # Process images in chunks based on current batch size
-    batch_size = _current_batch_size
-    total_images = len(images)
-    
-    logger.debug(f"Processing {total_images} images in batches of {batch_size}")
-    
-    for i in range(0, total_images, batch_size):
-        chunk = images[i:i + batch_size]
-        chunk_results = []
+def _encode_image(image: np.ndarray) -> str:
+    """Encode numpy array image to base64."""
+    try:
+        # Encode to JPEG
+        _, buffer = cv2.imencode('.jpg', image)
         
-        for image in chunk:
+        # Convert to base64
+        image_bytes = buffer.tobytes()
+        return base64.b64encode(image_bytes).decode('utf-8')
+    except Exception as e:
+        raise ValueError(f"Failed to encode image: {e}")
+
+def _detect_faces_batch(images: List[np.ndarray], min_quality: float = 0.5) -> List[List[FaceDetection]]:
+    """Detect faces in a batch of images."""
+    global _last_inference_time, _total_inferences
+    
+    logger.info(f"Processing batch of {len(images)} images with GPU")
+    
+    try:
+        # Check memory before processing (optional)
+        if PSUTIL_AVAILABLE and _check_memory_pressure():
+            logger.warning("Memory pressure before batch, performing cleanup...")
+            _cleanup_gpu_resources()
+        
+        face_app = _load_face_model()
+        results = []
+        
+        for i, image in enumerate(images):
             try:
+                logger.debug(f"Processing image {i+1}/{len(images)}")
+                
                 # Detect faces
                 faces = face_app.get(image)
                 
@@ -352,178 +453,166 @@ def _detect_faces_batch(images: List[np.ndarray], min_quality: float = 0.5) -> L
                         )
                         face_detections.append(face_detection)
                 
-                chunk_results.append(face_detections)
+                results.append(face_detections)
+                logger.debug(f"Image {i+1}: Found {len(face_detections)} faces")
                 
             except Exception as e:
-                logger.error(f"Error detecting faces in image: {e}")
-                chunk_results.append([])
+                logger.error(f"Error detecting faces in image {i+1}: {type(e).__name__}: {e}", exc_info=True)
+                results.append([])
         
-        # Add chunk results to overall results
-        results.extend(chunk_results)
-    
-    return results
+        # Update inference tracking (optional)
+        if PSUTIL_AVAILABLE:
+            _last_inference_time = time.time()
+            _total_inferences += len(images)
+            logger.info(f"Successfully processed batch: {len(results)} results (total inferences: {_total_inferences})")
+            
+            # Cleanup after large batches
+            if len(images) >= 32:
+                logger.debug("Large batch completed, performing cleanup...")
+                _cleanup_gpu_resources()
+        else:
+            logger.info(f"Successfully processed batch: {len(results)} results")
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"GPU processing error: {type(e).__name__}: {e}", exc_info=True)
+        raise
 
-def _process_request_queue():
-    """Process requests from the queue in a separate thread."""
-    global _metrics
-    
-    while not _shutdown_event.is_set():
-        try:
-            # Get request from queue with timeout
-            request_data = _request_queue.get(timeout=1.0)
-            
-            start_time = time.time()
-            
-            try:
-                # Decode images
-                images = []
-                for img_data in request_data['images']:
-                    try:
-                        image = _decode_image(img_data['data'])
-                        images.append(image)
-                    except Exception as e:
-                        logger.error(f"Failed to decode image {img_data.get('image_id', 'unknown')}: {e}")
-                        images.append(None)
-                
-                # Filter out None images
-                valid_images = [img for img in images if img is not None]
-                
-                if not valid_images:
-                    # Return empty results for all images
-                    results = [[] for _ in images]
-                else:
-                    # Detect faces in batch
-                    face_results = _detect_faces_batch(
-                        valid_images, 
-                        request_data.get('min_face_quality', 0.5)
-                    )
-                    
-                    # Pad results for None images
-                    results = []
-                    result_idx = 0
-                    for img in images:
-                        if img is not None:
-                            results.append(face_results[result_idx])
-                            result_idx += 1
-                        else:
-                            results.append([])
-                
-                # Update metrics
-                processing_time = time.time() - start_time
-                _metrics['requests_processed'] += 1
-                _metrics['total_processing_time'] += processing_time
-                
-                # Track recent requests and latencies for throughput calculation
-                current_time = time.time()
-                _metrics['recent_requests'].append(current_time)
-                _metrics['recent_latencies'].append({
-                    'timestamp': current_time,
-                    'latency': processing_time
-                })
-                
-                # Clean up old metrics (keep last 100 entries)
-                _metrics['recent_requests'] = [req_time for req_time in _metrics['recent_requests'] if current_time - req_time < 300.0]  # Last 5 minutes
-                _metrics['recent_latencies'] = [lat for lat in _metrics['recent_latencies'] if current_time - lat['timestamp'] < 300.0]  # Last 5 minutes
-                
-                # Put result back in request
-                request_data['result'] = results
-                request_data['processing_time'] = processing_time
-                request_data['gpu_used'] = _check_actual_gpu_usage()
-                
-            except Exception as e:
-                logger.error(f"Error processing request: {e}")
-                _metrics['requests_failed'] += 1
-                request_data['result'] = None
-                request_data['error'] = str(e)
-            
-            # Mark task as done
-            _request_queue.task_done()
-            
-        except Empty:
-            # Timeout - continue loop
-            continue
-        except Exception as e:
-            logger.error(f"Error in request processing loop: {e}")
-            time.sleep(1)
-
-def _signal_handler(signum, frame):
-    """Handle shutdown signals gracefully."""
-    logger.info(f"Received signal {signum}, initiating graceful shutdown...")
-    _shutdown_event.set()
-    
-    # Wait for processing thread to finish
-    if _processing_thread and _processing_thread.is_alive():
-        _processing_thread.join(timeout=5)
-    
-    # Close thread pool
-    _thread_pool.shutdown(wait=True)
-    
-    logger.info("GPU Worker shutdown complete")
-    sys.exit(0)
-
-# Register signal handlers
-signal.signal(signal.SIGINT, _signal_handler)
-signal.signal(signal.SIGTERM, _signal_handler)
+def _enhance_image(image: np.ndarray, scale_factor: float = 2.0) -> np.ndarray:
+    """Enhance image using upscaling."""
+    try:
+        # Convert to PIL for better upscaling
+        pil_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        
+        # Calculate new size
+        width, height = pil_image.size
+        new_width = int(width * scale_factor)
+        new_height = int(height * scale_factor)
+        
+        # Upscale using LANCZOS resampling
+        enhanced = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Convert back to OpenCV format
+        enhanced_cv = cv2.cvtColor(np.array(enhanced), cv2.COLOR_RGB2BGR)
+        
+        return enhanced_cv
+    except Exception as e:
+        logger.error(f"Error enhancing image: {e}")
+        return image
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize the GPU worker on startup."""
-    global _is_initialized, _processing_thread
+    global _is_initialized, _cleanup_task
     
     with _initialization_lock:
         if not _is_initialized:
-            logger.info(f"=== GPU Worker Service Starting (ID: {_worker_id}) ===")
+            logger.info("=== GPU Worker Service Starting ===")
+            logger.info(f"Python version: {sys.version}")
+            logger.info(f"Working directory: {os.getcwd()}")
             
-            # Check DirectML availability
-            directml_available = _check_directml_availability()
-            logger.info(f"[GPU-DETECTED] DirectML available: {directml_available}")
-            
-            # Load face model
             try:
-                logger.info("[GPU-DETECTED] Loading face analysis model...")
-                _load_face_model()
+                # Check DirectML availability
+                directml_available = _check_directml_availability()
+                logger.info(f"DirectML available: {directml_available}")
                 
-                # Verify GPU is actually being used
-                gpu_actually_used = _check_actual_gpu_usage()
-                if gpu_actually_used:
-                    logger.info("[GPU-ACTIVE] Models are using DirectML/GPU acceleration")
-                else:
-                    logger.warning("[GPU-WARNING] Models are using CPU execution (GPU not active)")
+                # Load face model
+                logger.info("Loading face detection model...")
+                _load_face_model()
+                logger.info("Face detection model loaded successfully")
+                
+                # Perform initial warmup (optional)
+                if PSUTIL_AVAILABLE:
+                    try:
+                        logger.info("Performing initial GPU warmup...")
+                        _warmup_inference()
+                        logger.info("GPU warmup completed")
+                    except Exception as e:
+                        logger.warning(f"GPU warmup failed (non-critical): {e}")
+                
+                # Start background maintenance task (optional)
+                if PSUTIL_AVAILABLE:
+                    try:
+                        logger.info("Starting background maintenance task...")
+                        _cleanup_task = asyncio.create_task(_background_maintenance())
+                        logger.info("Background maintenance task started")
+                    except Exception as e:
+                        logger.warning(f"Background maintenance task failed (non-critical): {e}")
                 
                 _is_initialized = True
-                logger.info("[GPU-DETECTED] GPU Worker Service started successfully")
-                
-                # Start processing thread
-                _processing_thread = threading.Thread(
-                    target=_process_request_queue,
-                    name="request_processor",
-                    daemon=True
-                )
-                _processing_thread.start()
-                logger.info("Request processing thread started")
+                logger.info("=== GPU Worker Service Started Successfully ===")
                 
             except Exception as e:
-                logger.error(f"Failed to initialize GPU worker: {e}")
+                logger.error(f"CRITICAL: Failed to initialize GPU worker: {e}", exc_info=True)
                 raise
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown."""
+    global _cleanup_task, _face_app
+    
+    logger.info("Shutting down GPU Worker Service...")
+    
+    # Cancel background task
+    if _cleanup_task:
+        _cleanup_task.cancel()
+        try:
+            await _cleanup_task
+        except asyncio.CancelledError:
+            pass
+    
+    # Cleanup GPU resources
+    try:
+        _cleanup_gpu_resources()
+        
+        # Clear model reference
+        _face_app = None
+        
+        logger.info("GPU Worker Service shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint with resource metrics."""
     directml_available = _check_directml_availability()
     gpu_actually_used = _check_actual_gpu_usage()
     model_loaded = _face_app is not None
-    uptime = time.time() - _metrics['start_time']
+    uptime = time.time() - _startup_time
+    
+    # Add resource metrics (optional)
+    if PSUTIL_AVAILABLE:
+        try:
+            import psutil
+            process = psutil.Process()
+            memory_mb = process.memory_info().rss / 1024 / 1024
+            cpu_percent = process.cpu_percent(interval=0.1)
+            logger.debug(f"Health check: Memory={memory_mb:.1f}MB, CPU={cpu_percent:.1f}%, Inferences={_total_inferences}")
+        except Exception as e:
+            logger.debug(f"Could not get resource metrics: {e}")
     
     return HealthResponse(
         status="healthy" if _is_initialized else "unhealthy",
         gpu_available=directml_available,
         directml_available=directml_available,
         model_loaded=model_loaded,
-        uptime_seconds=uptime,
-        worker_id=_worker_id,
-        queue_size=_request_queue.qsize(),
-        metrics=_metrics.copy()
+        uptime_seconds=uptime
     )
+
+@app.post("/cleanup")
+async def manual_cleanup():
+    """Manually trigger GPU resource cleanup."""
+    try:
+        memory_mb = _cleanup_gpu_resources()
+        return {
+            "status": "success",
+            "message": "GPU resources cleaned up",
+            "memory_mb": memory_mb,
+            "total_inferences": _total_inferences
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {e}")
 
 @app.post("/detect_faces_batch", response_model=BatchResponse)
 async def detect_faces_batch(request: BatchRequest):
@@ -531,46 +620,85 @@ async def detect_faces_batch(request: BatchRequest):
     start_time = time.time()
     
     try:
-        # Prepare request data
-        request_data = {
-            'images': [{'data': img.data, 'image_id': img.image_id} for img in request.images],
-            'min_face_quality': request.min_face_quality,
-            'require_face': request.require_face,
-            'crop_faces': request.crop_faces,
-            'face_margin': request.face_margin
-        }
+        # Decode images
+        images = []
+        for img_data in request.images:
+            try:
+                image = _decode_image(img_data.data)
+                images.append(image)
+            except Exception as e:
+                logger.error(f"Failed to decode image {img_data.image_id}: {e}")
+                images.append(None)
         
-        # Add to processing queue
-        _request_queue.put(request_data)
+        # Filter out None images
+        valid_images = [img for img in images if img is not None]
         
-        # Wait for processing to complete
-        timeout = 30.0  # 30 second timeout
-        start_wait = time.time()
+        if not valid_images:
+            raise HTTPException(status_code=400, detail="No valid images provided")
         
-        while time.time() - start_wait < timeout:
-            if 'result' in request_data:
-                break
-            await asyncio.sleep(0.1)
+        # Detect faces in batch
+        results = await asyncio.get_event_loop().run_in_executor(
+            _thread_pool,
+            _detect_faces_batch,
+            valid_images,
+            request.min_face_quality
+        )
         
-        if 'result' not in request_data:
-            raise HTTPException(status_code=504, detail="Request processing timeout")
+        # Pad results for None images
+        full_results = []
+        result_idx = 0
+        for img in images:
+            if img is not None:
+                full_results.append(results[result_idx])
+                result_idx += 1
+            else:
+                full_results.append([])
         
-        if 'error' in request_data:
-            raise HTTPException(status_code=500, detail=request_data['error'])
-        
-        results = request_data['result']
-        processing_time = request_data.get('processing_time', time.time() - start_time)
-        gpu_used = request_data.get('gpu_used', False)
+        processing_time = (time.time() - start_time) * 1000
         
         return BatchResponse(
-            results=results,
-            processing_time_ms=processing_time * 1000,
-            gpu_used=gpu_used,
-            worker_id=_worker_id
+            results=full_results,
+            processing_time_ms=processing_time,
+            gpu_used=_check_actual_gpu_usage()
         )
         
     except Exception as e:
         logger.error(f"Error in detect_faces_batch: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/enhance_image", response_model=EnhanceImageResponse)
+async def enhance_image(request: EnhanceImageRequest):
+    """Enhance a single image using upscaling."""
+    start_time = time.time()
+    
+    try:
+        # Decode image
+        image = _decode_image(request.image_data)
+        original_size = (image.shape[1], image.shape[0])  # (width, height)
+        
+        # Enhance image
+        enhanced = await asyncio.get_event_loop().run_in_executor(
+            _thread_pool,
+            _enhance_image,
+            image,
+            request.scale_factor
+        )
+        
+        # Encode enhanced image
+        enhanced_data = _encode_image(enhanced)
+        enhanced_size = (enhanced.shape[1], enhanced.shape[0])
+        
+        processing_time = (time.time() - start_time) * 1000
+        
+        return EnhanceImageResponse(
+            enhanced_data=enhanced_data,
+            original_size=original_size,
+            enhanced_size=enhanced_size,
+            processing_time_ms=processing_time
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in enhance_image: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/gpu_info")
@@ -589,74 +717,12 @@ async def get_gpu_info():
                     'using_gpu': providers[0] == 'DmlExecutionProvider' if providers else False
                 }
     
-    # Calculate recent throughput and latency
-    current_time = time.time()
-    recent_requests = [req_time for req_time in _metrics['recent_requests'] if current_time - req_time < 60.0]  # Last 60 seconds
-    recent_latencies = [lat for lat in _metrics['recent_latencies'] if current_time - lat['timestamp'] < 60.0]  # Last 60 seconds
-    
-    throughput_rps = len(recent_requests) / 60.0 if recent_requests else 0.0
-    avg_latency_ms = sum(lat['latency'] for lat in recent_latencies) / len(recent_latencies) * 1000 if recent_latencies else 0.0
-    
-    # Get system memory usage
-    system_memory_percent = psutil.virtual_memory().percent
-    
     return {
         'directml_available': directml_available,
         'gpu_actually_used': gpu_actually_used,
         'model_info': model_info,
-        'worker_id': _worker_id,
-        'queue_size': _request_queue.qsize(),
-        'current_batch_size': _current_batch_size,
-        'max_batch_size': _max_batch_size,
-        'min_batch_size': _min_batch_size,
-        'throughput_rps': throughput_rps,
-        'avg_latency_ms': avg_latency_ms,
-        'system_memory_percent': system_memory_percent,
-        'metrics': _metrics.copy(),
-        'timestamp': current_time
+        'timestamp': time.time()
     }
-
-@app.get("/batch_config", response_model=BatchConfigResponse)
-async def get_batch_config():
-    """Get current batch size configuration."""
-    return BatchConfigResponse(
-        current_batch_size=_current_batch_size,
-        max_batch_size=_max_batch_size,
-        min_batch_size=_min_batch_size,
-        success=True,
-        message="Batch configuration retrieved successfully"
-    )
-
-@app.post("/batch_config", response_model=BatchConfigResponse)
-async def set_batch_config(request: BatchConfigRequest):
-    """Update batch size configuration."""
-    global _current_batch_size
-    
-    new_batch_size = request.batch_size
-    
-    # Validate batch size
-    if new_batch_size < _min_batch_size or new_batch_size > _max_batch_size:
-        return BatchConfigResponse(
-            current_batch_size=_current_batch_size,
-            max_batch_size=_max_batch_size,
-            min_batch_size=_min_batch_size,
-            success=False,
-            message=f"Batch size must be between {_min_batch_size} and {_max_batch_size}"
-        )
-    
-    # Update batch size
-    old_batch_size = _current_batch_size
-    _current_batch_size = new_batch_size
-    
-    logger.info(f"Batch size updated: {old_batch_size} -> {new_batch_size}")
-    
-    return BatchConfigResponse(
-        current_batch_size=_current_batch_size,
-        max_batch_size=_max_batch_size,
-        min_batch_size=_min_batch_size,
-        success=True,
-        message=f"Batch size updated from {old_batch_size} to {new_batch_size}"
-    )
 
 @app.post("/detect_and_embed_batch", response_model=BatchResponse)
 async def detect_and_embed_batch(request: BatchRequest):

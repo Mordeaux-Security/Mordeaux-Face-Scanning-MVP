@@ -138,9 +138,9 @@ class Settings(BaseSettings):
         description="Enable Windows GPU worker service"
     )
     gpu_worker_url: str = Field(
-        default="http://host.docker.internal:8765",
+        default="http://localhost:8765",
         env="GPU_WORKER_URL",
-        description="GPU worker service URL"
+        description="GPU worker service URL (localhost for native Windows, host.docker.internal for Docker)"
     )
     gpu_worker_timeout: int = Field(
         default=60,

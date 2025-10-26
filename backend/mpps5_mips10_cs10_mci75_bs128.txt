@@ -1,0 +1,107 @@
+Command: python scripts/crawl_multisite.py --sites-file sites.txt --max-pages-per-site 5 --max-images-per-site 10 --concurrent-sites 10 --max-concurrent-images 75 --batch-size 128 --verbose
+Start time: 2025-10-25 22:09:22.275012
+End time: 2025-10-25 22:09:24.557907
+Exit code: 1
+
+STDOUT:
+Starting multisite crawl of 7 sites...
+Sites: https://wikifeet.com, https://candidteens.net, https://forum.candidgirls.io...
+
+
+STDERR:
+2025-10-25 22:09:24,295 - asyncio - DEBUG - Using selector: EpollSelector
+2025-10-25 22:09:24,296 - app.services.crawler - INFO - GPU worker is enabled, checking connectivity...
+2025-10-25 22:09:24,297 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-10-25 22:09:24,297 - httpx - DEBUG - load_verify_locations cafile='/usr/local/lib/python3.11/site-packages/certifi/cacert.pem'
+2025-10-25 22:09:24,304 - httpcore.connection - DEBUG - connect_tcp.started host='host.docker.internal' port=8765 local_address=None timeout=5.0 socket_options=None
+2025-10-25 22:09:24,307 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
+2025-10-25 22:09:24,307 - app.services.crawler - ERROR - GPU worker is enabled but not accessible at http://host.docker.internal:8765: All connection attempts failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/httpx/_transports/default.py", line 72, in map_httpcore_exceptions
+    yield
+  File "/usr/local/lib/python3.11/site-packages/httpx/_transports/default.py", line 377, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/usr/local/lib/python3.11/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpcore/_async/connection.py", line 101, in handle_async_request
+    raise exc
+  File "/usr/local/lib/python3.11/site-packages/httpcore/_async/connection.py", line 78, in handle_async_request
+    stream = await self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpcore/_async/connection.py", line 124, in _connect
+    stream = await self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpcore/_backends/auto.py", line 31, in connect_tcp
+    return await self._backend.connect_tcp(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpcore/_backends/anyio.py", line 113, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/local/lib/python3.11/contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.11/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: All connection attempts failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/app/services/crawler.py", line 387, in _check_gpu_worker_connectivity
+    response = await client.get(f"{settings.gpu_worker_url}/health")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1814, in get
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1776, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/httpx/_transports/default.py", line 376, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/local/lib/python3.11/contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.11/site-packages/httpx/_transports/default.py", line 89, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: All connection attempts failed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/scripts/crawl_multisite.py", line 280, in <module>
+    main()
+  File "/app/scripts/crawl_multisite.py", line 275, in main
+    exit_code = asyncio.run(run_multisite_crawler())
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/app/scripts/crawl_multisite.py", line 173, in run_multisite_crawler
+    async with ImageCrawler(**crawler_config) as crawler:
+  File "/app/app/services/crawler.py", line 336, in __aenter__
+    await self._check_gpu_worker_connectivity()
+  File "/app/app/services/crawler.py", line 395, in _check_gpu_worker_connectivity
+    raise RuntimeError(error_msg)
+RuntimeError: GPU worker is enabled but not accessible at http://host.docker.internal:8765: All connection attempts failed
+2025-10-25 22:09:24,327 - app.services.face - INFO - Closing face service resources...
+2025-10-25 22:09:24,327 - app.services.face - INFO - Face service global variables reset
+2025-10-25 22:09:24,365 - app.services.face - INFO - Face service cleanup complete - garbage collection triggered

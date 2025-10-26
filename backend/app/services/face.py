@@ -350,45 +350,10 @@ def detect_and_embed(image_bytes: bytes, enhancement_scale: float = 1.0, min_siz
         
     Returns:
         List of detected faces with metadata (coordinates in original image space)
+        
+    Note: This function performs CPU-only face detection. For GPU acceleration,
+    use detect_and_embed_batch_optimized() with multiple images.
     """
-    # Try GPU worker first if enabled (single-image batch)
-    try:
-        settings = get_settings()
-        if settings.gpu_worker_enabled:
-            logger.warning(f"[GPU-WORKER-SINGLE] Processing single image with GPU worker (inefficient - consider using batch queue)")
-            
-            # Use synchronous GPU worker call to avoid event loop conflicts
-            results = _try_gpu_worker_sync(
-                [image_bytes], 
-                min_face_quality=0.5,  # Use default quality
-                require_face=False,
-                crop_faces=False,
-                face_margin=0.2
-            )
-            
-            if results is not None and len(results) > 0:
-                # GPU worker succeeded, return first result
-                faces = results[0]
-                logger.info(f"[GPU-WORKER-SUCCESS] Detected {len(faces)} faces via GPU worker")
-                
-                # Convert GPU worker format to detect_and_embed format
-                converted_faces = []
-                for face in faces:
-                    converted_face = {
-                        'bbox': face['bbox'],
-                        'kps': face['landmarks'],
-                        'det_score': face['quality'],
-                        'embedding': face['embedding'],
-                        'age': face.get('age'),
-                        'gender': face.get('gender')
-                    }
-                    converted_faces.append(converted_face)
-                
-                return converted_faces
-    except Exception as e:
-        logger.warning(f"[GPU-WORKER-FAIL] GPU worker failed, falling back to CPU: {e}")
-
-    # CPU fallback processing (existing code continues below)
     logger.debug("[CPU-FALLBACK] Processing with CPU")
     
     # Check memory usage before processing

@@ -101,8 +101,8 @@ Site list file format (one URL per line):
                        help='Maximum images to collect per site (default: 20)')
     parser.add_argument('--max-pages-per-site', type=int, default=5,
                        help='Maximum pages to crawl per site (default: 5)')
-    parser.add_argument('--concurrent-sites', type=int, default=5,
-                       help='Maximum number of sites to crawl concurrently (default: 5)')
+    parser.add_argument('--concurrent-sites', type=int, default=15,
+                       help='Maximum number of sites to crawl concurrently (default: 15)')
     
     # Face detection parameters
     parser.add_argument('--min-face-quality', type=float, default=0.5,
@@ -121,8 +121,8 @@ Site list file format (one URL per line):
                        help='Request timeout in seconds (default: 30)')
     parser.add_argument('--max-concurrent-images', type=int, default=100,
                        help='Maximum number of images to process concurrently per site (default: 100)')
-    parser.add_argument('--batch-size', type=int, default=25,
-                       help='Batch size for operations (default: 25)')
+    parser.add_argument('--batch-size', type=int, default=256,
+                       help='Batch size for operations (default: 256)')
     parser.add_argument('--use-3x3-mining', action='store_true', default=False,
                        help='Enable 3x3 depth mining for better selector discovery (default: False)')
     

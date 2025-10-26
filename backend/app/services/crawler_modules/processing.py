@@ -26,14 +26,6 @@ except ImportError:
     get_face_service = None
     face_module = None
 
-# Import batch queue manager
-try:
-    from ..batch_queue_manager import get_batch_queue_manager
-    BATCH_QUEUE_AVAILABLE = True
-except ImportError:
-    BATCH_QUEUE_AVAILABLE = False
-    get_batch_queue_manager = None
-
 # Configure PIL for better performance
 Image.MAX_IMAGE_PIXELS = 50_000_000
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -79,16 +71,6 @@ class ImageProcessingService:
             max_workers=min(psutil.cpu_count() or 4, 8),  # Limit to CPU cores but cap at 8
             thread_name_prefix="face_detection"
         )
-        
-        # Initialize batch queue manager if available
-        self._batch_queue_manager = None
-        if BATCH_QUEUE_AVAILABLE:
-            try:
-                self._batch_queue_manager = get_batch_queue_manager()
-                self.logger.info(f"Batch queue manager initialized: enabled={self._batch_queue_manager.enabled}")
-            except Exception as e:
-                self.logger.warning(f"Failed to initialize batch queue manager: {e}")
-                self._batch_queue_manager = None
     
     async def process_single_image(self, image_info: ImageInfo, image_bytes: bytes, 
                                  index: int, total: int) -> Tuple[List, Optional[bytes], List[str]]:
@@ -115,88 +97,24 @@ class ImageProcessingService:
             # Strip EXIF data for privacy
             image_bytes = self.strip_exif_data(image_bytes)
             
-            # Try batch queue first if available
-            if self._batch_queue_manager and self._batch_queue_manager.enabled:
-                self.logger.info(f"Using batch queue for image {index}/{total}")
-                return await self._process_with_batch_queue(image_info, image_bytes, index, total)
-            else:
-                self.logger.info(f"Batch queue not available or disabled, using fallback for image {index}/{total}")
+            # Use async face detection with thread pool
+            faces = []
+            thumbnail_bytes = None
+            if self.require_face or self.crop_faces:
+                t_detect_start = datetime.utcnow()
+                faces, thumbnail_bytes = await self.async_face_detection(image_bytes, image_info)
+                t_detect_ms = (datetime.utcnow() - t_detect_start).total_seconds() * 1000.0
+                self.logger.debug(f"Face detection pipeline completed in {t_detect_ms:.1f} ms for {self._truncate_log_string(image_info.url)}")
+                
+                if self.require_face and not faces:
+                    self.logger.info(f"No faces detected for {self._truncate_log_string(image_info.url)}, skipping.")
+                    return [], None, []
             
-            # Fallback to single image processing
-            return await self._process_single_image_fallback(image_info, image_bytes, index, total)
+            return faces, thumbnail_bytes, []
             
         except Exception as e:
             self.logger.error(f"Error processing image {self._truncate_log_string(image_info.url)}: {e}")
             return [], None, [str(e)]
-    
-    async def _process_with_batch_queue(self, image_info: ImageInfo, image_bytes: bytes, 
-                                      index: int, total: int) -> Tuple[List, Optional[bytes], List[str]]:
-        """Process image using batch queue system."""
-        # Add image to batch queue and get image ID
-        image_id = self._batch_queue_manager.add_image(
-            image_bytes=image_bytes,
-            image_info=image_info
-        )
-        
-        self.logger.debug(f"Added image {image_id} to batch queue")
-        
-        # Wait for result from result queue
-        try:
-            faces_result = await self._batch_queue_manager.get_result_async(image_id, timeout=30.0)
-            
-            # Convert batch result to our format
-            faces = []
-            thumbnail_bytes = None
-            
-            if faces_result:
-                # Convert GPU worker format to our format
-                for face in faces_result:
-                    converted_face = {
-                        'bbox': face['bbox'],
-                        'kps': face['landmarks'],
-                        'det_score': face['quality'],
-                        'embedding': face['embedding'],
-                        'age': face.get('age'),
-                        'gender': face.get('gender')
-                    }
-                    faces.append(converted_face)
-                
-                # Create thumbnail if faces detected and cropping enabled
-                if self.crop_faces and faces:
-                    if FACE_SERVICE_AVAILABLE:
-                        face_service = get_face_service()
-                        thumbnail_bytes = face_service.crop_face_and_create_thumbnail(
-                            image_bytes, faces[0], self.face_margin
-                        )
-            
-            # Check if we should process this image
-            if self.require_face and not faces:
-                self.logger.info(f"No faces detected for {self._truncate_log_string(image_info.url)}, skipping.")
-                return [], None, []
-            
-            return faces, thumbnail_bytes, []
-            
-        except asyncio.TimeoutError:
-            self.logger.warning(f"Batch processing timeout for {self._truncate_log_string(image_info.url)}")
-            return [], None, ["Batch processing timeout"]
-    
-    async def _process_single_image_fallback(self, image_info: ImageInfo, image_bytes: bytes, 
-                                           index: int, total: int) -> Tuple[List, Optional[bytes], List[str]]:
-        """Fallback to single image processing when batch queue is not available."""
-        # Use async face detection with thread pool
-        faces = []
-        thumbnail_bytes = None
-        if self.require_face or self.crop_faces:
-            t_detect_start = datetime.utcnow()
-            faces, thumbnail_bytes = await self.async_face_detection(image_bytes, image_info)
-            t_detect_ms = (datetime.utcnow() - t_detect_start).total_seconds() * 1000.0
-            self.logger.debug(f"Face detection pipeline completed in {t_detect_ms:.1f} ms for {self._truncate_log_string(image_info.url)}")
-            
-            if self.require_face and not faces:
-                self.logger.info(f"No faces detected for {self._truncate_log_string(image_info.url)}, skipping.")
-                return [], None, []
-        
-        return faces, thumbnail_bytes, []
     
     async def async_face_detection(self, image_bytes: bytes, image_info: ImageInfo) -> Tuple[List, Optional[bytes]]:
         """
@@ -209,52 +127,6 @@ class ImageProcessingService:
         Returns:
             Tuple of (faces_list, thumbnail_bytes)
         """
-        # Try batch queue first if available
-        if self._batch_queue_manager and self._batch_queue_manager.enabled:
-            self.logger.debug(f"Using batch queue for async_face_detection")
-            
-            # Add image to batch queue and get image ID
-            image_id = self._batch_queue_manager.add_image(
-                image_bytes=image_bytes,
-                image_info=image_info
-            )
-            
-            # Wait for result from result queue
-            try:
-                faces_result = await self._batch_queue_manager.get_result_async(image_id, timeout=30.0)
-                
-                # Convert batch result to our format
-                faces = []
-                thumbnail_bytes = None
-                
-                if faces_result:
-                    # Convert GPU worker format to our format
-                    for face in faces_result:
-                        converted_face = {
-                            'bbox': face['bbox'],
-                            'kps': face['landmarks'],
-                            'det_score': face['quality'],
-                            'embedding': face['embedding'],
-                            'age': face.get('age'),
-                            'gender': face.get('gender')
-                        }
-                        faces.append(converted_face)
-                    
-                    # Create thumbnail if faces detected and cropping enabled
-                    if self.crop_faces and faces:
-                        if FACE_SERVICE_AVAILABLE:
-                            face_service = get_face_service()
-                            thumbnail_bytes = face_service.crop_face_and_create_thumbnail(
-                                image_bytes, faces[0], self.face_margin
-                            )
-                
-                return faces, thumbnail_bytes
-                
-            except asyncio.TimeoutError:
-                self.logger.warning(f"Batch processing timeout in async_face_detection for image {image_id}")
-                return [], None
-        
-        # Fallback to thread pool execution
         def _run_face_detection():
             """Synchronous face detection function to run in thread pool."""
             try:
@@ -359,14 +231,6 @@ class ImageProcessingService:
                 self.logger.info("Image processing thread pool shutdown complete")
         except Exception as e:
             self.logger.warning(f"Error cleaning up image processing resources: {e}")
-        
-        # Clean up batch queue manager
-        if self._batch_queue_manager:
-            try:
-                self._batch_queue_manager.stop()
-                self.logger.info("Batch queue manager stopped")
-            except Exception as e:
-                self.logger.warning(f"Error stopping batch queue manager: {e}")
     
     def check_image_dimensions(self, image_bytes: bytes) -> bool:
         """

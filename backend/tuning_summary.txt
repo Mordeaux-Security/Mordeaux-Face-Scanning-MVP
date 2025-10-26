@@ -1,0 +1,58 @@
+Parameter Tuning Summary
+==================================================
+
+Best Configuration: {'cs': 10, 'mci': 50, 'bs': 128}
+Best Rate: 4.86 img/s
+Total Tests: 6
+Timestamp: 2025-10-25T22:09:27.649684
+
+All Test Results:
+------------------------------
+Test 1: mpps5_mips10_cs10_mci50_bs128.txt
+  Config: {'cs': 10, 'mci': 50, 'bs': 128}
+  Rate: 4.86 img/s
+  Time: 48.9s
+  Images: 238
+  Pages: 29
+  Success: 0.0%
+
+Test 2: mpps5_mips10_cs15_mci100_bs256.txt
+  Config: {'cs': 15, 'mci': 100, 'bs': 256}
+  Rate: 0.00 img/s
+  Time: 2.2s
+  Images: 0
+  Pages: 0
+  Success: 0.0%
+
+Test 3: mpps5_mips10_cs20_mci150_bs512.txt
+  Config: {'cs': 20, 'mci': 150, 'bs': 512}
+  Rate: 0.00 img/s
+  Time: 2.1s
+  Images: 0
+  Pages: 0
+  Success: 0.0%
+
+Test 4: mpps5_mips10_cs15_mci50_bs128.txt
+  Config: {'cs': 15, 'mci': 50, 'bs': 128}
+  Rate: 0.00 img/s
+  Time: 2.2s
+  Images: 0
+  Pages: 0
+  Success: 0.0%
+
+Test 5: mpps5_mips10_cs10_mci75_bs128.txt
+  Config: {'cs': 10, 'mci': 75, 'bs': 128}
+  Rate: 0.00 img/s
+  Time: 2.3s
+  Images: 0
+  Pages: 0
+  Success: 0.0%
+
+Test 6: mpps5_mips10_cs10_mci50_bs192.txt
+  Config: {'cs': 10, 'mci': 50, 'bs': 192}
+  Rate: 0.00 img/s
+  Time: 2.3s
+  Images: 0
+  Pages: 0
+  Success: 0.0%
+

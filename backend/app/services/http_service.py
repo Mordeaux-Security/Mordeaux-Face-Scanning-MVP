@@ -35,8 +35,8 @@ BLOCKED_TLDS = set()   # Can be populated with blocked TLDs
 
 # HTTP Configuration
 DEFAULT_HTTP_LIMITS = httpx.Limits(
-    max_keepalive_connections=100,
-    max_connections=200
+    max_keepalive_connections=200,
+    max_connections=500
 )
 
 DEFAULT_TIMEOUT = httpx.Timeout(
@@ -310,8 +310,7 @@ class BrowserPool:
             # Navigate to the page
             await page.goto(url, wait_until='domcontentloaded')
             
-            # Wait for potential dynamic content
-            await page.wait_for_timeout(3000)
+            # Wait for potential dynamic content (removed fixed 3-second wait for faster processing)
             
             # Get the rendered HTML
             html_content = await page.content()
