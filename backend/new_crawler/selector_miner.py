@@ -123,6 +123,31 @@ class SelectorMiner:
             except (ValueError, TypeError):
                 width = height = None
             
+            # Infer content type from URL extension
+            content_type = None
+            img_url_lower = img_url.lower()
+            if img_url_lower.endswith(('.jpg', '.jpeg')):
+                content_type = 'image/jpeg'
+            elif img_url_lower.endswith('.png'):
+                content_type = 'image/png'
+            elif img_url_lower.endswith('.webp'):
+                content_type = 'image/webp'
+            elif img_url_lower.endswith('.gif'):
+                content_type = 'image/gif'
+            elif img_url_lower.endswith('.bmp'):
+                content_type = 'image/bmp'
+            elif img_url_lower.endswith('.svg'):
+                content_type = 'image/svg+xml'
+            
+            # Estimate file size from dimensions (rough approximation)
+            estimated_size = None
+            if width and height:
+                # Rough estimate: width * height * 3 bytes (RGB) * compression factor
+                estimated_size = int(width * height * 3 * 0.3)  # 30% compression factor
+            
+            # Check for srcset
+            has_srcset = bool(img_element.get('srcset'))
+            
             return CandidateImage(
                 page_url=base_url,
                 img_url=img_url,
@@ -130,7 +155,10 @@ class SelectorMiner:
                 site_id=site_id,
                 alt_text=alt_text,
                 width=width,
-                height=height
+                height=height,
+                content_type=content_type,
+                estimated_size=estimated_size,
+                has_srcset=has_srcset
             )
             
         except Exception as e:
@@ -140,6 +168,10 @@ class SelectorMiner:
     async def mine_with_3x3_crawl(self, base_url: str, site_id: str, max_pages: int = 5) -> List[CandidateImage]:
         """Perform 3x3 crawl: 3 category pages × 3 content pages."""
         try:
+            # Import redis manager at function level to avoid circular imports
+            from .redis_manager import get_redis_manager
+            redis = get_redis_manager()
+            
             logger.info(f"Starting 3x3 crawl for {base_url} (max_pages={max_pages})")
             all_candidates = []
             checked_urls = {base_url}
@@ -165,6 +197,14 @@ class SelectorMiner:
                 logger.info(f"[3x3-CRAWL] Reached max pages limit ({max_pages}), stopping")
                 return all_candidates
             
+            # NEW: Check if thumbnail limit reached before continuing
+            site_stats = await asyncio.to_thread(redis.get_site_stats, site_id)
+            thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
+            
+            if thumbnails_saved >= self.config.nc_max_images_per_site:
+                logger.info(f"[3x3-CRAWL] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping crawl")
+                return all_candidates
+            
             # Step 2: Find 3 category pages
             soup = BeautifulSoup(html, 'html.parser')
             category_urls = await self._discover_category_pages(soup, base_url)
@@ -172,6 +212,14 @@ class SelectorMiner:
             
             # Process up to 3 category pages
             for i, category_url in enumerate(category_urls[:3]):
+                # Check thumbnail limit before fetching next page
+                site_stats = await asyncio.to_thread(redis.get_site_stats, site_id)
+                thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
+                
+                if thumbnails_saved >= self.config.nc_max_images_per_site:
+                    logger.info(f"[3x3-CRAWL] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping crawl")
+                    return all_candidates
+                
                 if category_url in checked_urls:
                     continue
                 
@@ -197,6 +245,14 @@ class SelectorMiner:
                         
                         # Process up to 3 content pages from this category
                         for j, content_url in enumerate(content_urls[:3]):
+                            # Check thumbnail limit before fetching next page
+                            site_stats = await asyncio.to_thread(redis.get_site_stats, site_id)
+                            thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
+                            
+                            if thumbnails_saved >= self.config.nc_max_images_per_site:
+                                logger.info(f"[3x3-CRAWL] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping crawl")
+                                return all_candidates
+                            
                             if content_url in checked_urls:
                                 continue
                             

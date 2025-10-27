@@ -137,8 +137,9 @@ def print_results(results):
     print(f"Total images found: {results.total_images_found}")
     print(f"Total images processed: {sum(site.images_processed for site in results.sites)}")
     print(f"Total faces detected: {results.total_faces_detected}")
-    print(f"Raw images saved: {sum(site.raw_images_saved for site in results.sites)}")
-    print(f"Thumbnails saved: {sum(site.thumbnails_saved for site in results.sites)}")
+    print(f"Raw images saved: {sum(site.images_saved_raw for site in results.sites)}")
+    print(f"Thumbnails saved: {sum(site.images_saved_thumbs for site in results.sites)}")
+    print(f"Overall throughput: {results.overall_images_per_second:.2f} images/second")
     
     print(f"\n{'='*60}")
     print(f"PER-SITE RESULTS")
@@ -151,10 +152,11 @@ def print_results(results):
         print(f"  Images processed: {site_stats.images_processed}")
         print(f"  Images cached: {site_stats.images_cached}")
         print(f"  Faces detected: {site_stats.faces_detected}")
-        print(f"  Raw images saved: {site_stats.raw_images_saved}")
-        print(f"  Thumbnails saved: {site_stats.thumbnails_saved}")
+        print(f"  Raw images saved: {site_stats.images_saved_raw}")
+        print(f"  Thumbnails saved: {site_stats.images_saved_thumbs}")
         print(f"  Success rate: {site_stats.success_rate:.1f}%")
         print(f"  Processing time: {site_stats.total_time_seconds:.1f}s")
+        print(f"  Throughput: {site_stats.images_per_second:.2f} images/second")
         
         if site_stats.errors:
             print(f"  Errors: {len(site_stats.errors)}")

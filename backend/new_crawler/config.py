@@ -43,8 +43,11 @@ class CrawlerConfig(BaseSettings):
     nc_batch_size: int = 64
     nc_max_queue_depth: int = 512
     nc_crawler_concurrency: int = 32
-    nc_extractor_concurrency: int = 16
+    nc_extractor_concurrency: int = 64  # Increased from 16 to 64 for 4x more concurrent downloads
     nc_cache_ttl_days: int = 90
+    
+    # HTTP Performance Configuration
+    nc_skip_head_check: bool = True  # Skip HEAD requests when HTML metadata is available
     
     # Worker Configuration adds to 7 (8 cores-1 for Orchestrator)
     num_crawlers: int = 2
@@ -56,6 +59,7 @@ class CrawlerConfig(BaseSettings):
     gpu_worker_url: str = "http://host.docker.internal:8765"
     gpu_worker_timeout: float = 60.0
     gpu_worker_max_retries: int = 3
+    gpu_min_batch_size: int = 8
     
     # HTTP Configuration
     nc_http_timeout: float = 30.0
@@ -238,6 +242,7 @@ class CrawlerConfig(BaseSettings):
         logger.info(f"GPU Worker URL: {self.gpu_worker_url}")
         logger.info(f"GPU Worker Host: {self.gpu_worker_host_resolved}")
         logger.info(f"Batch Size: {self.nc_batch_size}")
+        logger.info(f"GPU Min Batch Size: {self.gpu_min_batch_size}")
         logger.info(f"Max Queue Depth: {self.nc_max_queue_depth}")
         logger.info(f"Crawler Concurrency: {self.nc_crawler_concurrency}")
         logger.info(f"Extractor Concurrency: {self.nc_extractor_concurrency}")

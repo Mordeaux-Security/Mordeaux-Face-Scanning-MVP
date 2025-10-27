@@ -145,3 +145,4 @@ To start the full system:
 3. Run a crawl: `docker-compose exec new-crawler python -m new_crawler.main --sites-file /app/new_crawler/example_sites.txt`
 
 The crawler will automatically detect and use the GPU worker for face detection.
+

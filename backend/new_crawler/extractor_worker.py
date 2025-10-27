@@ -12,6 +12,7 @@ import os
 import signal
 import tempfile
 import time
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from .config import get_config
@@ -62,15 +63,26 @@ class ExtractorWorker:
             try:
                 logger.debug(f"[Extractor {self.worker_id}] Processing candidate: {candidate.img_url}")
                 
-                # HEAD check first
-                is_valid, head_info = await self.http_utils.head_check(candidate.img_url)
-                if not is_valid:
-                    logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - FAILED")
-                    return None
+                # If we have metadata from HTML, skip HEAD check entirely!
+                if candidate.content_type and candidate.width and candidate.height:
+                    logger.debug(f"[EXTRACTOR-{self.worker_id}] Using HTML metadata, skipping HEAD check")
+                    head_info = {
+                        'content_type': candidate.content_type,
+                        'content_length': candidate.estimated_size or 0
+                    }
+                elif not self.config.nc_skip_head_check:
+                    # Fallback: HEAD check if metadata not available
+                    is_valid, head_info = await self.http_utils.head_check(candidate.img_url)
+                    if not is_valid:
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - FAILED")
+                        return None
+                    logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - OK")
+                else:
+                    # No metadata, no HEAD check - just proceed
+                    logger.debug(f"[EXTRACTOR-{self.worker_id}] Skipping HEAD check (config enabled)")
+                    head_info = {}
                 
-                logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - OK")
-                
-                # Download image to temp file
+                # Download image to temp file (only necessary HTTP request!)
                 temp_path, download_info = await self.http_utils.download_to_temp(
                     candidate.img_url, self.temp_dir
                 )
@@ -117,10 +129,32 @@ class ExtractorWorker:
                 
                 # Try to flush if batch is ready (atomic operation)
                 if new_batch_size >= self.batch_size_threshold:
-                    flushed = await self.redis.flush_shared_batch_if_ready_async(self.batch_size_threshold)
-                    if flushed:
-                        logger.info(f"[EXTRACTOR-{self.worker_id}] Flushed shared batch: {self.batch_size_threshold} images")
-                        self.batches_created += 1
+                    # BATCH-LEVEL CUTOFF CHECK:
+                    # Check if primary site in this batch has reached thumbnail limit
+                    site_id = candidate.site_id
+                    
+                    # Get current thumbnail count for this site from Redis
+                    site_stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
+                    thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
+                    
+                    if thumbnails_saved >= self.config.nc_max_images_per_site:
+                        # Site has reached limit - STOP feeding this site to GPU
+                        logger.info(f"[EXTRACTOR-{self.worker_id}] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping GPU feed")
+                        
+                        # Do NOT flush batch - let it accumulate but don't send to GPU
+                        # The batch will be processed by other extractors or timeout
+                        logger.info(f"[EXTRACTOR-{self.worker_id}] Skipping batch flush for site {site_id} (limit reached)")
+                        
+                        # Update stats for skipped batch
+                        await self.redis.update_site_stats_async(site_id, {
+                            'images_skipped_limit': self.batch_size_threshold
+                        })
+                    else:
+                        # Site still under limit - flush ALL images in batch to GPU
+                        flushed = await self.redis.flush_shared_batch_if_ready_async(self.batch_size_threshold)
+                        if flushed:
+                            logger.info(f"[EXTRACTOR-{self.worker_id}] Flushed shared batch: {self.batch_size_threshold} images (site {site_id} at {thumbnails_saved}/{self.config.nc_max_images_per_site} thumbnails)")
+                            self.batches_created += 1
                 
                 logger.debug(f"[Extractor {self.worker_id}] Created image task: {phash[:8]}...")
                 return image_task
@@ -136,8 +170,8 @@ class ExtractorWorker:
         logger.info(f"[Extractor {self.worker_id}] Starting extractor worker")
         self.running = True
         
-        # Start batch timeout monitor
-        # self._flush_task = asyncio.create_task(self._batch_timeout_monitor())  # Removed
+        # Track first and last extraction times per site
+        site_extraction_times = {}  # {site_id: {'start': datetime, 'end': datetime}}
         
         try:
             while self.running:
@@ -150,17 +184,34 @@ class ExtractorWorker:
                     await asyncio.sleep(0.1)
                     continue
                 
+                site_id = candidate.site_id
+                
+                # Track extraction start time
+                if site_id not in site_extraction_times:
+                    site_extraction_times[site_id] = {
+                        'start': datetime.now(),
+                        'end': None
+                    }
+                    await self.redis.update_site_stats_async(
+                        site_id,
+                        {'extraction_start_time': site_extraction_times[site_id]['start']}
+                    )
+                
                 # Process candidate
                 image_task = await self.process_candidate(candidate)
                 
                 if image_task:
                     self.downloaded_images += 1
-                    # Flushing is handled in process_candidate - no need for additional logic
+                    # Update extraction end time
+                    site_extraction_times[site_id]['end'] = datetime.now()
                     
                     # Update statistics in Redis
                     await self.redis.update_site_stats_async(
                         candidate.site_id,
-                        {'images_processed': 1}
+                        {
+                            'images_processed': 1,
+                            'extraction_end_time': site_extraction_times[site_id]['end']
+                        }
                     )
                 
                 self.processed_candidates += 1

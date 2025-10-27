@@ -283,7 +283,7 @@ def _load_face_model() -> FaceAnalysis:
             
             # Load model
             app = FaceAnalysis(name='buffalo_l', root=home)
-            app.prepare(ctx_id=0, det_size=(640, 640))
+            app.prepare(ctx_id=0)  # Let InsightFace use native image dimensions
             
             _face_app = app
             logger.info("InsightFace model loaded successfully")

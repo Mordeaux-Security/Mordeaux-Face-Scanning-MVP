@@ -55,10 +55,11 @@ class HTTPUtils:
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client."""
         if self._client is None:
+            # Improved connection pooling for higher concurrency
             limits = httpx.Limits(
-                max_connections=self.config.nc_crawler_concurrency,
-                max_keepalive_connections=20,
-                keepalive_expiry=30.0
+                max_connections=300,  # Up from crawler_concurrency to handle extractor load
+                max_keepalive_connections=200,  # Up from 20 for better connection reuse
+                keepalive_expiry=60.0  # Up from 30s to keep connections alive longer
             )
             timeout = httpx.Timeout(
                 connect=10.0,
@@ -70,7 +71,8 @@ class HTTPUtils:
                 limits=limits,
                 timeout=timeout,
                 follow_redirects=True,
-                max_redirects=self.config.nc_max_redirects
+                max_redirects=self.config.nc_max_redirects,
+                http2=True  # Enable HTTP/2 for better multiplexing
             )
         return self._client
     

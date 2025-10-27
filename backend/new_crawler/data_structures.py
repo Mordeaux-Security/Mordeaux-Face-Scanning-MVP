@@ -51,6 +51,11 @@ class CandidateImage(BaseModel):
     height: Optional[int] = Field(None, description="Image height")
     discovered_at: datetime = Field(default_factory=datetime.now)
     
+    # NEW: Add metadata from HTML parsing to skip HEAD requests
+    content_type: Optional[str] = Field(None, description="Content type inferred from URL extension")
+    estimated_size: Optional[int] = Field(None, description="Estimated file size from dimensions")
+    has_srcset: bool = Field(False, description="Whether image has srcset attribute")
+    
     @validator('img_url')
     def validate_img_url(cls, v):
         if not v.startswith(('http://', 'https://')):
@@ -68,6 +73,20 @@ class ImageTask(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     status: TaskStatus = Field(default=TaskStatus.PENDING)
 
+
+# TODO: ARCHITECTURE ISSUE - Duplicate Data Structures
+# FaceDetection is defined in THREE places:
+#   1. new_crawler/data_structures.py (this file)
+#   2. gpu_worker/worker.py (GPU service)
+#   3. app/services/gpu_client.py (legacy service)
+#
+# All three are identical but manually kept in sync.
+# Should create common/models.py with single definition:
+#
+#   from common.models import FaceDetection
+#
+# Instead of three separate implementations.
+# Risk: If one changes, others break silently.
 
 class FaceDetection(BaseModel):
     """Face detection result."""
@@ -113,12 +132,18 @@ class ProcessingStats(BaseModel):
     images_skipped_limit: int = Field(default=0, description="Number of images skipped due to per-site limit")
     images_cached: int = Field(default=0, description="Number of images skipped (cached)")
     faces_detected: int = Field(default=0, description="Number of faces detected")
-    raw_images_saved: int = Field(default=0, description="Number of raw images saved")
-    thumbnails_saved: int = Field(default=0, description="Number of thumbnails saved")
     errors: List[str] = Field(default_factory=list, description="List of errors encountered")
     start_time: datetime = Field(default_factory=datetime.now)
     end_time: Optional[datetime] = Field(None, description="Processing end time")
     total_time_seconds: Optional[float] = Field(None, description="Total processing time")
+    
+    # NEW: Add timing fields for throughput calculation
+    extraction_start_time: Optional[datetime] = Field(None, description="Extraction start time")
+    extraction_end_time: Optional[datetime] = Field(None, description="Extraction end time")
+    gpu_processing_start_time: Optional[datetime] = Field(None, description="GPU processing start time")
+    gpu_processing_end_time: Optional[datetime] = Field(None, description="GPU processing end time")
+    storage_start_time: Optional[datetime] = Field(None, description="Storage start time")
+    storage_end_time: Optional[datetime] = Field(None, description="Storage end time")
     
     @property
     def success_rate(self) -> float:
@@ -126,6 +151,31 @@ class ProcessingStats(BaseModel):
         if self.images_found == 0:
             return 0.0
         return (self.images_processed + self.images_cached) / self.images_found
+    
+    @property
+    def images_per_second(self) -> float:
+        """Calculate overall images/second throughput."""
+        if self.total_time_seconds and self.total_time_seconds > 0:
+            return self.images_processed / self.total_time_seconds
+        return 0.0
+    
+    @property
+    def extraction_images_per_second(self) -> float:
+        """Calculate extraction throughput."""
+        if self.extraction_start_time and self.extraction_end_time:
+            duration = (self.extraction_end_time - self.extraction_start_time).total_seconds()
+            if duration > 0:
+                return self.images_processed / duration
+        return 0.0
+    
+    @property
+    def gpu_images_per_second(self) -> float:
+        """Calculate GPU processing throughput."""
+        if self.gpu_processing_start_time and self.gpu_processing_end_time:
+            duration = (self.gpu_processing_end_time - self.gpu_processing_start_time).total_seconds()
+            if duration > 0:
+                return self.images_processed / duration
+        return 0.0
 
 
 class BatchRequest(BaseModel):
@@ -185,6 +235,19 @@ class CrawlResults(BaseModel):
         return sum(site.images_found for site in self.sites)
     
     @property
+    def total_images_processed(self) -> int:
+        """Total images processed across all sites."""
+        return sum(site.images_processed for site in self.sites)
+    
+    @property
     def total_faces_detected(self) -> int:
         """Total faces detected across all sites."""
         return sum(site.faces_detected for site in self.sites)
+    
+    @property
+    def overall_images_per_second(self) -> float:
+        """Calculate overall images/second across all sites."""
+        total_images = self.total_images_processed
+        if self.total_time_seconds > 0:
+            return total_images / self.total_time_seconds
+        return 0.0

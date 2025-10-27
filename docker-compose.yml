@@ -188,6 +188,7 @@ services:
       GPU_WORKER_URL: ${GPU_WORKER_URL:-http://host.docker.internal:8765}
       GPU_WORKER_TIMEOUT: ${GPU_WORKER_TIMEOUT:-60}
       GPU_WORKER_MAX_RETRIES: ${GPU_WORKER_MAX_RETRIES:-3}
+      GPU_MIN_BATCH_SIZE: ${GPU_MIN_BATCH_SIZE:-8}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

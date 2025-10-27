@@ -17,7 +17,7 @@ import json
 
 from .config import get_config
 from .redis_manager import get_redis_manager
-from .data_structures import SiteTask, ProcessingStats, SystemMetrics, CrawlResults
+from .data_structures import SiteTask, ProcessingStats, SystemMetrics, CrawlResults, FaceResult
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,10 @@ class Orchestrator:
         self._backpressure_task: Optional[asyncio.Task] = None
         self._should_throttle = False
         self.running = False
+        
+        # Results consumer
+        self._results_consumer_task: Optional[asyncio.Task] = None
+        self._consumed_results: List[FaceResult] = []
         
         # Control
         self.start_time = None
@@ -78,6 +82,30 @@ class Orchestrator:
             except Exception as e:
                 logger.error(f"Error monitoring back-pressure: {e}")
                 await asyncio.sleep(5.0)
+    
+    async def _consume_results(self):
+        """Continuously consume results from results queue."""
+        while self.running:
+            try:
+                # Pop result with short timeout to allow frequent checks
+                result = await asyncio.to_thread(
+                    self.redis.pop_face_result, 
+                    timeout=1.0
+                )
+                
+                if result:
+                    self._consumed_results.append(result)
+                    # Update aggregated statistics
+                    self.total_images_processed += 1
+                    self.total_faces_detected += len(result.faces)
+                    
+                    # Log periodically
+                    if len(self._consumed_results) % 100 == 0:
+                        logger.info(f"Consumed {len(self._consumed_results)} results from queue")
+                
+            except Exception as e:
+                logger.error(f"Error consuming results: {e}")
+                await asyncio.sleep(1.0)
     
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals."""
@@ -297,11 +325,16 @@ class Orchestrator:
             # Check if all queues are empty
             queue_lengths = self.redis.get_queue_lengths()
             
-            # Crawl is complete if sites and candidates queues are empty
+            # Crawl is complete if sites, candidates, and images queues are empty
             sites_empty = queue_lengths.get('sites', 0) == 0
             candidates_empty = queue_lengths.get('candidates', 0) == 0
+            images_empty = queue_lengths.get('images', 0) == 0
             
-            return sites_empty and candidates_empty
+            # Also check if results queue is being drained (allow small buffer)
+            results_depth = queue_lengths.get('results', 0)
+            results_manageable = results_depth < 50
+            
+            return sites_empty and candidates_empty and images_empty and results_manageable
         except Exception as e:
             logger.error(f"Error checking crawl completion: {e}")
             return False
@@ -312,11 +345,13 @@ class Orchestrator:
             # Check if all queues are empty
             queue_lengths = await self.redis.get_queue_lengths_async()
             
-            # Crawl is complete if sites and candidates queues are empty
             sites_empty = queue_lengths.get('sites', 0) == 0
             candidates_empty = queue_lengths.get('candidates', 0) == 0
+            images_empty = queue_lengths.get('images', 0) == 0
+            results_depth = queue_lengths.get('results', 0)
+            results_manageable = results_depth < 50
             
-            return sites_empty and candidates_empty
+            return sites_empty and candidates_empty and images_empty and results_manageable
         except Exception as e:
             logger.error(f"Error checking crawl completion (async): {e}")
             return False
@@ -360,6 +395,8 @@ class Orchestrator:
         
         # Start back-pressure monitor
         self._backpressure_task = asyncio.create_task(self._monitor_backpressure())
+        # Start results consumer
+        self._results_consumer_task = asyncio.create_task(self._consume_results())
         
         try:
             while self.running:
@@ -377,12 +414,15 @@ class Orchestrator:
                 # Log status
                 logger.info(f"Queues: sites={queue_info.get('queue_lengths', {}).get('sites', 0)}, "
                            f"candidates={queue_info.get('queue_lengths', {}).get('candidates', 0)}, "
-                           f"images={queue_info.get('queue_lengths', {}).get('images', 0)}")
+                           f"images={queue_info.get('queue_lengths', {}).get('images', 0)}, "
+                           f"results={queue_info.get('queue_lengths', {}).get('results', 0)}")
                 
                 await asyncio.sleep(10.0)
         finally:
             if self._backpressure_task:
                 self._backpressure_task.cancel()
+            if self._results_consumer_task:
+                self._results_consumer_task.cancel()
     
     async def crawl_sites(self, sites: List[str]) -> CrawlResults:
         """Main crawl orchestration."""
@@ -434,6 +474,11 @@ class Orchestrator:
                     site.images_skipped_limit = int(stats_dict.get('images_skipped_limit', 0))
                     site.images_cached = int(stats_dict.get('images_cached', 0))
             
+            # Log what we pulled from Redis for debugging
+            logger.info(f"Retrieved stats for {len(redis_stats)} sites from Redis")
+            for site_id, stats_dict in redis_stats.items():
+                logger.debug(f"Site {site_id}: {stats_dict}")
+            
             # Get final site stats
             site_stats_list = list(self.site_stats.values())
             for stats in site_stats_list:
@@ -443,15 +488,30 @@ class Orchestrator:
             # Get final system metrics
             system_metrics = self.get_system_metrics()
             
-            # Calculate success rate
+            # Add validation logging
+            logger.info(f"Consumed {len(self._consumed_results)} results from queue")
+            consumed_faces = sum(len(r.faces) for r in self._consumed_results)
+            consumed_saved_raw = sum(1 for r in self._consumed_results if r.saved_to_raw)
+            consumed_saved_thumbs = sum(1 for r in self._consumed_results if r.saved_to_thumbs)
+            logger.info(f"From consumed results: faces={consumed_faces}, raw={consumed_saved_raw}, thumbs={consumed_saved_thumbs}")
+            
+            # Use site stats as source of truth (already pulled from Redis)
             total_images_found = sum(site.images_found for site in site_stats_list)
             total_images_processed = sum(site.images_processed for site in site_stats_list)
+            total_faces_detected = sum(site.faces_detected for site in site_stats_list)
             total_images_saved_raw = sum(site.images_saved_raw for site in site_stats_list)
             total_images_saved_thumbs = sum(site.images_saved_thumbs for site in site_stats_list)
             total_images_skipped_limit = sum(site.images_skipped_limit for site in site_stats_list)
+            
+            logger.info(f"From Redis stats: faces={total_faces_detected}, raw={total_images_saved_raw}, thumbs={total_images_saved_thumbs}")
+            logger.info(f"Total images processed: {total_images_processed}")
+            
             success_rate = (total_images_processed / total_images_found * 100) if total_images_found > 0 else 0
             
-            # Print detailed summary
+            # Calculate overall throughput
+            overall_images_per_second = total_images_processed / total_time if total_time > 0 else 0
+            
+            # Print detailed summary with throughput
             logger.info(f"=== Crawl Summary ===")
             logger.info(f"Total sites processed: {len(site_stats_list)}")
             logger.info(f"Total images processed: {total_images_processed}")
@@ -459,6 +519,7 @@ class Orchestrator:
             logger.info(f"Total thumbnails saved: {total_images_saved_thumbs}")
             logger.info(f"Total images skipped due to limits: {total_images_skipped_limit}")
             logger.info(f"Success rate: {success_rate:.1f}%")
+            logger.info(f"Overall throughput: {overall_images_per_second:.2f} images/second")
             
             results = CrawlResults(
                 sites=site_stats_list,
@@ -467,7 +528,7 @@ class Orchestrator:
                 success_rate=success_rate
             )
             
-            logger.info(f"Crawl completed in {total_time:.1f}s, success rate: {success_rate:.1f}%")
+            logger.info(f"Crawl completed in {total_time:.1f}s, success rate: {success_rate:.1f}%, throughput: {overall_images_per_second:.2f} images/second")
             return results
             
         except Exception as e:
@@ -481,9 +542,11 @@ class Orchestrator:
         logger.info("Stopping orchestrator...")
         self.running = False
         
-        # Cancel back-pressure task
+        # Cancel tasks
         if self._backpressure_task:
             self._backpressure_task.cancel()
+        if self._results_consumer_task:
+            self._results_consumer_task.cancel()
         
         self.stop_workers()
 

@@ -11,6 +11,7 @@ import multiprocessing
 import os
 import signal
 import time
+from datetime import datetime
 from typing import List, Optional, Dict
 
 from .config import get_config
@@ -25,9 +26,6 @@ logger = logging.getLogger(__name__)
 
 class GPUProcessorWorker:
     """GPU processor worker for face detection and storage."""
-    
-    # Minimum batch size to justify GPU overhead
-    MIN_GPU_BATCH_SIZE = 8
     
     def __init__(self, worker_id: int):
         self.worker_id = worker_id
@@ -46,159 +44,165 @@ class GPUProcessorWorker:
         self.thumbnails_saved = 0
         self.cached_results = 0
         
-        # Per-site tracking
-        self.site_image_counts: Dict[str, Dict[str, int]] = {}
-        self._counts_lock = asyncio.Lock()
+        # No per-site tracking needed - limits handled by extractor
     
     async def process_batch(self, batch_request: BatchRequest) -> int:
         """Process a batch of image tasks."""
         try:
+            # Track GPU processing start time per site
+            site_ids = list(set(task.candidate.site_id for task in batch_request.image_tasks))
+            gpu_start_time = datetime.now()
+            
+            # Update GPU processing start time for all sites in batch
+            for site_id in site_ids:
+                await self.redis.update_site_stats_async(
+                    site_id,
+                    {'gpu_processing_start_time': gpu_start_time}
+                )
+            
             logger.info(f"[GPU Processor {self.worker_id}] Processing batch: {batch_request.batch_id}, "
                        f"{len(batch_request.image_tasks)} images")
             
             start_time = time.time()
+            compute_type = "GPU"  # Track compute type
             
             # Check if batch is large enough for GPU processing
-            if len(batch_request.image_tasks) < self.MIN_GPU_BATCH_SIZE:
-                logger.info(f"[GPU-WORKER-{self.worker_id}] Batch size ({len(batch_request.image_tasks)}) below minimum threshold ({self.MIN_GPU_BATCH_SIZE}), using CPU for efficiency")
+            if len(batch_request.image_tasks) < self.config.gpu_min_batch_size:
+                logger.info(f"[GPU-WORKER-{self.worker_id}] Batch size ({len(batch_request.image_tasks)}) below minimum threshold ({self.config.gpu_min_batch_size}), using CPU for efficiency")
+                compute_type = "CPU"
                 # Skip directly to CPU fallback processing
                 face_results = await _process_batch_cpu_fallback(batch_request.image_tasks)
             else:
                 # Process batch with GPU interface
                 face_results = await self.gpu_interface.process_batch(batch_request.image_tasks)
+                # Check if GPU fallback occurred
+                if not face_results or all(not faces for faces in face_results):
+                    compute_type = "CPU (fallback)"
             
             if not face_results:
                 logger.warning(f"[GPU Processor {self.worker_id}] No face results from batch: {batch_request.batch_id}")
                 return 0
             
-            # Process each image result
+            # Track GPU processing end time
+            gpu_end_time = datetime.now()
+            for site_id in site_ids:
+                await self.redis.update_site_stats_async(
+                    site_id,
+                    {'gpu_processing_end_time': gpu_end_time}
+                )
+            
+            # Process each image result concurrently
             processed_count = 0
+            
+            # Create tasks for concurrent image processing
+            save_tasks = []
             for i, (image_task, face_detections) in enumerate(zip(batch_request.image_tasks, face_results)):
-                try:
-                    site_id = image_task.candidate.site_id
-                    
-                    # Initialize site tracking if needed
-                    async with self._counts_lock:
-                        if site_id not in self.site_image_counts:
-                            self.site_image_counts[site_id] = {
-                                'processed': 0,
-                                'saved_raw': 0,
-                                'saved_thumbs': 0,
-                                'skipped': 0
-                            }
-                        self.site_image_counts[site_id]['processed'] += 1
-                    
-                    # Check if result is already cached
-                    if self.cache.is_image_cached(image_task.phash):
-                        logger.debug(f"[GPU Processor {self.worker_id}] Result already cached: {image_task.phash[:8]}...")
-                        self.cached_results += 1
-                        continue
-                    
-                    # Check per-site image limit
-                    max_images_per_site = self.config.nc_max_images_per_site
-                    async with self._counts_lock:
-                        if self.site_image_counts[site_id]['saved_thumbs'] >= max_images_per_site:
-                            logger.info(f"[GPU-PROC-{self.worker_id}] Site {site_id} reached image limit ({max_images_per_site}), skipping save")
-                            self.site_image_counts[site_id]['skipped'] += 1
-                            
-                            # Create face result without saving
-                            face_result = FaceResult(
-                                image_task=image_task,
-                                faces=face_detections,
-                                processing_time_ms=(time.time() - start_time) * 1000,
-                                gpu_used=True,
-                                saved_to_raw=False,
-                                saved_to_thumbs=False,
-                                skip_reason="site_limit_reached"
-                            )
-                            
-                            # Update statistics in Redis
-                            stats_update = {}
-                            if face_detections:
-                                stats_update['faces_detected'] = len(face_detections)
-                            if face_result.saved_to_raw:
-                                stats_update['images_saved_raw'] = 1
-                            if face_result.saved_to_thumbs:
-                                stats_update['images_saved_thumbs'] = 1
-                            if face_result.skip_reason == "site_limit_reached":
-                                stats_update['images_skipped_limit'] = 1
-                            
-                            await self.redis.update_site_stats_async(site_id, stats_update)
-                            
-                            # Push result to results queue
-                            await self.redis.push_face_result_async(face_result)
-                            processed_count += 1
-                            continue
-                    
-                    # Create face result
-                    face_result = FaceResult(
-                        image_task=image_task,
-                        faces=face_detections,
-                        processing_time_ms=(time.time() - start_time) * 1000,
-                        gpu_used=True  # Will be updated by GPU interface
-                    )
-                    
-                    # Save to storage (run in thread pool - blocking I/O)
-                    face_result, save_counts = await asyncio.to_thread(
-                        self.storage.save_face_result, image_task, face_result
-                    )
-                    
-                    # Update site counters
-                    async with self._counts_lock:
-                        self.site_image_counts[site_id]['saved_raw'] += save_counts.get('saved_raw', 0)
-                        self.site_image_counts[site_id]['saved_thumbs'] += save_counts.get('saved_thumbs', 0)
-                    
-                    # Update face result fields
-                    face_result.saved_to_raw = save_counts.get('saved_raw', 0) > 0
-                    face_result.saved_to_thumbs = save_counts.get('saved_thumbs', 0) > 0
-                    
-                    # Cache the result (run in thread pool - blocking I/O)
-                    await asyncio.to_thread(
-                        self.cache.store_processing_result, image_task, face_result
-                    )
-                    
-                    # Update statistics
-                    self.faces_detected += len(face_detections)
-                    if face_result.raw_image_key:
-                        self.raw_images_saved += 1
-                    self.thumbnails_saved += len(face_result.thumbnail_keys)
-                    
-                    # Log save details
-                    logger.debug(f"[GPU-PROC-{self.worker_id}] Image saved: raw={face_result.raw_image_key}, thumbs={len(face_result.thumbnail_keys)}")
-                    
-                    # Update statistics in Redis
-                    stats_update = {}
-                    if face_detections:
-                        stats_update['faces_detected'] = len(face_detections)
-                    if face_result.saved_to_raw:
-                        stats_update['images_saved_raw'] = 1
-                    if face_result.saved_to_thumbs:
-                        stats_update['images_saved_thumbs'] = 1
-                    
-                    await self.redis.update_site_stats_async(site_id, stats_update)
-                    
-                    # Log site progress
-                    counts = self.site_image_counts[site_id]
-                    logger.debug(f"[GPU-PROC-{self.worker_id}] Site {site_id}: processed={counts['processed']}, raw={counts['saved_raw']}, thumbs={counts['saved_thumbs']}, skipped={counts['skipped']}")
-                    
-                    # Push result to results queue
-                    await self.redis.push_face_result_async(face_result)
-                    
+                task = self._process_and_save_single_image(
+                    image_task, face_detections, start_time
+                )
+                save_tasks.append(task)
+            
+            # Execute all saves concurrently
+            save_results = await asyncio.gather(*save_tasks, return_exceptions=True)
+            
+            # Process results and count successes
+            for result in save_results:
+                if isinstance(result, Exception):
+                    logger.error(f"[GPU Processor {self.worker_id}] Error in batch processing: {result}")
+                elif result:
                     processed_count += 1
-                    
-                except Exception as e:
-                    logger.error(f"[GPU Processor {self.worker_id}] Error processing image {i} in batch: {e}")
-                    continue
             
             processing_time = (time.time() - start_time) * 1000
             logger.info(f"[GPU Processor {self.worker_id}] Batch completed: {processed_count}/{len(batch_request.image_tasks)} "
-                       f"images processed in {processing_time:.1f}ms")
+                       f"images processed in {processing_time:.1f}ms using {compute_type}")
             
             return processed_count
             
         except Exception as e:
             logger.error(f"[GPU Processor {self.worker_id}] Error processing batch {batch_request.batch_id}: {e}")
             return 0
+
+    async def _process_and_save_single_image(self, image_task: ImageTask, 
+                                            face_detections: List[FaceDetection],
+                                            batch_start_time: float) -> bool:
+        """Process and save a single image (helper for concurrent execution)."""
+        try:
+            site_id = image_task.candidate.site_id
+            
+            # Check cache
+            if self.cache.is_image_cached(image_task.phash):
+                logger.debug(f"[GPU Processor {self.worker_id}] Result already cached: {image_task.phash[:8]}...")
+                self.cached_results += 1
+                
+                # Still create a result for statistics tracking
+                face_result = FaceResult(
+                    image_task=image_task,
+                    faces=face_detections,
+                    processing_time_ms=(time.time() - batch_start_time) * 1000,
+                    gpu_used=False,
+                    saved_to_raw=False,
+                    saved_to_thumbs=False,
+                    skip_reason="cached"
+                )
+                await self.redis.push_face_result_async(face_result)
+                return False
+            
+            # Create face result
+            face_result = FaceResult(
+                image_task=image_task,
+                faces=face_detections,
+                processing_time_ms=(time.time() - batch_start_time) * 1000,
+                gpu_used=True
+            )
+            
+            # TODO: ARCHITECTURE ISSUE - Storage Responsibility Mixing
+            # Currently storage_manager does image cropping (compute-heavy PIL operations).
+            # This should be refactored so:
+            #   1. GPU processor (this file) handles ALL compute: ML inference + image manipulation
+            #   2. Storage manager handles ONLY I/O: save/load from MinIO
+            # 
+            # Proposed flow:
+            #   - After GPU returns bboxes, crop faces HERE using PIL
+            #   - Pass pre-cropped bytes to storage
+            #   - Storage just saves files, no image processing
+            #
+            # See: docs/architecture/clean-storage-separation.md (future)
+            
+            # Save to storage (async with concurrent thumbnails)
+            face_result, save_counts = await self.storage.save_face_result_async(
+                image_task, face_result
+            )
+            
+            # No local tracking needed - Redis stats are source of truth
+            
+            # Update face result fields
+            face_result.saved_to_raw = save_counts.get('saved_raw', 0) > 0
+            face_result.saved_to_thumbs = save_counts.get('saved_thumbs', 0) > 0
+            
+            # Cache result
+            await asyncio.to_thread(
+                self.cache.store_processing_result, image_task, face_result
+            )
+            
+            # Update statistics
+            stats_update = {}
+            if face_detections:
+                stats_update['faces_detected'] = len(face_detections)
+            if face_result.saved_to_raw:
+                stats_update['images_saved_raw'] = 1
+            if face_result.saved_to_thumbs:
+                stats_update['images_saved_thumbs'] = 1
+            
+            await self.redis.update_site_stats_async(site_id, stats_update)
+            
+            # Push result
+            await self.redis.push_face_result_async(face_result)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"[GPU Processor {self.worker_id}] Error processing image: {e}")
+            return False
     
     async def run(self):
         """Main worker loop."""
@@ -291,9 +295,13 @@ def gpu_processor_worker_process(worker_id: int):
 async def _process_batch_cpu_fallback(image_tasks: List[ImageTask]) -> List[List[FaceDetection]]:
     """Process batch using CPU fallback without attempting GPU connection."""
     try:
+        start_time = time.time()
         # Use the GPU interface's CPU fallback method
         gpu_interface = get_gpu_interface()
-        return await gpu_interface._cpu_fallback(image_tasks)
+        result = await gpu_interface._cpu_fallback(image_tasks)
+        elapsed_time = (time.time() - start_time) * 1000
+        logger.info(f"✓ CPU fallback processed {len(image_tasks)} images in {elapsed_time:.1f}ms")
+        return result
     except Exception as e:
         logger.error(f"CPU fallback processing failed: {e}")
         # Return empty results for all images

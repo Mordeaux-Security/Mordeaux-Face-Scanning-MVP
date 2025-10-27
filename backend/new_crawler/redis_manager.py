@@ -8,6 +8,7 @@ Provides clean interface for all queue operations with proper error handling.
 import json
 import logging
 import time
+from datetime import datetime
 from typing import Optional, List, Dict, Any, Union
 from contextlib import asynccontextmanager
 import redis
@@ -529,37 +530,68 @@ class RedisManager:
             logger.error(f"Failed to update stats for site {site_id}: {e}")
             return False
     
-    async def update_site_stats_async(self, site_id: str, stats_update: Dict[str, int]) -> bool:
+    async def update_site_stats_async(self, site_id: str, stats_update: Dict[str, Any]) -> bool:
         """Update site statistics in Redis (async)."""
         try:
             client = await self._get_async_client()
             key = f"stats:{site_id}"
+            
+            # Handle datetime fields by converting to ISO format
+            processed_stats = {}
             for field, value in stats_update.items():
-                await client.hincrby(key, field, value)
-            logger.debug(f"Updated stats for site {site_id} (async): {stats_update}")
+                if isinstance(value, datetime):
+                    processed_stats[field] = value.isoformat()
+                else:
+                    processed_stats[field] = value
+            
+            # Use HINCRBY for numeric fields, HSET for others
+            async with client.pipeline() as pipeline:
+                for field, value in processed_stats.items():
+                    if isinstance(value, (int, float)):
+                        if isinstance(value, int):
+                            await pipeline.hincrby(key, field, value)
+                        else:
+                            # For floats, get current value and add
+                            current = await client.hget(key, field)
+                            new_value = float(current or 0) + value
+                            await pipeline.hset(key, field, str(new_value))
+                    else:
+                        await pipeline.hset(key, field, str(value))
+                await pipeline.execute()
+            
+            logger.debug(f"Updated stats for site {site_id} (async): {processed_stats}")
             return True
         except Exception as e:
             logger.error(f"Failed to update stats for site {site_id} (async): {e}")
             return False
     
-    def get_site_stats(self, site_id: str) -> Dict[str, int]:
+    def get_site_stats(self, site_id: str) -> Dict[str, Any]:
         """Get site statistics from Redis."""
         try:
             client = self._get_client()
             key = f"stats:{site_id}"
             raw_stats = client.hgetall(key)
-            # Convert bytes keys/values to strings/ints
+            # Convert bytes keys/values to strings/appropriate types
             stats = {}
             for key_bytes, value_bytes in raw_stats.items():
                 key_str = key_bytes.decode() if isinstance(key_bytes, bytes) else key_bytes
-                value_int = int(value_bytes.decode()) if isinstance(value_bytes, bytes) else int(value_bytes)
-                stats[key_str] = value_int
+                value_str = value_bytes.decode() if isinstance(value_bytes, bytes) else value_bytes
+                
+                # Try to convert to int, float, or keep as string
+                try:
+                    if '.' in value_str:
+                        stats[key_str] = float(value_str)
+                    else:
+                        stats[key_str] = int(value_str)
+                except ValueError:
+                    # Keep as string (for datetime fields)
+                    stats[key_str] = value_str
             return stats
         except Exception as e:
             logger.error(f"Failed to get stats for site {site_id}: {e}")
             return {}
     
-    def get_all_site_stats(self) -> Dict[str, Dict[str, int]]:
+    def get_all_site_stats(self) -> Dict[str, Dict[str, Any]]:
         """Get all site statistics."""
         try:
             client = self._get_client()

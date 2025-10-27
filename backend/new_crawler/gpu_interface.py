@@ -262,6 +262,18 @@ class GPUInterface:
             import os
             sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
             
+            # TODO: ARCHITECTURE ISSUE - Legacy Code Import
+            # This line imports from legacy app/services/face.py which is NOT used by new_crawler.
+            # The new_crawler has its own separate path:
+            #   new_crawler/gpu_interface.py -> gpu_worker/worker.py (Windows service)
+            #
+            # The old path (not used here):
+            #   app/services/face.py -> gpu_client.py -> gpu_worker/worker.py
+            #
+            # This import on line 265 should be removed or clarified. The CPU fallback
+            # (_cpu_fallback method line 269-327) uses local InsightFace, not face.py.
+            #
+            # Action: Remove unused import or document why it exists
             from app.services.face import detect_faces_batch
             
             # Load images from temp paths
