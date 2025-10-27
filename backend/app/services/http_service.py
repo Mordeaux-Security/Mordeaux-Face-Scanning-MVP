@@ -13,8 +13,11 @@ Consolidates logic from:
 import asyncio
 import logging
 import os
-from typing import Optional, Tuple, Callable, Any, Dict
+import random
+import time
+from typing import Optional, Tuple, Callable, Any, Dict, List
 from urllib.parse import urljoin, urlparse
+from collections import defaultdict
 import httpx
 from contextlib import asynccontextmanager
 
@@ -54,6 +57,65 @@ DEFAULT_HEADERS = {
 MAX_REDIRECTS = 3
 REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
 
+# Retry configuration
+RETRY_STATUS_CODES = {403, 429, 500, 502, 503, 504}
+MAX_RETRIES = 3
+BASE_RETRY_DELAY = 1.0  # seconds
+MAX_RETRY_DELAY = 16.0  # seconds
+JITTER_FACTOR = 0.3  # ±30%
+
+# Realistic User-Agent pool (rotate to avoid detection)
+USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+]
+
+
+def calculate_retry_delay(attempt: int) -> float:
+    """
+    Calculate retry delay with exponential backoff and jitter.
+    
+    Args:
+        attempt: Retry attempt number (0-indexed)
+        
+    Returns:
+        Delay in seconds
+    """
+    # Exponential backoff: 1s, 2s, 4s, 8s, 16s (capped)
+    delay = min(BASE_RETRY_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+    
+    # Add random jitter (±30%)
+    jitter = delay * JITTER_FACTOR * (2 * random.random() - 1)
+    delay = delay + jitter
+    
+    return max(0.1, delay)  # Minimum 100ms
+
+
+def get_realistic_headers() -> Dict[str, str]:
+    """
+    Get realistic browser headers to avoid bot detection.
+    
+    Returns:
+        Dict of HTTP headers
+    """
+    return {
+        'User-Agent': random.choice(USER_AGENTS),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0'
+    }
+
 
 def validate_url_security(url: str) -> Tuple[bool, str]:
     """
@@ -90,6 +152,38 @@ def validate_url_security(url: str) -> Tuple[bool, str]:
     except Exception as e:
         logger.warning(f"URL validation error for {url}: {e}")
         return False, "VALIDATION_ERROR"
+
+
+class RateLimiter:
+    """Per-host rate limiter with token bucket algorithm."""
+    
+    def __init__(self, requests_per_second: float = 2.0):
+        self.requests_per_second = requests_per_second
+        self.min_interval = 1.0 / requests_per_second
+        self.last_request_time: Dict[str, float] = defaultdict(float)
+        self.locks: Dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+    
+    async def acquire(self, host: str):
+        """
+        Acquire permission to make a request to the given host.
+        Blocks until enough time has passed since the last request.
+        """
+        async with self.locks[host]:
+            now = time.time()
+            time_since_last = now - self.last_request_time[host]
+            
+            if time_since_last < self.min_interval:
+                wait_time = self.min_interval - time_since_last
+                # Add small jitter to avoid thundering herd
+                wait_time += random.uniform(0, 0.1)
+                logger.debug(f"Rate limiting {host}: waiting {wait_time:.2f}s")
+                await asyncio.sleep(wait_time)
+            
+            self.last_request_time[host] = time.time()
+
+
+# Global rate limiter instance
+_rate_limiter = RateLimiter(requests_per_second=2.0)
 
 
 async def fetch_with_redirects(
@@ -172,29 +266,104 @@ async def fetch_with_redirects(
     return None, "REDIRECT_CAP"
 
 
+async def fetch_with_redirects_and_retry(
+    url: str, 
+    client: httpx.AsyncClient, 
+    max_hops: int = MAX_REDIRECTS,
+    method: str = "GET",
+    max_retries: int = MAX_RETRIES
+) -> Tuple[Optional[httpx.Response], str]:
+    """
+    Fetch URL with redirect handling and retry logic.
+    
+    Retries on:
+    - Specific HTTP status codes (403, 429, 5xx)
+    - Connection errors (timeout, connection reset)
+    - With exponential backoff and jitter
+    """
+    last_error = None
+    
+    for attempt in range(max_retries + 1):
+        try:
+            # Add delay for retries
+            if attempt > 0:
+                delay = calculate_retry_delay(attempt - 1)
+                logger.info(f"Retry attempt {attempt}/{max_retries} for {url} after {delay:.2f}s")
+                await asyncio.sleep(delay)
+            
+            # Use existing fetch_with_redirects logic
+            response, reason = await fetch_with_redirects(url, client, max_hops, method)
+            
+            # Check if we should retry
+            if response is None:
+                # Connection/network error - retry
+                if attempt < max_retries:
+                    logger.warning(f"Request failed ({reason}), will retry: {url}")
+                    last_error = reason
+                    continue
+                return None, reason
+            
+            # Check status code
+            if response.status_code in RETRY_STATUS_CODES:
+                if attempt < max_retries:
+                    logger.warning(f"Got {response.status_code}, will retry: {url}")
+                    last_error = f"HTTP_{response.status_code}"
+                    continue
+                return None, f"HTTP_ERROR_{response.status_code}"
+            
+            # Success!
+            return response, "SUCCESS"
+            
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError) as e:
+            if attempt < max_retries:
+                logger.warning(f"Connection error ({type(e).__name__}), will retry: {url}")
+                last_error = f"CONNECTION_ERROR_{type(e).__name__}"
+                continue
+            return None, f"CONNECTION_ERROR_{type(e).__name__}"
+        
+        except Exception as e:
+            logger.error(f"Unexpected error fetching {url}: {e}")
+            return None, f"UNEXPECTED_ERROR_{type(e).__name__}"
+    
+    # All retries exhausted
+    return None, f"MAX_RETRIES_EXCEEDED_{last_error}"
+
+
+async def fetch_with_rate_limit(
+    url: str,
+    client: httpx.AsyncClient,
+    max_hops: int = MAX_REDIRECTS,
+    method: str = "GET",
+    max_retries: int = MAX_RETRIES
+) -> Tuple[Optional[httpx.Response], str]:
+    """Fetch with rate limiting applied."""
+    parsed = urlparse(url)
+    host = parsed.netloc
+    
+    # Apply rate limiting
+    await _rate_limiter.acquire(host)
+    
+    # Proceed with fetch
+    return await fetch_with_redirects_and_retry(
+        url, client, max_hops, method, max_retries
+    )
+
+
 async def fetch_html_with_redirects(
     url: str, 
     client: httpx.AsyncClient, 
-    max_hops: int = MAX_REDIRECTS
+    max_hops: int = MAX_REDIRECTS,
+    max_retries: int = MAX_RETRIES
 ) -> Tuple[Optional[str], str]:
-    """
-    Fetch HTML content with manual redirect handling.
-    
-    Args:
-        url: URL to fetch
-        client: httpx.AsyncClient instance (must have follow_redirects=False)
-        max_hops: Maximum number of redirect hops (default: 3)
-        
-    Returns:
-        Tuple of (html_content, reason_code)
-    """
-    response, reason = await fetch_with_redirects(url, client, max_hops, "GET")
+    """Fetch HTML with redirects and retry logic."""
+    response, reason = await fetch_with_redirects_and_retry(
+        url, client, max_hops, "GET", max_retries
+    )
     
     if response is None:
         return None, reason
     
     try:
-        # Check content type
         content_type = response.headers.get('content-type', '').lower()
         if 'text/html' not in content_type:
             return None, "NOT_HTML_CONTENT"
@@ -326,51 +495,21 @@ class BrowserPool:
 
 
 def create_http_client(
-    limits: Optional[httpx.Limits] = None,
     timeout: Optional[httpx.Timeout] = None,
-    headers: Optional[Dict[str, str]] = None,
-    **kwargs
+    limits: Optional[httpx.Limits] = None,
+    follow_redirects: bool = False,
+    headers: Optional[Dict[str, str]] = None
 ) -> httpx.AsyncClient:
-    """
-    Create an httpx.AsyncClient with safe defaults for redirect handling.
-    
-    Args:
-        limits: Connection limits (defaults to DEFAULT_HTTP_LIMITS)
-        timeout: Request timeouts (defaults to DEFAULT_TIMEOUT)
-        headers: Request headers (defaults to DEFAULT_HEADERS)
-        **kwargs: Additional arguments for httpx.AsyncClient
-        
-    Returns:
-        httpx.AsyncClient with follow_redirects=False
-    """
-    # Ensure follow_redirects is False
-    kwargs['follow_redirects'] = False
-    
-    # Set safe defaults if not provided
-    if limits is None:
-        limits = DEFAULT_HTTP_LIMITS
-    if timeout is None:
-        timeout = DEFAULT_TIMEOUT
+    """Create HTTP client with enhanced headers."""
     if headers is None:
-        headers = DEFAULT_HEADERS.copy()
-    
-    # Merge headers
-    if 'headers' in kwargs:
-        headers.update(kwargs['headers'])
-        del kwargs['headers']
-    
-    # Set other defaults
-    if 'verify' not in kwargs:
-        kwargs['verify'] = True
-    
-    if 'http2' not in kwargs:
-        kwargs['http2'] = True
+        headers = get_realistic_headers()
     
     return httpx.AsyncClient(
-        limits=limits,
-        timeout=timeout,
+        timeout=timeout or DEFAULT_TIMEOUT,
+        limits=limits or DEFAULT_HTTP_LIMITS,
+        follow_redirects=follow_redirects,
         headers=headers,
-        **kwargs
+        http2=True  # Enable HTTP/2 for better performance
     )
 
 

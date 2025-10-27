@@ -473,6 +473,7 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: http
     # Parse HTML
     soup = BeautifulSoup(html, 'html.parser')
     base_url = url
+    active_soup = soup  # Track which soup to use for extra sources
     
     # Selector pass: find repeated containers and build candidates
     logger.info("Starting selector pass")
@@ -503,9 +504,9 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: http
                 logger.debug(f"Failed to fetch category page {category_url}: {e}")
                 continue
     
-    # If no candidates and JS is enabled, try JavaScript rendering
-    if len(selector_candidates) == 0 and use_js:
-        logger.info("No static candidates found, trying JavaScript rendering")
+    # If 3 or fewer candidates and JS is enabled, try JavaScript rendering
+    if len(selector_candidates) <= 3 and use_js:
+        logger.info("Found 3 or fewer candidates, trying JavaScript rendering")
         try:
             from app.services.http_service import fetch_html_with_js_rendering
             js_html, js_errors = await fetch_html_with_js_rendering(
@@ -519,7 +520,8 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: http
                 stats['js_candidates'] = len(js_candidates)
                 
                 if len(js_candidates) > 0:
-                    selector_candidates = js_candidates
+                    selector_candidates.extend(js_candidates)
+                    active_soup = js_soup  # Use JS soup for extra sources
                     logger.info(f"JavaScript rendering found {len(js_candidates)} candidates")
                 else:
                     logger.info("JavaScript rendering found no additional candidates")
@@ -530,11 +532,12 @@ async def mine_page(url: str, html: Optional[str], *, use_js: bool, client: http
     
     # Extra sources pass: extract and validate extra sources
     logger.info("Starting extra sources pass")
-    extra_candidates = await _extra_sources_pass(soup, base_url, client, limits)
+    extra_candidates = await _extra_sources_pass(active_soup, base_url, client, limits)
     stats['extra_sources'] = len(extra_candidates)
     
     # Combine and validate candidates
     all_candidates = selector_candidates + extra_candidates
+    logger.info(f"Combined {len(selector_candidates)} total candidates (static + JS)")
     validated_candidates = await _validate_candidates(all_candidates, client, limits)
     stats['total_validated'] = len(validated_candidates)
     
@@ -589,22 +592,9 @@ class SelectorMiningService:
         if limits is None:
             limits = Limits()
         
-        # If use_js_rendering is True and we have a URL, fetch with JS
-        if use_js_rendering and url and not html:
-            logger.info(f"Using JS rendering for {url}")
-            html, errors = await fetch_html_with_js_rendering(url, timeout=5.0)
-            if not html:
-                logger.warning(f"JS rendering failed for {url}: {errors}")
-                # Fall back to regular fetch
-                if client:
-                    html, errors = await fetch_html_with_redirects(url, client)
-                    if not html:
-                        logger.error(f"Both JS and regular fetch failed for {url}: {errors}")
-                        return MinedResult(candidates=[], status="FETCH_FAILED", stats={}, checked_urls=[url])
-            else:
-                logger.info(f"JS rendering successful for {url}")
-        
-        return await mine_page(url, html, use_js=use_js_rendering, client=client, limits=limits)
+        # Always start with provided HTML or fetch via standard HTTP
+        # JS rendering will be handled as fallback in mine_page if needed
+        return await mine_page(url, html, use_js=True, client=client, limits=limits)
     
     async def mine_selectors_for_site(
         self, 

@@ -1,0 +1,1537 @@
+CRAWLER WORKER TEST: 3 PAGES PER SITE
+================================================================================
+Test started at: 2025-10-26 19:02:50
+
+
+[1/7] Site: https://wikifeet.com
+  Pages Crawled: 0
+  Candidates Found: 0
+
+[2/7] Site: https://candidteens.net
+  Pages Crawled: 3
+    1. https://candidteens.net
+    2. https://candidteens.net/category/hidden-cam/
+    3. https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+  Candidates Found: 37
+    [1] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_170552-1024x572.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 1024x572
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684580
+
+    [2] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 576x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684606
+
+    [3] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_004248-1024x571.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 1024x571
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684621
+
+    [4] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_135205-925x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 925x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684634
+
+    [5] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_002356-1024x757.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 1024x757
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684647
+
+    [6] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 576x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684659
+
+    [7] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1761241681876-768x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 768x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684670
+
+    [8] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1761239737805-576x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 576x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684682
+
+    [9] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1761234630597-576x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 576x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684694
+
+    [10] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1761230545850-576x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 576x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684706
+
+    [11] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251023_184703-583x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 583x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684718
+
+    [12] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 641x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684729
+
+    [13] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251021_223855.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 927x827
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684742
+
+    [14] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1761063896294-546x1024.jpg
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 546x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684754
+
+    [15] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1761062271944-581x1024.png
+        page_url: https://candidteens.net
+        selector: .post img
+        dimensions: 581x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:52.684766
+
+    [16] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1759574758154-573x1024.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 573x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029835
+
+    [17] img_url: https://candidteens.net/wp-content/uploads/2025/09/Photo_1757520211307-847x1024.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 847x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029843
+
+    [18] img_url: https://candidteens.net/wp-content/uploads/2025/09/IMG_20250903_193826-1024x555.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 1024x555
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029851
+
+    [19] img_url: https://candidteens.net/wp-content/uploads/2025/08/IMG_20250824_180002-1000x1024.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 1000x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029858
+
+    [20] img_url: https://candidteens.net/wp-content/uploads/2025/08/Photo_1755516773532-1024x1021.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 1024x1021
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029866
+
+    [21] img_url: https://candidteens.net/wp-content/uploads/2025/08/Photo_1754743230066-1024x571.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 1024x571
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029873
+
+    [22] img_url: https://candidteens.net/wp-content/uploads/2025/08/IMG_20250809_173836-1024x1014.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 1024x1014
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029880
+
+    [23] img_url: https://candidteens.net/wp-content/uploads/2025/08/IMG_20250807_235642-1024x993.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 1024x993
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029887
+
+    [24] img_url: https://candidteens.net/wp-content/uploads/2025/08/IMG_20250801_193141-553x1024.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 553x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029894
+
+    [25] img_url: https://candidteens.net/wp-content/uploads/2025/07/IMG_20250728_025952-1024x974.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 1024x974
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029901
+
+    [26] img_url: https://candidteens.net/wp-content/uploads/2025/07/IMG_20250724_012812-611x1024.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 611x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029908
+
+    [27] img_url: https://candidteens.net/wp-content/uploads/2025/07/IMG_20250702_233230-586x1024.jpg
+        page_url: https://candidteens.net/category/hidden-cam/
+        selector: .post img
+        dimensions: 586x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.029916
+
+    [28] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1760823106635.jpg
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 550x952
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361166
+
+    [29] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1760811847811-1-618x1024.jpg
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 618x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361174
+
+    [30] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251018_031234-1024x842.jpg
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 1024x842
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361181
+
+    [31] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1760638988298.png
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 369x535
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361189
+
+    [32] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1760124738518-698x1024.jpg
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 698x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361197
+
+    [33] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1760036121404-576x1024.jpg
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 576x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361204
+
+    [34] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1759949833788-576x1024.jpg
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 576x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361211
+
+    [35] img_url: https://candidteens.net/wp-content/uploads/2025/10/IMG_20251007_000244-578x1024.png
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 578x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361218
+
+    [36] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1759765245056-900x1024.jpg
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 900x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361226
+
+    [37] img_url: https://candidteens.net/wp-content/uploads/2025/10/Photo_1759604604743-640x1024.png
+        page_url: https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+        selector: .post img
+        dimensions: 640x1024
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:53.361233
+
+
+[3/7] Site: https://forum.candidgirls.io
+  Pages Crawled: 0
+  Candidates Found: 0
+
+[4/7] Site: https://motherless.com
+  Pages Crawled: 0
+  Candidates Found: 0
+
+[5/7] Site: https://www.voyeurshd.com
+  Pages Crawled: 2
+    1. https://www.voyeurshd.com
+    2. https://www.voyeurshd.com/videos/videos/
+  Candidates Found: 64
+    [1] img_url: https://www.voyeurshd.com/images/videos/0587/41660/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Epic bubble butt enters the bus"
+        discovered_at: 2025-10-26 19:02:57.482318
+
+    [2] img_url: https://www.voyeurshd.com/stp/images/extra-new/hdicon.png
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "none"
+        discovered_at: 2025-10-26 19:02:57.482337
+
+    [3] img_url: https://www.voyeurshd.com/images/videos/0565/40112/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Epic ass in blue bikini at a pool party"
+        discovered_at: 2025-10-26 19:02:57.482354
+
+    [4] img_url: https://www.voyeurshd.com/images/videos/0699/39800/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hot naked girlfriend caught by hidden cam on the floor"
+        discovered_at: 2025-10-26 19:02:57.482374
+
+    [5] img_url: https://www.voyeurshd.com/images/videos/0942/38752/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Spying on bald guy fucking hot girlfriend twice and cumming too soon"
+        discovered_at: 2025-10-26 19:02:57.482394
+
+    [6] img_url: https://www.voyeurshd.com/images/videos/0295/38146/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Voyeur caught hot girl giving blowjob in the park"
+        discovered_at: 2025-10-26 19:02:57.482416
+
+    [7] img_url: https://www.voyeurshd.com/images/videos/0614/37720/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Spying on irresistible blonde opening her ass and pussy"
+        discovered_at: 2025-10-26 19:02:57.482435
+
+    [8] img_url: https://www.voyeurshd.com/images/videos/0111/38281/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Smooth pussy lips slip out of erotic thong in upskirt"
+        discovered_at: 2025-10-26 19:02:57.482454
+
+    [9] img_url: https://www.voyeurshd.com/images/videos/0539/37841/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Peeping two sunburnt girls changing clothes"
+        discovered_at: 2025-10-26 19:02:57.482473
+
+    [10] img_url: https://www.voyeurshd.com/images/videos/0915/36015/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Snobby looking girl got flawless ass and long legs"
+        discovered_at: 2025-10-26 19:02:57.482492
+
+    [11] img_url: https://www.voyeurshd.com/images/videos/0384/36067/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Kind of girl that causes accidental boners"
+        discovered_at: 2025-10-26 19:02:57.482511
+
+    [12] img_url: https://www.voyeurshd.com/images/videos/0066/39234/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Nudist amazon woman with her short husband"
+        discovered_at: 2025-10-26 19:02:57.482524
+
+    [13] img_url: https://www.voyeurshd.com/images/videos/0422/43262/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Muscular fitness influencer gets creampie while she rides on hard dick"
+        discovered_at: 2025-10-26 19:02:57.482541
+
+    [14] img_url: https://www.voyeurshd.com/images/videos/0146/45145/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Voyeur gets close to the hottest girl at a beach party"
+        discovered_at: 2025-10-26 19:02:57.482554
+
+    [15] img_url: https://www.voyeurshd.com/images/videos/0304/40232/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Beach voyeur is all over this posh girl"
+        discovered_at: 2025-10-26 19:02:57.482567
+
+    [16] img_url: https://www.voyeurshd.com/images/videos/0372/42946/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Cuck lets another guy fuck his hot blonde wife"
+        discovered_at: 2025-10-26 19:02:57.482585
+
+    [17] img_url: https://www.voyeurshd.com/images/videos/0236/45924/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Boyfriend got horny when she undressed in pool cabin"
+        discovered_at: 2025-10-26 19:02:57.482598
+
+    [18] img_url: https://www.voyeurshd.com/images/videos/0891/44754/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Spying on sexy dancer undress after her performance on stage"
+        discovered_at: 2025-10-26 19:02:57.482611
+
+    [19] img_url: https://www.voyeurshd.com/images/videos/0013/43388/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Ass fucking makes her legs shake and tremble"
+        discovered_at: 2025-10-26 19:02:57.482628
+
+    [20] img_url: https://www.voyeurshd.com/images/videos/0022/44077/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Spying on tattooed hottie relaxing with music and masturbation"
+        discovered_at: 2025-10-26 19:02:57.482642
+
+    [21] img_url: https://www.voyeurshd.com/images/videos/0973/41611/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Best pair of topless boobs caught by beach voyeur"
+        discovered_at: 2025-10-26 19:02:57.482655
+
+    [22] img_url: https://www.voyeurshd.com/images/videos/0698/43464/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Crazy mouth fucking and even better anal sex"
+        discovered_at: 2025-10-26 19:02:57.482673
+
+    [23] img_url: https://www.voyeurshd.com/images/videos/0621/43949/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hidden cam caught lots of strippers in backstage"
+        discovered_at: 2025-10-26 19:02:57.482687
+
+    [24] img_url: https://www.voyeurshd.com/images/videos/0066/44071/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Checking out her small tits and nipple piercing"
+        discovered_at: 2025-10-26 19:02:57.482701
+
+    [25] img_url: https://www.voyeurshd.com/images/videos/0751/39969/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Nice and tight asian ass in white shorts"
+        discovered_at: 2025-10-26 19:02:57.482714
+
+    [26] img_url: https://www.voyeurshd.com/images/videos/0770/42156/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Big boobs bounce when she gets fucked from behind"
+        discovered_at: 2025-10-26 19:02:57.482731
+
+    [27] img_url: https://www.voyeurshd.com/images/videos/0925/45686/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Patrolling the places where girls from festival come to pee"
+        discovered_at: 2025-10-26 19:02:57.482744
+
+    [28] img_url: https://www.voyeurshd.com/images/videos/0469/45971/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Asian girl's pubes stick out of her white thong in upskirt"
+        discovered_at: 2025-10-26 19:02:57.482757
+
+    [29] img_url: https://www.voyeurshd.com/images/videos/0556/42230/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Slutty girl is a wild anal sex receiver"
+        discovered_at: 2025-10-26 19:02:57.482775
+
+    [30] img_url: https://www.voyeurshd.com/images/videos/0236/41987/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Beach girl got small deflated tits and a nice plump butt"
+        discovered_at: 2025-10-26 19:02:57.482789
+
+    [31] img_url: https://www.voyeurshd.com/images/videos/0777/36119/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Big boobs with lots of tattoos and a piercing"
+        discovered_at: 2025-10-26 19:02:57.482826
+
+    [32] img_url: https://www.voyeurshd.com/images/videos/0424/42964/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Slutty white girl shows what she can do with a big black cock"
+        discovered_at: 2025-10-26 19:02:57.482856
+
+    [33] img_url: https://www.voyeurshd.com/images/videos/0744/45853/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Curvy exotic girl caught by hidden camera in shower"
+        discovered_at: 2025-10-26 19:02:57.482872
+
+    [34] img_url: https://www.voyeurshd.com/images/videos/0412/43987/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Pretty girl turns a guy into a voyeur by the swimming pool"
+        discovered_at: 2025-10-26 19:02:57.482886
+
+    [35] img_url: https://www.voyeurshd.com/images/videos/0329/34849/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Showing off sex life like a king"
+        discovered_at: 2025-10-26 19:02:57.482906
+
+    [36] img_url: https://www.voyeurshd.com/images/videos/0239/41816/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hipster girl caught naked by a voyeur in the dressing room"
+        discovered_at: 2025-10-26 19:02:57.482921
+
+    [37] img_url: https://www.voyeurshd.com/images/videos/0474/44546/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Busty housewife with an itchy pussy undresses for bedtime"
+        discovered_at: 2025-10-26 19:02:57.482934
+
+    [38] img_url: https://www.voyeurshd.com/images/videos/0916/43407/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Sex with chubby hipster girl and cum in her mouth"
+        discovered_at: 2025-10-26 19:02:57.482952
+
+    [39] img_url: https://www.voyeurshd.com/images/videos/0570/41380/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Upskirt of perfect girl while she goes in the bus"
+        discovered_at: 2025-10-26 19:02:57.482966
+
+    [40] img_url: https://www.voyeurshd.com/images/videos/0383/32664/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Short guy got a very sexy taller wife"
+        discovered_at: 2025-10-26 19:02:57.482979
+
+    [41] img_url: https://www.voyeurshd.com/images/videos/0346/42994/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Thick girl moans while she rides a dick in the car"
+        discovered_at: 2025-10-26 19:02:57.482998
+
+    [42] img_url: https://www.voyeurshd.com/images/videos/0126/43920/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Two different girls with lots of makeup and no bras"
+        discovered_at: 2025-10-26 19:02:57.483011
+
+    [43] img_url: https://www.voyeurshd.com/images/videos/0519/41636/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Sexy blonde lights up a cigarette on the street"
+        discovered_at: 2025-10-26 19:02:57.483024
+
+    [44] img_url: https://www.voyeurshd.com/images/videos/0842/43237/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Tiny asshole requires careful anal sex"
+        discovered_at: 2025-10-26 19:02:57.483041
+
+    [45] img_url: https://www.voyeurshd.com/images/videos/0564/41910/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Woman with perfect nipples and many more topless girls"
+        discovered_at: 2025-10-26 19:02:57.483055
+
+    [46] img_url: https://www.voyeurshd.com/images/videos/0706/39219/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Spying on naked roommate bent over and stuck under bed"
+        discovered_at: 2025-10-26 19:02:57.483068
+
+    [47] img_url: https://www.voyeurshd.com/images/videos/0426/43239/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Latina gets fucked hard on the couch"
+        discovered_at: 2025-10-26 19:02:57.483086
+
+    [48] img_url: https://www.voyeurshd.com/images/videos/0700/44324/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Inspection of a wobbly booty in tight grey shorts"
+        discovered_at: 2025-10-26 19:02:57.483104
+
+    [49] img_url: https://www.voyeurshd.com/images/videos/0054/45917/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Front and back upskirt while she is in the train"
+        discovered_at: 2025-10-26 19:02:57.483121
+
+    [50] img_url: https://www.voyeurshd.com/images/videos/0278/43258/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Impossibly good blowjob and anal sex with a blonde bimbo"
+        discovered_at: 2025-10-26 19:02:57.483138
+
+    [51] img_url: https://www.voyeurshd.com/images/videos/0916/44158/main.jpg
+        page_url: https://www.voyeurshd.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Latina's big butt in blue leggings can't be ignored"
+        discovered_at: 2025-10-26 19:02:57.483155
+
+    [52] img_url: https://www.voyeurshd.com/images/videos/0710/43951/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Voyeur enjoys the view of a bubble butt in front of him on the beach"
+        discovered_at: 2025-10-26 19:02:57.926585
+
+    [53] img_url: https://www.voyeurshd.com/images/videos/0226/41931/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Badass girl with tattoos caught a voyeur looking at her pussy"
+        discovered_at: 2025-10-26 19:02:57.926602
+
+    [54] img_url: https://www.voyeurshd.com/images/videos/0121/41616/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Smooth asian pussy keeps slipping out of sexy panties in upskirt"
+        discovered_at: 2025-10-26 19:02:57.926620
+
+    [55] img_url: https://www.voyeurshd.com/images/videos/0391/44270/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Voyeur can't stop following a sexy redhead in tights"
+        discovered_at: 2025-10-26 19:02:57.926639
+
+    [56] img_url: https://www.voyeurshd.com/images/videos/0810/41761/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Upskirt of adorable asian girl shows panties tucked in her ass crack"
+        discovered_at: 2025-10-26 19:02:57.926656
+
+    [57] img_url: https://www.voyeurshd.com/images/videos/0329/44165/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hidden cam caught horny girl fingering pussy in living room"
+        discovered_at: 2025-10-26 19:02:57.926673
+
+    [58] img_url: https://www.voyeurshd.com/images/videos/0040/41849/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hottest duo on the nudist beach"
+        discovered_at: 2025-10-26 19:02:57.926690
+
+    [59] img_url: https://www.voyeurshd.com/images/videos/0979/45796/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Looking sexy when she bends over to pee in front of hidden cam"
+        discovered_at: 2025-10-26 19:02:57.926707
+
+    [60] img_url: https://www.voyeurshd.com/images/videos/0310/42477/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Quick peep on her tattooed foot and beautiful body"
+        discovered_at: 2025-10-26 19:02:57.926724
+
+    [61] img_url: https://www.voyeurshd.com/images/videos/0583/41939/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Fun girl with big boobs likes to play on the beach"
+        discovered_at: 2025-10-26 19:02:57.926741
+
+    [62] img_url: https://www.voyeurshd.com/images/videos/0003/45052/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Focusing on white panties in upskirt while she sits unladylike"
+        discovered_at: 2025-10-26 19:02:57.926758
+
+    [63] img_url: https://www.voyeurshd.com/images/videos/0595/44137/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hidden cam caught short haired woman's shaved pussy in toilet"
+        discovered_at: 2025-10-26 19:02:57.926775
+
+    [64] img_url: https://www.voyeurshd.com/images/videos/0336/43952/main.jpg
+        page_url: https://www.voyeurshd.com/videos/videos/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Checking out two hot fit friends sunbathing on the beach"
+        discovered_at: 2025-10-26 19:02:57.926793
+
+
+[6/7] Site: https://www.voyeurstyle.com
+  Pages Crawled: 3
+    1. https://www.voyeurstyle.com
+    2. https://www.voyeurstyle.com/categories/amateur-webcam/
+    3. https://www.voyeurstyle.com/watched-now/
+  Candidates Found: 111
+    [1] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16346/240x180/13.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Perky and hot tiny titties"
+        discovered_at: 2025-10-26 19:02:58.995744
+
+    [2] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16345/240x180/7.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Fun on the beach"
+        discovered_at: 2025-10-26 19:02:58.995772
+
+    [3] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16344/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Naked drunk woman in the street"
+        discovered_at: 2025-10-26 19:02:58.995789
+
+    [4] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16343/240x180/4.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "WC pee voyeur"
+        discovered_at: 2025-10-26 19:02:58.995804
+
+    [5] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16342/240x180/17.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "GF holiday strip dare"
+        discovered_at: 2025-10-26 19:02:58.995820
+
+    [6] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16341/240x180/7.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Bathroom spy - girlfriend inserts tampon"
+        discovered_at: 2025-10-26 19:02:58.995834
+
+    [7] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Curvy tease"
+        discovered_at: 2025-10-26 19:02:58.995849
+
+    [8] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16339/240x180/4.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Beautiful face and a perfect body"
+        discovered_at: 2025-10-26 19:02:58.995864
+
+    [9] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16338/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Wonderful sexy bride with perfect breasts"
+        discovered_at: 2025-10-26 19:02:58.995877
+
+    [10] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16337/240x180/7.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "He comes twice like a stallion!"
+        discovered_at: 2025-10-26 19:02:58.995891
+
+    [11] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16336/240x180/4.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Voyeur peeing in public"
+        discovered_at: 2025-10-26 19:02:58.995904
+
+    [12] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16334/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "College sex"
+        discovered_at: 2025-10-26 19:02:58.995917
+
+    [13] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16333/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "I would have to drunk her champagne"
+        discovered_at: 2025-10-26 19:02:58.995931
+
+    [14] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16332/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Saying she's cute is not enough!"
+        discovered_at: 2025-10-26 19:02:58.995945
+
+    [15] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/15000/15357/240x180/17.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Jacuzzi party about to turn into a sexy orgy"
+        discovered_at: 2025-10-26 19:02:58.995959
+
+    [16] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/10000/10137/240x180/16.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Female tourist filmed from behind by voyeur"
+        discovered_at: 2025-10-26 19:02:58.995974
+
+    [17] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/15000/15364/240x180/4.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Cam girl anal fingered while on live streaming"
+        discovered_at: 2025-10-26 19:02:58.995987
+
+    [18] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/9000/9800/240x180/3.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Black babe films herself naked in the shower"
+        discovered_at: 2025-10-26 19:02:58.996001
+
+    [19] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16331/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "MILF in lingerie peeing doggystyle outdoors"
+        discovered_at: 2025-10-26 19:02:58.996014
+
+    [20] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16330/240x180/5.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Man gets his cock sucked in the car by a female stranger"
+        discovered_at: 2025-10-26 19:02:58.996029
+
+    [21] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16329/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "I want to make love to her while she pisses and poops"
+        discovered_at: 2025-10-26 19:02:58.996044
+
+    [22] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16328/240x180/9.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Anal destruction - video 2"
+        discovered_at: 2025-10-26 19:02:58.996058
+
+    [23] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16327/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Voyeur pee video"
+        discovered_at: 2025-10-26 19:02:58.996073
+
+    [24] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16324/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Girl sucks cock in a car in public"
+        discovered_at: 2025-10-26 19:02:58.996088
+
+    [25] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16323/240x180/14.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Threesome FFM sex"
+        discovered_at: 2025-10-26 19:02:58.996102
+
+    [26] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16322/240x180/3.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Public cumshot on a girlfriend"
+        discovered_at: 2025-10-26 19:02:58.996116
+
+    [27] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16321/240x180/7.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Pantie show in the restaurant"
+        discovered_at: 2025-10-26 19:02:58.996130
+
+    [28] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16320/240x180/7.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Beautiful masturbation in public!"
+        discovered_at: 2025-10-26 19:02:58.996144
+
+    [29] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16319/240x180/19.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Good mature sex on the beach"
+        discovered_at: 2025-10-26 19:02:58.996157
+
+    [30] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16318/240x180/5.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Titjob for a large cock"
+        discovered_at: 2025-10-26 19:02:58.996171
+
+    [31] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16317/240x180/11.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Drunk woman pisses on floor in the shop"
+        discovered_at: 2025-10-26 19:02:58.996183
+
+    [32] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16314/240x180/10.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Lesbian strap-on sex outdoors"
+        discovered_at: 2025-10-26 19:02:58.996197
+
+    [33] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16313/240x180/13.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Amateur sex in the forest"
+        discovered_at: 2025-10-26 19:02:58.996210
+
+    [34] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16312/240x180/6.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Girl in mini dress without panties"
+        discovered_at: 2025-10-26 19:02:58.996223
+
+    [35] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16311/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "She does not care and takes a shower"
+        discovered_at: 2025-10-26 19:02:58.996263
+
+    [36] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16308/240x180/3.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Wife takes her shower"
+        discovered_at: 2025-10-26 19:02:58.996290
+
+    [37] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16306/240x180/13.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Showing off in the car"
+        discovered_at: 2025-10-26 19:02:58.996308
+
+    [38] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16305/240x180/18.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Car fun"
+        discovered_at: 2025-10-26 19:02:58.996326
+
+    [39] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16304/240x180/13.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Teen pisses panties on toilet"
+        discovered_at: 2025-10-26 19:02:58.996342
+
+    [40] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16303/240x180/20.jpg
+        page_url: https://www.voyeurstyle.com
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Cute girl undressing in train"
+        discovered_at: 2025-10-26 19:02:58.996357
+
+    [41] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16286/240x180/7.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Submissive girl gets a creampie"
+        discovered_at: 2025-10-26 19:02:59.238542
+
+    [42] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16282/240x180/19.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Nice hairy asshole and pee fart"
+        discovered_at: 2025-10-26 19:02:59.238557
+
+    [43] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16279/240x180/12.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "I met her at the club"
+        discovered_at: 2025-10-26 19:02:59.238570
+
+    [44] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16264/240x180/10.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Babe is getting fucked at the side of the road"
+        discovered_at: 2025-10-26 19:02:59.238582
+
+    [45] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16254/240x180/4.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Lucky babe with awesome boobs"
+        discovered_at: 2025-10-26 19:02:59.238595
+
+    [46] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16250/240x180/17.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Horny outfit and great tits"
+        discovered_at: 2025-10-26 19:02:59.238607
+
+    [47] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16248/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Perfect wank action"
+        discovered_at: 2025-10-26 19:02:59.238619
+
+    [48] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16245/240x180/9.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Sleeping and waking up"
+        discovered_at: 2025-10-26 19:02:59.238631
+
+    [49] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16240/240x180/18.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "A fuckable ass!"
+        discovered_at: 2025-10-26 19:02:59.238642
+
+    [50] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16238/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Homemade sex on vacation"
+        discovered_at: 2025-10-26 19:02:59.238653
+
+    [51] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16223/240x180/16.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "She is truly amazing!"
+        discovered_at: 2025-10-26 19:02:59.238664
+
+    [52] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16222/240x180/19.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Short haired college girl blowing her boyfriend while hiking"
+        discovered_at: 2025-10-26 19:02:59.238675
+
+    [53] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16212/240x180/5.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Amateur creampie in rocks"
+        discovered_at: 2025-10-26 19:02:59.238687
+
+    [54] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16206/240x180/14.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Sleeping and waking up, happy loving"
+        discovered_at: 2025-10-26 19:02:59.238698
+
+    [55] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16197/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Wonderful destroyed asshole"
+        discovered_at: 2025-10-26 19:02:59.238710
+
+    [56] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16169/240x180/19.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "She can't get enough"
+        discovered_at: 2025-10-26 19:02:59.238721
+
+    [57] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16159/240x180/20.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Outdoor sex with a chubby black hooker"
+        discovered_at: 2025-10-26 19:02:59.238732
+
+    [58] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16155/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Girlfriend loves being pissed on after sex"
+        discovered_at: 2025-10-26 19:02:59.238743
+
+    [59] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16142/240x180/20.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Pure anal homemade"
+        discovered_at: 2025-10-26 19:02:59.238755
+
+    [60] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16134/240x180/13.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Watch from below as your wife takes a stranger's cock in her pussy"
+        discovered_at: 2025-10-26 19:02:59.238765
+
+    [61] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16131/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hot dildo playing"
+        discovered_at: 2025-10-26 19:02:59.238777
+
+    [62] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16123/240x180/5.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Gorgeous hairy pussy and dreamy horny labia"
+        discovered_at: 2025-10-26 19:02:59.238788
+
+    [63] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16112/240x180/10.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Pussy is getting fucked nicely"
+        discovered_at: 2025-10-26 19:02:59.238799
+
+    [64] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16106/240x180/11.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "WhatsApp sex video"
+        discovered_at: 2025-10-26 19:02:59.238810
+
+    [65] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16097/240x180/3.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hairy teen girl"
+        discovered_at: 2025-10-26 19:02:59.238821
+
+    [66] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16083/240x180/8.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Begging for daddy's sperm"
+        discovered_at: 2025-10-26 19:02:59.238833
+
+    [67] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16082/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "My cock in wife's beautiful arse"
+        discovered_at: 2025-10-26 19:02:59.239461
+
+    [68] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16078/240x180/7.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Naughty French girl"
+        discovered_at: 2025-10-26 19:02:59.239478
+
+    [69] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16073/240x180/19.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "I would love to rub and eat that pussy"
+        discovered_at: 2025-10-26 19:02:59.239492
+
+    [70] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16060/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Mature has her pussy as tight as a 18yo girl"
+        discovered_at: 2025-10-26 19:02:59.239505
+
+    [71] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16049/240x180/12.jpg
+        page_url: https://www.voyeurstyle.com/categories/amateur-webcam/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "What a beautiful pussy!"
+        discovered_at: 2025-10-26 19:02:59.239516
+
+    [72] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16292/240x180/9.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Wish all women would go without bras"
+        discovered_at: 2025-10-26 19:02:59.507951
+
+    [73] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16253/240x180/5.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Mature upskirt"
+        discovered_at: 2025-10-26 19:02:59.507979
+
+    [74] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/15000/15972/240x180/13.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Bouncing braless (non nude)"
+        discovered_at: 2025-10-26 19:02:59.507998
+
+    [75] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/15000/15211/240x180/4.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Amazing footage of a handjob stimulation in the massage parlor"
+        discovered_at: 2025-10-26 19:02:59.508014
+
+    [76] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/1000/1475/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "College dorm cam captures him fucking his black girlfriend"
+        discovered_at: 2025-10-26 19:02:59.508029
+
+    [77] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16218/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Tits and nipples in public"
+        discovered_at: 2025-10-26 19:02:59.508044
+
+    [78] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/10000/10072/240x180/13.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Reading and masturbating before bed time"
+        discovered_at: 2025-10-26 19:02:59.508058
+
+    [79] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/9000/9353/240x180/20.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Let everyone see our juicy butts!"
+        discovered_at: 2025-10-26 19:02:59.508073
+
+    [80] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/4000/4524/240x180/11.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Young wife flashes for the first time"
+        discovered_at: 2025-10-26 19:02:59.508089
+
+    [81] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/8000/8473/240x180/10.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "It was the best girls' fight ever"
+        discovered_at: 2025-10-26 19:02:59.508104
+
+    [82] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/7000/7608/240x180/8.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Slutty wife takes a creampie from a stranger at the beach"
+        discovered_at: 2025-10-26 19:02:59.508118
+
+    [83] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/3000/3687/240x180/4.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Huge granny ass on spycam in her bathroom"
+        discovered_at: 2025-10-26 19:02:59.508132
+
+    [84] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/3000/3289/240x180/15.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Amateur girls have lesbian toy sex in the shower"
+        discovered_at: 2025-10-26 19:02:59.508145
+
+    [85] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/2000/2046/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Lead singer fucks his fan girl on stage at rock show"
+        discovered_at: 2025-10-26 19:02:59.508158
+
+    [86] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/14000/14989/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Cute kinky girl caught masturbating in the public toilet"
+        discovered_at: 2025-10-26 19:02:59.508173
+
+    [87] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/13000/13547/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "My GF enjoys pleasuring her puffy clit and nipples"
+        discovered_at: 2025-10-26 19:02:59.508186
+
+    [88] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/2000/2844/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hottie puts a toy in her cunt in public"
+        discovered_at: 2025-10-26 19:02:59.508200
+
+    [89] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/0/430/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Curvy amateur with great hair comes into the bathroom"
+        discovered_at: 2025-10-26 19:02:59.508215
+
+    [90] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16251/240x180/12.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Serbian couple gets busted getting it on in public"
+        discovered_at: 2025-10-26 19:02:59.508229
+
+    [91] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/15000/15635/240x180/3.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Fat grandma with huge tits filmed in the shower fully naked"
+        discovered_at: 2025-10-26 19:02:59.508242
+
+    [92] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/12000/12010/240x180/18.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Stunning TV host shows off her underwear during a show"
+        discovered_at: 2025-10-26 19:02:59.508255
+
+    [93] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/13000/13959/240x180/14.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Fascinating Latinas going nude for their friends"
+        discovered_at: 2025-10-26 19:02:59.508268
+
+    [94] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/1000/1889/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Nudist men and women dance at the beach"
+        discovered_at: 2025-10-26 19:02:59.508281
+
+    [95] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16096/240x180/2.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "She should show her great huge tits"
+        discovered_at: 2025-10-26 19:02:59.508295
+
+    [96] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/15000/15631/240x180/8.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Voyeur spy cam in women's shower room"
+        discovered_at: 2025-10-26 19:02:59.508309
+
+    [97] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/9000/9652/240x180/6.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Busty blonde posing when fingering the pussy in public"
+        discovered_at: 2025-10-26 19:02:59.508323
+
+    [98] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/0/237/240x180/6.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Beach slut rides a dick and strokes another"
+        discovered_at: 2025-10-26 19:02:59.508337
+
+    [99] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/2000/2362/240x180/55.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Vintage nudist pageant from the 1970s"
+        discovered_at: 2025-10-26 19:02:59.508350
+
+    [100] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/1000/1323/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "My sister rubbing her pussy on the couch"
+        discovered_at: 2025-10-26 19:02:59.508366
+
+    [101] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/5000/5141/240x180/8.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Perfect underskirt shots made by me"
+        discovered_at: 2025-10-26 19:02:59.508380
+
+    [102] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/3000/3492/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Big sporty ass in nearly sheer tights at the gym"
+        discovered_at: 2025-10-26 19:02:59.508393
+
+    [103] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16194/240x180/5.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Girl masturbates in the car"
+        discovered_at: 2025-10-26 19:02:59.508406
+
+    [104] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/10000/10078/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Bunch of horny guys grabbing the ravishing girls"
+        discovered_at: 2025-10-26 19:02:59.508419
+
+    [105] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/8000/8260/240x180/3.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Nude Thai massage and good sex at the parlor"
+        discovered_at: 2025-10-26 19:02:59.508432
+
+    [106] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/12000/12418/240x180/7.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Nasty Mexican filly goes out on the street completely naked"
+        discovered_at: 2025-10-26 19:02:59.508445
+
+    [107] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/3000/3388/240x180/11.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Nude beach relaxation and gentle penis stroking"
+        discovered_at: 2025-10-26 19:02:59.508458
+
+    [108] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/1000/1770/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Mature blowjob and handjob on the beach"
+        discovered_at: 2025-10-26 19:02:59.508470
+
+    [109] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/0/832/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Hardcore car sex with a sultry young brunette"
+        discovered_at: 2025-10-26 19:02:59.508483
+
+    [110] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/2000/2203/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "Busty milf tans naked on the beach"
+        discovered_at: 2025-10-26 19:02:59.508495
+
+    [111] img_url: https://www.voyeurstyle.com/contents/videos_screenshots/16000/16172/240x180/1.jpg
+        page_url: https://www.voyeurstyle.com/watched-now/
+        selector: .thumb img
+        dimensions: unknown
+        alt_text: "That a horny bitch!"
+        discovered_at: 2025-10-26 19:02:59.508508
+
+
+[7/7] Site: https://candidshiny.com
+  Pages Crawled: 0
+  Candidates Found: 0
+
+================================================================================
+STATISTICS
+================================================================================
+Total sites: 7
+Successful sites: 7
+Failed sites: 0
+Total pages crawled: 8
+Total candidates: 212
+Average candidates per site: 30.3
+Average pages per site: 1.1
+
+Test completed at: 2025-10-26 19:03:02

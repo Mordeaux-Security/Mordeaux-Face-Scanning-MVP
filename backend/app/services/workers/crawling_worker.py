@@ -9,13 +9,14 @@ import asyncio
 import logging
 import sys
 import os
+import random
 from urllib.parse import urljoin, urlparse
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from app.services.redis_queues import get_redis_client, get_site_from_queue, push_crawled_page
-from app.services.http_service import fetch_html_with_redirects, fetch_html_with_js_rendering
+from app.services.http_service import fetch_html_with_redirects, fetch_html_with_js_rendering, create_http_client
 from app.services.selector_mining import SelectorMiningService
 from bs4 import BeautifulSoup
 
@@ -26,6 +27,7 @@ logging.basicConfig(
     force=True
 )
 logger = logging.getLogger(__name__)
+
 
 
 def discover_page_urls(soup: BeautifulSoup, base_url: str, max_urls: int = 20) -> list:
@@ -93,10 +95,8 @@ async def crawl_site(site_url: str, use_3x3_mining: bool = False, max_pages: int
         max_pages = 1
     
     try:
-        # Create HTTP client
-        import httpx
-        timeout = httpx.Timeout(30.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        # Create HTTP client with enhanced headers and retry logic
+        async with create_http_client() as client:
             
             # Initialize crawling state
             visited_urls = set()
@@ -116,15 +116,15 @@ async def crawl_site(site_url: str, use_3x3_mining: bool = False, max_pages: int
                 
                 logger.info(f"Crawling page {pages_crawled}/{max_pages}: {current_url}")
                 
-                # Fetch HTML
+                # Fetch HTML using standard HTTP first
                 html, errors = await fetch_html_with_redirects(current_url, client)
                 
-                # If HTML fetch failed or returned very little content, try JS rendering
-                if not html or len(html) < 500:
-                    logger.info(f"Standard fetch failed or returned minimal content, trying JS rendering for {current_url}")
+                # Only try JS rendering if standard HTTP failed
+                if not html or len(html) < 500 or 'cloudflare' in html.lower() or 'captcha' in html.lower() or 'access denied' in html.lower():
+                    logger.info(f"Standard HTTP failed or detected blocking, trying JS rendering for {current_url}")
                     html, js_errors = await fetch_html_with_js_rendering(
                         current_url, 
-                        timeout=10.0,
+                        timeout=15.0,  # Increased timeout
                         wait_for_network_idle=True
                     )
                     if html:
@@ -149,12 +149,15 @@ async def crawl_site(site_url: str, use_3x3_mining: bool = False, max_pages: int
                         mined_result = await mining_service.mine_selectors_for_page(
                             html=html,
                             url=current_url,
-                            client=client
+                            client=client,
+                            use_js_rendering=False  # Let selector mining handle its own JS fallback
                         )
                         
                         if mined_result.candidates:
-                            for candidate in mined_result.candidates:
-                                for img_url in candidate.images:
+                            logger.info(f"Processing {len(mined_result.candidates)} validated candidates")
+                            for i, candidate in enumerate(mined_result.candidates):
+                                logger.info(f"Candidate {i+1}: selector='{candidate.selector}', sample_urls={len(candidate.sample_urls)}")
+                                for img_url in candidate.sample_urls:
                                     page_images.append({
                                         'url': img_url,
                                         'alt': '',
@@ -218,6 +221,12 @@ async def crawl_site(site_url: str, use_3x3_mining: bool = False, max_pages: int
                         if url not in visited_urls and url not in urls_to_visit:
                             urls_to_visit.append(url)
                     logger.info(f"Discovered {len(discovered)} new URLs to visit")
+                    
+                    # Add polite delay before next page (1-3 seconds)
+                    if urls_to_visit:
+                        delay = random.uniform(1.0, 3.0)
+                        logger.debug(f"Waiting {delay:.2f}s before next page")
+                        await asyncio.sleep(delay)
             
             logger.info(f"Crawl complete: {pages_crawled} pages, {len(all_images)} total images")
             
@@ -233,6 +242,12 @@ async def crawl_site(site_url: str, use_3x3_mining: bool = False, max_pages: int
         error_msg = str(e)
         if '403' in error_msg:
             logger.warning(f"Site {site_url} returned 403 Forbidden - may require authentication or be blocking crawlers")
+            logger.warning(f"Consider: 1) Using JS rendering, 2) Checking robots.txt, 3) Using different User-Agent")
+        elif '429' in error_msg:
+            logger.warning(f"Site {site_url} returned 429 Too Many Requests - rate limiting in effect")
+            logger.warning(f"Retry with exponential backoff will be attempted")
+        elif 'timeout' in error_msg.lower():
+            logger.warning(f"Site {site_url} timed out - may be slow or blocking")
         else:
             logger.error(f"Error crawling {site_url}: {e}")
         return None

@@ -155,6 +155,57 @@ services:
     environment:
       NGINX_MAX_BODY: ${NGINX_MAX_BODY:-50m}
 
+  new-crawler:
+    build:
+      context: ./backend
+      args:
+        ENABLE_GPU: 0
+    env_file: [.env]
+    environment:
+      <<: *common-env
+      # New Crawler Configuration
+      NC_BATCH_SIZE: ${NC_BATCH_SIZE:-64}
+      NC_MAX_QUEUE_DEPTH: ${NC_MAX_QUEUE_DEPTH:-512}
+      NC_CRAWLER_CONCURRENCY: ${NC_CRAWLER_CONCURRENCY:-32}
+      NC_EXTRACTOR_CONCURRENCY: ${NC_EXTRACTOR_CONCURRENCY:-16}
+      NC_CACHE_TTL_DAYS: ${NC_CACHE_TTL_DAYS:-90}
+      NC_HTTP_TIMEOUT: ${NC_HTTP_TIMEOUT:-30.0}
+      NC_GPU_TIMEOUT: ${NC_GPU_TIMEOUT:-60.0}
+      NC_JS_RENDER_TIMEOUT: ${NC_JS_RENDER_TIMEOUT:-15.0}
+      NC_USE_3X3_MINING: ${NC_USE_3X3_MINING:-true}
+      NC_MAX_SELECTOR_PATTERNS: ${NC_MAX_SELECTOR_PATTERNS:-30}
+      NC_MAX_PAGES_PER_SITE: ${NC_MAX_PAGES_PER_SITE:-5}
+      NC_MAX_IMAGES_PER_SITE: ${NC_MAX_IMAGES_PER_SITE:-1000}
+      MIN_FACE_QUALITY: ${MIN_FACE_QUALITY:-0.5}
+      MIN_FACE_SIZE: ${MIN_FACE_SIZE:-80}
+      FACE_MARGIN: ${FACE_MARGIN:-0.2}
+      BACKPRESSURE_THRESHOLD: ${BACKPRESSURE_THRESHOLD:-0.75}
+      BACKPRESSURE_CHECK_INTERVAL: ${BACKPRESSURE_CHECK_INTERVAL:-2.0}
+      METRICS_INTERVAL: ${METRICS_INTERVAL:-30.0}
+      HEALTH_CHECK_INTERVAL: ${HEALTH_CHECK_INTERVAL:-10.0}
+      # GPU Worker Configuration (Docker to Windows)
+      GPU_WORKER_ENABLED: ${GPU_WORKER_ENABLED:-true}
+      GPU_WORKER_URL: ${GPU_WORKER_URL:-http://host.docker.internal:8765}
+      GPU_WORKER_TIMEOUT: ${GPU_WORKER_TIMEOUT:-60}
+      GPU_WORKER_MAX_RETRIES: ${GPU_WORKER_MAX_RETRIES:-3}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+      - ./backend/sites.txt:/app/sites.txt:ro
+      - ./crawl_output:/app/crawl_output
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    command: ["/bin/sh", "-c", "cd /app && PYTHONPATH=/app python -m new_crawler.main --sites-file sites.txt --log-level info --max-pages-per-site 5 --max-images-per-site 5"]
+
 volumes:
   pgdata:
   qdrantdata:

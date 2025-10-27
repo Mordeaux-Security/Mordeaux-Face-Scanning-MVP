@@ -125,3 +125,6 @@ def download_all_thumbs(output_dir: str = "thumbs") -> None:
 
 if __name__ == "__main__":
     download_all_thumbs()
+
+
+
