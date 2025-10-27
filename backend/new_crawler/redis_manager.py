@@ -38,6 +38,8 @@ class RedisManager:
         self._async_pool: Optional[aioredis.ConnectionPool] = None
         self._client: Optional[redis.Redis] = None
         self._async_client: Optional[aioredis.Redis] = None
+        # Active task counter key
+        self._active_tasks_key = "nc:active_tasks"
         
     def _get_pool(self) -> ConnectionPool:
         """Get or create Redis connection pool."""
@@ -450,6 +452,8 @@ class RedisManager:
             queue_names = list(self.config.queue_names.values())
             result = client.delete(*queue_names)
             logger.info(f"Cleared {result} crawler queues")
+            # Reset active tasks counter
+            client.set(self._active_tasks_key, 0)
             return True
         except Exception as e:
             logger.error(f"Failed to clear queues: {e}")
@@ -469,6 +473,35 @@ class RedisManager:
         except Exception as e:
             logger.error(f"Failed to get queue lengths: {e}")
             return {}
+
+    # Active Task Counters (for orchestrator to wait on JS tasks)
+    def incr_active_tasks(self, amount: int = 1) -> int:
+        try:
+            client = self._get_client()
+            return client.incrby(self._active_tasks_key, amount)
+        except Exception as e:
+            logger.error(f"Failed to increment active tasks: {e}")
+            return 0
+    
+    def decr_active_tasks(self, amount: int = 1) -> int:
+        try:
+            client = self._get_client()
+            new_val = client.decrby(self._active_tasks_key, amount)
+            if new_val < 0:
+                client.set(self._active_tasks_key, 0)
+                return 0
+            return new_val
+        except Exception as e:
+            logger.error(f"Failed to decrement active tasks: {e}")
+            return 0
+
+    def get_active_task_count(self) -> int:
+        try:
+            client = self._get_client()
+            val = client.get(self._active_tasks_key)
+            return int(val or 0)
+        except Exception:
+            return 0
     
     async def get_queue_lengths_async(self) -> Dict[str, int]:
         """Get lengths of all queues (async version)."""

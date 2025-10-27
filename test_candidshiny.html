@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CandidShiny Image Analyzer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #c82333;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #dc3545;
+        }
+        .error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .redirect-info {
+            background: #e2e3e5;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .image-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            background: white;
+        }
+        .image-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .image-item:last-child {
+            border-bottom: none;
+        }
+        .attribute {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .value {
+            color: #28a745;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #dc3545;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .method-buttons {
+            margin: 15px 0;
+        }
+        .method-btn {
+            background: #6c757d;
+            margin: 5px;
+        }
+        .method-btn.active {
+            background: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CandidShiny Analysis (Redirect Prevention)</h1>
+        <p>This tool analyzes candidshiny.com with various methods to prevent automatic redirects and understand the site's image structure.</p>
+        
+        <div class="method-buttons">
+            <button onclick="setMethod('manual')" class="method-btn active" id="manualBtn">Manual Redirect Control</button>
+            <button onclick="setMethod('proxy')" class="method-btn" id="proxyBtn">CORS Proxy</button>
+            <button onclick="setMethod('iframe')" class="method-btn" id="iframeBtn">Iframe Method</button>
+        </div>
+        
+        <button onclick="analyzeCandidshiny()" id="analyzeBtn">Analyze CandidShiny</button>
+        <button onclick="clearResults()" id="clearBtn">Clear Results</button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText">Analyzing candidshiny.com...</p>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let analysisData = null;
+        let currentMethod = 'manual';
+
+        function setMethod(method) {
+            currentMethod = method;
+            document.querySelectorAll('.method-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(method + 'Btn').classList.add('active');
+        }
+
+        async function analyzeCandidshiny() {
+            const resultsDiv = document.getElementById('results');
+            const loadingDiv = document.getElementById('loading');
+            const loadingText = document.getElementById('loadingText');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            // Show loading
+            loadingDiv.style.display = 'block';
+            analyzeBtn.disabled = true;
+            resultsDiv.innerHTML = '';
+            
+            try {
+                console.log(`Starting CandidShiny analysis with method: ${currentMethod}`);
+                loadingText.textContent = `Analyzing candidshiny.com using ${currentMethod} method...`;
+                
+                let result;
+                switch (currentMethod) {
+                    case 'manual':
+                        result = await analyzeWithManualRedirect();
+                        break;
+                    case 'proxy':
+                        result = await analyzeWithProxy();
+                        break;
+                    case 'iframe':
+                        result = await analyzeWithIframe();
+                        break;
+                    default:
+                        throw new Error('Unknown method');
+                }
+                
+                analysisData = result;
+                displayResults(result);
+                
+            } catch (error) {
+                console.error('Analysis failed:', error);
+                resultsDiv.innerHTML = `
+                    <div class="results error">
+                        <h3>Analysis Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Method:</strong> ${currentMethod}</p>
+                        <p><strong>Try:</strong> Switch to a different method or use browser DevTools</p>
+                    </div>
+                `;
+            } finally {
+                loadingDiv.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        async function analyzeWithManualRedirect() {
+            console.log('Using manual redirect control...');
+            
+            try {
+                const response = await fetch('https://candidshiny.com', {
+                    method: 'GET',
+                    redirect: 'manual',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response type:', response.type);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                // Check for redirects
+                if (response.type === 'opaqueredirect' || 
+                    response.status === 301 || 
+                    response.status === 302) {
+                    
+                    const location = response.headers.get('location');
+                    return {
+                        method: 'manual',
+                        success: false,
+                        redirect: true,
+                        status: response.status,
+                        type: response.type,
+                        location: location,
+                        headers: Object.fromEntries(response.headers.entries()),
+                        message: `Redirect detected: ${response.status} to ${location || 'unknown'}`
+                    };
+                } else if (response.ok) {
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    return analyzeImages(doc, 'manual', response);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    return {
+                        method: 'manual',
+                        success: false,
+                        error: 'CORS blocked - try proxy method',
+                        details: error.message
+                    };
+                }
+                throw error;
+            }
+        }
+
+        async function analyzeWithProxy() {
+            console.log('Using CORS proxy...');
+            
+            const proxies = [
+                'https://corsproxy.io/?',
+                'https://api.allorigins.win/raw?url=',
+                'https://cors-anywhere.herokuapp.com/',
+                'https://thingproxy.freeboard.io/fetch/'
+            ];
+            
+            for (const proxy of proxies) {
+                try {
+                    console.log(`Trying proxy: ${proxy}`);
+                    const response = await fetch(proxy + encodeURIComponent('https://candidshiny.com'), {
+                        method: 'GET',
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const html = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        return analyzeImages(doc, 'proxy', response, proxy);
+                    }
+                } catch (error) {
+                    console.log(`Proxy ${proxy} failed:`, error.message);
+                    continue;
+                }
+            }
+            
+            throw new Error('All CORS proxies failed');
+        }
+
+        async function analyzeWithIframe() {
+            console.log('Using iframe method...');
+            
+            return new Promise((resolve, reject) => {
+                const iframe = document.createElement('iframe');
+                iframe.style.width = '100%';
+                iframe.style.height = '600px';
+                iframe.style.border = '1px solid #ccc';
+                iframe.src = 'https://candidshiny.com';
+                
+                const timeout = setTimeout(() => {
+                    reject(new Error('Iframe load timeout'));
+                }, 10000);
+                
+                iframe.onload = function() {
+                    clearTimeout(timeout);
+                    try {
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        const result = analyzeImages(doc, 'iframe');
+                        result.iframe = true;
+                        resolve(result);
+                    } catch (error) {
+                        if (error.name === 'SecurityError') {
+                            resolve({
+                                method: 'iframe',
+                                success: false,
+                                error: 'CORS blocked iframe access',
+                                message: 'Site loaded but cross-origin access blocked. Check browser DevTools for manual analysis.'
+                            });
+                        } else {
+                            reject(error);
+                        }
+                    }
+                };
+                
+                iframe.onerror = function() {
+                    clearTimeout(timeout);
+                    reject(new Error('Iframe failed to load'));
+                };
+                
+                // Add iframe to results for user to see
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '<div class="results warning"><h3>Loading iframe...</h3><p>This may take a moment. If the site redirects, you\'ll see it happen below.</p></div>';
+                resultsDiv.appendChild(iframe);
+            });
+        }
+
+        function analyzeImages(doc, method, response = null, proxy = null) {
+            // Find all image-related elements
+            const imgs = doc.querySelectorAll('img');
+            const pictures = doc.querySelectorAll('picture');
+            const sources = doc.querySelectorAll('source');
+            
+            // Analyze img tags
+            const imgAnalysis = Array.from(imgs).map((img, index) => {
+                const attributes = {};
+                for (const attr of img.attributes) {
+                    attributes[attr.name] = attr.value;
+                }
+                return {
+                    index: index + 1,
+                    tagName: img.tagName.toLowerCase(),
+                    attributes: attributes,
+                    outerHTML: img.outerHTML,
+                    hasSrc: !!img.src,
+                    hasDataSrc: !!img.getAttribute('data-src'),
+                    hasDataTn: !!img.getAttribute('data-tn'),
+                    hasSrcset: !!img.getAttribute('srcset'),
+                    hasLazyAttrs: Object.keys(attributes).some(key => key.startsWith('data-'))
+                };
+            });
+            
+            // Find all unique data attributes
+            const allDataAttrs = new Set();
+            imgs.forEach(img => {
+                for (const attr of img.attributes) {
+                    if (attr.name.startsWith('data-')) {
+                        allDataAttrs.add(attr.name);
+                    }
+                }
+            });
+            
+            // Find CSS background images
+            const allElements = doc.querySelectorAll('*');
+            const backgroundImages = [];
+            allElements.forEach((el, index) => {
+                const style = el.getAttribute('style');
+                if (style && style.includes('background-image') && style.includes('url(')) {
+                    backgroundImages.push({
+                        index: index + 1,
+                        tagName: el.tagName.toLowerCase(),
+                        className: el.className,
+                        style: style,
+                        outerHTML: el.outerHTML.substring(0, 200) + '...'
+                    });
+                }
+            });
+            
+            return {
+                method: method,
+                success: true,
+                proxy: proxy,
+                stats: {
+                    totalImgs: imgs.length,
+                    totalPictures: pictures.length,
+                    totalSources: sources.length,
+                    totalBackgroundImages: backgroundImages.length,
+                    uniqueDataAttrs: allDataAttrs.size
+                },
+                imgs: imgAnalysis,
+                dataAttributes: Array.from(allDataAttrs).sort(),
+                backgroundImages: backgroundImages,
+                htmlLength: doc.documentElement.outerHTML.length,
+                response: response ? {
+                    status: response.status,
+                    headers: Object.fromEntries(response.headers.entries())
+                } : null
+            };
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!data.success) {
+                resultsDiv.innerHTML = `
+                    <div class="results error">
+                        <h3>Analysis Failed</h3>
+                        <p><strong>Method:</strong> ${data.method}</p>
+                        <p><strong>Error:</strong> ${data.error || data.message}</p>
+                        ${data.location ? `<p><strong>Redirect Location:</strong> ${data.location}</p>` : ''}
+                        ${data.headers ? `
+                            <div class="redirect-info">
+                                <strong>Response Headers:</strong><br>
+                                ${Object.entries(data.headers).map(([key, value]) => `${key}: ${value}`).join('<br>')}
+                            </div>
+                        ` : ''}
+                        <p><strong>Recommendation:</strong> Try a different method or use browser DevTools for manual analysis.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="results success">
+                    <h3>Analysis Complete!</h3>
+                    <p><strong>Method:</strong> ${data.method}</p>
+                    ${data.proxy ? `<p><strong>Proxy used:</strong> ${data.proxy}</p>` : ''}
+                    <p><strong>HTML length:</strong> ${data.htmlLength.toLocaleString()} characters</p>
+                    ${data.response ? `<p><strong>Response status:</strong> ${data.response.status}</p>` : ''}
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-number">${data.stats.totalImgs}</div>
+                        <div class="stat-label">IMG Tags</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">${data.stats.totalPictures}</div>
+                        <div class="stat-label">PICTURE Tags</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">${data.stats.totalSources}</div>
+                        <div class="stat-label">SOURCE Tags</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">${data.stats.totalBackgroundImages}</div>
+                        <div class="stat-label">Background Images</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">${data.stats.uniqueDataAttrs}</div>
+                        <div class="stat-label">Data Attributes</div>
+                    </div>
+                </div>
+                
+                <div class="results">
+                    <h3>Data Attributes Found</h3>
+                    <div style="font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                        ${data.dataAttributes.length > 0 ? 
+                            data.dataAttributes.map(attr => `<span class="attribute">${attr}</span>`).join(', ') : 
+                            'No data attributes found'
+                        }
+                    </div>
+                </div>
+                
+                <div class="results">
+                    <h3>Image Tags Analysis</h3>
+                    <div class="image-list">
+                        ${data.imgs.length > 0 ? 
+                            data.imgs.map(img => `
+                                <div class="image-item">
+                                    <strong>Image ${img.index}:</strong><br>
+                                    ${Object.entries(img.attributes).map(([key, value]) => 
+                                        `<span class="attribute">${key}</span>="${value}"`
+                                    ).join(' ')}<br>
+                                    <small>Has src: ${img.hasSrc}, Has data-src: ${img.hasDataSrc}, Has data-tn: ${img.hasDataTn}, Has srcset: ${img.hasSrcset}, Has lazy attrs: ${img.hasLazyAttrs}</small>
+                                </div>
+                            `).join('') : 
+                            '<p>No img tags found</p>'
+                        }
+                    </div>
+                </div>
+                
+                ${data.backgroundImages.length > 0 ? `
+                <div class="results">
+                    <h3>CSS Background Images</h3>
+                    <div class="image-list">
+                        ${data.backgroundImages.map(bg => `
+                            <div class="image-item">
+                                <strong>Element ${bg.index}:</strong> &lt;${bg.tagName}&gt;<br>
+                                Class: ${bg.className || 'none'}<br>
+                                Style: ${bg.style}<br>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="results">
+                    <h3>Recommended Updates for selector_miner.py</h3>
+                    <div style="font-family: monospace; background: #f8f9fa; padding: 15px; border-radius: 4px;">
+                        <p><strong>Based on analysis:</strong></p>
+                        <pre>${generateSelectorRecommendations(data)}</pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateSelectorRecommendations(data) {
+            let recommendations = [];
+            
+            // Data attributes
+            if (data.dataAttributes.length > 0) {
+                recommendations.push(`# Add these data attributes to lazy_attrs:`);
+                data.dataAttributes.forEach(attr => {
+                    recommendations.push(`'${attr}',`);
+                });
+            }
+            
+            // Specific to candidshiny
+            const hasDataTn = data.imgs.some(img => img.hasDataTn);
+            if (hasDataTn) {
+                recommendations.push(`# CandidShiny uses data-tn attribute - already added to lazy_attrs`);
+            }
+            
+            const hasLazyImages = data.imgs.some(img => img.hasLazyAttrs);
+            if (hasLazyImages) {
+                recommendations.push(`# Site uses lazy loading - ensure lazy attribute extraction is enabled`);
+            }
+            
+            const hasSrcset = data.imgs.some(img => img.hasSrcset);
+            if (hasSrcset) {
+                recommendations.push(`# Site uses srcset - ensure srcset parsing is enabled`);
+            }
+            
+            if (data.stats.totalImgs === 0) {
+                recommendations.push(`# No images found - site may be dead/redirecting or use different structure`);
+            }
+            
+            return recommendations.join('\n') || '# No specific recommendations';
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            analysisData = null;
+        }
+    </script>
+</body>
+</html>

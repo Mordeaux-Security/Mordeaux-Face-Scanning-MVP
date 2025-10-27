@@ -38,6 +38,9 @@ class CrawlerWorker:
         self.processed_sites = 0
         self.total_candidates = 0
         self._shutdown_event = asyncio.Event()
+        # Track active tasks via Redis for orchestrator coordination
+        self._active_tasks_incr = self.redis.incr_active_tasks
+        self._active_tasks_decr = self.redis.decr_active_tasks
         
     async def process_site(self, site_task: SiteTask) -> int:
         """Process a single site task."""
@@ -45,9 +48,14 @@ class CrawlerWorker:
             logger.debug(f"[CRAWLER-{self.worker_id}] Starting site: {site_task.url}, max_pages={site_task.max_pages}")
             
             # Mine selectors from site
-            candidates = await self.selector_miner.mine_with_3x3_crawl(
-                site_task.url, site_task.site_id, site_task.max_pages
-            )
+            # Increment active tasks counter for duration of JS/HTTP crawl
+            self._active_tasks_incr(1)
+            try:
+                candidates = await self.selector_miner.mine_with_3x3_crawl(
+                    site_task.url, site_task.site_id, site_task.max_pages
+                )
+            finally:
+                self._active_tasks_decr(1)
             
             # Push candidates to queue
             candidates_pushed = 0

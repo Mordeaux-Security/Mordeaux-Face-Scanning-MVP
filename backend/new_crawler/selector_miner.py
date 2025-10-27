@@ -8,6 +8,7 @@ Performs 3x3 crawl (3 category pages × 3 content pages) for better structure di
 import asyncio
 import logging
 import time
+import re
 from typing import List, Dict, Any, Optional, Set
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
@@ -62,7 +63,7 @@ class SelectorMiner:
         ]
     
     async def mine_selectors(self, html: str, base_url: str, site_id: str) -> List[CandidateImage]:
-        """Mine selectors from HTML content."""
+        """Mine selectors from HTML content with script/noscript/JSON-LD extraction."""
         try:
             soup = BeautifulSoup(html, 'html.parser')
             candidates = []
@@ -79,6 +80,33 @@ class SelectorMiner:
                 except Exception as e:
                     logger.debug(f"Error with pattern {pattern}: {e}")
                     continue
+
+            # Broad fallback: if no candidates yet, scan all <img> tags on page
+            if not candidates:
+                try:
+                    img_tags = soup.find_all('img')
+                    for img in img_tags:
+                        candidate = self._create_candidate(img, base_url, 'img', site_id)
+                        if candidate:
+                            candidates.append(candidate)
+                    logger.info(f"Broad image fallback found {len(candidates)} candidates on {base_url}")
+                except Exception as e:
+                    logger.debug(f"Error during broad image fallback: {e}")
+            
+            # Extract images from noscript blocks if enabled
+            if self.config.nc_extract_noscript_images:
+                noscript_candidates = self._extract_noscript_images(soup, base_url, site_id)
+                candidates.extend(noscript_candidates)
+            
+            # Extract images from JSON-LD if enabled
+            if self.config.nc_extract_jsonld_images:
+                jsonld_candidates = self._extract_jsonld_images(soup, base_url, site_id)
+                candidates.extend(jsonld_candidates)
+            
+            # Extract images from script blocks if enabled
+            if self.config.nc_extract_script_images:
+                script_candidates = self._extract_script_images(soup, base_url, site_id)
+                candidates.extend(script_candidates)
             
             # Remove duplicates based on image URL
             seen_urls = set()
@@ -96,19 +124,11 @@ class SelectorMiner:
             return []
     
     def _create_candidate(self, img_element, base_url: str, selector: str, site_id: str) -> Optional[CandidateImage]:
-        """Create candidate image from img element."""
+        """Create candidate image from img element with comprehensive attribute extraction."""
         try:
-            # Get image source
-            src = img_element.get('src') or img_element.get('data-src') or img_element.get('data-lazy-src')
-            if not src:
-                return None
-            
-            # Convert to absolute URL
-            img_url = urljoin(base_url, src)
-            
-            # Validate URL
-            parsed = urlparse(img_url)
-            if not parsed.scheme or not parsed.netloc:
+            # Comprehensive image source extraction
+            img_url = self._extract_image_url(img_element, base_url)
+            if not img_url:
                 return None
             
             # Get additional attributes
@@ -124,20 +144,7 @@ class SelectorMiner:
                 width = height = None
             
             # Infer content type from URL extension
-            content_type = None
-            img_url_lower = img_url.lower()
-            if img_url_lower.endswith(('.jpg', '.jpeg')):
-                content_type = 'image/jpeg'
-            elif img_url_lower.endswith('.png'):
-                content_type = 'image/png'
-            elif img_url_lower.endswith('.webp'):
-                content_type = 'image/webp'
-            elif img_url_lower.endswith('.gif'):
-                content_type = 'image/gif'
-            elif img_url_lower.endswith('.bmp'):
-                content_type = 'image/bmp'
-            elif img_url_lower.endswith('.svg'):
-                content_type = 'image/svg+xml'
+            content_type = self._infer_content_type(img_url)
             
             # Estimate file size from dimensions (rough approximation)
             estimated_size = None
@@ -165,6 +172,181 @@ class SelectorMiner:
             logger.debug(f"Error creating candidate: {e}")
             return None
     
+    def _extract_image_url(self, img_element, base_url: str) -> Optional[str]:
+        """Extract image URL with comprehensive attribute checking."""
+        # Primary attributes (in order of preference)
+        primary_attrs = ['src', 'data-src', 'data-lazy-src', 'data-original', 'data-medium', 'data-large']
+        
+        # Additional lazy-load attributes
+        lazy_attrs = ['data-lazy', 'data-highres', 'data-mediumthumb', 'data-thumb', 'data-image', 'data-tn']
+        
+        # Check primary attributes first
+        for attr in primary_attrs:
+            src = img_element.get(attr)
+            if src and src.strip():
+                img_url = urljoin(base_url, src.strip())
+                if self._is_valid_image_url(img_url):
+                    return img_url
+        
+        # Check lazy-load attributes if enabled
+        if self.config.nc_extract_data_attributes:
+            for attr in lazy_attrs:
+                src = img_element.get(attr)
+                if src and src.strip():
+                    img_url = urljoin(base_url, src.strip())
+                    if self._is_valid_image_url(img_url):
+                        return img_url
+        
+        # Check srcset if enabled
+        if self.config.nc_extract_srcset_images:
+            srcset_url = self._extract_from_srcset(img_element, base_url)
+            if srcset_url:
+                return srcset_url
+        
+        # Check parent element data attributes
+        if self.config.nc_extract_data_attributes:
+            parent_url = self._extract_from_parent(img_element, base_url)
+            if parent_url:
+                return parent_url
+        
+        # Check background images in style attributes
+        if self.config.nc_extract_background_images:
+            bg_url = self._extract_background_image(img_element, base_url)
+            if bg_url:
+                return bg_url
+        
+        return None
+    
+    def _extract_from_srcset(self, img_element, base_url: str) -> Optional[str]:
+        """Extract best quality image from srcset attribute."""
+        srcset = img_element.get('srcset')
+        if not srcset:
+            return None
+        
+        try:
+            # Parse srcset format: "url1 width1, url2 width2, ..."
+            candidates = []
+            for entry in srcset.split(','):
+                entry = entry.strip()
+                if not entry:
+                    continue
+                    
+                parts = entry.split()
+                if len(parts) < 2:
+                    continue
+                    
+                url = parts[0].strip()
+                descriptor = parts[1].strip()
+                
+                # Parse width descriptor (e.g., "640w")
+                if descriptor.endswith('w'):
+                    try:
+                        width = int(descriptor[:-1])
+                        absolute_url = urljoin(base_url, url)
+                        if self._is_valid_image_url(absolute_url):
+                            candidates.append((width, absolute_url))
+                    except ValueError:
+                        continue
+            
+            if not candidates:
+                return None
+            
+            # Return the highest quality image (largest width)
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            return candidates[0][1]
+            
+        except Exception as e:
+            logger.debug(f"Error parsing srcset: {e}")
+            return None
+    
+    def _extract_from_parent(self, img_element, base_url: str) -> Optional[str]:
+        """Extract image URL from parent element data attributes."""
+        try:
+            parent = img_element.parent
+            if not parent:
+                return None
+            
+            # Check parent data attributes
+            parent_attrs = ['data-src', 'data-image', 'data-thumb', 'data-medium', 'data-large']
+            for attr in parent_attrs:
+                src = parent.get(attr)
+                if src and src.strip():
+                    img_url = urljoin(base_url, src.strip())
+                    if self._is_valid_image_url(img_url):
+                        return img_url
+            
+            return None
+        except Exception as e:
+            logger.debug(f"Error extracting from parent: {e}")
+            return None
+    
+    def _extract_background_image(self, img_element, base_url: str) -> Optional[str]:
+        """Extract background image URL from style attribute."""
+        style = img_element.get('style')
+        if not style:
+            return None
+        
+        try:
+            # Look for background-image: url(...) patterns
+            patterns = [
+                r'background-image:\s*url\(["\']?([^"\']+)["\']?\)',
+                r'background:\s*[^;]*url\(["\']?([^"\']+)["\']?\)',
+                r'background-image:\s*url\(([^)]+)\)',
+                r'background:\s*[^;]*url\(([^)]+)\)'
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, style, re.IGNORECASE)
+                if match:
+                    url = match.group(1).strip()
+                    if url and not url.startswith('data:'):
+                        img_url = urljoin(base_url, url)
+                        if self._is_valid_image_url(img_url):
+                            return img_url
+            
+            return None
+        except Exception as e:
+            logger.debug(f"Error extracting background image: {e}")
+            return None
+    
+    def _is_valid_image_url(self, url: str) -> bool:
+        """Check if URL is a valid image URL."""
+        try:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return False
+            
+            # Skip data URLs and non-HTTP protocols
+            if parsed.scheme not in ['http', 'https']:
+                return False
+            
+            # Skip obvious non-image URLs
+            url_lower = url.lower()
+            skip_patterns = ['javascript:', 'mailto:', 'tel:', '#', '.pdf', '.doc', '.zip']
+            if any(pattern in url_lower for pattern in skip_patterns):
+                return False
+            
+            return True
+        except Exception:
+            return False
+    
+    def _infer_content_type(self, url: str) -> Optional[str]:
+        """Infer content type from URL extension."""
+        url_lower = url.lower()
+        if url_lower.endswith(('.jpg', '.jpeg')):
+            return 'image/jpeg'
+        elif url_lower.endswith('.png'):
+            return 'image/png'
+        elif url_lower.endswith('.webp'):
+            return 'image/webp'
+        elif url_lower.endswith('.gif'):
+            return 'image/gif'
+        elif url_lower.endswith('.bmp'):
+            return 'image/bmp'
+        elif url_lower.endswith('.svg'):
+            return 'image/svg+xml'
+        return None
+    
     async def mine_with_3x3_crawl(self, base_url: str, site_id: str, max_pages: int = 5) -> List[CandidateImage]:
         """Perform 3x3 crawl: 3 category pages × 3 content pages."""
         try:
@@ -187,7 +369,20 @@ class SelectorMiner:
             
             pages_crawled += 1
             
-            # Mine from base page
+            # On first page, optionally compare HTTP vs JS-rendered HTML and pick better
+            if self.config.nc_js_first_visit_compare:
+                # Try both sources via http_utils helper
+                http_html, _ = await self.http_utils._fetch_with_redirects(base_url)
+                js_html, _ = await self.http_utils._fetch_with_js(base_url)
+                # Count <img> tags as proxy for richness
+                http_cnt = len(BeautifulSoup(http_html or '', 'html.parser').find_all('img'))
+                js_cnt = len(BeautifulSoup(js_html or '', 'html.parser').find_all('img'))
+                chosen_html = js_html if js_cnt >= max(5, 2 * http_cnt) else (http_html or html)
+                if chosen_html:
+                    html = chosen_html
+                    logger.info(f"[3x3-CRAWL] First-page chosen source for {base_url}: {'JS' if chosen_html == js_html else 'HTTP'} (HTTP={http_cnt}, JS={js_cnt})")
+
+            # Mine from chosen base page
             base_candidates = await self.mine_selectors(html, base_url, site_id)
             all_candidates.extend(base_candidates)
             logger.debug(f"[3x3-CRAWL] Page yielded {len(base_candidates)} candidates")
@@ -209,6 +404,12 @@ class SelectorMiner:
             soup = BeautifulSoup(html, 'html.parser')
             category_urls = await self._discover_category_pages(soup, base_url)
             logger.info(f"Found {len(category_urls)} category pages")
+
+            # If no categories, fallback to random same-domain links
+            if not category_urls:
+                random_urls = await self._discover_random_same_domain_links(soup, base_url, limit=3)
+                logger.info(f"No categories found, using {len(random_urls)} random same-domain links")
+                category_urls = random_urls
             
             # Process up to 3 category pages
             for i, category_url in enumerate(category_urls[:3]):
@@ -293,6 +494,31 @@ class SelectorMiner:
             
         except Exception as e:
             logger.error(f"Error in 3x3 crawl for {base_url}: {e}")
+            return []
+
+    async def _discover_random_same_domain_links(self, soup: BeautifulSoup, base_url: str, limit: int = 3) -> List[str]:
+        """Pick random same-domain links when categories are not detected."""
+        try:
+            import random as _random
+            same_host = urlparse(base_url).netloc
+            links = []
+            for a in soup.find_all('a', href=True):
+                absolute = urljoin(base_url, a['href'])
+                parsed = urlparse(absolute)
+                if parsed.netloc == same_host:
+                    if not any(skip in parsed.path.lower() for skip in ['/login', '/register', '/user', '/profile', '/admin']):
+                        links.append(absolute)
+            # Unique and shuffle
+            unique = []
+            seen = set()
+            for u in links:
+                if u not in seen:
+                    seen.add(u)
+                    unique.append(u)
+            _random.shuffle(unique)
+            return unique[:limit]
+        except Exception as e:
+            logger.debug(f"Error discovering random links: {e}")
             return []
     
     async def _discover_category_pages(self, soup: BeautifulSoup, base_url: str) -> List[str]:
@@ -403,7 +629,122 @@ class SelectorMiner:
             logger.error(f"Error mining site {site_url}: {e}")
             return []
 
-
+    def _extract_noscript_images(self, soup: BeautifulSoup, base_url: str, site_id: str) -> List[CandidateImage]:
+        """Extract images from noscript blocks."""
+        candidates = []
+        try:
+            noscript_tags = soup.find_all('noscript')
+            for noscript in noscript_tags:
+                # Parse the inner HTML of noscript as HTML
+                inner_soup = BeautifulSoup(noscript.string or '', 'html.parser')
+                img_tags = inner_soup.find_all('img')
+                for img in img_tags:
+                    candidate = self._create_candidate(img, base_url, 'noscript img', site_id)
+                    if candidate:
+                        candidates.append(candidate)
+        except Exception as e:
+            logger.debug(f"Error extracting noscript images: {e}")
+        return candidates
+    
+    def _extract_jsonld_images(self, soup: BeautifulSoup, base_url: str, site_id: str) -> List[CandidateImage]:
+        """Extract images from JSON-LD structured data."""
+        candidates = []
+        try:
+            import json
+            jsonld_scripts = soup.find_all('script', type='application/ld+json')
+            for script in jsonld_scripts:
+                try:
+                    json_data = json.loads(script.string or '{}')
+                    image_urls = self._extract_images_from_json(json_data)
+                    for img_url in image_urls:
+                        if self._is_valid_image_url(img_url):
+                            full_url = urljoin(base_url, img_url)
+                            candidate = CandidateImage(
+                                page_url=base_url,
+                                img_url=full_url,
+                                selector_hint='json-ld',
+                                site_id=site_id,
+                                alt_text='',
+                                width=None,
+                                height=None,
+                                content_type=self._infer_content_type(full_url),
+                                estimated_size=None,
+                                has_srcset=False
+                            )
+                            candidates.append(candidate)
+                except json.JSONDecodeError:
+                    continue
+        except Exception as e:
+            logger.debug(f"Error extracting JSON-LD images: {e}")
+        return candidates
+    
+    def _extract_script_images(self, soup: BeautifulSoup, base_url: str, site_id: str) -> List[CandidateImage]:
+        """Extract images from script blocks (HTML fragments and JSON)."""
+        candidates = []
+        try:
+            script_tags = soup.find_all('script')
+            img_tag_pattern = re.compile(r'<img[^>]+>', re.IGNORECASE)
+            url_pattern = re.compile(r'https?://[^\s"\'<>]+\.(?:jpg|jpeg|png|webp|gif)', re.IGNORECASE)
+            
+            for script in script_tags:
+                script_content = script.string or ''
+                
+                # Extract HTML img tags from script content
+                img_matches = img_tag_pattern.findall(script_content)
+                for img_html in img_matches:
+                    try:
+                        img_soup = BeautifulSoup(img_html, 'html.parser')
+                        img_tag = img_soup.find('img')
+                        if img_tag:
+                            candidate = self._create_candidate(img_tag, base_url, 'script img', site_id)
+                            if candidate:
+                                candidates.append(candidate)
+                    except Exception:
+                        continue
+                
+                # Extract image URLs from script content
+                url_matches = url_pattern.findall(script_content)
+                for img_url in url_matches:
+                    if self._is_valid_image_url(img_url):
+                        full_url = urljoin(base_url, img_url)
+                        candidate = CandidateImage(
+                            page_url=base_url,
+                            img_url=full_url,
+                            selector_hint='script url',
+                            site_id=site_id,
+                            alt_text='',
+                            width=None,
+                            height=None,
+                            content_type=self._infer_content_type(full_url),
+                            estimated_size=None,
+                            has_srcset=False
+                        )
+                        candidates.append(candidate)
+        except Exception as e:
+            logger.debug(f"Error extracting script images: {e}")
+        return candidates
+    
+    def _extract_images_from_json(self, json_data: Any) -> List[str]:
+        """Recursively extract image URLs from JSON data."""
+        image_urls = []
+        try:
+            if isinstance(json_data, dict):
+                for key, value in json_data.items():
+                    if key.lower() in ['image', 'thumbnail', 'src', 'srcset', 'url', 'photo', 'picture']:
+                        if isinstance(value, str) and any(value.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']):
+                            image_urls.append(value)
+                        elif isinstance(value, list):
+                            for item in value:
+                                if isinstance(item, str) and any(item.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']):
+                                    image_urls.append(item)
+                    else:
+                        image_urls.extend(self._extract_images_from_json(value))
+            elif isinstance(json_data, list):
+                for item in json_data:
+                    image_urls.extend(self._extract_images_from_json(item))
+        except Exception:
+            pass
+        return image_urls
 
 
 def get_selector_miner() -> SelectorMiner:

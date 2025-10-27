@@ -399,11 +399,25 @@ class Orchestrator:
         self._results_consumer_task = asyncio.create_task(self._consume_results())
         
         try:
+            idle_grace_start = None
             while self.running:
                 # Check if crawl is complete
-                if await self.is_crawl_complete_async():
-                    logger.info("Crawl complete, shutting down")
-                    break
+                queues_empty = await self.is_crawl_complete_async()
+                # Additionally, ensure no active crawler JS tasks remain
+                active_tasks = 0
+                try:
+                    active_tasks = await asyncio.to_thread(self.redis.get_active_task_count)
+                except Exception:
+                    pass
+                if queues_empty and active_tasks == 0:
+                    # Grace period to avoid racing with late JS callbacks
+                    if idle_grace_start is None:
+                        idle_grace_start = time.time()
+                    if time.time() - idle_grace_start >= 5.0:
+                        logger.info("Crawl complete (queues empty, no active tasks), shutting down")
+                        break
+                else:
+                    idle_grace_start = None
                 
                 # Monitor queue metrics
                 queue_info = await self.monitor_queues_async()

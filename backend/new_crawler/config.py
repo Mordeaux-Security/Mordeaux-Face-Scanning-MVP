@@ -63,9 +63,33 @@ class CrawlerConfig(BaseSettings):
     
     # HTTP Configuration
     nc_http_timeout: float = 30.0
-    nc_js_render_timeout: float = 15.0
+    nc_js_render_timeout: float = 20.0
     nc_max_redirects: int = 3
     nc_max_retries: int = 3
+    
+    # JavaScript Rendering Configuration
+    nc_js_wait_strategy: str = "both"  # "fixed" | "networkidle" | "both"
+    nc_js_wait_timeout: float = 5.0  # seconds to wait for fixed strategy
+    nc_js_networkidle_timeout: float = 3.0  # timeout for network idle strategy
+    # First visit strategy: fetch both HTTP and JS, pick best by candidate count
+    nc_js_first_visit_compare: bool = True
+    
+    # Image Extraction Configuration
+    nc_extract_background_images: bool = True
+    nc_extract_srcset_images: bool = True
+    nc_extract_data_attributes: bool = True
+    
+    # Advanced HTTP Configuration
+    nc_same_origin_redirects_only: bool = True
+    nc_blocklist_redirect_hosts: list[str] = ['progress-tm.com', 'google.com']
+    nc_realistic_headers: bool = True
+    
+    # Advanced JavaScript Configuration
+    nc_js_wait_selectors: str = 'img, picture source, noscript img, [style*="background-image"]'
+    nc_capture_network_images: bool = True
+    nc_extract_script_images: bool = True
+    nc_extract_noscript_images: bool = True
+    nc_extract_jsonld_images: bool = True
     
     # Selector Mining Configuration
     nc_use_3x3_mining: bool = True
@@ -133,14 +157,41 @@ class CrawlerConfig(BaseSettings):
             raise ValueError(f'Log level must be one of {allowed}')
         return v.lower()
     
-    @field_validator('environment')
+    @field_validator('nc_js_wait_strategy')
     @classmethod
-    def validate_environment(cls, v):
-        """Validate environment."""
-        allowed = ['development', 'staging', 'production']
+    def validate_js_wait_strategy(cls, v):
+        """Validate JavaScript wait strategy."""
+        allowed = ['fixed', 'networkidle', 'both']
         if v.lower() not in allowed:
-            raise ValueError(f'Environment must be one of {allowed}')
+            raise ValueError(f'JS wait strategy must be one of {allowed}')
         return v.lower()
+    
+    @field_validator('nc_js_wait_timeout')
+    @classmethod
+    def validate_js_wait_timeout(cls, v):
+        """Validate JavaScript wait timeout."""
+        if v < 1.0 or v > 30.0:
+            raise ValueError('JS wait timeout must be between 1.0 and 30.0 seconds')
+        return v
+    
+    @field_validator('nc_blocklist_redirect_hosts')
+    @classmethod
+    def validate_blocklist_redirect_hosts(cls, v):
+        """Validate redirect host blocklist."""
+        if not isinstance(v, list):
+            raise ValueError('Blocklist must be a list of strings')
+        for host in v:
+            if not isinstance(host, str) or not host.strip():
+                raise ValueError('All blocklist entries must be non-empty strings')
+        return v
+    
+    @field_validator('nc_js_wait_selectors')
+    @classmethod
+    def validate_js_wait_selectors(cls, v):
+        """Validate JavaScript wait selectors."""
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError('JS wait selectors must be a non-empty string')
+        return v.strip()
     
     @property
     def is_docker(self) -> bool:
@@ -250,6 +301,20 @@ class CrawlerConfig(BaseSettings):
         logger.info(f"Max Selector Patterns: {self.nc_max_selector_patterns}")
         logger.info(f"HTTP Timeout: {self.nc_http_timeout}s")
         logger.info(f"GPU Timeout: {self.gpu_worker_timeout}s")
+        logger.info(f"JS Wait Strategy: {self.nc_js_wait_strategy}")
+        logger.info(f"JS Wait Timeout: {self.nc_js_wait_timeout}s")
+        logger.info(f"JS Network Idle Timeout: {self.nc_js_networkidle_timeout}s")
+        logger.info(f"Extract Background Images: {self.nc_extract_background_images}")
+        logger.info(f"Extract Srcset Images: {self.nc_extract_srcset_images}")
+        logger.info(f"Extract Data Attributes: {self.nc_extract_data_attributes}")
+        logger.info(f"Same Origin Redirects Only: {self.nc_same_origin_redirects_only}")
+        logger.info(f"Blocklist Redirect Hosts: {self.nc_blocklist_redirect_hosts}")
+        logger.info(f"Realistic Headers: {self.nc_realistic_headers}")
+        logger.info(f"JS Wait Selectors: {self.nc_js_wait_selectors}")
+        logger.info(f"Capture Network Images: {self.nc_capture_network_images}")
+        logger.info(f"Extract Script Images: {self.nc_extract_script_images}")
+        logger.info(f"Extract Noscript Images: {self.nc_extract_noscript_images}")
+        logger.info(f"Extract JSON-LD Images: {self.nc_extract_jsonld_images}")
         logger.info(f"Cache TTL: {self.nc_cache_ttl_days} days")
         logger.info("================================")
 
