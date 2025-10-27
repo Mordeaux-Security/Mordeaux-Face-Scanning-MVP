@@ -106,6 +106,8 @@ def process_image(message: dict) -> dict:
     from pipeline.storage import put_bytes, presign, ensure_buckets
     from pipeline.indexer import ensure_collection, upsert, make_point
     from pipeline.utils import compute_phash, phash_prefix, now_iso
+    from pipeline.dedup import is_duplicate, mark_processed
+    from pipeline.stats import increment_processed, increment_rejected, increment_dup_skipped
 
     # Counters for results
     faces_total = 0
@@ -219,6 +221,22 @@ def process_image(message: dict) -> dict:
         phex = compute_phash(pil_crop)
         pfx = phash_prefix(phex, bits=16)
 
+        # ========================================================================
+        # STEP 7: GLOBAL DEDUPLICATION CHECK
+        # ========================================================================
+        # Stage 1: Exact-match dedup (existing)
+        if settings.enable_global_dedup and is_duplicate(phex):
+            logger.debug(f"Face {i} is duplicate (exact, pHash: {phex}), skipping")
+            dup_skipped += 1
+            continue
+        
+        # Stage 2: Near-duplicate dedup (new - Hamming distance)
+        from pipeline.dedup import should_skip, remember
+        if settings.enable_global_dedup and should_skip(msg.tenant_id, pfx, phex, max_dist=3):
+            logger.debug(f"Face {i} is near-duplicate (pHash: {phex}), skipping")
+            dup_skipped += 1
+            continue
+
         # Build keys
         base = f"{msg.image_sha256}_face_{i}"
         crop_key = f"{msg.tenant_id}/{base}.jpg"
@@ -270,11 +288,31 @@ def process_image(message: dict) -> dict:
         thumbs_keys.append(thumb_key)
         meta_keys.append(meta_key)
 
+        # Mark as processed for global dedup
+        if settings.enable_global_dedup:
+            mark_processed(phex)  # Exact-match dedup (existing)
+            remember(msg.tenant_id, pfx, phex, max_size=1000, ttl=3600)  # Near-duplicate dedup (new)
+
         accepted += 1
 
     # Batch upsert to Qdrant
     if points:
         upsert(points)
+
+    # ========================================================================
+    # STEP 12: UPDATE STATISTICS
+    # ========================================================================
+    try:
+        if accepted > 0:
+            increment_processed(accepted, msg.tenant_id)
+        if rejected > 0:
+            increment_rejected(rejected, msg.tenant_id)
+        if dup_skipped > 0:
+            increment_dup_skipped(dup_skipped, msg.tenant_id)
+        logger.debug(f"Updated stats: accepted={accepted}, rejected={rejected}, dup_skipped={dup_skipped}")
+    except Exception as e:
+        logger.error(f"Failed to update statistics: {e}")
+        # Don't fail the entire pipeline for stats errors
 
     # Build summary for return
     summary = {
