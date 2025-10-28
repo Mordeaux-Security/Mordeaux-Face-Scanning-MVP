@@ -107,7 +107,7 @@ def process_image(message: dict) -> dict:
     from pipeline.indexer import ensure_collection, upsert, make_point
     from pipeline.utils import compute_phash, phash_prefix, now_iso
     from pipeline.dedup import is_duplicate, mark_processed
-    from pipeline.stats import increment_processed, increment_rejected, increment_dup_skipped
+    from pipeline.stats import increment_processed, increment_rejected, increment_dup_skipped, inc, timer, add_time_ms
 
     # Counters for results
     faces_total = 0
@@ -126,52 +126,58 @@ def process_image(message: dict) -> dict:
     # ========================================================================
     msg = PipelineInput.model_validate(message)
     logger.info(f"Processing image: {msg.image_sha256} from {msg.site}")
+    
+    # Increment images counter
+    inc("images_total", 1)
 
     # ========================================================================
     # STEP 2: DOWNLOAD IMAGE FROM MINIO
     # ========================================================================
     from pipeline.storage import get_bytes
     
-    t0 = time.time()
-    try:
-        image_bytes = get_bytes(bucket=msg.bucket, key=msg.key)
-        timings["download_ms"] = (time.time() - t0) * 1000
-        logger.debug(f"Downloaded {len(image_bytes)} bytes from {msg.bucket}/{msg.key}")
-    except Exception as e:
-        logger.error(f"Failed to download image {msg.image_sha256}: {e}")
-        return _build_error_response(msg.image_sha256, timings, f"Download failed: {e}")
+    with timer("download_ms"):
+        try:
+            image_bytes = get_bytes(bucket=msg.bucket, key=msg.key)
+            timings["download_ms"] = 0  # Will be set by timer context manager
+            logger.debug(f"Downloaded {len(image_bytes)} bytes from {msg.bucket}/{msg.key}")
+        except Exception as e:
+            logger.error(f"Failed to download image {msg.image_sha256}: {e}")
+            return _build_error_response(msg.image_sha256, timings, f"Download failed: {e}")
 
     # ========================================================================
     # STEP 3: DECODE IMAGE
     # ========================================================================
-    t0 = time.time()
-    try:
-        # Direct decode to BGR using OpenCV
-        arr = np.frombuffer(image_bytes, dtype=np.uint8)
-        img_bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)  # BGR
-        assert img_bgr is not None, "Decode failed"
-        timings["decode_ms"] = (time.time() - t0) * 1000
-        logger.debug(f"Decoded image: {img_bgr.shape}")
-    except Exception as e:
-        logger.error(f"Failed to decode image {msg.image_sha256}: {e}")
-        return _build_error_response(msg.image_sha256, timings, f"Decode failed: {e}")
+    with timer("decode_ms"):
+        try:
+            # Direct decode to BGR using OpenCV
+            arr = np.frombuffer(image_bytes, dtype=np.uint8)
+            img_bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)  # BGR
+            assert img_bgr is not None, "Decode failed"
+            timings["decode_ms"] = 0  # Will be set by timer context manager
+            logger.debug(f"Decoded image: {img_bgr.shape}")
+        except Exception as e:
+            logger.error(f"Failed to decode image {msg.image_sha256}: {e}")
+            return _build_error_response(msg.image_sha256, timings, f"Decode failed: {e}")
 
     # ========================================================================
     # STEP 4: DETECT FACES
     # ========================================================================
-    t0 = time.time()
-    face_detections = []
+    with timer("detect_ms"):
+        face_detections = []
+        
+        if msg.face_hints and len(msg.face_hints) > 0:
+            logger.debug(f"Using {len(msg.face_hints)} face hints from upstream")
+            face_detections = msg.face_hints
+        else:
+            logger.debug("Running face detector")
+            face_detections = detect_faces(img_bgr)
+        
+        faces_total = len(face_detections)
+        timings["detection_ms"] = 0  # Will be set by timer context manager
+        logger.info(f"Detected {faces_total} faces")
     
-    if msg.face_hints and len(msg.face_hints) > 0:
-        logger.debug(f"Using {len(msg.face_hints)} face hints from upstream")
-        face_detections = msg.face_hints
-    else:
-        logger.debug("Running face detector")
-        face_detections = detect_faces(img_bgr)
-    
-    faces_total = len(face_detections)
-    timings["detection_ms"] = (time.time() - t0) * 1000
-    logger.info(f"Detected {faces_total} faces")
+    # Increment faces detected counter
+    inc("faces_detected", faces_total)
     
     if faces_total == 0:
         return _build_error_response(msg.image_sha256, timings)
@@ -203,7 +209,8 @@ def process_image(message: dict) -> dict:
             continue
 
         # Align & crop to 112 BGR
-        crop_bgr = align_and_crop(img_bgr, lmk, image_size=settings.IMAGE_SIZE)
+        with timer("align_ms"):
+            crop_bgr = align_and_crop(img_bgr, lmk, image_size=settings.IMAGE_SIZE)
 
         # Quality gate (tweak thresholds later if needed)
         q = evaluate(crop_bgr)
@@ -212,8 +219,9 @@ def process_image(message: dict) -> dict:
             continue
 
         # Embedding (512-d float32)
-        vec = embed(crop_bgr)
-        vec_list = vec.astype(np.float32).tolist()
+        with timer("embed_ms"):
+            vec = embed(crop_bgr)
+            vec_list = vec.astype(np.float32).tolist()
 
         # Compute pHash on RGB PIL (more stable)
         crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
@@ -305,10 +313,13 @@ def process_image(message: dict) -> dict:
     try:
         if accepted > 0:
             increment_processed(accepted, msg.tenant_id)
+            inc("faces_accepted", accepted)
         if rejected > 0:
             increment_rejected(rejected, msg.tenant_id)
+            inc("faces_rejected", rejected)
         if dup_skipped > 0:
             increment_dup_skipped(dup_skipped, msg.tenant_id)
+            inc("faces_dup_skipped", dup_skipped)
         logger.debug(f"Updated stats: accepted={accepted}, rejected={rejected}, dup_skipped={dup_skipped}")
     except Exception as e:
         logger.error(f"Failed to update statistics: {e}")

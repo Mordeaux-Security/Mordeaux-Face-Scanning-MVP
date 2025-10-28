@@ -41,6 +41,7 @@ services:
       timeout: 3s
       retries: 20
 
+  # Redis service for Phase 3 features (deduplication, statistics, queue worker)
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
@@ -120,6 +121,8 @@ services:
       <<: *common-env
       API_HOST: 0.0.0.0
       API_PORT: 8001
+      ENABLE_GLOBAL_DEDUP: "true"
+      ENABLE_QUEUE_WORKER: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,15 +133,35 @@ services:
       redis:
         condition: service_started
     ports:
-      - "8001:8000"
+      - "8001:8001"
     volumes:
       - insightface_models:/root/.insightface
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+    # healthcheck:
+    #   test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/api/v1/health')"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 60s
+
+  # face-pipeline-worker:  # Disabled for safe deployment - enable after testing
+  #   build:
+  #     context: ./face-pipeline
+  #   env_file: [.env]
+  #   environment:
+  #     <<: *common-env
+  #     ENABLE_QUEUE_WORKER: "true"
+  #     ENABLE_GLOBAL_DEDUP: "true"
+  #     MAX_WORKER_CONCURRENCY: 5
+  #     WORKER_BATCH_SIZE: 10
+  #   depends_on:
+  #     - redis
+  #     - qdrant
+  #     - minio
+  #     - face-pipeline
+  #   command: ["python", "worker.py"]
+  #   volumes:
+  #     - insightface_models:/root/.insightface
+  #   restart: unless-stopped
 
   frontend:
     build:

@@ -391,9 +391,6 @@
         uploadButton.addEventListener('click', async () => {
             if (!selectedFile) return;
 
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-
             // Show loading state
             loading.style.display = 'block';
             uploadButton.disabled = true;
@@ -404,14 +401,18 @@
                 const topK = parseInt(topKInput.value) || 10;
                 const threshold = parseFloat(thresholdInput.value) || 0.25;
                 
-                // Build URL with query parameters
-                const apiBase = window.location.origin + '/api';
-                const url = new URL(apiBase + '/search_face');
-                url.searchParams.append('top_k', topK);
-                url.searchParams.append('threshold', threshold);
-                
                 // Get tenant ID from environment or use default
                 const tenantId = window.TENANT_ID || 'demo-tenant';
+                
+                // Create FormData for file upload
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                // Build URL with query parameters
+                const url = new URL('http://localhost:8001/api/v1/search/file');
+                url.searchParams.append('tenant_id', tenantId);
+                url.searchParams.append('top_k', topK);
+                url.searchParams.append('threshold', threshold);
                 
                 const response = await fetch(url.toString(), {
                     method: 'POST',
@@ -426,7 +427,9 @@
                 if (response.ok) {
                     displayResults(data);
                 } else {
-                    showError(`Upload failed: ${data.detail || 'Unknown error'}`);
+                    console.error('API Error:', data);
+                    const errorMessage = data.detail || data.message || data.error || JSON.stringify(data);
+                    showError(`Upload failed: ${errorMessage}`);
                 }
             } catch (error) {
                 showError(`Network error: ${error.message}`);
@@ -440,30 +443,27 @@
             let html = `
                 <div class="success">🎉 Face analysis completed!</div>
                 <div class="result-item">
-                    <strong>👥 Faces detected:</strong> ${data.faces_found || 0}
+                    <strong>🔍 Search Results:</strong> ${data.count || 0} matches found
                 </div>
                 <div class="result-item">
-                    <strong>🔢 Perceptual hash:</strong> ${data.phash || 'N/A'}
+                    <strong>⚙️ Search Mode:</strong> ${data.query?.search_mode || 'Image Upload'}
                 </div>
                 <div class="result-item">
-                    <strong>⚙️ Vector backend:</strong> ${data.vector_backend || 'N/A'}
+                    <strong>🎯 Threshold:</strong> ${data.query?.threshold || 'N/A'}
                 </div>
             `;
 
-            if (data.message) {
-                html += `<div class="result-item"><strong>📝 Status:</strong> ${data.message}</div>`;
-            }
-
-            if (data.results && data.results.length > 0) {
+            if (data.hits && data.hits.length > 0) {
                 html += `<div class="result-item"><strong>🔍 Similar faces found in database:</strong></div>`;
-                data.results.forEach((result, index) => {
-                    const score = result.score ? (result.score * 100).toFixed(1) : 'N/A';
+                data.hits.forEach((hit, index) => {
+                    const score = hit.score ? (hit.score * 100).toFixed(1) : 'N/A';
                     const confidence = score > 80 ? '🟢 High' : score > 60 ? '🟡 Medium' : '🔴 Low';
                     html += `
                         <div class="result-item">
                             <strong>Match ${index + 1}:</strong> ${score}% similarity (${confidence} confidence)
-                            ${result.metadata && result.metadata.raw_url ? 
-                                `<br><small>📷 <a href="${result.metadata.raw_url}" target="_blank" style="color: #667eea;">View original image</a></small>` : 
+                            <br><strong>Face ID:</strong> ${hit.face_id}
+                            ${hit.thumb_url ? 
+                                `<br><small>📷 <a href="${hit.thumb_url}" target="_blank" style="color: #667eea;">View thumbnail</a></small>` : 
                                 ''
                             }
                         </div>

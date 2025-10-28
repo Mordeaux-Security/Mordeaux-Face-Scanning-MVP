@@ -42,9 +42,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Face Pipeline starting up...")
     logger.info(f"📝 Configuration loaded:")
-    logger.info(f"   - MinIO: {settings.minio_endpoint}")
-    logger.info(f"   - Qdrant: {settings.qdrant_url}")
-    logger.info(f"   - Collection: {settings.qdrant_collection}")
+    logger.info(f"   - MinIO: {settings.MINIO_ENDPOINT}")
+    logger.info(f"   - Qdrant: {settings.QDRANT_URL}")
+    logger.info(f"   - Collection: {settings.QDRANT_COLLECTION}")
     logger.info(f"   - Max Concurrent: {settings.max_concurrent}")
     logger.info(f"   - Face Min Size: {settings.min_face_size}")
     logger.info(f"   - Blur Min Variance: {settings.blur_min_variance}")
@@ -189,6 +189,9 @@ def ready():
 
     Checks if the application is ready to serve requests by verifying:
     - ML models are loaded (detector + embedder)
+    - MinIO connectivity (storage)
+    - Qdrant connectivity (vector database)
+    - Redis connectivity (stats and dedup)
 
     Returns 503 (Service Unavailable) if not ready, 200 OK when ready.
 
@@ -198,19 +201,63 @@ def ready():
         - reason: str - Explanation if not ready
         - checks: dict - Individual check statuses
     """
-    ok = True
-    reason = "ok"
+    checks = {}
+    all_ready = True
+    reasons = []
+    
+    # Check ML models
     try:
         from pipeline.detector import load_detector
         from pipeline.embedder import load_model
         
         load_detector()
         load_model()
+        checks["models"] = True
     except Exception as e:
-        ok = False
-        reason = f"models_not_ready: {e.__class__.__name__}"
+        checks["models"] = False
+        all_ready = False
+        reasons.append(f"models_not_ready: {e.__class__.__name__}")
     
-    return {"ready": ok, "reason": reason, "checks": {"models": ok}}
+    # Check MinIO storage
+    try:
+        from pipeline.storage import get_minio_client
+        client = get_minio_client()
+        client.list_buckets()
+        checks["storage"] = True
+    except Exception as e:
+        checks["storage"] = False
+        all_ready = False
+        reasons.append(f"storage_not_ready: {e.__class__.__name__}")
+    
+    # Check Qdrant vector database
+    try:
+        from pipeline.indexer import get_qdrant_client
+        client = get_qdrant_client()
+        client.get_collections()
+        checks["vector_db"] = True
+    except Exception as e:
+        checks["vector_db"] = False
+        all_ready = False
+        reasons.append(f"vector_db_not_ready: {e.__class__.__name__}")
+    
+    # Check Redis
+    try:
+        from pipeline.stats import get_redis_client
+        r = get_redis_client()
+        r.ping()
+        checks["redis"] = True
+    except Exception as e:
+        checks["redis"] = False
+        all_ready = False
+        reasons.append(f"redis_not_ready: {e.__class__.__name__}")
+    
+    reason = "ok" if all_ready else "; ".join(reasons)
+    
+    return {
+        "ready": all_ready,
+        "reason": reason,
+        "checks": checks
+    }
 
 
 @app.get("/info", status_code=status.HTTP_200_OK)
@@ -225,13 +272,13 @@ async def info():
         "service": "Face Processing Pipeline",
         "version": "0.1.0",
         "configuration": {
-            "minio_endpoint": settings.minio_endpoint,
-            "qdrant_url": settings.qdrant_url,
-            "qdrant_collection": settings.qdrant_collection,
+            "minio_endpoint": settings.MINIO_ENDPOINT,
+            "qdrant_url": settings.QDRANT_URL,
+            "qdrant_collection": settings.QDRANT_COLLECTION,
             "max_concurrent": settings.max_concurrent,
             "min_face_size": settings.min_face_size,
             "blur_min_variance": settings.blur_min_variance,
-            "presign_ttl_sec": settings.presign_ttl_sec,
+            "presign_ttl_sec": settings.PRESIGN_TTL_SEC,
         },
         "features": {
             "face_detection": "planned",

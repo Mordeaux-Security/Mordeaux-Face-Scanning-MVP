@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 import os
 
 
@@ -33,6 +33,60 @@ class Settings(BaseModel):
     ONNX_PROVIDERS_CSV: str = os.getenv("ONNX_PROVIDERS_CSV", "CPUExecutionProvider")
     IMAGE_SIZE: int = int(os.getenv("IMAGE_SIZE", "112"))
 
+    # ----- Feature Flags -----
+    enable_global_dedup: bool = os.getenv("ENABLE_GLOBAL_DEDUP", "false").lower() == "true"
+    enable_queue_worker: bool = os.getenv("ENABLE_QUEUE_WORKER", "false").lower() == "true"
+
+    # ----- Redis Configuration -----
+    redis_url: str = Field(default="redis://redis:6379/0", env="REDIS_URL")
+    redis_stream_name: str = Field(default="face-processing-queue", env="REDIS_STREAM_NAME")
+    redis_group_name: str = Field(default="pipeline", env="REDIS_GROUP_NAME")
+    redis_consumer_name: str = Field(default="", env="REDIS_CONSUMER_NAME")  # Auto-generated if empty
+
+    # ----- Worker Configuration -----
+    max_worker_concurrency: int = Field(default=5, env="MAX_WORKER_CONCURRENCY")
+    worker_batch_size: int = Field(default=10, env="WORKER_BATCH_SIZE")
+
+    # ----- Dedup Configuration -----
+    dedup_ttl_seconds: int = Field(default=86400, env="DEDUP_TTL_SECONDS")  # 24h default
+
+    # ----- API Configuration -----
+    api_host: str = os.getenv("API_HOST", "0.0.0.0")
+    api_port: int = int(os.getenv("API_PORT", "8001"))
+    api_reload: bool = os.getenv("API_RELOAD", "false").lower() == "true"
+    log_level: str = os.getenv("LOG_LEVEL", "INFO")
+    cors_origins: str = os.getenv("CORS_ORIGINS", "*")
+
+    # ----- Quality Thresholds -----
+    min_face_size: int = int(os.getenv("MIN_FACE_SIZE", "80"))
+    blur_min_variance: float = float(os.getenv("BLUR_MIN_VARIANCE", "120.0"))
+    min_overall_quality: float = float(os.getenv("MIN_OVERALL_QUALITY", "0.7"))
+
+    # ----- Pipeline Settings -----
+    max_faces_per_image: int = int(os.getenv("MAX_FACES_PER_IMAGE", "10"))
+    enable_deduplication: bool = os.getenv("ENABLE_DEDUPLICATION", "true").lower() == "true"
+    max_concurrent: int = int(os.getenv("MAX_CONCURRENT", "5"))
 
 # Global settings instance
 settings = Settings()
+
+
+# Backward compatibility shim for alternative env var names
+def _apply_compat_shim():
+    """Support alternative environment variable names for backward compatibility."""
+    import os
+    
+    # Map old names to new names
+    compat_map = {
+        'FACE_STREAM': 'REDIS_STREAM_NAME',
+        'FACE_GROUP': 'REDIS_GROUP_NAME',
+        'FACE_CONSUMER': 'REDIS_CONSUMER_NAME',
+        'GLOBAL_DEDUP_ENABLED': 'ENABLE_GLOBAL_DEDUP',
+        'GLOBAL_DEDUP_TTL_SEC': 'DEDUP_TTL_SECONDS',
+    }
+    
+    for old_name, new_name in compat_map.items():
+        if old_name in os.environ and new_name not in os.environ:
+            os.environ[new_name] = os.environ[old_name]
+
+_apply_compat_shim()

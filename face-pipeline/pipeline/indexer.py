@@ -6,7 +6,8 @@ import hashlib
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import (
-    Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue, ScoredPoint
+    Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue, ScoredPoint,
+    PayloadSchemaType
 )
 
 from config.settings import settings
@@ -36,6 +37,28 @@ def ensure_collection() -> None:
             ),
         )
         # Payload index helpers: you can add later if desired
+    
+    # Create payload indexes for faster filtering (idempotent)
+    fields_to_index = ['tenant_id', 'p_hash_prefix', 'site']
+    
+    try:
+        collection_info = qc.get_collection(collection_name=coll)
+        existing_indexes = collection_info.payload_schema or {}
+        
+        for field in fields_to_index:
+            if field not in existing_indexes:
+                try:
+                    qc.create_payload_index(
+                        collection_name=coll,
+                        field_name=field,
+                        field_schema=PayloadSchemaType.KEYWORD,
+                    )
+                except Exception as e:
+                    # Handle "index already exists" and other errors gracefully
+                    if "already exists" not in str(e).lower():
+                        print(f"Warning: Could not create payload index for {field}: {e}")
+    except Exception as e:
+        print(f"Warning: Could not check/create payload indexes: {e}")
 
 def make_point(face_id: str, vector: list[float], payload: Dict[str, Any]) -> PointStruct:
     # Convert string face_id to a UUID for Qdrant compatibility

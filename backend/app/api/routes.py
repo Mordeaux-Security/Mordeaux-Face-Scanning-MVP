@@ -5,10 +5,6 @@ import uuid
 import io
 import asyncio
 import time
-
-
-    # Get tenant_id from request state (set by middleware)
-
 from fastapi.responses import StreamingResponse
 from ..services.face import get_face_service
 from ..services.storage import save_raw_and_thumb_async, get_object_from_storage, get_presigned_url
@@ -18,14 +14,13 @@ from ..services.batch import get_batch_processor
 from ..services.webhook import get_webhook_service, WebhookEvent
 from ..core.audit import get_audit_logger
 from ..core.errors import (
-    from ..core.config import get_settings
-    from ..core.config import get_settings
-    from ..services.cleanup import run_cleanup_jobs
-
     create_http_exception, handle_mordeaux_error, handle_generic_error,
-    ValidationError, StorageError, VectorDBError, FaceProcessingError,
-    BatchProcessingError, ResourceNotFoundError, AuthorizationError
+    MordeauxError, ValidationError, ProcessingError, StorageError,
+    VectorDBError, FaceProcessingError, BatchProcessingError, 
+    ResourceNotFoundError, AuthorizationError
 )
+from ..core.config import get_settings
+from ..services.cleanup import run_cleanup_jobs
 router = APIRouter()
 
 # Batch processing models
