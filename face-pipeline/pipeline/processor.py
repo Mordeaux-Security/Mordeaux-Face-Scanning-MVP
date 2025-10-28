@@ -243,7 +243,7 @@ def process_image(message: dict) -> dict:
         
         # Stage 2: Near-duplicate dedup (new - Hamming distance)
         from pipeline.dedup import should_skip, remember
-        if settings.enable_global_dedup and should_skip(msg.tenant_id, pfx, phex, max_dist=3):
+        if settings.enable_global_dedup and should_skip(msg.tenant_id, pfx, phex, max_dist=settings.dedup_max_hamming):
             logger.debug(f"Face {i} is near-duplicate (pHash: {phex}), skipping")
             dup_skipped += 1
             continue

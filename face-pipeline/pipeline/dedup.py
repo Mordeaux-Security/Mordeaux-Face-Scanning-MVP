@@ -113,7 +113,7 @@ def mark_processed(phash: str) -> bool:
         raise
 
 
-def should_skip(tenant_id: str, prefix: str, phash: str, max_dist: int = 3) -> bool:
+def should_skip(tenant_id: str, prefix: str, phash: str, max_dist: int | None = None) -> bool:
     """
     Check if a similar pHash exists within Hamming distance threshold.
     
@@ -124,7 +124,7 @@ def should_skip(tenant_id: str, prefix: str, phash: str, max_dist: int = 3) -> b
         tenant_id: Tenant identifier for scoping
         prefix: pHash prefix (4 chars) for efficient lookup
         phash: Full perceptual hash (16-char hex string)
-        max_dist: Maximum Hamming distance to consider a duplicate (default 3)
+        max_dist: Maximum Hamming distance to consider a duplicate (uses settings default if None)
         
     Returns:
         True if a similar pHash exists (should skip), False otherwise
@@ -138,6 +138,10 @@ def should_skip(tenant_id: str, prefix: str, phash: str, max_dist: int = 3) -> b
     if not phash or len(phash) < 4 or not prefix:
         logger.warning(f"Invalid pHash/prefix: {phash}/{prefix}")
         return False
+    
+    # Use settings default if not provided
+    if max_dist is None:
+        max_dist = settings.dedup_max_hamming
     
     # Import here to avoid circular dependency
     from pipeline.utils import hamming_distance_hex
@@ -163,7 +167,7 @@ def should_skip(tenant_id: str, prefix: str, phash: str, max_dist: int = 3) -> b
         raise
 
 
-def remember(tenant_id: str, prefix: str, phash: str, max_size: int = 1000, ttl: int = 3600) -> bool:
+def remember(tenant_id: str, prefix: str, phash: str, max_size: int = 1000, ttl: int | None = None) -> bool:
     """
     Store a pHash for future near-duplicate detection.
     
@@ -175,7 +179,7 @@ def remember(tenant_id: str, prefix: str, phash: str, max_size: int = 1000, ttl:
         prefix: pHash prefix (4 chars) for sharding
         phash: Full perceptual hash (16-char hex string)
         max_size: Maximum number of hashes per prefix set (default 1000)
-        ttl: Time-to-live in seconds (default 3600 = 1 hour)
+        ttl: Time-to-live in seconds (uses settings default if None)
         
     Returns:
         True if successfully added, False otherwise
@@ -189,6 +193,10 @@ def remember(tenant_id: str, prefix: str, phash: str, max_size: int = 1000, ttl:
     if not phash or len(phash) < 4 or not prefix:
         logger.warning(f"Invalid pHash/prefix: {phash}/{prefix}")
         return False
+    
+    # Use settings default if not provided
+    if ttl is None:
+        ttl = settings.dedup_ttl_seconds
     
     key = f"dedup:near:{tenant_id}:{prefix}"
     

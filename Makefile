@@ -26,6 +26,14 @@ help:
 	@echo "  make phase2-ensure   - Ensure MinIO buckets & Qdrant collection ready"
 	@echo "  make process-samples - Process sample images through face pipeline"
 	@echo ""
+	@echo "Phase 3 Face Pipeline:"
+	@echo "  make phase3-install     - Install/update face-pipeline deps"
+	@echo "  make phase3-ensure      - Ensure MinIO buckets & Qdrant collection"
+	@echo "  make worker             - Start async Redis stream worker"
+	@echo "  make worker-once        - Process a single batch then exit"
+	@echo "  make dedup-flush        - Flush Redis DB used for dedup/stats"
+	@echo "  make stats              - Print aggregated counters & timings"
+	@echo ""
 	@echo "  make help      - Show this help message"
 	@echo ""
 	@echo "Service URLs:"
@@ -189,3 +197,22 @@ PY
 process-samples:
 	@echo "📸 Processing sample images through the face pipeline..."
 	cd face-pipeline && export MINIO_ACCESS_KEY=changeme && export MINIO_SECRET_KEY=changeme && python scripts/process_folder.py --path ./samples --tenant demo --site local
+
+# ========= Phase 3 Face Pipeline =========
+phase3-install:
+	$(MAKE) -C face-pipeline phase3-install
+
+phase3-ensure:
+	$(MAKE) -C face-pipeline phase3-ensure
+
+worker:
+	$(MAKE) -C face-pipeline worker
+
+worker-once:
+	$(MAKE) -C face-pipeline worker-once
+
+dedup-flush:
+	$(MAKE) -C face-pipeline dedup-flush
+
+stats:
+	$(MAKE) -C face-pipeline stats

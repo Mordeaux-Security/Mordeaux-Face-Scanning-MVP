@@ -38,8 +38,10 @@ python worker.py --max-batch 16
 python scripts/publish_test_message.py
 ```
 
-### Configuration
-See `face-pipeline/PHASE3_IMPLEMENTATION.md` for detailed configuration and usage.
+### Documentation
+- **[PHASE3_RUNBOOK.md](face-pipeline/PHASE3_RUNBOOK.md)** - Operations guide for running, testing, and troubleshooting the queue worker
+- **[PHASE3_IMPLEMENTATION.md](face-pipeline/PHASE3_IMPLEMENTATION.md)** - Technical implementation details and architecture
+- **[README.md](face-pipeline/README.md)** - Developer documentation and API contracts
 
 ## Getting Started
 1. Copy `.env.example` → `.env` and fill in Pinecone/AWS keys.

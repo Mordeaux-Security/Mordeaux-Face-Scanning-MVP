@@ -48,7 +48,8 @@ class Settings(BaseModel):
     worker_batch_size: int = Field(default=10, env="WORKER_BATCH_SIZE")
 
     # ----- Dedup Configuration -----
-    dedup_ttl_seconds: int = Field(default=86400, env="DEDUP_TTL_SECONDS")  # 24h default
+    dedup_ttl_seconds: int = Field(default=3600, env="DEDUP_TTL_SECONDS")  # 1h default
+    dedup_max_hamming: int = Field(default=8, env="DEDUP_MAX_HAMMING")  # Hamming distance threshold
 
     # ----- API Configuration -----
     api_host: str = os.getenv("API_HOST", "0.0.0.0")
@@ -83,6 +84,7 @@ def _apply_compat_shim():
         'FACE_CONSUMER': 'REDIS_CONSUMER_NAME',
         'GLOBAL_DEDUP_ENABLED': 'ENABLE_GLOBAL_DEDUP',
         'GLOBAL_DEDUP_TTL_SEC': 'DEDUP_TTL_SECONDS',
+        'GLOBAL_DEDUP_MAX_HAMMING': 'DEDUP_MAX_HAMMING',
     }
     
     for old_name, new_name in compat_map.items():

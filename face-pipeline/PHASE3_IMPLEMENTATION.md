@@ -1,5 +1,11 @@
 # Phase 3 Implementation Guide - ✅ COMPLETE
 
+**📚 See Also:**
+- **[PHASE3_RUNBOOK.md](PHASE3_RUNBOOK.md)** - Operations guide for running, testing, and troubleshooting the queue worker
+- **[README.md](README.md)** - Developer documentation and API contracts
+
+---
+
 ## Overview
 
 This document describes the Phase 3 production-ready features **FULLY IMPLEMENTED** for the face-pipeline service:
