@@ -83,7 +83,7 @@ class TestSuite:
         try:
             # Test with a simple, reliable site
             test_url = "https://httpbin.org/html"
-            html, error = await self.http_utils.fetch_html(test_url)
+            html, error, _ = await self.http_utils.fetch_html(test_url)
             
             result = html is not None and len(html) > 100
             self.results['http_utils'] = result
@@ -531,7 +531,7 @@ def main():
             exit(0 if result else 1)
         else:
             # Run all tests
-        results = loop.run_until_complete(run_tests())
+            results = loop.run_until_complete(run_tests())
         
         # Exit with appropriate code
         if results['success_rate'] == 100:

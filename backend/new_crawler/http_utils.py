@@ -121,9 +121,12 @@ class HTTPUtils:
         
         return any(indicator in html_lower for indicator in blocking_indicators)
     
-    async def fetch_html(self, url: str, use_js_fallback: bool = True, force_compare_first_visit: bool = False) -> Tuple[Optional[str], str]:
+    async def fetch_html(self, url: str, use_js_fallback: bool = True, force_compare_first_visit: bool = False) -> Tuple[Optional[str], str, Optional[Dict[str, int]]]:
         """Fetch HTML content with optional JavaScript rendering fallback.
         If force_compare_first_visit is True, fetch both HTTP and JS and choose the better one by heuristic.
+        
+        Returns: (html, status_message, comparison_stats)
+        comparison_stats is None unless force_compare_first_visit=True, then it's {'http_count': N, 'js_count': M}
         """
         async with self._semaphore:  # Limit concurrency
             try:
@@ -154,16 +157,21 @@ class HTTPUtils:
                     http_count = await self._estimate_img_candidates(http_html, url) if http_html else 0
                     js_count = await self._estimate_img_candidates(js_html, url) if js_html else 0
                     logger.info(f"First-visit compare for {url}: HTTP={http_count}, JS={js_count}, elapsed={(time.time()-start)*1000:.1f}ms")
+                    
+                    # Return comparison stats WITHOUT storing strategy yet
+                    comparison_stats = {'http_count': http_count, 'js_count': js_count}
+                    
+                    # Return the better HTML
                     if js_count >= max(5, 2 * http_count):
-                        return js_html, "SUCCESS"
-                    return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED"))
+                        return js_html, "SUCCESS", comparison_stats
+                    return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED")), comparison_stats
 
                 # Try standard HTTP first
                 html, error = await self._fetch_with_redirects(url)
                 
                 if html and not self._needs_js_rendering(html):
                     logger.debug(f"Standard HTTP successful for {url}")
-                    return html, "SUCCESS"
+                    return html, "SUCCESS", None
                 
                 # Try JavaScript rendering if needed and enabled
                 if use_js_fallback and PLAYWRIGHT_AVAILABLE:
@@ -172,16 +180,16 @@ class HTTPUtils:
                     
                     if js_html:
                         logger.info(f"JavaScript rendering successful for {url}")
-                        return js_html, "SUCCESS"
+                        return js_html, "SUCCESS", None
                     else:
                         logger.warning(f"JavaScript rendering also failed for {url}: {js_error}")
                 
                 # Return whatever we got from standard HTTP
-                return html, error or "FAILED"
+                return html, error or "FAILED", None
                 
             except Exception as e:
                 logger.error(f"Error fetching HTML from {url}: {e}")
-                return None, f"ERROR: {str(e)}"
+                return None, f"ERROR: {str(e)}", None
 
     async def _estimate_img_candidates(self, html: Optional[str], base_url: str) -> int:
         """Rudimentary estimator: count <img> tags and common patterns to pick better HTML source."""

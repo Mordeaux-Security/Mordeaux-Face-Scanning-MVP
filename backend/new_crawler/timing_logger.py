@@ -31,7 +31,7 @@ class TimingLogger:
             return
         
         self._file_lock = threading.Lock()
-        self._timing_file = "timings03.txt"
+        self._timing_file = "timings04.txt"
         self._initialized = True
         
         # Ensure timing file exists and is empty

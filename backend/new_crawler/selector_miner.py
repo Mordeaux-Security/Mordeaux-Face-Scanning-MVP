@@ -348,44 +348,94 @@ class SelectorMiner:
         return None
     
     async def mine_with_3x3_crawl(self, base_url: str, site_id: str, max_pages: int = 5) -> AsyncIterator[Tuple[str, List[CandidateImage]]]:
-        """Perform 3x3 crawl: 3 category pages × 3 content pages."""
+        """Perform 3x3 crawl: 1 base + 3 category + 3 content pages with strategy learning."""
         try:
-            # Import redis manager at function level to avoid circular imports
             from .redis_manager import get_redis_manager
+            from urllib.parse import urlparse
             redis = get_redis_manager()
+            domain = urlparse(base_url).netloc
             
             logger.info(f"Starting 3x3 crawl for {base_url} (max_pages={max_pages})")
             checked_urls = {base_url}
             pages_crawled = 0
             
-            # Step 1: Fetch base page
-            logger.debug(f"[3x3-CRAWL] Fetching page {pages_crawled + 1}/{max_pages}: {base_url}")
+            # Track comparison stats for strategy learning
+            total_http_candidates = 0
+            total_js_candidates = 0
+            sample_pages_count = 0
+            max_sample_pages = min(7, max_pages)  # 1+3+3 = 7 pages for sampling
+            
+            # PHASE 1: Sample crawl - fetch ALL sample pages with comparison
+            
+            # Step 1: Fetch base page with comparison
+            logger.info(f"[3x3-SAMPLE] Fetching base page: {base_url}")
             async with self._semaphore:
-                html, error = await self.http_utils.fetch_html(base_url)
+                html, error, comparison_stats = await self.http_utils.fetch_html(
+                    base_url, use_js_fallback=True, force_compare_first_visit=True
+                )
+            
             if not html:
                 logger.warning(f"Failed to fetch base page {base_url}: {error}")
                 return
             
-            pages_crawled += 1
+            # Track stats
+            if comparison_stats:
+                total_http_candidates += comparison_stats['http_count']
+                total_js_candidates += comparison_stats['js_count']
+                sample_pages_count += 1
             
-            # On first page, optionally compare HTTP vs JS via unified fetch
-            if self.config.nc_js_first_visit_compare:
-                best_html, status = await self.http_utils.fetch_html(base_url, use_js_fallback=True, force_compare_first_visit=True)
-                if best_html:
-                    html = best_html
-                    logger.debug(f"[3x3-CRAWL] First-page source selected for {base_url}: {status}")
-
-            # Mine from chosen base page
+            pages_crawled += 1
             base_candidates = await self.mine_selectors(html, base_url, site_id)
-            logger.debug(f"[3x3-CRAWL] Page yielded {len(base_candidates)} candidates")
             yield base_url, base_candidates
             
-            # Check if we've reached the page limit
+            # Get category/content URLs for sampling
+            soup = BeautifulSoup(html, 'html.parser')
+            category_urls = await self._discover_category_pages(soup, base_url)
+            if not category_urls:
+                category_urls = await self._discover_random_same_domain_links(soup, base_url, limit=3)
+            
+            # Step 2: Fetch up to 6 more sample pages in PARALLEL with comparison
+            sample_tasks = []
+            for category_url in category_urls[:6]:  # Take up to 6 more (for total of 7)
+                if category_url not in checked_urls and sample_pages_count < max_sample_pages:
+                    checked_urls.add(category_url)
+                    task = asyncio.create_task(self._fetch_and_compare_page(category_url, site_id))
+                    sample_tasks.append(task)
+            
+            # Process sample pages as they complete
+            for task in asyncio.as_completed(sample_tasks):
+                try:
+                    candidates, url, comparison_stats = await task
+                    pages_crawled += 1
+                    sample_pages_count += 1
+                    
+                    if comparison_stats:
+                        total_http_candidates += comparison_stats['http_count']
+                        total_js_candidates += comparison_stats['js_count']
+                    
+                    logger.info(f"[3x3-SAMPLE] Page {sample_pages_count}/{max_sample_pages} yielded {len(candidates)} candidates")
+                    yield url, candidates
+                    
+                except Exception as e:
+                    logger.debug(f"Error processing sample page: {e}")
+            
+            # PHASE 2: Aggregate and store strategy
+            logger.info(f"[3x3-SAMPLE] Completed {sample_pages_count} sample pages")
+            logger.info(f"[3x3-AGGREGATE] Total HTTP candidates: {total_http_candidates}")
+            logger.info(f"[3x3-AGGREGATE] Total JS candidates: {total_js_candidates}")
+            
+            # Determine winning strategy
+            use_js = total_js_candidates >= max(5, 2 * total_http_candidates)
+            await redis.set_domain_rendering_strategy_async(
+                domain, use_js, total_http_candidates, total_js_candidates
+            )
+            logger.info(f"[3x3-STRATEGY] Stored strategy for {domain}: use_js={use_js}")
+            
+            # PHASE 3: Remaining pages (if any) use the learned strategy
             if pages_crawled >= max_pages:
-                logger.info(f"[3x3-CRAWL] Reached max pages limit ({max_pages}), stopping")
                 return
             
-            # NEW: Check if thumbnail limit reached before continuing
+            # Check if thumbnail limit reached before continuing
             site_stats = await asyncio.to_thread(redis.get_site_stats, site_id)
             thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
             
@@ -393,47 +443,27 @@ class SelectorMiner:
                 logger.info(f"[3x3-CRAWL] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping crawl")
                 return
             
-            # Step 2: Find 3 category pages
-            soup = BeautifulSoup(html, 'html.parser')
-            category_urls = await self._discover_category_pages(soup, base_url)
-            logger.info(f"Found {len(category_urls)} category pages")
-
-            # Step 2: Process category pages in parallel
-            if not category_urls:
-                random_urls = await self._discover_random_same_domain_links(soup, base_url, limit=3)
-                logger.info(f"No categories found, using {len(random_urls)} random same-domain links")
-                category_urls = random_urls
-            
-            # Fetch all category pages in parallel
-            category_tasks = []
-            for category_url in category_urls[:3]:
+            # Continue with remaining pages using learned strategy
+            remaining_urls = []
+            for category_url in category_urls[6:]:  # Any remaining URLs beyond the sample
                 if category_url not in checked_urls and pages_crawled < max_pages:
-                    checked_urls.add(category_url)
-                    task = asyncio.create_task(self._fetch_and_mine_page(category_url, site_id))
-                    category_tasks.append(task)
+                    remaining_urls.append(category_url)
             
-            # Process category pages as they complete
-            for task in asyncio.as_completed(category_tasks):
-                try:
-                    category_candidates, category_url = await task
-                    pages_crawled += 1
-                    logger.debug(f"[3x3-CRAWL] Category page yielded {len(category_candidates)} candidates")
-                    yield category_url, category_candidates
+            # Process remaining pages with learned strategy
+            for url in remaining_urls:
+                if pages_crawled >= max_pages:
+                    break
                     
-                    # Check limits after each category page
-                    site_stats = await asyncio.to_thread(redis.get_site_stats, site_id)
-                    thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
-                    if thumbnails_saved >= self.config.nc_max_images_per_site:
-                        logger.info(f"[3x3-CRAWL] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping crawl")
-                        return
-                    
-                    if pages_crawled >= max_pages:
-                        logger.info(f"[3x3-CRAWL] Reached max pages limit ({max_pages}), stopping")
-                        return
-                        
-                except Exception as e:
-                    logger.debug(f"Error processing category page: {e}")
-                    continue
+                candidates, _ = await self._fetch_and_mine_page(url, site_id)
+                pages_crawled += 1
+                yield url, candidates
+                
+                # Check limits after each page
+                site_stats = await asyncio.to_thread(redis.get_site_stats, site_id)
+                thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
+                if thumbnails_saved >= self.config.nc_max_images_per_site:
+                    logger.info(f"[3x3-CRAWL] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping crawl")
+                    return
             
             logger.info(f"3x3 crawl completed: {pages_crawled} pages crawled, {len(checked_urls)} URLs checked")
             
@@ -441,11 +471,49 @@ class SelectorMiner:
             logger.error(f"Error in 3x3 crawl for {base_url}: {e}")
             return
 
-    async def _fetch_and_mine_page(self, url: str, site_id: str) -> Tuple[List[CandidateImage], str]:
-        """Fetch and mine a single page, returning candidates and URL."""
+    async def _fetch_and_compare_page(self, url: str, site_id: str) -> Tuple[List[CandidateImage], str, Optional[Dict[str, int]]]:
+        """Fetch and mine a page with HTTP vs JS comparison (for sample phase)."""
         try:
             async with self._semaphore:
-                html, error = await self.http_utils.fetch_html(url)
+                html, error, comparison_stats = await self.http_utils.fetch_html(
+                    url, use_js_fallback=True, force_compare_first_visit=True
+                )
+            
+            if html:
+                candidates = await self.mine_selectors(html, url, site_id)
+                return candidates, url, comparison_stats
+            else:
+                logger.warning(f"Failed to fetch page {url}: {error}")
+                return [], url, None
+        except Exception as e:
+            logger.debug(f"Error fetching page {url}: {e}")
+            return [], url, None
+
+    async def _fetch_and_mine_page(self, url: str, site_id: str) -> Tuple[List[CandidateImage], str]:
+        """Fetch and mine a page using learned strategy (for remaining pages after sample)."""
+        try:
+            from urllib.parse import urlparse
+            from .redis_manager import get_redis_manager
+            domain = urlparse(url).netloc
+            redis = get_redis_manager()
+            
+            # Get stored strategy
+            use_js = await redis.get_domain_rendering_strategy_async(domain)
+            
+            async with self._semaphore:
+                if use_js is True:
+                    # FORCE JS rendering directly
+                    logger.info(f"[3x3-APPLY] Using JS rendering for {url} (domain strategy)")
+                    html, error = await self.http_utils._fetch_with_js(url)
+                elif use_js is False:
+                    # Use HTTP only
+                    logger.debug(f"[3x3-APPLY] Using HTTP for {url} (domain strategy)")
+                    html, error = await self.http_utils._fetch_with_redirects(url)
+                else:
+                    # No strategy yet - shouldn't happen in remaining pages
+                    logger.warning(f"[3x3-APPLY] No strategy for {domain}, using standard fetch")
+                    html, error, _ = await self.http_utils.fetch_html(url)
+            
             if html:
                 candidates = await self.mine_selectors(html, url, site_id)
                 return candidates, url
@@ -453,7 +521,7 @@ class SelectorMiner:
                 logger.warning(f"Failed to fetch page {url}: {error}")
                 return [], url
         except Exception as e:
-            logger.debug(f"Error fetching page {url}: {e}")
+            logger.error(f"Error fetching page {url}: {e}")
             return [], url
 
     async def _discover_random_same_domain_links(self, soup: BeautifulSoup, base_url: str, limit: int = 3) -> List[str]:
@@ -582,7 +650,7 @@ class SelectorMiner:
                 return all_candidates
             else:
                 logger.info(f"Using simple mining for {site_url}")
-                html, error = await self.http_utils.fetch_html(site_url)
+                html, error, _ = await self.http_utils.fetch_html(site_url)
                 if html:
                     return await self.mine_selectors(html, site_url, site_id)
                 else:

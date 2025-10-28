@@ -10463,3 +10463,399 @@
 2025-10-28 09:35:48,220 - new_crawler.orchestrator - INFO - Stopping worker processes...
 2025-10-28 09:35:48,220 - new_crawler.orchestrator - INFO - All worker processes stopped
 2025-10-28 09:35:48,221 - __main__ - INFO - Crawl completed successfully
+2025-10-28 09:54:46,684 - new_crawler.config - INFO - Validating crawler configuration...
+2025-10-28 09:54:46,692 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-10-28 09:54:46,692 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-10-28 09:54:46,692 - new_crawler.config - INFO - Configuration validated: crawlers=2, extractors=4, gpu_processors=1
+2025-10-28 09:54:46,693 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-10-28 09:54:46,693 - new_crawler.config - INFO - Environment: development
+2025-10-28 09:54:46,693 - new_crawler.config - INFO - Log Level: info
+2025-10-28 09:54:46,693 - new_crawler.config - INFO - Docker: True
+2025-10-28 09:54:46,694 - new_crawler.config - INFO - Windows: False
+2025-10-28 09:54:46,694 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-10-28 09:54:46,694 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-10-28 09:54:46,694 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-10-28 09:54:46,695 - new_crawler.config - INFO - Batch Size: 64
+2025-10-28 09:54:46,695 - new_crawler.config - INFO - GPU Min Batch Size: 8
+2025-10-28 09:54:46,695 - new_crawler.config - INFO - Max Queue Depth: 512
+2025-10-28 09:54:46,695 - new_crawler.config - INFO - Crawler Concurrency: 32
+2025-10-28 09:54:46,696 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-10-28 09:54:46,696 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-10-28 09:54:46,696 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-10-28 09:54:46,696 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-10-28 09:54:46,697 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-10-28 09:54:46,697 - new_crawler.config - INFO - JS Wait Strategy: both
+2025-10-28 09:54:46,697 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-10-28 09:54:46,697 - new_crawler.config - INFO - JS Network Idle Timeout: 3.0s
+2025-10-28 09:54:46,698 - new_crawler.config - INFO - Extract Background Images: True
+2025-10-28 09:54:46,698 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-10-28 09:54:46,698 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-10-28 09:54:46,698 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-10-28 09:54:46,698 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-10-28 09:54:46,699 - new_crawler.config - INFO - Realistic Headers: True
+2025-10-28 09:54:46,699 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-10-28 09:54:46,699 - new_crawler.config - INFO - Capture Network Images: True
+2025-10-28 09:54:46,699 - new_crawler.config - INFO - Extract Script Images: True
+2025-10-28 09:54:46,700 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-10-28 09:54:46,700 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-10-28 09:54:46,700 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-10-28 09:54:46,700 - new_crawler.config - INFO - ================================
+2025-10-28 09:54:46,702 - __main__ - INFO - Loaded 7 sites from sites.txt
+2025-10-28 09:54:46,702 - __main__ - INFO - Starting crawl of 7 sites
+2025-10-28 09:54:46,702 - __main__ - INFO - Performing system health check...
+2025-10-28 09:54:46,704 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-10-28 09:54:46,704 - __main__ - INFO - Redis: ✓
+2025-10-28 09:54:46,707 - __main__ - INFO - Cache: ✓
+2025-10-28 09:54:46,919 - __main__ - INFO - Storage: ✓
+2025-10-28 09:54:47,046 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-10-28 09:54:47,047 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-10-28 09:54:47,047 - __main__ - INFO - GPU Worker: ✓
+2025-10-28 09:54:47,047 - __main__ - INFO - ✓ All systems healthy
+2025-10-28 09:54:47,050 - new_crawler.orchestrator - INFO - Starting crawl of 7 sites
+2025-10-28 09:54:47,061 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+2025-10-28 09:54:47,062 - new_crawler.redis_manager - INFO - Cleared 7 site stats
+2025-10-28 09:54:47,062 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-10-28 09:54:47,063 - new_crawler.orchestrator - INFO - Pushing 7 sites to crawl queue
+2025-10-28 09:54:47,066 - new_crawler.orchestrator - INFO - Successfully pushed 7 sites to queue
+2025-10-28 09:54:47,067 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-10-28 09:54:47,067 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-10-28 09:54:47,067 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-10-28 09:54:47,074 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 24)
+2025-10-28 09:54:47,078 - new_crawler.orchestrator - INFO - Started crawler worker 1 (PID: 25)
+2025-10-28 09:54:47,081 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 26)
+2025-10-28 09:54:47,085 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 27)
+2025-10-28 09:54:47,088 - new_crawler.orchestrator - INFO - Started extractor worker 2 (PID: 28)
+2025-10-28 09:54:47,093 - new_crawler.orchestrator - INFO - Started extractor worker 3 (PID: 29)
+2025-10-28 09:54:47,099 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 30)
+2025-10-28 09:54:47,100 - new_crawler.orchestrator - INFO - Started 2 crawlers, 4 extractors, 1 GPU processors
+2025-10-28 09:54:49,103 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-10-28 09:54:49,115 - new_crawler.orchestrator - INFO - Queues: sites=5, candidates=0, images=0, results=0
+2025-10-28 09:54:59,120 - new_crawler.orchestrator - INFO - Queues: sites=4, candidates=0, images=0, results=0
+2025-10-28 09:55:09,125 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, results=0
+2025-10-28 09:55:19,130 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, results=0
+2025-10-28 09:55:29,136 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, results=0
+2025-10-28 09:55:39,140 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, results=0
+2025-10-28 09:55:49,146 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 09:55:59,151 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 09:56:09,153 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+2025-10-28 09:56:09,153 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-10-28 09:56:09,241 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-10-28 09:56:09,244 - new_crawler.orchestrator - INFO - Retrieved stats for 7 sites from Redis
+2025-10-28 09:56:09,246 - new_crawler.orchestrator - INFO - Consumed 71 results from queue
+2025-10-28 09:56:09,247 - new_crawler.orchestrator - INFO - From consumed results: faces=65, raw=71, thumbs=49
+2025-10-28 09:56:09,247 - new_crawler.orchestrator - INFO - From Redis stats: faces=65, raw=71, thumbs=49
+2025-10-28 09:56:09,247 - new_crawler.orchestrator - INFO - Total images processed: 71
+2025-10-28 09:56:09,248 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+2025-10-28 09:56:09,248 - new_crawler.orchestrator - INFO - Total sites processed: 7
+2025-10-28 09:56:09,248 - new_crawler.orchestrator - INFO - Total images processed: 71
+2025-10-28 09:56:09,248 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 71
+2025-10-28 09:56:09,249 - new_crawler.orchestrator - INFO - Total thumbnails saved: 49
+2025-10-28 09:56:09,249 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+2025-10-28 09:56:09,249 - new_crawler.orchestrator - INFO - Success rate: 27.3%
+2025-10-28 09:56:09,250 - new_crawler.orchestrator - INFO - Overall throughput: 0.86 images/second
+2025-10-28 09:56:09,250 - new_crawler.orchestrator - INFO - Crawl completed in 82.2s, success rate: 27.3%, throughput: 0.86 images/second
+2025-10-28 09:56:09,272 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+2025-10-28 09:56:09,272 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-10-28 09:56:09,272 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-10-28 09:56:09,273 - __main__ - INFO - Crawl completed successfully
+2025-10-28 09:57:21,342 - new_crawler.config - INFO - Validating crawler configuration...
+2025-10-28 09:57:21,348 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-10-28 09:57:21,349 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-10-28 09:57:21,349 - new_crawler.config - INFO - Configuration validated: crawlers=2, extractors=4, gpu_processors=1
+2025-10-28 09:57:21,349 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-10-28 09:57:21,349 - new_crawler.config - INFO - Environment: development
+2025-10-28 09:57:21,350 - new_crawler.config - INFO - Log Level: info
+2025-10-28 09:57:21,350 - new_crawler.config - INFO - Docker: True
+2025-10-28 09:57:21,350 - new_crawler.config - INFO - Windows: False
+2025-10-28 09:57:21,350 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-10-28 09:57:21,351 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-10-28 09:57:21,351 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-10-28 09:57:21,351 - new_crawler.config - INFO - Batch Size: 64
+2025-10-28 09:57:21,352 - new_crawler.config - INFO - GPU Min Batch Size: 8
+2025-10-28 09:57:21,352 - new_crawler.config - INFO - Max Queue Depth: 512
+2025-10-28 09:57:21,352 - new_crawler.config - INFO - Crawler Concurrency: 32
+2025-10-28 09:57:21,352 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-10-28 09:57:21,353 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-10-28 09:57:21,353 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-10-28 09:57:21,353 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-10-28 09:57:21,353 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-10-28 09:57:21,354 - new_crawler.config - INFO - JS Wait Strategy: both
+2025-10-28 09:57:21,354 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-10-28 09:57:21,354 - new_crawler.config - INFO - JS Network Idle Timeout: 3.0s
+2025-10-28 09:57:21,354 - new_crawler.config - INFO - Extract Background Images: True
+2025-10-28 09:57:21,355 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-10-28 09:57:21,355 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-10-28 09:57:21,355 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-10-28 09:57:21,355 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-10-28 09:57:21,356 - new_crawler.config - INFO - Realistic Headers: True
+2025-10-28 09:57:21,356 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-10-28 09:57:21,356 - new_crawler.config - INFO - Capture Network Images: True
+2025-10-28 09:57:21,356 - new_crawler.config - INFO - Extract Script Images: True
+2025-10-28 09:57:21,357 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-10-28 09:57:21,357 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-10-28 09:57:21,357 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-10-28 09:57:21,357 - new_crawler.config - INFO - ================================
+2025-10-28 09:57:21,359 - __main__ - INFO - Loaded 7 sites from sites.txt
+2025-10-28 09:57:21,359 - __main__ - INFO - Starting crawl of 7 sites
+2025-10-28 09:57:21,359 - __main__ - INFO - Performing system health check...
+2025-10-28 09:57:21,361 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-10-28 09:57:21,361 - __main__ - INFO - Redis: ✓
+2025-10-28 09:57:21,363 - __main__ - INFO - Cache: ✓
+2025-10-28 09:57:21,497 - __main__ - INFO - Storage: ✓
+2025-10-28 09:57:21,614 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-10-28 09:57:21,615 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-10-28 09:57:21,615 - __main__ - INFO - GPU Worker: ✓
+2025-10-28 09:57:21,616 - __main__ - INFO - ✓ All systems healthy
+2025-10-28 09:57:21,620 - new_crawler.orchestrator - INFO - Starting crawl of 7 sites
+2025-10-28 09:57:21,629 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+2025-10-28 09:57:21,630 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-10-28 09:57:21,630 - new_crawler.orchestrator - INFO - Pushing 7 sites to crawl queue
+2025-10-28 09:57:21,632 - new_crawler.orchestrator - INFO - Successfully pushed 7 sites to queue
+2025-10-28 09:57:21,633 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-10-28 09:57:21,633 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-10-28 09:57:21,633 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-10-28 09:57:21,641 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 24)
+2025-10-28 09:57:21,645 - new_crawler.orchestrator - INFO - Started crawler worker 1 (PID: 25)
+2025-10-28 09:57:21,650 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 26)
+2025-10-28 09:57:21,653 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 27)
+2025-10-28 09:57:21,657 - new_crawler.orchestrator - INFO - Started extractor worker 2 (PID: 28)
+2025-10-28 09:57:21,661 - new_crawler.orchestrator - INFO - Started extractor worker 3 (PID: 29)
+2025-10-28 09:57:21,665 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 30)
+2025-10-28 09:57:21,666 - new_crawler.orchestrator - INFO - Started 2 crawlers, 4 extractors, 1 GPU processors
+2025-10-28 09:57:23,669 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-10-28 09:57:23,682 - new_crawler.orchestrator - INFO - Queues: sites=5, candidates=0, images=0, results=0
+2025-10-28 09:57:33,687 - new_crawler.orchestrator - INFO - Queues: sites=4, candidates=0, images=0, results=0
+2025-10-28 09:57:43,691 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, results=0
+2025-10-28 09:57:52,523 - new_crawler.orchestrator - INFO - Consumed 100 results from queue
+2025-10-28 09:57:53,698 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, results=0
+2025-10-28 09:58:03,704 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=125, images=0, results=0
+2025-10-28 09:58:13,708 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, results=0
+2025-10-28 09:58:18,304 - new_crawler.orchestrator - INFO - Consumed 200 results from queue
+2025-10-28 09:58:23,713 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 09:58:29,427 - new_crawler.orchestrator - INFO - Consumed 300 results from queue
+2025-10-28 09:58:33,718 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 09:58:43,721 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+2025-10-28 09:58:43,721 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-10-28 09:58:43,807 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-10-28 09:58:43,809 - new_crawler.orchestrator - INFO - Retrieved stats for 7 sites from Redis
+2025-10-28 09:58:43,811 - new_crawler.orchestrator - INFO - Consumed 372 results from queue
+2025-10-28 09:58:43,811 - new_crawler.orchestrator - INFO - From consumed results: faces=247, raw=369, thumbs=168
+2025-10-28 09:58:43,811 - new_crawler.orchestrator - INFO - From Redis stats: faces=247, raw=369, thumbs=168
+2025-10-28 09:58:43,812 - new_crawler.orchestrator - INFO - Total images processed: 372
+2025-10-28 09:58:43,812 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+2025-10-28 09:58:43,812 - new_crawler.orchestrator - INFO - Total sites processed: 7
+2025-10-28 09:58:43,812 - new_crawler.orchestrator - INFO - Total images processed: 372
+2025-10-28 09:58:43,813 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 369
+2025-10-28 09:58:43,813 - new_crawler.orchestrator - INFO - Total thumbnails saved: 168
+2025-10-28 09:58:43,813 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+2025-10-28 09:58:43,813 - new_crawler.orchestrator - INFO - Success rate: 61.2%
+2025-10-28 09:58:43,814 - new_crawler.orchestrator - INFO - Overall throughput: 4.53 images/second
+2025-10-28 09:58:43,814 - new_crawler.orchestrator - INFO - Crawl completed in 82.2s, success rate: 61.2%, throughput: 4.53 images/second
+2025-10-28 09:58:43,840 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+2025-10-28 09:58:43,841 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-10-28 09:58:43,841 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-10-28 09:58:43,841 - __main__ - INFO - Crawl completed successfully
+2025-10-28 10:22:54,958 - new_crawler.config - INFO - Validating crawler configuration...
+2025-10-28 10:22:54,966 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-10-28 10:22:54,967 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-10-28 10:22:54,967 - new_crawler.config - INFO - Configuration validated: crawlers=2, extractors=4, gpu_processors=1
+2025-10-28 10:22:54,967 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-10-28 10:22:54,968 - new_crawler.config - INFO - Environment: development
+2025-10-28 10:22:54,968 - new_crawler.config - INFO - Log Level: info
+2025-10-28 10:22:54,968 - new_crawler.config - INFO - Docker: True
+2025-10-28 10:22:54,969 - new_crawler.config - INFO - Windows: False
+2025-10-28 10:22:54,969 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-10-28 10:22:54,969 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-10-28 10:22:54,969 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-10-28 10:22:54,970 - new_crawler.config - INFO - Batch Size: 64
+2025-10-28 10:22:54,970 - new_crawler.config - INFO - GPU Min Batch Size: 8
+2025-10-28 10:22:54,970 - new_crawler.config - INFO - Max Queue Depth: 512
+2025-10-28 10:22:54,970 - new_crawler.config - INFO - Crawler Concurrency: 32
+2025-10-28 10:22:54,971 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-10-28 10:22:54,971 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-10-28 10:22:54,971 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-10-28 10:22:54,971 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-10-28 10:22:54,972 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-10-28 10:22:54,972 - new_crawler.config - INFO - JS Wait Strategy: both
+2025-10-28 10:22:54,972 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-10-28 10:22:54,972 - new_crawler.config - INFO - JS Network Idle Timeout: 3.0s
+2025-10-28 10:22:54,972 - new_crawler.config - INFO - Extract Background Images: True
+2025-10-28 10:22:54,973 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-10-28 10:22:54,973 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-10-28 10:22:54,973 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-10-28 10:22:54,973 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-10-28 10:22:54,974 - new_crawler.config - INFO - Realistic Headers: True
+2025-10-28 10:22:54,974 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-10-28 10:22:54,974 - new_crawler.config - INFO - Capture Network Images: True
+2025-10-28 10:22:54,974 - new_crawler.config - INFO - Extract Script Images: True
+2025-10-28 10:22:54,975 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-10-28 10:22:54,975 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-10-28 10:22:54,975 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-10-28 10:22:54,975 - new_crawler.config - INFO - ================================
+2025-10-28 10:22:54,977 - __main__ - INFO - Loaded 7 sites from sites.txt
+2025-10-28 10:22:54,977 - __main__ - INFO - Starting crawl of 7 sites
+2025-10-28 10:22:54,978 - __main__ - INFO - Performing system health check...
+2025-10-28 10:22:54,979 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-10-28 10:22:54,979 - __main__ - INFO - Redis: ✓
+2025-10-28 10:22:54,982 - __main__ - INFO - Cache: ✓
+2025-10-28 10:22:55,154 - __main__ - INFO - Storage: ✓
+2025-10-28 10:22:55,276 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-10-28 10:22:55,277 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-10-28 10:22:55,277 - __main__ - INFO - GPU Worker: ✓
+2025-10-28 10:22:55,277 - __main__ - INFO - ✓ All systems healthy
+2025-10-28 10:22:55,280 - new_crawler.orchestrator - INFO - Starting crawl of 7 sites
+2025-10-28 10:22:55,290 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+2025-10-28 10:22:55,291 - new_crawler.redis_manager - INFO - Cleared 7 site stats
+2025-10-28 10:22:55,291 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-10-28 10:22:55,292 - new_crawler.orchestrator - INFO - Pushing 7 sites to crawl queue
+2025-10-28 10:22:55,295 - new_crawler.orchestrator - INFO - Successfully pushed 7 sites to queue
+2025-10-28 10:22:55,295 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-10-28 10:22:55,295 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-10-28 10:22:55,296 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-10-28 10:22:55,303 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 24)
+2025-10-28 10:22:55,306 - new_crawler.orchestrator - INFO - Started crawler worker 1 (PID: 25)
+2025-10-28 10:22:55,310 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 26)
+2025-10-28 10:22:55,315 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 27)
+2025-10-28 10:22:55,319 - new_crawler.orchestrator - INFO - Started extractor worker 2 (PID: 28)
+2025-10-28 10:22:55,324 - new_crawler.orchestrator - INFO - Started extractor worker 3 (PID: 29)
+2025-10-28 10:22:55,329 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 30)
+2025-10-28 10:22:55,330 - new_crawler.orchestrator - INFO - Started 2 crawlers, 4 extractors, 1 GPU processors
+2025-10-28 10:22:57,333 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-10-28 10:22:57,345 - new_crawler.orchestrator - INFO - Queues: sites=5, candidates=0, images=0, results=0
+2025-10-28 10:23:07,349 - new_crawler.orchestrator - INFO - Queues: sites=5, candidates=0, images=0, results=0
+2025-10-28 10:23:17,355 - new_crawler.orchestrator - INFO - Queues: sites=5, candidates=0, images=0, results=0
+2025-10-28 10:23:27,360 - new_crawler.orchestrator - INFO - Queues: sites=4, candidates=0, images=0, results=0
+2025-10-28 10:23:37,366 - new_crawler.orchestrator - INFO - Queues: sites=4, candidates=0, images=0, results=0
+2025-10-28 10:23:47,372 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, results=0
+2025-10-28 10:23:57,378 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=74, images=0, results=0
+2025-10-28 10:24:07,382 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, results=0
+2025-10-28 10:24:11,647 - new_crawler.orchestrator - INFO - Consumed 100 results from queue
+2025-10-28 10:24:14,651 - new_crawler.orchestrator - INFO - Consumed 200 results from queue
+2025-10-28 10:24:17,386 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 10:24:27,402 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=24, images=0, results=0
+2025-10-28 10:24:29,010 - new_crawler.orchestrator - INFO - Consumed 300 results from queue
+2025-10-28 10:24:37,416 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 10:24:47,418 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+2025-10-28 10:24:47,419 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-10-28 10:24:47,524 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-10-28 10:24:47,527 - new_crawler.orchestrator - INFO - Retrieved stats for 7 sites from Redis
+2025-10-28 10:24:47,529 - new_crawler.orchestrator - INFO - Consumed 320 results from queue
+2025-10-28 10:24:47,529 - new_crawler.orchestrator - INFO - From consumed results: faces=83, raw=314, thumbs=69
+2025-10-28 10:24:47,530 - new_crawler.orchestrator - INFO - From Redis stats: faces=83, raw=314, thumbs=69
+2025-10-28 10:24:47,530 - new_crawler.orchestrator - INFO - Total images processed: 324
+2025-10-28 10:24:47,530 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+2025-10-28 10:24:47,531 - new_crawler.orchestrator - INFO - Total sites processed: 7
+2025-10-28 10:24:47,531 - new_crawler.orchestrator - INFO - Total images processed: 324
+2025-10-28 10:24:47,532 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 314
+2025-10-28 10:24:47,532 - new_crawler.orchestrator - INFO - Total thumbnails saved: 69
+2025-10-28 10:24:47,533 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+2025-10-28 10:24:47,533 - new_crawler.orchestrator - INFO - Success rate: 47.3%
+2025-10-28 10:24:47,533 - new_crawler.orchestrator - INFO - Overall throughput: 2.89 images/second
+2025-10-28 10:24:47,534 - new_crawler.orchestrator - INFO - Crawl completed in 112.2s, success rate: 47.3%, throughput: 2.89 images/second
+2025-10-28 10:24:47,560 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+2025-10-28 10:24:47,560 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-10-28 10:24:47,560 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-10-28 10:24:47,561 - __main__ - INFO - Crawl completed successfully
+2025-10-28 10:25:09,663 - new_crawler.config - INFO - Validating crawler configuration...
+2025-10-28 10:25:09,669 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-10-28 10:25:09,670 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-10-28 10:25:09,670 - new_crawler.config - INFO - Configuration validated: crawlers=2, extractors=4, gpu_processors=1
+2025-10-28 10:25:09,670 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-10-28 10:25:09,671 - new_crawler.config - INFO - Environment: development
+2025-10-28 10:25:09,671 - new_crawler.config - INFO - Log Level: info
+2025-10-28 10:25:09,671 - new_crawler.config - INFO - Docker: True
+2025-10-28 10:25:09,671 - new_crawler.config - INFO - Windows: False
+2025-10-28 10:25:09,672 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-10-28 10:25:09,672 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-10-28 10:25:09,672 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-10-28 10:25:09,672 - new_crawler.config - INFO - Batch Size: 64
+2025-10-28 10:25:09,673 - new_crawler.config - INFO - GPU Min Batch Size: 8
+2025-10-28 10:25:09,673 - new_crawler.config - INFO - Max Queue Depth: 512
+2025-10-28 10:25:09,673 - new_crawler.config - INFO - Crawler Concurrency: 32
+2025-10-28 10:25:09,673 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-10-28 10:25:09,674 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-10-28 10:25:09,674 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-10-28 10:25:09,674 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-10-28 10:25:09,674 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-10-28 10:25:09,675 - new_crawler.config - INFO - JS Wait Strategy: both
+2025-10-28 10:25:09,675 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-10-28 10:25:09,675 - new_crawler.config - INFO - JS Network Idle Timeout: 3.0s
+2025-10-28 10:25:09,675 - new_crawler.config - INFO - Extract Background Images: True
+2025-10-28 10:25:09,676 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-10-28 10:25:09,676 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-10-28 10:25:09,676 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-10-28 10:25:09,676 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-10-28 10:25:09,677 - new_crawler.config - INFO - Realistic Headers: True
+2025-10-28 10:25:09,677 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-10-28 10:25:09,677 - new_crawler.config - INFO - Capture Network Images: True
+2025-10-28 10:25:09,678 - new_crawler.config - INFO - Extract Script Images: True
+2025-10-28 10:25:09,678 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-10-28 10:25:09,678 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-10-28 10:25:09,678 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-10-28 10:25:09,679 - new_crawler.config - INFO - ================================
+2025-10-28 10:25:09,680 - __main__ - INFO - Loaded 7 sites from sites.txt
+2025-10-28 10:25:09,680 - __main__ - INFO - Starting crawl of 7 sites
+2025-10-28 10:25:09,681 - __main__ - INFO - Performing system health check...
+2025-10-28 10:25:09,682 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-10-28 10:25:09,682 - __main__ - INFO - Redis: ✓
+2025-10-28 10:25:09,688 - __main__ - INFO - Cache: ✓
+2025-10-28 10:25:09,814 - __main__ - INFO - Storage: ✓
+2025-10-28 10:25:09,930 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-10-28 10:25:09,931 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-10-28 10:25:09,931 - __main__ - INFO - GPU Worker: ✓
+2025-10-28 10:25:09,931 - __main__ - INFO - ✓ All systems healthy
+2025-10-28 10:25:09,934 - new_crawler.orchestrator - INFO - Starting crawl of 7 sites
+2025-10-28 10:25:09,943 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+2025-10-28 10:25:09,944 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-10-28 10:25:09,944 - new_crawler.orchestrator - INFO - Pushing 7 sites to crawl queue
+2025-10-28 10:25:09,946 - new_crawler.orchestrator - INFO - Successfully pushed 7 sites to queue
+2025-10-28 10:25:09,946 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-10-28 10:25:09,946 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-10-28 10:25:09,947 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-10-28 10:25:09,953 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 24)
+2025-10-28 10:25:09,956 - new_crawler.orchestrator - INFO - Started crawler worker 1 (PID: 25)
+2025-10-28 10:25:09,959 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 26)
+2025-10-28 10:25:09,962 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 27)
+2025-10-28 10:25:09,967 - new_crawler.orchestrator - INFO - Started extractor worker 2 (PID: 28)
+2025-10-28 10:25:09,971 - new_crawler.orchestrator - INFO - Started extractor worker 3 (PID: 29)
+2025-10-28 10:25:09,975 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 30)
+2025-10-28 10:25:09,976 - new_crawler.orchestrator - INFO - Started 2 crawlers, 4 extractors, 1 GPU processors
+2025-10-28 10:25:11,977 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-10-28 10:25:11,988 - new_crawler.orchestrator - INFO - Queues: sites=5, candidates=0, images=0, results=0
+2025-10-28 10:25:21,993 - new_crawler.orchestrator - INFO - Queues: sites=5, candidates=0, images=0, results=0
+2025-10-28 10:25:31,998 - new_crawler.orchestrator - INFO - Queues: sites=5, candidates=0, images=0, results=0
+2025-10-28 10:25:42,003 - new_crawler.orchestrator - INFO - Queues: sites=4, candidates=0, images=0, results=0
+2025-10-28 10:25:47,072 - new_crawler.orchestrator - INFO - Consumed 100 results from queue
+2025-10-28 10:25:52,008 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, results=0
+2025-10-28 10:26:02,016 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, results=0
+2025-10-28 10:26:12,022 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=25, images=0, results=0
+2025-10-28 10:26:14,393 - new_crawler.orchestrator - INFO - Consumed 200 results from queue
+2025-10-28 10:26:22,027 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, results=0
+2025-10-28 10:26:32,039 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 10:26:32,287 - new_crawler.orchestrator - INFO - Consumed 300 results from queue
+2025-10-28 10:26:42,046 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 10:26:45,305 - new_crawler.orchestrator - INFO - Consumed 400 results from queue
+2025-10-28 10:26:52,051 - new_crawler.orchestrator - INFO - All sites reached image limits; purged candidates/images queues for fast shutdown
+2025-10-28 10:26:52,054 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, results=0
+2025-10-28 10:27:02,057 - new_crawler.orchestrator - INFO - All sites reached image limits; purged candidates/images queues for fast shutdown
+2025-10-28 10:27:02,058 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+2025-10-28 10:27:02,058 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-10-28 10:27:02,159 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-10-28 10:27:02,166 - new_crawler.orchestrator - INFO - Retrieved stats for 7 sites from Redis
+2025-10-28 10:27:02,167 - new_crawler.orchestrator - INFO - Consumed 414 results from queue
+2025-10-28 10:27:02,169 - new_crawler.orchestrator - INFO - From consumed results: faces=227, raw=407, thumbs=170
+2025-10-28 10:27:02,170 - new_crawler.orchestrator - INFO - From Redis stats: faces=227, raw=407, thumbs=170
+2025-10-28 10:27:02,170 - new_crawler.orchestrator - INFO - Total images processed: 414
+2025-10-28 10:27:02,171 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+2025-10-28 10:27:02,171 - new_crawler.orchestrator - INFO - Total sites processed: 7
+2025-10-28 10:27:02,171 - new_crawler.orchestrator - INFO - Total images processed: 414
+2025-10-28 10:27:02,171 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 407
+2025-10-28 10:27:02,172 - new_crawler.orchestrator - INFO - Total thumbnails saved: 170
+2025-10-28 10:27:02,172 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+2025-10-28 10:27:02,172 - new_crawler.orchestrator - INFO - Success rate: 63.7%
+2025-10-28 10:27:02,173 - new_crawler.orchestrator - INFO - Overall throughput: 3.69 images/second
+2025-10-28 10:27:02,173 - new_crawler.orchestrator - INFO - Crawl completed in 112.2s, success rate: 63.7%, throughput: 3.69 images/second
+2025-10-28 10:27:02,196 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+2025-10-28 10:27:02,196 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-10-28 10:27:02,197 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-10-28 10:27:02,197 - __main__ - INFO - Crawl completed successfully

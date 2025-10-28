@@ -926,6 +926,73 @@ class RedisManager:
         except Exception as e:
             logger.error(f"Error closing async Redis connections: {e}")
 
+    # Domain Rendering Strategy Management
+    
+    def set_domain_rendering_strategy(self, domain: str, use_js: bool, http_count: int, js_count: int) -> bool:
+        """Store the winning rendering strategy for a domain."""
+        try:
+            client = self._get_client()
+            key = f"domain:strategy:{domain}"
+            data = {
+                'use_js': use_js,
+                'http_count': http_count,
+                'js_count': js_count,
+                'timestamp': time.time()
+            }
+            # Store with 7-day TTL (sites don't change rendering often)
+            client.setex(key, 7 * 24 * 3600, json.dumps(data))
+            logger.info(f"Stored rendering strategy for {domain}: use_js={use_js} (HTTP={http_count}, JS={js_count})")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to store domain strategy for {domain}: {e}")
+            return False
+
+    def get_domain_rendering_strategy(self, domain: str) -> Optional[bool]:
+        """Get the stored rendering strategy for a domain. Returns None if not yet determined."""
+        try:
+            client = self._get_client()
+            key = f"domain:strategy:{domain}"
+            value = client.get(key)
+            if value:
+                data = json.loads(value)
+                return data.get('use_js')
+            return None
+        except Exception as e:
+            logger.debug(f"Failed to get domain strategy for {domain}: {e}")
+            return None
+
+    async def set_domain_rendering_strategy_async(self, domain: str, use_js: bool, http_count: int, js_count: int) -> bool:
+        """Store the winning rendering strategy for a domain (async)."""
+        try:
+            client = await self._get_async_client()
+            key = f"domain:strategy:{domain}"
+            data = {
+                'use_js': use_js,
+                'http_count': http_count,
+                'js_count': js_count,
+                'timestamp': time.time()
+            }
+            await client.setex(key, 7 * 24 * 3600, json.dumps(data))
+            logger.info(f"Stored rendering strategy for {domain}: use_js={use_js} (HTTP={http_count}, JS={js_count})")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to store domain strategy for {domain}: {e}")
+            return False
+
+    async def get_domain_rendering_strategy_async(self, domain: str) -> Optional[bool]:
+        """Get the stored rendering strategy for a domain (async). Returns None if not yet determined."""
+        try:
+            client = await self._get_async_client()
+            key = f"domain:strategy:{domain}"
+            value = await client.get(key)
+            if value:
+                data = json.loads(value)
+                return data.get('use_js')
+            return None
+        except Exception as e:
+            logger.debug(f"Failed to get domain strategy for {domain}: {e}")
+            return None
+
 
 
 

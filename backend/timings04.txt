@@ -1,0 +1,1854 @@
+[2025-10-28 10:25:09.933] SYSTEM_START
+[2025-10-28 10:25:09.934] CRAWL_START
+[2025-10-28 10:25:10.074] SITE_START | site_0006 | https://candidshiny.com
+[2025-10-28 10:25:10.074] SITE_START | site_0005 | https://www.voyeurstyle.com
+[2025-10-28 10:25:17.261] PAGE_START | site_0006 | https://candidshiny.com
+[2025-10-28 10:25:17.263] PAGE_END | site_0006 | https://candidshiny.com | 2ms | 36 candidates
+[2025-10-28 10:25:17.562] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/wg/jJ.jpg
+[2025-10-28 10:25:17.650] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/M_/UG.jpg
+[2025-10-28 10:25:17.827] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/wg/jJ.jpg | 265ms
+[2025-10-28 10:25:17.907] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/M_/UG.jpg | 257ms
+[2025-10-28 10:25:17.991] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/aL/_f.jpg
+[2025-10-28 10:25:18.166] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Af/Tu.jpg
+[2025-10-28 10:25:18.167] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/tL/Qq.jpg
+[2025-10-28 10:25:18.167] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/B8/xn.jpg
+[2025-10-28 10:25:18.185] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Af/Tu.jpg | 19ms
+[2025-10-28 10:25:18.188] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/B8/xn.jpg | 21ms
+[2025-10-28 10:25:18.198] EXTRACT_START | site_0006 | https://candidshiny.com/t.png
+[2025-10-28 10:25:18.199] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/XB/gR.jpg
+[2025-10-28 10:25:18.225] EXTRACT_END | site_0006 | https://candidshiny.com/t.png | 27ms
+[2025-10-28 10:25:18.225] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/XB/gR.jpg | 27ms
+[2025-10-28 10:25:18.229] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/nu/fk.jpg
+[2025-10-28 10:25:18.229] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/qe/iS.jpg
+[2025-10-28 10:25:18.258] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/nu/fk.jpg | 29ms
+[2025-10-28 10:25:18.258] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/qe/iS.jpg | 29ms
+[2025-10-28 10:25:18.263] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/aL/_f.jpg | 272ms
+[2025-10-28 10:25:18.262] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/kY/hN.jpg
+[2025-10-28 10:25:18.262] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Yn/rf.jpg
+[2025-10-28 10:25:18.292] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/mJ/oT.jpg
+[2025-10-28 10:25:18.287] GPU_BATCH_START | batch_1761672318283 | 9 images
+[2025-10-28 10:25:18.311] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/kY/hN.jpg | 50ms
+[2025-10-28 10:25:18.345] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/mJ/oT.jpg | 53ms
+[2025-10-28 10:25:18.340] GPU_RECOGNITION_START | batch_1761672318283
+[2025-10-28 10:25:18.325] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Yn/rf.jpg | 63ms
+[2025-10-28 10:25:18.331] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/lB/Wp.jpg
+[2025-10-28 10:25:18.362] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/ZC/hM.jpg
+[2025-10-28 10:25:18.359] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/XT/yT.jpg
+[2025-10-28 10:25:18.378] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/lB/Wp.jpg | 47ms
+[2025-10-28 10:25:18.383] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/o9/jI.jpg
+[2025-10-28 10:25:18.402] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/XT/yT.jpg | 43ms
+[2025-10-28 10:25:18.416] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/ZC/hM.jpg | 54ms
+[2025-10-28 10:25:18.443] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/o9/jI.jpg | 60ms
+[2025-10-28 10:25:18.419] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/_m/gB.jpg
+[2025-10-28 10:25:18.479] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/_m/gB.jpg | 60ms
+[2025-10-28 10:25:18.465] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/vO/tU.jpg
+[2025-10-28 10:25:18.465] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/OA/cN.jpg
+[2025-10-28 10:25:18.504] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/OA/cN.jpg | 39ms
+[2025-10-28 10:25:18.489] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/QH/GN.jpg
+[2025-10-28 10:25:18.504] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/vO/tU.jpg | 40ms
+[2025-10-28 10:25:18.517] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/bs/6h.jpg
+[2025-10-28 10:25:18.530] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/QH/GN.jpg | 40ms
+[2025-10-28 10:25:18.523] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/tL/Qq.jpg | 356ms
+[2025-10-28 10:25:18.516] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/m4/Z_.jpg
+[2025-10-28 10:25:18.534] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Np/uR.jpg
+[2025-10-28 10:25:18.549] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/m4/Z_.jpg | 33ms
+[2025-10-28 10:25:18.534] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Dw/uR.jpg
+[2025-10-28 10:25:18.554] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/4o/Tm.jpg
+[2025-10-28 10:25:18.569] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Dw/uR.jpg | 35ms
+[2025-10-28 10:25:18.551] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/bs/6h.jpg | 34ms
+[2025-10-28 10:25:18.569] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Np/uR.jpg | 35ms
+[2025-10-28 10:25:18.592] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/4o/Tm.jpg | 38ms
+[2025-10-28 10:25:18.577] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/pD/gc.jpg
+[2025-10-28 10:25:18.577] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/lx/Mk.jpg
+[2025-10-28 10:25:18.577] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/DZ/Oo.jpg
+[2025-10-28 10:25:18.603] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/g0/T2.jpg
+[2025-10-28 10:25:18.619] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/DZ/Oo.jpg | 42ms
+[2025-10-28 10:25:18.622] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/lx/Mk.jpg | 45ms
+[2025-10-28 10:25:18.619] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/pD/gc.jpg | 42ms
+[2025-10-28 10:25:18.630] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/hN/qq.jpg
+[2025-10-28 10:25:18.628] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/LL/al.jpg
+[2025-10-28 10:25:18.628] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/3K/uN.jpg
+[2025-10-28 10:25:18.667] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/LL/al.jpg | 40ms
+[2025-10-28 10:25:18.668] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/hN/qq.jpg | 38ms
+[2025-10-28 10:25:18.665] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/3K/uN.jpg | 37ms
+[2025-10-28 10:25:18.677] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/FS/qz.jpg
+[2025-10-28 10:25:18.677] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/_k/At.jpg
+[2025-10-28 10:25:18.696] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/g0/T2.jpg | 93ms
+[2025-10-28 10:25:18.677] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/D_/Sx.jpg
+[2025-10-28 10:25:18.714] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/FS/qz.jpg | 37ms
+[2025-10-28 10:25:18.719] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/D_/Sx.jpg | 42ms
+[2025-10-28 10:25:18.772] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/_k/At.jpg | 95ms
+[2025-10-28 10:25:19.015] GPU_RECOGNITION_END | batch_1761672318283 | 675ms | 17 faces
+[2025-10-28 10:25:19.017] GPU_STORAGE_START | cdc6c760 | raw
+[2025-10-28 10:25:19.035] GPU_STORAGE_START | ffb2828e | raw
+[2025-10-28 10:25:19.048] GPU_STORAGE_START | eb11b0f4 | raw
+[2025-10-28 10:25:19.063] GPU_STORAGE_START | dde7f831 | raw
+[2025-10-28 10:25:19.080] GPU_STORAGE_START | 80000000 | raw
+[2025-10-28 10:25:19.092] GPU_STORAGE_START | c62b383b | raw
+[2025-10-28 10:25:19.106] GPU_STORAGE_START | 973418ab | raw
+[2025-10-28 10:25:19.121] GPU_STORAGE_START | ddcdc061 | raw
+[2025-10-28 10:25:19.136] GPU_STORAGE_START | 87050d3d | raw
+[2025-10-28 10:25:19.183] GPU_STORAGE_END | cdc6c760 | raw | 166ms
+[2025-10-28 10:25:19.188] GPU_STORAGE_END | dde7f831 | raw | 125ms
+[2025-10-28 10:25:19.207] GPU_STORAGE_END | 973418ab | raw | 101ms
+[2025-10-28 10:25:19.224] GPU_STORAGE_END | 80000000 | raw | 144ms
+[2025-10-28 10:25:19.240] GPU_STORAGE_END | eb11b0f4 | raw | 192ms
+[2025-10-28 10:25:19.255] GPU_STORAGE_END | ffb2828e | raw | 220ms
+[2025-10-28 10:25:19.315] GPU_STORAGE_END | ddcdc061 | raw | 195ms
+[2025-10-28 10:25:19.321] GPU_STORAGE_END | 87050d3d | raw | 186ms
+[2025-10-28 10:25:19.335] GPU_STORAGE_END | c62b383b | raw | 243ms
+[2025-10-28 10:25:19.352] GPU_BATCH_END | batch_1761672318283 | 1065ms | 9 images
+[2025-10-28 10:25:19.382] GPU_BATCH_START | batch_1761672319381 | 27 images
+[2025-10-28 10:25:19.390] GPU_RECOGNITION_START | batch_1761672319381
+[2025-10-28 10:25:20.128] GPU_RECOGNITION_END | batch_1761672319381 | 738ms | 9 faces
+[2025-10-28 10:25:20.130] GPU_STORAGE_START | bacde633 | raw
+[2025-10-28 10:25:20.147] GPU_STORAGE_START | bf87b98b | raw
+[2025-10-28 10:25:20.160] GPU_STORAGE_START | a820b947 | raw
+[2025-10-28 10:25:20.175] GPU_STORAGE_START | c64b943e | raw
+[2025-10-28 10:25:20.188] GPU_STORAGE_START | 9ae0c41a | raw
+[2025-10-28 10:25:20.203] GPU_STORAGE_START | df8e1171 | raw
+[2025-10-28 10:25:20.217] GPU_STORAGE_START | ebc4cb35 | raw
+[2025-10-28 10:25:20.230] GPU_STORAGE_START | 9f68916c | raw
+[2025-10-28 10:25:20.244] GPU_STORAGE_START | f0a34097 | raw
+[2025-10-28 10:25:20.258] GPU_STORAGE_START | dd0890bb | raw
+[2025-10-28 10:25:20.270] GPU_STORAGE_START | ae317db5 | raw
+[2025-10-28 10:25:20.283] GPU_STORAGE_START | d89bae03 | raw
+[2025-10-28 10:25:20.296] GPU_STORAGE_START | bbcb6d94 | raw
+[2025-10-28 10:25:20.310] GPU_STORAGE_START | eb3e3702 | raw
+[2025-10-28 10:25:20.323] GPU_STORAGE_START | caae7907 | raw
+[2025-10-28 10:25:20.337] GPU_STORAGE_START | dc3b0620 | raw
+[2025-10-28 10:25:20.352] GPU_STORAGE_START | 90e75988 | raw
+[2025-10-28 10:25:20.365] GPU_STORAGE_START | c0b997e8 | raw
+[2025-10-28 10:25:20.378] GPU_STORAGE_START | cebf0da4 | raw
+[2025-10-28 10:25:20.391] GPU_STORAGE_START | dfd4110b | raw
+[2025-10-28 10:25:20.406] GPU_STORAGE_START | 9f830282 | raw
+[2025-10-28 10:25:20.420] GPU_STORAGE_START | 841cdb96 | raw
+[2025-10-28 10:25:20.433] GPU_STORAGE_START | d58f0f70 | raw
+[2025-10-28 10:25:20.445] GPU_STORAGE_START | e0ea3e65 | raw
+[2025-10-28 10:25:20.459] GPU_STORAGE_START | 84f3791b | raw
+[2025-10-28 10:25:20.474] GPU_STORAGE_START | 92ae53af | raw
+[2025-10-28 10:25:20.489] GPU_STORAGE_START | f192b6f6 | raw
+[2025-10-28 10:25:20.524] GPU_STORAGE_END | bacde633 | raw | 394ms
+[2025-10-28 10:25:20.547] GPU_STORAGE_END | c64b943e | raw | 372ms
+[2025-10-28 10:25:20.557] GPU_STORAGE_END | 9ae0c41a | raw | 369ms
+[2025-10-28 10:25:20.572] GPU_STORAGE_END | a820b947 | raw | 412ms
+[2025-10-28 10:25:20.586] GPU_STORAGE_END | df8e1171 | raw | 383ms
+[2025-10-28 10:25:20.600] GPU_STORAGE_END | ebc4cb35 | raw | 383ms
+[2025-10-28 10:25:20.616] GPU_STORAGE_END | dc3b0620 | raw | 279ms
+[2025-10-28 10:25:20.629] GPU_STORAGE_END | caae7907 | raw | 306ms
+[2025-10-28 10:25:20.645] GPU_STORAGE_END | f0a34097 | raw | 401ms
+[2025-10-28 10:25:20.659] GPU_STORAGE_END | dd0890bb | raw | 401ms
+[2025-10-28 10:25:20.671] GPU_STORAGE_END | bbcb6d94 | raw | 375ms
+[2025-10-28 10:25:20.683] GPU_STORAGE_END | eb3e3702 | raw | 374ms
+[2025-10-28 10:25:20.695] GPU_STORAGE_END | d89bae03 | raw | 412ms
+[2025-10-28 10:25:20.708] GPU_STORAGE_END | 841cdb96 | raw | 288ms
+[2025-10-28 10:25:20.721] GPU_STORAGE_END | dfd4110b | raw | 330ms
+[2025-10-28 10:25:20.734] GPU_STORAGE_END | 90e75988 | raw | 382ms
+[2025-10-28 10:25:20.746] GPU_STORAGE_END | cebf0da4 | raw | 369ms
+[2025-10-28 10:25:20.759] GPU_STORAGE_END | d58f0f70 | raw | 326ms
+[2025-10-28 10:25:20.773] GPU_STORAGE_END | 92ae53af | raw | 299ms
+[2025-10-28 10:25:20.785] GPU_STORAGE_END | e0ea3e65 | raw | 339ms
+[2025-10-28 10:25:20.797] GPU_STORAGE_END | 84f3791b | raw | 338ms
+[2025-10-28 10:25:20.812] GPU_STORAGE_END | f192b6f6 | raw | 324ms
+[2025-10-28 10:25:20.879] GPU_STORAGE_END | bf87b98b | raw | 733ms
+[2025-10-28 10:25:20.882] GPU_STORAGE_END | c0b997e8 | raw | 517ms
+[2025-10-28 10:25:20.896] GPU_STORAGE_END | 9f830282 | raw | 490ms
+[2025-10-28 10:25:20.910] GPU_STORAGE_END | ae317db5 | raw | 639ms
+[2025-10-28 10:25:20.922] GPU_STORAGE_END | 9f68916c | raw | 692ms
+[2025-10-28 10:25:20.942] GPU_BATCH_END | batch_1761672319381 | 1561ms | 27 images
+[2025-10-28 10:25:22.991] PAGE_START | site_0005 | https://www.voyeurstyle.com
+[2025-10-28 10:25:22.993] PAGE_END | site_0005 | https://www.voyeurstyle.com | 2ms | 40 candidates
+[2025-10-28 10:25:23.218] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16346/240x180/13.jpg
+[2025-10-28 10:25:23.299] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16345/240x180/7.jpg
+[2025-10-28 10:25:23.505] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16346/240x180/13.jpg | 287ms
+[2025-10-28 10:25:23.547] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16344/240x180/2.jpg
+[2025-10-28 10:25:23.598] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16345/240x180/7.jpg | 299ms
+[2025-10-28 10:25:23.670] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16343/240x180/4.jpg
+[2025-10-28 10:25:23.670] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16342/240x180/17.jpg
+[2025-10-28 10:25:23.671] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16341/240x180/7.jpg
+[2025-10-28 10:25:23.742] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16342/240x180/17.jpg | 71ms
+[2025-10-28 10:25:23.745] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16303/240x180/20.jpg
+[2025-10-28 10:25:23.747] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16341/240x180/7.jpg | 76ms
+[2025-10-28 10:25:23.765] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16304/240x180/13.jpg
+[2025-10-28 10:25:23.834] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16344/240x180/2.jpg | 287ms
+[2025-10-28 10:25:23.834] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16303/240x180/20.jpg | 89ms
+[2025-10-28 10:25:23.837] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16306/240x180/13.jpg
+[2025-10-28 10:25:23.837] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16305/240x180/18.jpg
+[2025-10-28 10:25:23.900] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16304/240x180/13.jpg | 135ms
+[2025-10-28 10:25:23.903] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16308/240x180/3.jpg
+[2025-10-28 10:25:23.931] GPU_BATCH_START | batch_1761672323930 | 9 images
+[2025-10-28 10:25:23.925] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16306/240x180/13.jpg | 87ms
+[2025-10-28 10:25:23.920] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16305/240x180/18.jpg | 83ms
+[2025-10-28 10:25:23.935] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16311/240x180/1.jpg
+[2025-10-28 10:25:23.936] GPU_RECOGNITION_START | batch_1761672323930
+[2025-10-28 10:25:23.935] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16312/240x180/6.jpg
+[2025-10-28 10:25:23.978] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16343/240x180/4.jpg | 308ms
+[2025-10-28 10:25:23.981] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16313/240x180/13.jpg
+[2025-10-28 10:25:23.990] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16308/240x180/3.jpg | 87ms
+[2025-10-28 10:25:23.998] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16314/240x180/10.jpg
+[2025-10-28 10:25:24.018] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16312/240x180/6.jpg | 83ms
+[2025-10-28 10:25:24.018] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16311/240x180/1.jpg | 83ms
+[2025-10-28 10:25:24.034] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16317/240x180/11.jpg
+[2025-10-28 10:25:24.034] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16318/240x180/5.jpg
+[2025-10-28 10:25:24.069] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16313/240x180/13.jpg | 88ms
+[2025-10-28 10:25:24.074] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16319/240x180/19.jpg
+[2025-10-28 10:25:24.090] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16314/240x180/10.jpg | 92ms
+[2025-10-28 10:25:24.098] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16320/240x180/7.jpg
+[2025-10-28 10:25:24.118] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16317/240x180/11.jpg | 84ms
+[2025-10-28 10:25:24.120] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16318/240x180/5.jpg | 86ms
+[2025-10-28 10:25:24.121] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16321/240x180/7.jpg
+[2025-10-28 10:25:24.144] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16322/240x180/3.jpg
+[2025-10-28 10:25:24.171] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16319/240x180/19.jpg | 97ms
+[2025-10-28 10:25:24.184] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16323/240x180/14.jpg
+[2025-10-28 10:25:24.192] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16320/240x180/7.jpg | 94ms
+[2025-10-28 10:25:24.219] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16321/240x180/7.jpg | 98ms
+[2025-10-28 10:25:24.205] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16324/240x180/1.jpg
+[2025-10-28 10:25:24.235] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16327/240x180/2.jpg
+[2025-10-28 10:25:24.236] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16322/240x180/3.jpg | 92ms
+[2025-10-28 10:25:24.257] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16328/240x180/9.jpg
+[2025-10-28 10:25:24.284] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16323/240x180/14.jpg | 100ms
+[2025-10-28 10:25:24.302] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16329/240x180/1.jpg
+[2025-10-28 10:25:24.305] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16324/240x180/1.jpg | 100ms
+[2025-10-28 10:25:24.321] GPU_RECOGNITION_END | batch_1761672323930 | 385ms | 2 faces
+[2025-10-28 10:25:24.324] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16330/240x180/5.jpg
+[2025-10-28 10:25:24.348] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16328/240x180/9.jpg | 91ms
+[2025-10-28 10:25:24.345] GPU_STORAGE_START | 82826e5f | raw
+[2025-10-28 10:25:24.367] GPU_STORAGE_START | 9a0f3df8 | raw
+[2025-10-28 10:25:24.368] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16331/240x180/2.jpg
+[2025-10-28 10:25:24.393] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16327/240x180/2.jpg | 158ms
+[2025-10-28 10:25:24.403] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/9000/9800/240x180/3.jpg
+[2025-10-28 10:25:24.399] GPU_STORAGE_START | 8f583996 | raw
+[2025-10-28 10:25:24.421] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16330/240x180/5.jpg | 97ms
+[2025-10-28 10:25:24.399] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16329/240x180/1.jpg | 96ms
+[2025-10-28 10:25:24.451] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/10000/10137/240x180/16.jpg
+[2025-10-28 10:25:24.468] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16331/240x180/2.jpg | 99ms
+[2025-10-28 10:25:24.450] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15364/240x180/4.jpg
+[2025-10-28 10:25:24.449] GPU_STORAGE_START | cda4d595 | raw
+[2025-10-28 10:25:24.494] GPU_STORAGE_START | c26b6bdc | raw
+[2025-10-28 10:25:24.494] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15357/240x180/17.jpg
+[2025-10-28 10:25:24.520] GPU_STORAGE_START | c0c06dc8 | raw
+[2025-10-28 10:25:24.523] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/9000/9800/240x180/3.jpg | 120ms
+[2025-10-28 10:25:24.546] GPU_STORAGE_START | a4d19967 | raw
+[2025-10-28 10:25:24.548] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16332/240x180/1.jpg
+[2025-10-28 10:25:24.567] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15364/240x180/4.jpg | 117ms
+[2025-10-28 10:25:24.571] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/10000/10137/240x180/16.jpg | 120ms
+[2025-10-28 10:25:24.595] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15357/240x180/17.jpg | 100ms
+[2025-10-28 10:25:24.575] GPU_STORAGE_START | c899ee27 | raw
+[2025-10-28 10:25:24.576] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16333/240x180/2.jpg
+[2025-10-28 10:25:24.581] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16334/240x180/2.jpg
+[2025-10-28 10:25:24.643] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16332/240x180/1.jpg | 95ms
+[2025-10-28 10:25:24.628] GPU_STORAGE_START | c7199585 | raw
+[2025-10-28 10:25:24.633] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16336/240x180/4.jpg
+[2025-10-28 10:25:24.673] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16337/240x180/7.jpg
+[2025-10-28 10:25:24.709] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16333/240x180/2.jpg | 133ms
+[2025-10-28 10:25:24.710] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16334/240x180/2.jpg | 129ms
+[2025-10-28 10:25:24.722] GPU_STORAGE_END | 82826e5f | raw | 377ms
+[2025-10-28 10:25:24.737] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16338/240x180/1.jpg
+[2025-10-28 10:25:24.748] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16336/240x180/4.jpg | 115ms
+[2025-10-28 10:25:24.740] GPU_STORAGE_END | c0c06dc8 | raw | 219ms
+[2025-10-28 10:25:24.739] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16339/240x180/4.jpg
+[2025-10-28 10:25:24.765] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg
+[2025-10-28 10:25:24.763] GPU_STORAGE_END | cda4d595 | raw | 315ms
+[2025-10-28 10:25:24.787] GPU_STORAGE_END | a4d19967 | raw | 241ms
+[2025-10-28 10:25:24.799] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16337/240x180/7.jpg | 126ms
+[2025-10-28 10:25:24.811] GPU_STORAGE_END | 9a0f3df8 | raw | 444ms
+[2025-10-28 10:25:24.843] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16339/240x180/4.jpg | 104ms
+[2025-10-28 10:25:24.831] GPU_STORAGE_END | c26b6bdc | raw | 337ms
+[2025-10-28 10:25:24.837] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16338/240x180/1.jpg | 99ms
+[2025-10-28 10:25:24.850] GPU_STORAGE_END | c899ee27 | raw | 276ms
+[2025-10-28 10:25:24.858] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg | 93ms
+[2025-10-28 10:25:24.851] PAGE_START | site_0006 | https://candidshiny.com/new/
+[2025-10-28 10:25:24.874] PAGE_END | site_0006 | https://candidshiny.com/new/ | 22ms | 36 candidates
+[2025-10-28 10:25:24.874] GPU_STORAGE_END | c7199585 | raw | 246ms
+[2025-10-28 10:25:24.916] GPU_STORAGE_END | 8f583996 | raw | 516ms
+[2025-10-28 10:25:24.923] GPU_BATCH_END | batch_1761672323930 | 993ms | 9 images
+[2025-10-28 10:25:24.959] GPU_BATCH_START | batch_1761672324957 | 31 images
+[2025-10-28 10:25:24.952] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Vo/VY.jpg
+[2025-10-28 10:25:24.987] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Vo/VY.jpg | 36ms
+[2025-10-28 10:25:24.979] GPU_RECOGNITION_START | batch_1761672324957
+[2025-10-28 10:25:25.314] PAGE_START | site_0006 | https://candidshiny.com/best/
+[2025-10-28 10:25:25.316] PAGE_END | site_0006 | https://candidshiny.com/best/ | 2ms | 36 candidates
+[2025-10-28 10:25:25.785] GPU_RECOGNITION_END | batch_1761672324957 | 806ms | 12 faces
+[2025-10-28 10:25:25.787] GPU_STORAGE_START | e8a1d20e | raw
+[2025-10-28 10:25:25.803] GPU_STORAGE_START | c5cf5e70 | raw
+[2025-10-28 10:25:25.816] GPU_STORAGE_START | b30bccb5 | raw
+[2025-10-28 10:25:25.829] GPU_STORAGE_START | b1cdcc66 | raw
+[2025-10-28 10:25:25.844] GPU_STORAGE_START | e4163bf8 | raw
+[2025-10-28 10:25:25.857] GPU_STORAGE_START | cb8ba461 | raw
+[2025-10-28 10:25:25.870] GPU_STORAGE_START | abc7cdca | raw
+[2025-10-28 10:25:25.883] GPU_STORAGE_START | b0e9657a | raw
+[2025-10-28 10:25:25.897] GPU_STORAGE_START | bf308a41 | raw
+[2025-10-28 10:25:25.912] GPU_STORAGE_START | 8f58e084 | raw
+[2025-10-28 10:25:25.927] GPU_STORAGE_START | bc2c7ce3 | raw
+[2025-10-28 10:25:25.940] GPU_STORAGE_START | 95ff300e | raw
+[2025-10-28 10:25:25.953] GPU_STORAGE_START | f1cd5147 | raw
+[2025-10-28 10:25:25.966] GPU_STORAGE_START | b280c8ba | raw
+[2025-10-28 10:25:25.979] GPU_STORAGE_START | 8084e0bd | raw
+[2025-10-28 10:25:25.993] GPU_STORAGE_START | eaeab839 | raw
+[2025-10-28 10:25:26.007] GPU_STORAGE_START | f601dd71 | raw
+[2025-10-28 10:25:26.019] GPU_STORAGE_START | e36302c1 | raw
+[2025-10-28 10:25:26.031] GPU_STORAGE_START | 815e4b2d | raw
+[2025-10-28 10:25:26.044] GPU_STORAGE_START | f8fef0c2 | raw
+[2025-10-28 10:25:26.056] GPU_STORAGE_START | 8acadb69 | raw
+[2025-10-28 10:25:26.067] GPU_STORAGE_START | f8a0b195 | raw
+[2025-10-28 10:25:26.079] GPU_STORAGE_START | 89293954 | raw
+[2025-10-28 10:25:26.091] GPU_STORAGE_START | e44c33c6 | raw
+[2025-10-28 10:25:26.105] GPU_STORAGE_START | 9e323093 | raw
+[2025-10-28 10:25:26.118] GPU_STORAGE_START | 8f7e9a83 | raw
+[2025-10-28 10:25:26.133] GPU_STORAGE_START | afa5666b | raw
+[2025-10-28 10:25:26.146] GPU_STORAGE_START | 80c87d93 | raw
+[2025-10-28 10:25:26.159] GPU_STORAGE_START | 874369be | raw
+[2025-10-28 10:25:26.173] GPU_STORAGE_START | ecc65b34 | raw
+[2025-10-28 10:25:26.186] GPU_STORAGE_START | b5ca4c0d | raw
+[2025-10-28 10:25:26.223] GPU_STORAGE_END | c5cf5e70 | raw | 420ms
+[2025-10-28 10:25:26.231] GPU_STORAGE_END | e4163bf8 | raw | 387ms
+[2025-10-28 10:25:26.245] GPU_STORAGE_END | e8a1d20e | raw | 458ms
+[2025-10-28 10:25:26.258] GPU_STORAGE_END | abc7cdca | raw | 388ms
+[2025-10-28 10:25:26.273] GPU_STORAGE_END | 95ff300e | raw | 332ms
+[2025-10-28 10:25:26.284] GPU_STORAGE_END | b1cdcc66 | raw | 455ms
+[2025-10-28 10:25:26.297] GPU_STORAGE_END | bc2c7ce3 | raw | 371ms
+[2025-10-28 10:25:26.313] GPU_STORAGE_END | b0e9657a | raw | 430ms
+[2025-10-28 10:25:26.326] GPU_STORAGE_END | 89293954 | raw | 248ms
+[2025-10-28 10:25:26.338] GPU_STORAGE_END | 80c87d93 | raw | 193ms
+[2025-10-28 10:25:26.349] GPU_STORAGE_END | eaeab839 | raw | 356ms
+[2025-10-28 10:25:26.362] GPU_STORAGE_END | b280c8ba | raw | 396ms
+[2025-10-28 10:25:26.376] GPU_STORAGE_END | bf308a41 | raw | 479ms
+[2025-10-28 10:25:26.390] GPU_STORAGE_END | 8084e0bd | raw | 411ms
+[2025-10-28 10:25:26.403] GPU_STORAGE_END | afa5666b | raw | 270ms
+[2025-10-28 10:25:26.416] GPU_STORAGE_END | e36302c1 | raw | 396ms
+[2025-10-28 10:25:26.429] GPU_STORAGE_END | 815e4b2d | raw | 397ms
+[2025-10-28 10:25:26.443] GPU_STORAGE_END | ecc65b34 | raw | 270ms
+[2025-10-28 10:25:26.455] GPU_STORAGE_END | f8a0b195 | raw | 387ms
+[2025-10-28 10:25:26.469] GPU_STORAGE_END | b5ca4c0d | raw | 282ms
+[2025-10-28 10:25:26.499] GPU_STORAGE_END | cb8ba461 | raw | 642ms
+[2025-10-28 10:25:26.501] GPU_STORAGE_END | f601dd71 | raw | 494ms
+[2025-10-28 10:25:26.514] GPU_STORAGE_END | b30bccb5 | raw | 698ms
+[2025-10-28 10:25:26.527] GPU_STORAGE_END | f8fef0c2 | raw | 483ms
+[2025-10-28 10:25:26.540] GPU_STORAGE_END | 8f58e084 | raw | 628ms
+[2025-10-28 10:25:26.553] GPU_STORAGE_END | f1cd5147 | raw | 600ms
+[2025-10-28 10:25:26.564] GPU_STORAGE_END | 8acadb69 | raw | 508ms
+[2025-10-28 10:25:26.577] GPU_STORAGE_END | 9e323093 | raw | 472ms
+[2025-10-28 10:25:26.589] GPU_STORAGE_END | e44c33c6 | raw | 498ms
+[2025-10-28 10:25:26.602] GPU_STORAGE_END | 8f7e9a83 | raw | 484ms
+[2025-10-28 10:25:26.614] GPU_STORAGE_END | 874369be | raw | 454ms
+[2025-10-28 10:25:26.629] GPU_BATCH_END | batch_1761672324957 | 1671ms | 31 images
+[2025-10-28 10:25:29.259] PAGE_START | site_0006 | https://candidshiny.com/categories
+[2025-10-28 10:25:29.261] PAGE_END | site_0006 | https://candidshiny.com/categories | 2ms | 0 candidates
+[2025-10-28 10:25:35.850] PAGE_START | site_0005 | https://www.voyeurstyle.com/categories/amateur-webcam/
+[2025-10-28 10:25:35.852] PAGE_END | site_0005 | https://www.voyeurstyle.com/categories/amateur-webcam/ | 2ms | 40 candidates
+[2025-10-28 10:25:35.952] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg
+[2025-10-28 10:25:36.026] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg | 74ms
+[2025-10-28 10:25:36.298] PAGE_START | site_0006 | https://candidshiny.com/history/
+[2025-10-28 10:25:36.300] PAGE_END | site_0006 | https://candidshiny.com/history/ | 2ms | 0 candidates
+[2025-10-28 10:25:36.316] SITE_END | site_0006 | 26242ms | 5 pages | 37 candidates
+[2025-10-28 10:25:36.334] SITE_START | site_0004 | https://www.voyeurshd.com
+[2025-10-28 10:25:36.474] PAGE_START | site_0005 | https://www.voyeurstyle.com/categories/beach-spy/
+[2025-10-28 10:25:36.475] PAGE_END | site_0005 | https://www.voyeurstyle.com/categories/beach-spy/ | 2ms | 40 candidates
+[2025-10-28 10:25:36.645] PAGE_START | site_0005 | https://www.voyeurstyle.com/categories/camel-toe/
+[2025-10-28 10:25:36.646] PAGE_END | site_0005 | https://www.voyeurstyle.com/categories/camel-toe/ | 2ms | 40 candidates
+[2025-10-28 10:25:43.759] PAGE_START | site_0004 | https://www.voyeurshd.com
+[2025-10-28 10:25:43.761] PAGE_END | site_0004 | https://www.voyeurshd.com | 2ms | 51 candidates
+[2025-10-28 10:25:43.956] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0587/41660/main.jpg
+[2025-10-28 10:25:44.041] EXTRACT_START | site_0004 | https://www.voyeurshd.com/stp/images/extra-new/hdicon.png
+[2025-10-28 10:25:44.256] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0565/40112/main.jpg
+[2025-10-28 10:25:44.304] EXTRACT_END | site_0004 | https://www.voyeurshd.com/stp/images/extra-new/hdicon.png | 262ms
+[2025-10-28 10:25:44.326] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0587/41660/main.jpg | 370ms
+[2025-10-28 10:25:44.511] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0699/39800/main.jpg
+[2025-10-28 10:25:44.512] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0942/38752/main.jpg
+[2025-10-28 10:25:44.513] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0295/38146/main.jpg
+[2025-10-28 10:25:44.575] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0565/40112/main.jpg | 318ms
+[2025-10-28 10:25:44.578] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0564/41910/main.jpg
+[2025-10-28 10:25:44.594] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0295/38146/main.jpg | 82ms
+[2025-10-28 10:25:44.610] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0842/43237/main.jpg
+[2025-10-28 10:25:44.635] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0942/38752/main.jpg | 123ms
+[2025-10-28 10:25:44.645] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0519/41636/main.jpg
+[2025-10-28 10:25:44.657] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0564/41910/main.jpg | 79ms
+[2025-10-28 10:25:44.662] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0126/43920/main.jpg
+[2025-10-28 10:25:44.689] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0842/43237/main.jpg | 79ms
+[2025-10-28 10:25:44.706] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0346/42994/main.jpg
+[2025-10-28 10:25:44.714] GPU_BATCH_START | batch_1761672344713 | 8 images
+[2025-10-28 10:25:44.725] GPU_RECOGNITION_START | batch_1761672344713
+[2025-10-28 10:25:44.726] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0519/41636/main.jpg | 82ms
+[2025-10-28 10:25:44.740] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0383/32664/main.jpg
+[2025-10-28 10:25:44.742] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0126/43920/main.jpg | 80ms
+[2025-10-28 10:25:44.773] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0699/39800/main.jpg | 262ms
+[2025-10-28 10:25:44.762] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0570/41380/main.jpg
+[2025-10-28 10:25:44.780] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0916/43407/main.jpg
+[2025-10-28 10:25:44.785] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0346/42994/main.jpg | 79ms
+[2025-10-28 10:25:44.797] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0474/44546/main.jpg
+[2025-10-28 10:25:44.825] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0383/32664/main.jpg | 84ms
+[2025-10-28 10:25:44.843] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0570/41380/main.jpg | 81ms
+[2025-10-28 10:25:44.833] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0239/41816/main.jpg
+[2025-10-28 10:25:44.859] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0916/43407/main.jpg | 79ms
+[2025-10-28 10:25:44.852] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0329/34849/main.jpg
+[2025-10-28 10:25:44.876] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0474/44546/main.jpg | 79ms
+[2025-10-28 10:25:44.872] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0412/43987/main.jpg
+[2025-10-28 10:25:44.895] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0744/45853/main.jpg
+[2025-10-28 10:25:44.916] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0239/41816/main.jpg | 83ms
+[2025-10-28 10:25:44.932] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0329/34849/main.jpg | 79ms
+[2025-10-28 10:25:44.936] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0424/42964/main.jpg
+[2025-10-28 10:25:44.936] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0777/36119/main.jpg
+[2025-10-28 10:25:44.956] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0412/43987/main.jpg | 85ms
+[2025-10-28 10:25:44.976] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0744/45853/main.jpg | 81ms
+[2025-10-28 10:25:44.982] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0556/42230/main.jpg
+[2025-10-28 10:25:44.981] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0236/41987/main.jpg
+[2025-10-28 10:25:45.023] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0424/42964/main.jpg | 87ms
+[2025-10-28 10:25:45.023] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0777/36119/main.jpg | 87ms
+[2025-10-28 10:25:45.030] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0469/45971/main.jpg
+[2025-10-28 10:25:45.030] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0925/45686/main.jpg
+[2025-10-28 10:25:45.071] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0236/41987/main.jpg | 90ms
+[2025-10-28 10:25:45.071] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0556/42230/main.jpg | 89ms
+[2025-10-28 10:25:45.082] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0751/39969/main.jpg
+[2025-10-28 10:25:45.082] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0770/42156/main.jpg
+[2025-10-28 10:25:45.190] GPU_RECOGNITION_END | batch_1761672344713 | 465ms | 5 faces
+[2025-10-28 10:25:45.192] GPU_STORAGE_START | f7b6e50f | raw
+[2025-10-28 10:25:45.219] GPU_STORAGE_START | 95277ad8 | raw
+[2025-10-28 10:25:45.236] GPU_STORAGE_START | a8ddb2e2 | raw
+[2025-10-28 10:25:45.258] GPU_STORAGE_START | d8c02f4c | raw
+[2025-10-28 10:25:45.274] GPU_STORAGE_START | b681d30c | raw
+[2025-10-28 10:25:45.288] GPU_STORAGE_START | 918676b9 | raw
+[2025-10-28 10:25:45.305] GPU_STORAGE_START | e94365f5 | raw
+[2025-10-28 10:25:45.322] GPU_STORAGE_START | efbdf450 | raw
+[2025-10-28 10:25:45.339] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0925/45686/main.jpg | 309ms
+[2025-10-28 10:25:45.364] GPU_STORAGE_END | 95277ad8 | raw | 145ms
+[2025-10-28 10:25:45.363] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0469/45971/main.jpg | 333ms
+[2025-10-28 10:25:45.371] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0066/44071/main.jpg
+[2025-10-28 10:25:45.394] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0621/43949/main.jpg
+[2025-10-28 10:25:45.393] GPU_STORAGE_END | b681d30c | raw | 119ms
+[2025-10-28 10:25:45.414] GPU_STORAGE_END | a8ddb2e2 | raw | 178ms
+[2025-10-28 10:25:45.433] GPU_STORAGE_END | f7b6e50f | raw | 240ms
+[2025-10-28 10:25:45.456] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0066/44071/main.jpg | 85ms
+[2025-10-28 10:25:45.478] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0698/43464/main.jpg
+[2025-10-28 10:25:45.497] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0770/42156/main.jpg | 415ms
+[2025-10-28 10:25:45.482] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0621/43949/main.jpg | 87ms
+[2025-10-28 10:25:45.489] GPU_STORAGE_END | e94365f5 | raw | 184ms
+[2025-10-28 10:25:45.501] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0973/41611/main.jpg
+[2025-10-28 10:25:45.500] GPU_STORAGE_END | 918676b9 | raw | 212ms
+[2025-10-28 10:25:45.501] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0022/44077/main.jpg
+[2025-10-28 10:25:45.517] GPU_STORAGE_END | efbdf450 | raw | 195ms
+[2025-10-28 10:25:45.537] GPU_STORAGE_END | d8c02f4c | raw | 279ms
+[2025-10-28 10:25:45.560] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0698/43464/main.jpg | 82ms
+[2025-10-28 10:25:45.559] GPU_BATCH_END | batch_1761672344713 | 845ms | 8 images
+[2025-10-28 10:25:45.580] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0013/43388/main.jpg
+[2025-10-28 10:25:45.582] GPU_BATCH_START | batch_1761672345580 | 22 images
+[2025-10-28 10:25:45.582] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0022/44077/main.jpg | 81ms
+[2025-10-28 10:25:45.583] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0973/41611/main.jpg | 82ms
+[2025-10-28 10:25:45.610] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0751/39969/main.jpg | 527ms
+[2025-10-28 10:25:45.599] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0891/44754/main.jpg
+[2025-10-28 10:25:45.604] GPU_RECOGNITION_START | batch_1761672345580
+[2025-10-28 10:25:45.600] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0236/45924/main.jpg
+[2025-10-28 10:25:45.615] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0372/42946/main.jpg
+[2025-10-28 10:25:45.659] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0013/43388/main.jpg | 80ms
+[2025-10-28 10:25:45.679] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0236/45924/main.jpg | 79ms
+[2025-10-28 10:25:45.679] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0891/44754/main.jpg | 79ms
+[2025-10-28 10:25:45.662] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0304/40232/main.jpg
+[2025-10-28 10:25:45.696] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0372/42946/main.jpg | 81ms
+[2025-10-28 10:25:45.686] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0146/45145/main.jpg
+[2025-10-28 10:25:45.687] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0422/43262/main.jpg
+[2025-10-28 10:25:45.704] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0066/39234/main.jpg
+[2025-10-28 10:25:45.747] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0304/40232/main.jpg | 85ms
+[2025-10-28 10:25:45.767] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0422/43262/main.jpg | 80ms
+[2025-10-28 10:25:45.767] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0146/45145/main.jpg | 81ms
+[2025-10-28 10:25:45.750] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0217/41845/main.jpg
+[2025-10-28 10:25:45.770] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0597/37783/main.jpg
+[2025-10-28 10:25:45.770] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0096/34627/main.jpg
+[2025-10-28 10:25:45.832] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0217/41845/main.jpg | 81ms
+[2025-10-28 10:25:45.844] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0066/39234/main.jpg | 140ms
+[2025-10-28 10:25:45.849] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0096/34627/main.jpg | 80ms
+[2025-10-28 10:25:45.849] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0597/37783/main.jpg | 79ms
+[2025-10-28 10:25:45.836] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0465/43943/main.jpg
+[2025-10-28 10:25:45.857] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0490/43374/main.jpg
+[2025-10-28 10:25:45.857] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0314/42836/main.jpg
+[2025-10-28 10:25:45.856] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0384/36067/main.jpg
+[2025-10-28 10:25:45.916] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0465/43943/main.jpg | 81ms
+[2025-10-28 10:25:45.919] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0915/36015/main.jpg
+[2025-10-28 10:25:45.939] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0490/43374/main.jpg | 83ms
+[2025-10-28 10:25:45.940] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0314/42836/main.jpg | 84ms
+[2025-10-28 10:25:45.940] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0384/36067/main.jpg | 83ms
+[2025-10-28 10:25:45.955] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0614/37720/main.jpg
+[2025-10-28 10:25:45.955] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0111/38281/main.jpg
+[2025-10-28 10:25:45.955] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0539/37841/main.jpg
+[2025-10-28 10:25:45.998] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0915/36015/main.jpg | 78ms
+[2025-10-28 10:25:46.038] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0539/37841/main.jpg | 84ms
+[2025-10-28 10:25:46.039] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0614/37720/main.jpg | 84ms
+[2025-10-28 10:25:46.039] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0111/38281/main.jpg | 84ms
+[2025-10-28 10:25:46.398] GPU_RECOGNITION_END | batch_1761672345580 | 794ms | 19 faces
+[2025-10-28 10:25:46.400] GPU_STORAGE_START | cc9bb7b0 | raw
+[2025-10-28 10:25:46.420] GPU_STORAGE_START | da79678c | raw
+[2025-10-28 10:25:46.435] GPU_STORAGE_START | b3e0079e | raw
+[2025-10-28 10:25:46.450] GPU_STORAGE_START | a55339b4 | raw
+[2025-10-28 10:25:46.470] GPU_STORAGE_START | 989e743a | raw
+[2025-10-28 10:25:46.485] GPU_STORAGE_START | c78639cb | raw
+[2025-10-28 10:25:46.500] GPU_STORAGE_START | aec4d929 | raw
+[2025-10-28 10:25:46.515] GPU_STORAGE_START | d2152d6a | raw
+[2025-10-28 10:25:46.531] GPU_STORAGE_START | a7b5b5c2 | raw
+[2025-10-28 10:25:46.547] GPU_STORAGE_START | d15b2a4a | raw
+[2025-10-28 10:25:46.563] GPU_STORAGE_START | fae5b985 | raw
+[2025-10-28 10:25:46.579] GPU_STORAGE_START | b9e243c6 | raw
+[2025-10-28 10:25:46.594] GPU_STORAGE_START | c932443c | raw
+[2025-10-28 10:25:46.607] GPU_STORAGE_START | cdca3e0d | raw
+[2025-10-28 10:25:46.620] GPU_STORAGE_START | bedfcc30 | raw
+[2025-10-28 10:25:46.632] GPU_STORAGE_START | e4df8600 | raw
+[2025-10-28 10:25:46.645] GPU_STORAGE_START | e49c46da | raw
+[2025-10-28 10:25:46.660] GPU_STORAGE_START | 929b989a | raw
+[2025-10-28 10:25:46.675] GPU_STORAGE_START | 9ccfe531 | raw
+[2025-10-28 10:25:46.689] GPU_STORAGE_START | d04fbc62 | raw
+[2025-10-28 10:25:46.703] GPU_STORAGE_START | a3b456c8 | raw
+[2025-10-28 10:25:46.717] GPU_STORAGE_START | d03230ad | raw
+[2025-10-28 10:25:46.768] GPU_STORAGE_END | 989e743a | raw | 298ms
+[2025-10-28 10:25:46.772] GPU_STORAGE_END | b9e243c6 | raw | 193ms
+[2025-10-28 10:25:46.786] GPU_STORAGE_END | cdca3e0d | raw | 179ms
+[2025-10-28 10:25:46.801] GPU_STORAGE_END | bedfcc30 | raw | 181ms
+[2025-10-28 10:25:46.813] GPU_STORAGE_END | d15b2a4a | raw | 266ms
+[2025-10-28 10:25:46.835] GPU_STORAGE_END | d03230ad | raw | 118ms
+[2025-10-28 10:25:46.861] GPU_STORAGE_END | a55339b4 | raw | 411ms
+[2025-10-28 10:25:46.869] GPU_STORAGE_END | b3e0079e | raw | 433ms
+[2025-10-28 10:25:46.884] GPU_STORAGE_END | aec4d929 | raw | 383ms
+[2025-10-28 10:25:46.902] GPU_STORAGE_END | cc9bb7b0 | raw | 502ms
+[2025-10-28 10:25:46.917] GPU_STORAGE_END | da79678c | raw | 497ms
+[2025-10-28 10:25:46.930] GPU_STORAGE_END | d04fbc62 | raw | 240ms
+[2025-10-28 10:25:46.943] GPU_STORAGE_END | 9ccfe531 | raw | 268ms
+[2025-10-28 10:25:46.956] GPU_STORAGE_END | a7b5b5c2 | raw | 425ms
+[2025-10-28 10:25:46.971] GPU_STORAGE_END | c932443c | raw | 377ms
+[2025-10-28 10:25:46.983] GPU_STORAGE_END | d2152d6a | raw | 469ms
+[2025-10-28 10:25:46.995] GPU_STORAGE_END | a3b456c8 | raw | 292ms
+[2025-10-28 10:25:47.006] GPU_STORAGE_END | e4df8600 | raw | 374ms
+[2025-10-28 10:25:47.018] GPU_STORAGE_END | fae5b985 | raw | 456ms
+[2025-10-28 10:25:47.030] GPU_STORAGE_END | c78639cb | raw | 545ms
+[2025-10-28 10:25:47.042] GPU_STORAGE_END | e49c46da | raw | 397ms
+[2025-10-28 10:25:47.054] GPU_STORAGE_END | 929b989a | raw | 394ms
+[2025-10-28 10:25:47.069] GPU_BATCH_END | batch_1761672345580 | 1488ms | 22 images
+[2025-10-28 10:25:47.094] GPU_BATCH_START | batch_1761672347094 | 22 images
+[2025-10-28 10:25:47.100] GPU_RECOGNITION_START | batch_1761672347094
+[2025-10-28 10:25:47.841] GPU_RECOGNITION_END | batch_1761672347094 | 741ms | 21 faces
+[2025-10-28 10:25:47.843] GPU_STORAGE_START | 837be202 | raw
+[2025-10-28 10:25:47.857] GPU_STORAGE_START | b384cbe6 | raw
+[2025-10-28 10:25:47.870] GPU_STORAGE_START | f49aedc2 | raw
+[2025-10-28 10:25:47.884] GPU_STORAGE_START | f093ec1d | raw
+[2025-10-28 10:25:47.899] GPU_STORAGE_START | 8083f060 | raw
+[2025-10-28 10:25:47.913] GPU_STORAGE_START | cc2787ec | raw
+[2025-10-28 10:25:47.927] GPU_STORAGE_START | f0e0e9a9 | raw
+[2025-10-28 10:25:47.940] GPU_STORAGE_START | db49a573 | raw
+[2025-10-28 10:25:47.952] GPU_STORAGE_START | e0a7dc4b | raw
+[2025-10-28 10:25:47.965] GPU_STORAGE_START | a7ecaa51 | raw
+[2025-10-28 10:25:47.976] GPU_STORAGE_START | cc763785 | raw
+[2025-10-28 10:25:47.988] GPU_STORAGE_START | e4f48496 | raw
+[2025-10-28 10:25:47.998] GPU_STORAGE_START | df64b922 | raw
+[2025-10-28 10:25:48.009] GPU_STORAGE_START | 95993654 | raw
+[2025-10-28 10:25:48.020] GPU_STORAGE_START | 8c585973 | raw
+[2025-10-28 10:25:48.030] GPU_STORAGE_START | 894f203c | raw
+[2025-10-28 10:25:48.039] GPU_STORAGE_START | f0b407af | raw
+[2025-10-28 10:25:48.049] GPU_STORAGE_START | b318086b | raw
+[2025-10-28 10:25:48.060] GPU_STORAGE_START | fc928c17 | raw
+[2025-10-28 10:25:48.072] GPU_STORAGE_START | a0af2ef0 | raw
+[2025-10-28 10:25:48.082] GPU_STORAGE_START | aea5b5d9 | raw
+[2025-10-28 10:25:48.094] GPU_STORAGE_START | edbb9904 | raw
+[2025-10-28 10:25:48.144] GPU_STORAGE_END | cc763785 | raw | 168ms
+[2025-10-28 10:25:48.147] GPU_STORAGE_END | f093ec1d | raw | 263ms
+[2025-10-28 10:25:48.161] GPU_STORAGE_END | a0af2ef0 | raw | 89ms
+[2025-10-28 10:25:48.173] GPU_STORAGE_END | 8083f060 | raw | 273ms
+[2025-10-28 10:25:48.186] GPU_STORAGE_END | aea5b5d9 | raw | 104ms
+[2025-10-28 10:25:48.195] GPU_STORAGE_END | e0a7dc4b | raw | 243ms
+[2025-10-28 10:25:48.208] GPU_STORAGE_END | fc928c17 | raw | 148ms
+[2025-10-28 10:25:48.218] GPU_STORAGE_END | a7ecaa51 | raw | 253ms
+[2025-10-28 10:25:48.230] GPU_STORAGE_END | 8c585973 | raw | 210ms
+[2025-10-28 10:25:48.242] GPU_STORAGE_END | f0b407af | raw | 203ms
+[2025-10-28 10:25:48.261] GPU_STORAGE_END | edbb9904 | raw | 167ms
+[2025-10-28 10:25:48.285] GPU_STORAGE_END | 837be202 | raw | 441ms
+[2025-10-28 10:25:48.288] GPU_STORAGE_END | f0e0e9a9 | raw | 360ms
+[2025-10-28 10:25:48.301] GPU_STORAGE_END | b384cbe6 | raw | 444ms
+[2025-10-28 10:25:48.313] GPU_STORAGE_END | cc2787ec | raw | 400ms
+[2025-10-28 10:25:48.324] GPU_STORAGE_END | f49aedc2 | raw | 454ms
+[2025-10-28 10:25:48.336] GPU_STORAGE_END | db49a573 | raw | 396ms
+[2025-10-28 10:25:48.347] GPU_STORAGE_END | df64b922 | raw | 349ms
+[2025-10-28 10:25:48.359] GPU_STORAGE_END | e4f48496 | raw | 370ms
+[2025-10-28 10:25:48.370] GPU_STORAGE_END | 95993654 | raw | 361ms
+[2025-10-28 10:25:48.382] GPU_STORAGE_END | 894f203c | raw | 352ms
+[2025-10-28 10:25:48.397] GPU_STORAGE_END | b318086b | raw | 348ms
+[2025-10-28 10:25:48.415] GPU_BATCH_END | batch_1761672347094 | 1321ms | 22 images
+[2025-10-28 10:25:48.590] PAGE_START | site_0005 | https://www.voyeurstyle.com/categories/delivery-flashers/
+[2025-10-28 10:25:48.592] PAGE_END | site_0005 | https://www.voyeurstyle.com/categories/delivery-flashers/ | 2ms | 40 candidates
+[2025-10-28 10:25:49.289] PAGE_START | site_0005 | https://www.voyeurstyle.com/categories/down-blouse/
+[2025-10-28 10:25:49.291] PAGE_END | site_0005 | https://www.voyeurstyle.com/categories/down-blouse/ | 2ms | 40 candidates
+[2025-10-28 10:25:49.525] PAGE_START | site_0005 | https://www.voyeurstyle.com/categories/dressing-room/
+[2025-10-28 10:25:49.527] PAGE_END | site_0005 | https://www.voyeurstyle.com/categories/dressing-room/ | 2ms | 40 candidates
+[2025-10-28 10:25:49.548] SITE_END | site_0005 | 39475ms | 7 pages | 41 candidates
+[2025-10-28 10:25:49.556] SITE_START | site_0003 | https://motherless.com
+[2025-10-28 10:25:51.495] PAGE_START | site_0004 | https://www.voyeurshd.com/galleries/
+[2025-10-28 10:25:51.496] PAGE_END | site_0004 | https://www.voyeurshd.com/galleries/ | 2ms | 25 candidates
+[2025-10-28 10:25:51.556] EXTRACT_START | site_0004 | https://www.voyeurshd.com/stp/images/voyeurshd/logo.png
+[2025-10-28 10:25:51.605] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0044/1041/main.jpg
+[2025-10-28 10:25:51.618] EXTRACT_END | site_0004 | https://www.voyeurshd.com/stp/images/voyeurshd/logo.png | 61ms
+[2025-10-28 10:25:51.672] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0044/1041/main.jpg | 67ms
+[2025-10-28 10:25:52.185] PAGE_START | site_0004 | https://www.voyeurshd.com/videos/videos/
+[2025-10-28 10:25:52.187] PAGE_END | site_0004 | https://www.voyeurshd.com/videos/videos/ | 2ms | 41 candidates
+[2025-10-28 10:25:52.748] PAGE_START | site_0004 | https://www.voyeurshd.com/videos/bonus/
+[2025-10-28 10:25:52.750] PAGE_END | site_0004 | https://www.voyeurshd.com/videos/bonus/ | 2ms | 41 candidates
+[2025-10-28 10:25:59.036] PAGE_START | site_0004 | https://www.voyeurshd.com/videos/videos/beach-recent.html
+[2025-10-28 10:25:59.038] PAGE_END | site_0004 | https://www.voyeurshd.com/videos/videos/beach-recent.html | 2ms | 41 candidates
+[2025-10-28 10:25:59.831] PAGE_START | site_0004 | https://www.voyeurshd.com/videos/videos/busted-recent.html
+[2025-10-28 10:25:59.833] PAGE_END | site_0004 | https://www.voyeurshd.com/videos/videos/busted-recent.html | 2ms | 41 candidates
+[2025-10-28 10:26:00.356] PAGE_START | site_0004 | https://www.voyeurshd.com/videos/videos/camel-toe-recent.html
+[2025-10-28 10:26:00.358] PAGE_END | site_0004 | https://www.voyeurshd.com/videos/videos/camel-toe-recent.html | 2ms | 41 candidates
+[2025-10-28 10:26:00.402] SITE_END | site_0004 | 24068ms | 7 pages | 53 candidates
+[2025-10-28 10:26:00.405] SITE_START | site_0002 | https://forum.candidgirls.io
+[2025-10-28 10:26:00.826] PAGE_START | site_0003 | https://motherless.com
+[2025-10-28 10:26:00.828] PAGE_END | site_0003 | https://motherless.com | 2ms | 161 candidates
+[2025-10-28 10:26:01.522] EXTRACT_START | site_0003 | https://cdn5-static.motherlessmedia.com/images/plc.gif
+[2025-10-28 10:26:01.569] EXTRACT_END | site_0003 | https://cdn5-static.motherlessmedia.com/images/plc.gif | 47ms
+[2025-10-28 10:26:01.620] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/6B9A394-small-7.jpg
+[2025-10-28 10:26:01.806] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/01CAABC-small-7.jpg
+[2025-10-28 10:26:02.127] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8755EFA-small-3.jpg
+[2025-10-28 10:26:02.128] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/6F1BA22-small-7.jpg
+[2025-10-28 10:26:02.147] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/6B9A394-small-7.jpg | 527ms
+[2025-10-28 10:26:02.155] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/5FBF56C-small-5.jpg
+[2025-10-28 10:26:02.352] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/5FBF56C-small-5.jpg | 197ms
+[2025-10-28 10:26:02.355] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/0A9DF81-zoom.jpg
+[2025-10-28 10:26:02.494] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/01CAABC-small-7.jpg | 688ms
+[2025-10-28 10:26:02.496] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8EDDEB6-zoom.jpg
+[2025-10-28 10:26:02.571] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/0A9DF81-zoom.jpg | 217ms
+[2025-10-28 10:26:02.575] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/5B62F0F-zoom.jpg
+[2025-10-28 10:26:02.658] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/6F1BA22-small-7.jpg | 530ms
+[2025-10-28 10:26:02.663] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/78101FD-zoom.jpg
+[2025-10-28 10:26:02.684] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8EDDEB6-zoom.jpg | 188ms
+[2025-10-28 10:26:02.693] GPU_BATCH_START | batch_1761672362692 | 8 images
+[2025-10-28 10:26:02.694] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/D87878C-zoom.jpg
+[2025-10-28 10:26:02.711] GPU_RECOGNITION_START | batch_1761672362692
+[2025-10-28 10:26:02.760] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/5B62F0F-zoom.jpg | 186ms
+[2025-10-28 10:26:02.763] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/B904DB9-zoom.jpg
+[2025-10-28 10:26:02.822] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8755EFA-small-3.jpg | 695ms
+[2025-10-28 10:26:02.826] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9E27CC2-zoom.jpg
+[2025-10-28 10:26:02.854] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/78101FD-zoom.jpg | 191ms
+[2025-10-28 10:26:02.874] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9DA6A2-zoom.jpg
+[2025-10-28 10:26:02.881] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/D87878C-zoom.jpg | 186ms
+[2025-10-28 10:26:02.904] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/DB9E893-zoom.jpg
+[2025-10-28 10:26:02.990] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/B904DB9-zoom.jpg | 227ms
+[2025-10-28 10:26:02.994] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/91EC7CD-zoom.jpg
+[2025-10-28 10:26:03.022] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9E27CC2-zoom.jpg | 196ms
+[2025-10-28 10:26:03.043] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8556498-zoom.jpg
+[2025-10-28 10:26:03.083] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9DA6A2-zoom.jpg | 209ms
+[2025-10-28 10:26:03.096] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/2C3D314-zoom.jpg
+[2025-10-28 10:26:03.103] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/DB9E893-zoom.jpg | 199ms
+[2025-10-28 10:26:03.138] GPU_RECOGNITION_END | batch_1761672362692 | 427ms | 3 faces
+[2025-10-28 10:26:03.132] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/59BD3D7-zoom.jpg
+[2025-10-28 10:26:03.160] GPU_STORAGE_START | d2adad52 | raw
+[2025-10-28 10:26:03.190] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/91EC7CD-zoom.jpg | 196ms
+[2025-10-28 10:26:03.184] GPU_STORAGE_START | a9243ea7 | raw
+[2025-10-28 10:26:03.212] GPU_STORAGE_START | a472d9ce | raw
+[2025-10-28 10:26:03.213] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/23853CA-zoom.jpg
+[2025-10-28 10:26:03.234] GPU_STORAGE_START | fc7c73eb | raw
+[2025-10-28 10:26:03.244] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8556498-zoom.jpg | 202ms
+[2025-10-28 10:26:03.257] GPU_STORAGE_START | d5de06a5 | raw
+[2025-10-28 10:26:03.258] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/40675B9-small.jpg
+[2025-10-28 10:26:03.278] GPU_STORAGE_START | cf6facc0 | raw
+[2025-10-28 10:26:03.301] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/2C3D314-zoom.jpg | 205ms
+[2025-10-28 10:26:03.306] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8AA4116-zoom.jpg
+[2025-10-28 10:26:03.305] GPU_STORAGE_START | 8d45fa16 | raw
+[2025-10-28 10:26:03.325] GPU_STORAGE_START | fe9e18d1 | raw
+[2025-10-28 10:26:03.332] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/59BD3D7-zoom.jpg | 200ms
+[2025-10-28 10:26:03.350] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/CF2D3A8-zoom.jpg
+[2025-10-28 10:26:03.375] GPU_STORAGE_END | fc7c73eb | raw | 141ms
+[2025-10-28 10:26:03.403] GPU_STORAGE_END | a472d9ce | raw | 192ms
+[2025-10-28 10:26:03.405] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/23853CA-zoom.jpg | 192ms
+[2025-10-28 10:26:03.431] GPU_STORAGE_END | 8d45fa16 | raw | 126ms
+[2025-10-28 10:26:03.432] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/3083D88-zoom.jpg
+[2025-10-28 10:26:03.452] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/40675B9-small.jpg | 194ms
+[2025-10-28 10:26:03.453] GPU_STORAGE_END | d2adad52 | raw | 293ms
+[2025-10-28 10:26:03.480] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/7D42099-zoom.jpg
+[2025-10-28 10:26:03.479] GPU_STORAGE_END | a9243ea7 | raw | 296ms
+[2025-10-28 10:26:03.504] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8AA4116-zoom.jpg | 198ms
+[2025-10-28 10:26:03.502] GPU_STORAGE_END | fe9e18d1 | raw | 176ms
+[2025-10-28 10:26:03.528] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/A2586CB-zoom.jpg
+[2025-10-28 10:26:03.526] GPU_STORAGE_END | d5de06a5 | raw | 269ms
+[2025-10-28 10:26:03.546] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/CF2D3A8-zoom.jpg | 196ms
+[2025-10-28 10:26:03.545] GPU_STORAGE_END | cf6facc0 | raw | 267ms
+[2025-10-28 10:26:03.565] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/97997F5-small.jpg
+[2025-10-28 10:26:03.567] GPU_BATCH_END | batch_1761672362692 | 874ms | 8 images
+[2025-10-28 10:26:03.582] GPU_BATCH_START | batch_1761672363581 | 16 images
+[2025-10-28 10:26:03.599] GPU_RECOGNITION_START | batch_1761672363581
+[2025-10-28 10:26:03.637] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/3083D88-zoom.jpg | 205ms
+[2025-10-28 10:26:03.640] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/F2D3444-zoom.jpg
+[2025-10-28 10:26:03.677] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/7D42099-zoom.jpg | 197ms
+[2025-10-28 10:26:03.680] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/B727B47-zoom.jpg
+[2025-10-28 10:26:03.719] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/A2586CB-zoom.jpg | 192ms
+[2025-10-28 10:26:03.724] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/67F82F8-zoom.jpg
+[2025-10-28 10:26:03.827] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/F2D3444-zoom.jpg | 187ms
+[2025-10-28 10:26:03.830] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/E4CD49E-small.jpg
+[2025-10-28 10:26:03.872] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/B727B47-zoom.jpg | 192ms
+[2025-10-28 10:26:03.885] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/69C29CA-zoom.jpg
+[2025-10-28 10:26:03.918] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/97997F5-small.jpg | 353ms
+[2025-10-28 10:26:03.941] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/67F82F8-zoom.jpg | 217ms
+[2025-10-28 10:26:03.927] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/85FB4C5-small.jpg
+[2025-10-28 10:26:03.947] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/CF8D754-zoom.jpg
+[2025-10-28 10:26:04.037] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/E4CD49E-small.jpg | 207ms
+[2025-10-28 10:26:04.040] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/37F31D9-zoom.jpg
+[2025-10-28 10:26:04.106] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/69C29CA-zoom.jpg | 221ms
+[2025-10-28 10:26:04.116] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/85FB4C5-small.jpg | 190ms
+[2025-10-28 10:26:04.111] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/37F17AE-zoom.jpg
+[2025-10-28 10:26:04.138] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/CF8D754-zoom.jpg | 191ms
+[2025-10-28 10:26:04.136] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/1F23D26-zoom.jpg
+[2025-10-28 10:26:04.157] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/122F3E7-zoom.jpg
+[2025-10-28 10:26:04.226] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/37F31D9-zoom.jpg | 186ms
+[2025-10-28 10:26:04.229] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/0E10E53-zoom.jpg
+[2025-10-28 10:26:04.314] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/37F17AE-zoom.jpg | 204ms
+[2025-10-28 10:26:04.317] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/CB2B33A-zoom.jpg
+[2025-10-28 10:26:04.339] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/1F23D26-zoom.jpg | 203ms
+[2025-10-28 10:26:04.344] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/122F3E7-zoom.jpg | 187ms
+[2025-10-28 10:26:04.357] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/1E2A213-zoom.jpg
+[2025-10-28 10:26:04.357] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/850533C-zoom.jpg
+[2025-10-28 10:26:04.395] GPU_RECOGNITION_END | batch_1761672363581 | 795ms | 15 faces
+[2025-10-28 10:26:04.397] GPU_STORAGE_START | c66ef595 | raw
+[2025-10-28 10:26:04.428] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/0E10E53-zoom.jpg | 199ms
+[2025-10-28 10:26:04.414] GPU_STORAGE_START | c1111167 | raw
+[2025-10-28 10:26:04.433] GPU_STORAGE_START | a6669868 | raw
+[2025-10-28 10:26:04.433] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/59F9E87-small-7.jpg
+[2025-10-28 10:26:04.452] GPU_STORAGE_START | 83bdecc4 | raw
+[2025-10-28 10:26:04.477] GPU_STORAGE_START | 8613476f | raw
+[2025-10-28 10:26:04.495] GPU_STORAGE_START | c959db73 | raw
+[2025-10-28 10:26:04.515] GPU_STORAGE_START | 8c2d7097 | raw
+[2025-10-28 10:26:04.515] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/CB2B33A-zoom.jpg | 197ms
+[2025-10-28 10:26:04.532] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/C786B9E-small-7.jpg
+[2025-10-28 10:26:04.531] GPU_STORAGE_START | e13193e3 | raw
+[2025-10-28 10:26:04.550] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/1E2A213-zoom.jpg | 193ms
+[2025-10-28 10:26:04.550] GPU_STORAGE_START | 85f132b4 | raw
+[2025-10-28 10:26:04.551] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/850533C-zoom.jpg | 194ms
+[2025-10-28 10:26:04.573] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/FF389D2-small-6.jpg
+[2025-10-28 10:26:04.573] GPU_STORAGE_START | 9a90f15b | raw
+[2025-10-28 10:26:04.574] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/5FC8008-small-14.jpg
+[2025-10-28 10:26:04.592] GPU_STORAGE_START | d8952677 | raw
+[2025-10-28 10:26:04.623] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/59F9E87-small-7.jpg | 189ms
+[2025-10-28 10:26:04.610] GPU_STORAGE_START | f29901fe | raw
+[2025-10-28 10:26:04.632] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/F4EAB5F-small-11.jpg
+[2025-10-28 10:26:04.630] GPU_STORAGE_START | b741d85e | raw
+[2025-10-28 10:26:04.650] GPU_STORAGE_START | e8e1a1e7 | raw
+[2025-10-28 10:26:04.671] GPU_STORAGE_START | ebe48d92 | raw
+[2025-10-28 10:26:04.690] GPU_STORAGE_START | c4db5821 | raw
+[2025-10-28 10:26:04.726] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/C786B9E-small-7.jpg | 194ms
+[2025-10-28 10:26:04.733] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/EE5BD5C-small.jpg
+[2025-10-28 10:26:04.739] GPU_STORAGE_END | c66ef595 | raw | 343ms
+[2025-10-28 10:26:04.772] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/5FC8008-small-14.jpg | 199ms
+[2025-10-28 10:26:04.772] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/FF389D2-small-6.jpg | 199ms
+[2025-10-28 10:26:04.760] GPU_STORAGE_END | d8952677 | raw | 168ms
+[2025-10-28 10:26:04.780] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/F7FAF85-small-13.jpg
+[2025-10-28 10:26:04.780] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/FF7A381-small-7.jpg
+[2025-10-28 10:26:04.780] GPU_STORAGE_END | e8e1a1e7 | raw | 129ms
+[2025-10-28 10:26:04.798] GPU_STORAGE_END | ebe48d92 | raw | 126ms
+[2025-10-28 10:26:04.827] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/F4EAB5F-small-11.jpg | 195ms
+[2025-10-28 10:26:04.822] GPU_STORAGE_END | c4db5821 | raw | 132ms
+[2025-10-28 10:26:04.861] GPU_STORAGE_END | c1111167 | raw | 448ms
+[2025-10-28 10:26:04.841] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9F36444-small-7.jpg
+[2025-10-28 10:26:04.865] GPU_STORAGE_END | a6669868 | raw | 432ms
+[2025-10-28 10:26:04.884] GPU_STORAGE_END | 8613476f | raw | 406ms
+[2025-10-28 10:26:04.904] GPU_STORAGE_END | 8c2d7097 | raw | 390ms
+[2025-10-28 10:26:04.927] GPU_STORAGE_END | 83bdecc4 | raw | 474ms
+[2025-10-28 10:26:04.938] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/EE5BD5C-small.jpg | 205ms
+[2025-10-28 10:26:04.947] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/FD7CD30-small-7.jpg
+[2025-10-28 10:26:04.945] GPU_STORAGE_END | c959db73 | raw | 450ms
+[2025-10-28 10:26:04.963] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/FF7A381-small-7.jpg | 183ms
+[2025-10-28 10:26:04.972] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/F7FAF85-small-13.jpg | 192ms
+[2025-10-28 10:26:04.966] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/A43330F-small-7.jpg
+[2025-10-28 10:26:04.965] GPU_STORAGE_END | b741d85e | raw | 335ms
+[2025-10-28 10:26:04.983] GPU_STORAGE_END | e13193e3 | raw | 452ms
+[2025-10-28 10:26:04.984] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/7AA2B3F-small-7.jpg
+[2025-10-28 10:26:05.004] GPU_STORAGE_END | f29901fe | raw | 393ms
+[2025-10-28 10:26:05.021] GPU_STORAGE_END | 85f132b4 | raw | 472ms
+[2025-10-28 10:26:05.035] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9F36444-small-7.jpg | 194ms
+[2025-10-28 10:26:05.036] GPU_STORAGE_END | 9a90f15b | raw | 463ms
+[2025-10-28 10:26:05.052] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/D046DCE-small-10.jpg
+[2025-10-28 10:26:05.054] GPU_BATCH_END | batch_1761672363581 | 1472ms | 16 images
+[2025-10-28 10:26:05.069] GPU_BATCH_START | batch_1761672365068 | 28 images
+[2025-10-28 10:26:05.090] GPU_RECOGNITION_START | batch_1761672365068
+[2025-10-28 10:26:05.143] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/FD7CD30-small-7.jpg | 196ms
+[2025-10-28 10:26:05.179] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/7AA2B3F-small-7.jpg | 195ms
+[2025-10-28 10:26:05.192] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/A43330F-small-7.jpg | 226ms
+[2025-10-28 10:26:05.240] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/D046DCE-small-10.jpg | 187ms
+[2025-10-28 10:26:06.128] GPU_RECOGNITION_END | batch_1761672365068 | 1038ms | 19 faces
+[2025-10-28 10:26:06.130] GPU_STORAGE_START | d6c64cc0 | raw
+[2025-10-28 10:26:06.149] GPU_STORAGE_START | c9f26ec4 | raw
+[2025-10-28 10:26:06.165] GPU_STORAGE_START | e1cf1c90 | raw
+[2025-10-28 10:26:06.183] GPU_STORAGE_START | fcb0e0df | raw
+[2025-10-28 10:26:06.199] GPU_STORAGE_START | 9ab206d2 | raw
+[2025-10-28 10:26:06.214] GPU_STORAGE_START | 9cdeb2ad | raw
+[2025-10-28 10:26:06.229] GPU_STORAGE_START | c26bf4bc | raw
+[2025-10-28 10:26:06.242] GPU_STORAGE_START | eec0a4b9 | raw
+[2025-10-28 10:26:06.256] GPU_STORAGE_START | 8257fe28 | raw
+[2025-10-28 10:26:06.270] GPU_STORAGE_START | b9b1c400 | raw
+[2025-10-28 10:26:06.283] GPU_STORAGE_START | 812af472 | raw
+[2025-10-28 10:26:06.296] GPU_STORAGE_START | 96913709 | raw
+[2025-10-28 10:26:06.310] GPU_STORAGE_START | bdf0526e | raw
+[2025-10-28 10:26:06.323] GPU_STORAGE_START | fb4b03d1 | raw
+[2025-10-28 10:26:06.336] GPU_STORAGE_START | fca45f32 | raw
+[2025-10-28 10:26:06.348] GPU_STORAGE_START | faa534d6 | raw
+[2025-10-28 10:26:06.363] GPU_STORAGE_START | fa78d392 | raw
+[2025-10-28 10:26:06.376] GPU_STORAGE_START | f58f9686 | raw
+[2025-10-28 10:26:06.391] GPU_STORAGE_START | a8f0a9ed | raw
+[2025-10-28 10:26:06.404] GPU_STORAGE_START | 99646667 | raw
+[2025-10-28 10:26:06.420] GPU_STORAGE_START | f2aef502 | raw
+[2025-10-28 10:26:06.441] GPU_STORAGE_START | cff6a38a | raw
+[2025-10-28 10:26:06.463] GPU_STORAGE_START | cf649939 | raw
+[2025-10-28 10:26:06.475] GPU_STORAGE_START | b18fce1c | raw
+[2025-10-28 10:26:06.488] GPU_STORAGE_START | d8ca6e34 | raw
+[2025-10-28 10:26:06.501] GPU_STORAGE_START | b9bba78a | raw
+[2025-10-28 10:26:06.513] GPU_STORAGE_START | c0cd2f1d | raw
+[2025-10-28 10:26:06.525] GPU_STORAGE_START | b3245b1a | raw
+[2025-10-28 10:26:06.577] GPU_STORAGE_END | c9f26ec4 | raw | 428ms
+[2025-10-28 10:26:06.580] GPU_STORAGE_END | cf649939 | raw | 117ms
+[2025-10-28 10:26:06.600] GPU_STORAGE_END | 9ab206d2 | raw | 400ms
+[2025-10-28 10:26:06.617] GPU_STORAGE_END | f2aef502 | raw | 197ms
+[2025-10-28 10:26:06.633] GPU_STORAGE_END | b9bba78a | raw | 131ms
+[2025-10-28 10:26:06.648] GPU_STORAGE_END | bdf0526e | raw | 337ms
+[2025-10-28 10:26:06.665] GPU_STORAGE_END | eec0a4b9 | raw | 423ms
+[2025-10-28 10:26:06.680] GPU_STORAGE_END | fca45f32 | raw | 345ms
+[2025-10-28 10:26:06.698] GPU_STORAGE_END | f58f9686 | raw | 323ms
+[2025-10-28 10:26:06.712] GPU_STORAGE_END | 9cdeb2ad | raw | 498ms
+[2025-10-28 10:26:06.735] GPU_STORAGE_END | b3245b1a | raw | 210ms
+[2025-10-28 10:26:06.776] GPU_STORAGE_END | d6c64cc0 | raw | 646ms
+[2025-10-28 10:26:06.779] GPU_STORAGE_END | c26bf4bc | raw | 550ms
+[2025-10-28 10:26:06.794] GPU_STORAGE_END | fcb0e0df | raw | 612ms
+[2025-10-28 10:26:06.807] GPU_STORAGE_END | e1cf1c90 | raw | 642ms
+[2025-10-28 10:26:06.823] GPU_STORAGE_END | 8257fe28 | raw | 566ms
+[2025-10-28 10:26:06.838] GPU_STORAGE_END | 812af472 | raw | 555ms
+[2025-10-28 10:26:06.851] GPU_STORAGE_END | b18fce1c | raw | 376ms
+[2025-10-28 10:26:06.864] GPU_STORAGE_END | cff6a38a | raw | 423ms
+[2025-10-28 10:26:06.876] GPU_STORAGE_END | b9b1c400 | raw | 606ms
+[2025-10-28 10:26:06.891] GPU_STORAGE_END | faa534d6 | raw | 543ms
+[2025-10-28 10:26:06.908] GPU_STORAGE_END | d8ca6e34 | raw | 420ms
+[2025-10-28 10:26:06.932] GPU_STORAGE_END | fb4b03d1 | raw | 609ms
+[2025-10-28 10:26:06.946] GPU_STORAGE_END | c0cd2f1d | raw | 432ms
+[2025-10-28 10:26:06.959] GPU_STORAGE_END | fa78d392 | raw | 596ms
+[2025-10-28 10:26:06.971] GPU_STORAGE_END | 99646667 | raw | 567ms
+[2025-10-28 10:26:06.991] GPU_STORAGE_END | a8f0a9ed | raw | 600ms
+[2025-10-28 10:26:07.006] GPU_STORAGE_END | 96913709 | raw | 710ms
+[2025-10-28 10:26:07.022] GPU_BATCH_END | batch_1761672365068 | 1954ms | 28 images
+[2025-10-28 10:26:10.329] PAGE_START | site_0002 | https://forum.candidgirls.io
+[2025-10-28 10:26:10.331] PAGE_END | site_0002 | https://forum.candidgirls.io | 2ms | 103 candidates
+[2025-10-28 10:26:10.643] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/a/3ec8ea/24.png
+[2025-10-28 10:26:10.682] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/a/3ec8ea/24.png | 39ms
+[2025-10-28 10:26:10.687] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/c/e274bd/24.png
+[2025-10-28 10:26:10.734] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/ecd19e/24.png
+[2025-10-28 10:26:10.742] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/c/e274bd/24.png | 54ms
+[2025-10-28 10:26:10.779] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/ecd19e/24.png | 45ms
+[2025-10-28 10:26:10.872] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/n/87869e/24.png
+[2025-10-28 10:26:10.919] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/n/87869e/24.png | 47ms
+[2025-10-28 10:26:10.941] GPU_BATCH_START | batch_1761672370940 | 8 images
+[2025-10-28 10:26:10.946] GPU_RECOGNITION_START | batch_1761672370940
+[2025-10-28 10:26:11.006] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/goangels77/24/1617999_2.png
+[2025-10-28 10:26:11.018] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/goangels77/24/1617999_2.png | 12ms
+[2025-10-28 10:26:11.010] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/leapermesiah/24/992146_2.png
+[2025-10-28 10:26:11.009] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/txxxcx/24/1563124_2.png
+[2025-10-28 10:26:11.007] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/bb73d2/24.png
+[2025-10-28 10:26:11.035] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/bb73d2/24.png | 28ms
+[2025-10-28 10:26:11.035] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/leapermesiah/24/992146_2.png | 25ms
+[2025-10-28 10:26:11.026] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/tmoney/24/1084158_2.png
+[2025-10-28 10:26:11.039] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/txxxcx/24/1563124_2.png | 30ms
+[2025-10-28 10:26:11.042] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/latinalovrr/24/1059832_2.png
+[2025-10-28 10:26:11.051] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/tmoney/24/1084158_2.png | 25ms
+[2025-10-28 10:26:11.041] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/65b543/24.png
+[2025-10-28 10:26:11.042] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/d/d07c76/24.png
+[2025-10-28 10:26:11.086] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/65b543/24.png | 44ms
+[2025-10-28 10:26:11.086] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/d/d07c76/24.png | 44ms
+[2025-10-28 10:26:11.085] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/latinalovrr/24/1059832_2.png | 43ms
+[2025-10-28 10:26:11.073] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/k/7ba0ec/24.png
+[2025-10-28 10:26:11.100] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/k/7ba0ec/24.png | 27ms
+[2025-10-28 10:26:11.089] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/3ab097/24.png
+[2025-10-28 10:26:11.089] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/a/8491ac/24.png
+[2025-10-28 10:26:11.089] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mannylex/24/545262_2.png
+[2025-10-28 10:26:11.116] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/a/8491ac/24.png | 27ms
+[2025-10-28 10:26:11.116] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/3ab097/24.png | 26ms
+[2025-10-28 10:26:11.116] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mannylex/24/545262_2.png | 27ms
+[2025-10-28 10:26:11.105] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user0000/24/1516373_2.png
+[2025-10-28 10:26:11.121] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mick_swag/24/41225_2.png
+[2025-10-28 10:26:11.132] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user0000/24/1516373_2.png | 26ms
+[2025-10-28 10:26:11.122] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/pawglover007/24/1629953_2.png
+[2025-10-28 10:26:11.122] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/5daacb/24.png
+[2025-10-28 10:26:11.141] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/gloryyholecandids/24/830087_2.png
+[2025-10-28 10:26:11.142] GPU_RECOGNITION_END | batch_1761672370940 | 196ms | 1 faces
+[2025-10-28 10:26:11.151] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/5daacb/24.png | 30ms
+[2025-10-28 10:26:11.151] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/pawglover007/24/1629953_2.png | 30ms
+[2025-10-28 10:26:11.151] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mick_swag/24/41225_2.png | 30ms
+[2025-10-28 10:26:11.159] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/jitterbug/24/1598444_2.png
+[2025-10-28 10:26:11.157] GPU_STORAGE_START | ac47a639 | raw
+[2025-10-28 10:26:11.159] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/w/58f4c7/24.png
+[2025-10-28 10:26:11.159] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/n/838e76/24.png
+[2025-10-28 10:26:11.175] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/gloryyholecandids/24/830087_2.png | 34ms
+[2025-10-28 10:26:11.180] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/actnormal/24/1059209_2.png
+[2025-10-28 10:26:11.191] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/n/838e76/24.png | 32ms
+[2025-10-28 10:26:11.191] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/w/58f4c7/24.png | 32ms
+[2025-10-28 10:26:11.178] GPU_STORAGE_START | bc356464 | raw
+[2025-10-28 10:26:11.191] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/jitterbug/24/1598444_2.png | 32ms
+[2025-10-28 10:26:11.219] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/f/b9bd4f/24.png
+[2025-10-28 10:26:11.232] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/actnormal/24/1059209_2.png | 52ms
+[2025-10-28 10:26:11.218] GPU_STORAGE_START | eb1d34e1 | raw
+[2025-10-28 10:26:11.220] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/c/8edcca/24.png
+[2025-10-28 10:26:11.220] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user64064/24/1658326_2.png
+[2025-10-28 10:26:11.259] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user64064/24/1658326_2.png | 38ms
+[2025-10-28 10:26:11.252] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/f/b9bd4f/24.png | 33ms
+[2025-10-28 10:26:11.253] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/c/8edcca/24.png | 32ms
+[2025-10-28 10:26:11.242] GPU_STORAGE_START | beb158dc | raw
+[2025-10-28 10:26:11.243] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/meatytasty/24/1191842_2.png
+[2025-10-28 10:26:11.263] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/fury17/24/1329700_2.png
+[2025-10-28 10:26:11.262] GPU_STORAGE_START | cd0c32d3 | raw
+[2025-10-28 10:26:11.263] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/kinkybruh/24/1580899_2.png
+[2025-10-28 10:26:11.263] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/candidnoob7/24/1079546_2.png
+[2025-10-28 10:26:11.278] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/meatytasty/24/1191842_2.png | 35ms
+[2025-10-28 10:26:11.311] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/luv2cap/24/1378135_2.png
+[2025-10-28 10:26:11.310] GPU_STORAGE_START | cc9a3179 | raw
+[2025-10-28 10:26:11.326] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/candidnoob7/24/1079546_2.png | 64ms
+[2025-10-28 10:26:11.324] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/fury17/24/1329700_2.png | 61ms
+[2025-10-28 10:26:11.323] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/kinkybruh/24/1580899_2.png | 60ms
+[2025-10-28 10:26:11.354] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/luv2cap/24/1378135_2.png | 43ms
+[2025-10-28 10:26:11.348] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/slartibartfast/24/1493620_2.png
+[2025-10-28 10:26:11.342] GPU_STORAGE_START | cc993366 | raw
+[2025-10-28 10:26:11.347] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/cc9497/24.png
+[2025-10-28 10:26:11.342] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/genericcaps/24/1360409_2.png
+[2025-10-28 10:26:11.383] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/slartibartfast/24/1493620_2.png | 35ms
+[2025-10-28 10:26:11.366] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/addicted2fapping/24/1579665_2.png
+[2025-10-28 10:26:11.365] GPU_STORAGE_START | cbce3431 | raw
+[2025-10-28 10:26:11.383] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/cc9497/24.png | 36ms
+[2025-10-28 10:26:11.415] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/addicted2fapping/24/1579665_2.png | 49ms
+[2025-10-28 10:26:11.400] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/shadow20969/24/1511548_2.png
+[2025-10-28 10:26:11.394] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/genericcaps/24/1360409_2.png | 52ms
+[2025-10-28 10:26:11.400] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/59ef9b/24.png
+[2025-10-28 10:26:11.417] GPU_STORAGE_END | ac47a639 | raw | 259ms
+[2025-10-28 10:26:11.450] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/59ef9b/24.png | 50ms
+[2025-10-28 10:26:11.436] GPU_STORAGE_END | eb1d34e1 | raw | 218ms
+[2025-10-28 10:26:11.432] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/resolve/24/1413797_2.png
+[2025-10-28 10:26:11.436] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/a183cd/24.png
+[2025-10-28 10:26:11.452] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/shadow20969/24/1511548_2.png | 52ms
+[2025-10-28 10:26:11.493] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mr.backside/24/1656232_2.png
+[2025-10-28 10:26:11.499] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/a183cd/24.png | 63ms
+[2025-10-28 10:26:11.480] GPU_STORAGE_END | bc356464 | raw | 301ms
+[2025-10-28 10:26:11.495] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/atomcandid888/24/1600500_2.png
+[2025-10-28 10:26:11.508] GPU_STORAGE_END | cd0c32d3 | raw | 247ms
+[2025-10-28 10:26:11.508] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user27653/24/1615854_2.png
+[2025-10-28 10:26:11.510] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/resolve/24/1413797_2.png | 79ms
+[2025-10-28 10:26:11.519] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/atomcandid888/24/1600500_2.png | 24ms
+[2025-10-28 10:26:11.519] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mr.backside/24/1656232_2.png | 26ms
+[2025-10-28 10:26:11.535] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/pkfire/24/1661393_2.png
+[2025-10-28 10:26:11.550] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user27653/24/1615854_2.png | 42ms
+[2025-10-28 10:26:11.535] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/omgfat84/24/1627488_2.png
+[2025-10-28 10:26:11.535] EXTRACT_START | site_0002 | https://forum.candidgirls.io/images/emoji/apple/flushed_face.png?v=14
+[2025-10-28 10:26:11.532] GPU_STORAGE_END | cc9a3179 | raw | 223ms
+[2025-10-28 10:26:11.591] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/pkfire/24/1661393_2.png | 56ms
+[2025-10-28 10:26:11.591] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/omgfat84/24/1627488_2.png | 56ms
+[2025-10-28 10:26:11.591] EXTRACT_END | site_0002 | https://forum.candidgirls.io/images/emoji/apple/flushed_face.png?v=14 | 56ms
+[2025-10-28 10:26:11.580] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/8e8cbc/24.png
+[2025-10-28 10:26:11.577] GPU_STORAGE_END | cc993366 | raw | 235ms
+[2025-10-28 10:26:11.603] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/iass/24/904780_2.png
+[2025-10-28 10:26:11.603] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/dm09/24/1579346_2.png
+[2025-10-28 10:26:11.605] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/bradsha/24/1304865_2.png
+[2025-10-28 10:26:11.616] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/8e8cbc/24.png | 36ms
+[2025-10-28 10:26:11.604] GPU_STORAGE_END | cbce3431 | raw | 239ms
+[2025-10-28 10:26:11.642] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/bradsha/24/1304865_2.png | 37ms
+[2025-10-28 10:26:11.629] GPU_STORAGE_END | beb158dc | raw | 386ms
+[2025-10-28 10:26:11.644] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/iass/24/904780_2.png | 40ms
+[2025-10-28 10:26:11.641] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/dm09/24/1579346_2.png | 38ms
+[2025-10-28 10:26:11.629] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/rayne/24/1372269_2.png
+[2025-10-28 10:26:11.670] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/51bf81/24.png
+[2025-10-28 10:26:11.671] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/ecd19e/24.png
+[2025-10-28 10:26:11.673] GPU_BATCH_END | batch_1761672370940 | 732ms | 8 images
+[2025-10-28 10:26:11.679] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/rayne/24/1372269_2.png | 51ms
+[2025-10-28 10:26:11.670] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/stedecreepin/24/1573104_2.png
+[2025-10-28 10:26:11.705] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/stedecreepin/24/1573104_2.png | 35ms
+[2025-10-28 10:26:11.705] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/51bf81/24.png | 35ms
+[2025-10-28 10:26:11.705] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/ecd19e/24.png | 34ms
+[2025-10-28 10:26:11.695] GPU_BATCH_START | batch_1761672371693 | 48 images
+[2025-10-28 10:26:11.693] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/big_dawg/24/278995_2.png
+[2025-10-28 10:26:11.738] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/big_dawg/24/278995_2.png | 44ms
+[2025-10-28 10:26:11.723] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user42739/24/1384408_2.png
+[2025-10-28 10:26:11.723] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/miami1970/24/930146_2.png
+[2025-10-28 10:26:11.747] GPU_RECOGNITION_START | batch_1761672371693
+[2025-10-28 10:26:11.752] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/showurbutt/24/622622_2.png
+[2025-10-28 10:26:11.768] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/miami1970/24/930146_2.png | 45ms
+[2025-10-28 10:26:11.723] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/fnbreez/24/1476087_2.png
+[2025-10-28 10:26:11.769] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user42739/24/1384408_2.png | 47ms
+[2025-10-28 10:26:11.779] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/legl0ver/24/1138785_2.png
+[2025-10-28 10:26:11.793] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/showurbutt/24/622622_2.png | 41ms
+[2025-10-28 10:26:11.779] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/noapologies/24/1370812_2.png
+[2025-10-28 10:26:11.803] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/fnbreez/24/1476087_2.png | 81ms
+[2025-10-28 10:26:11.826] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/noapologies/24/1370812_2.png | 47ms
+[2025-10-28 10:26:11.826] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/legl0ver/24/1138785_2.png | 48ms
+[2025-10-28 10:26:11.812] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/buckmontana/24/1230705_2.png
+[2025-10-28 10:26:11.811] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/lovejeans/24/1142728_2.png
+[2025-10-28 10:26:11.848] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/buckmontana/24/1230705_2.png | 36ms
+[2025-10-28 10:26:11.848] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/lovejeans/24/1142728_2.png | 37ms
+[2025-10-28 10:26:11.837] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/d/90ced4/24.png
+[2025-10-28 10:26:11.836] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/blerv/24/1470481_2.png
+[2025-10-28 10:26:11.857] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/eada6e/24.png
+[2025-10-28 10:26:11.869] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/blerv/24/1470481_2.png | 33ms
+[2025-10-28 10:26:11.858] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/d/b77776/24.png
+[2025-10-28 10:26:11.869] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/d/90ced4/24.png | 33ms
+[2025-10-28 10:26:11.881] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/piercer75/24/138804_2.png
+[2025-10-28 10:26:11.881] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/e47774/24.png
+[2025-10-28 10:26:11.894] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/d/b77776/24.png | 37ms
+[2025-10-28 10:26:11.892] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/eada6e/24.png | 35ms
+[2025-10-28 10:26:11.919] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/e47774/24.png | 38ms
+[2025-10-28 10:26:11.922] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/piercer75/24/138804_2.png | 41ms
+[2025-10-28 10:26:11.908] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/58956e/24.png
+[2025-10-28 10:26:11.906] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/e19adc/24.png
+[2025-10-28 10:26:11.945] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/58956e/24.png | 37ms
+[2025-10-28 10:26:11.930] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/thegivingtree/24/540831_2.png
+[2025-10-28 10:26:11.930] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user25983/24/1666253_2.png
+[2025-10-28 10:26:11.943] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/e19adc/24.png | 37ms
+[2025-10-28 10:26:11.955] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/roodmerc/24/1634365_2.png
+[2025-10-28 10:26:11.973] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/thegivingtree/24/540831_2.png | 43ms
+[2025-10-28 10:26:11.956] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/danielle_luther/24/1643803_2.png
+[2025-10-28 10:26:11.972] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user25983/24/1666253_2.png | 42ms
+[2025-10-28 10:26:11.995] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/roodmerc/24/1634365_2.png | 40ms
+[2025-10-28 10:26:11.994] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/danielle_luther/24/1643803_2.png | 38ms
+[2025-10-28 10:26:11.982] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/spider40/24/406480_2.png
+[2025-10-28 10:26:11.985] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/ed655f/24.png
+[2025-10-28 10:26:12.045] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/spider40/24/406480_2.png | 63ms
+[2025-10-28 10:26:12.032] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/22d042/24.png
+[2025-10-28 10:26:12.054] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/ed655f/24.png | 68ms
+[2025-10-28 10:26:12.032] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/bootyfreak/24/1652531_2.png
+[2025-10-28 10:26:12.063] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/messyshooter/24/1045447_2.png
+[2025-10-28 10:26:12.074] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/22d042/24.png | 42ms
+[2025-10-28 10:26:12.074] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/bootyfreak/24/1652531_2.png | 41ms
+[2025-10-28 10:26:12.062] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/fbc32d/24.png
+[2025-10-28 10:26:12.088] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mnight0/24/1031197_2.png
+[2025-10-28 10:26:12.086] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/b9e5f3/24.png
+[2025-10-28 10:26:12.099] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/messyshooter/24/1045447_2.png | 36ms
+[2025-10-28 10:26:12.099] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/fbc32d/24.png | 36ms
+[2025-10-28 10:26:12.125] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/b9e5f3/24.png | 39ms
+[2025-10-28 10:26:12.113] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/hon/24/1528679_2.png
+[2025-10-28 10:26:12.125] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mnight0/24/1031197_2.png | 37ms
+[2025-10-28 10:26:12.113] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/pocketlessjeansbest/24/1630294_2.png
+[2025-10-28 10:26:12.139] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/i/53a042/24.png
+[2025-10-28 10:26:12.152] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/pocketlessjeansbest/24/1630294_2.png | 39ms
+[2025-10-28 10:26:12.138] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/culosadictos/24/1671295_2.png
+[2025-10-28 10:26:12.151] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/hon/24/1528679_2.png | 38ms
+[2025-10-28 10:26:12.178] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/culosadictos/24/1671295_2.png | 40ms
+[2025-10-28 10:26:12.162] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/laromp14/24/1069035_2.png
+[2025-10-28 10:26:12.162] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/d/58f4c7/24.png
+[2025-10-28 10:26:12.176] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/i/53a042/24.png | 38ms
+[2025-10-28 10:26:12.182] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/zedude/24/1434246_2.png
+[2025-10-28 10:26:12.196] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/d/58f4c7/24.png | 34ms
+[2025-10-28 10:26:12.182] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/royalchef/24/1172923_2.png
+[2025-10-28 10:26:12.194] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/laromp14/24/1069035_2.png | 32ms
+[2025-10-28 10:26:12.217] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/royalchef/24/1172923_2.png | 36ms
+[2025-10-28 10:26:12.217] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/zedude/24/1434246_2.png | 35ms
+[2025-10-28 10:26:12.207] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/redhour3/24/1105112_2.png
+[2025-10-28 10:26:12.207] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/h/77aa72/24.png
+[2025-10-28 10:26:12.232] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/squirtle_27/24/42335_2.png
+[2025-10-28 10:26:12.246] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/h/77aa72/24.png | 39ms
+[2025-10-28 10:26:12.232] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/fbc32d/24.png
+[2025-10-28 10:26:12.246] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/redhour3/24/1105112_2.png | 39ms
+[2025-10-28 10:26:12.256] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/ecb155/24.png
+[2025-10-28 10:26:12.269] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/squirtle_27/24/42335_2.png | 38ms
+[2025-10-28 10:26:12.268] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/fbc32d/24.png | 36ms
+[2025-10-28 10:26:12.256] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/petites4life/24/1292267_2.png
+[2025-10-28 10:26:12.279] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/cc9497/24.png
+[2025-10-28 10:26:12.279] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/hombresinsombra/24/165847_2.png
+[2025-10-28 10:26:12.291] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/ecb155/24.png | 36ms
+[2025-10-28 10:26:12.289] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/petites4life/24/1292267_2.png | 34ms
+[2025-10-28 10:26:12.314] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/hombresinsombra/24/165847_2.png | 34ms
+[2025-10-28 10:26:12.314] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/cc9497/24.png | 34ms
+[2025-10-28 10:26:12.302] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/k/f04885/24.png
+[2025-10-28 10:26:12.302] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/gifguy/24/1618219_2.png
+[2025-10-28 10:26:12.333] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/k/f04885/24.png | 30ms
+[2025-10-28 10:26:12.333] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/gifguy/24/1618219_2.png | 31ms
+[2025-10-28 10:26:12.320] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/c/a4c791/24.png
+[2025-10-28 10:26:12.357] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/c/a4c791/24.png | 37ms
+[2025-10-28 10:26:13.070] GPU_RECOGNITION_END | batch_1761672371693 | 1323ms | 6 faces
+[2025-10-28 10:26:13.073] GPU_STORAGE_START | e230c76c | raw
+[2025-10-28 10:26:13.098] GPU_STORAGE_START | b818b39b | raw
+[2025-10-28 10:26:13.115] GPU_STORAGE_START | cc3366cc | raw
+[2025-10-28 10:26:13.139] GPU_STORAGE_START | e3cdc0ce | raw
+[2025-10-28 10:26:13.159] GPU_STORAGE_START | e20f3d30 | raw
+[2025-10-28 10:26:13.178] GPU_STORAGE_START | 999e6661 | raw
+[2025-10-28 10:26:13.199] GPU_STORAGE_START | cecd3132 | raw
+[2025-10-28 10:26:13.223] GPU_STORAGE_START | ce93614c | raw
+[2025-10-28 10:26:13.242] GPU_STORAGE_START | ce4c33b3 | raw
+[2025-10-28 10:26:13.258] GPU_STORAGE_START | cf673098 | raw
+[2025-10-28 10:26:13.274] GPU_STORAGE_START | cd3c33c3 | raw
+[2025-10-28 10:26:13.289] GPU_STORAGE_START | cd2c32d3 | raw
+[2025-10-28 10:26:13.304] GPU_STORAGE_START | d868b71b | raw
+[2025-10-28 10:26:13.322] GPU_STORAGE_START | 00000000 | raw
+[2025-10-28 10:26:13.340] GPU_STORAGE_START | ea658162 | raw
+[2025-10-28 10:26:13.355] GPU_STORAGE_START | cc6c6693 | raw
+[2025-10-28 10:26:13.367] GPU_STORAGE_START | e9da1065 | raw
+[2025-10-28 10:26:13.380] GPU_STORAGE_START | c3a43c1b | raw
+[2025-10-28 10:26:13.393] GPU_STORAGE_START | a3837385 | raw
+[2025-10-28 10:26:13.408] GPU_STORAGE_START | 993364cc | raw
+[2025-10-28 10:26:13.421] GPU_STORAGE_START | cc993366 | raw
+[2025-10-28 10:26:13.436] GPU_STORAGE_START | cc9631cd | raw
+[2025-10-28 10:26:13.444] PAGE_START | site_0003 | https://motherless.com/galleries
+[2025-10-28 10:26:13.451] GPU_STORAGE_START | ee3d1d75 | raw
+[2025-10-28 10:26:13.451] PAGE_END | site_0003 | https://motherless.com/galleries | 7ms | 276 candidates
+[2025-10-28 10:26:13.465] GPU_STORAGE_START | d1d149ff | raw
+[2025-10-28 10:26:13.481] GPU_STORAGE_START | f0524be5 | raw
+[2025-10-28 10:26:13.494] GPU_STORAGE_START | 997166ce | raw
+[2025-10-28 10:26:13.507] GPU_STORAGE_START | c7105e3a | raw
+[2025-10-28 10:26:13.521] GPU_STORAGE_START | cc3333cc | raw
+[2025-10-28 10:26:13.534] GPU_STORAGE_START | 8ffa94c9 | raw
+[2025-10-28 10:26:13.546] GPU_STORAGE_START | ccce3231 | raw
+[2025-10-28 10:26:13.558] GPU_STORAGE_START | e273fbdd | raw
+[2025-10-28 10:26:13.571] GPU_STORAGE_START | f2ca9736 | raw
+[2025-10-28 10:26:13.585] GPU_STORAGE_START | cf643093 | raw
+[2025-10-28 10:26:13.604] GPU_STORAGE_START | 931ee46f | raw
+[2025-10-28 10:26:13.620] GPU_STORAGE_START | cc993366 | raw
+[2025-10-28 10:26:13.632] GPU_STORAGE_START | fdcac14b | raw
+[2025-10-28 10:26:13.645] GPU_STORAGE_START | 9e0b6569 | raw
+[2025-10-28 10:26:13.657] GPU_STORAGE_START | eedecd40 | raw
+[2025-10-28 10:26:13.671] GPU_STORAGE_START | e49ac963 | raw
+[2025-10-28 10:26:13.685] GPU_STORAGE_START | d31f8271 | raw
+[2025-10-28 10:26:13.699] GPU_STORAGE_START | ebc0e1ea | raw
+[2025-10-28 10:26:13.713] GPU_STORAGE_START | 948d5353 | raw
+[2025-10-28 10:26:13.727] GPU_STORAGE_START | cc3366cc | raw
+[2025-10-28 10:26:13.741] GPU_STORAGE_START | b4d907d8 | raw
+[2025-10-28 10:26:13.756] GPU_STORAGE_START | c3333ccc | raw
+[2025-10-28 10:26:13.770] GPU_STORAGE_START | da416cb6 | raw
+[2025-10-28 10:26:13.786] GPU_STORAGE_START | 9b582758 | raw
+[2025-10-28 10:26:13.821] GPU_STORAGE_END | e3cdc0ce | raw | 683ms
+[2025-10-28 10:26:13.829] GPU_STORAGE_END | e230c76c | raw | 757ms
+[2025-10-28 10:26:13.849] GPU_STORAGE_END | 999e6661 | raw | 671ms
+[2025-10-28 10:26:13.866] GPU_STORAGE_END | cc3366cc | raw | 750ms
+[2025-10-28 10:26:13.881] GPU_STORAGE_END | b818b39b | raw | 784ms
+[2025-10-28 10:26:13.896] GPU_STORAGE_END | ce93614c | raw | 673ms
+[2025-10-28 10:26:13.910] GPU_STORAGE_END | cecd3132 | raw | 710ms
+[2025-10-28 10:26:13.923] GPU_STORAGE_END | cd2c32d3 | raw | 634ms
+[2025-10-28 10:26:13.935] GPU_STORAGE_END | ce4c33b3 | raw | 693ms
+[2025-10-28 10:26:13.947] GPU_STORAGE_END | cd3c33c3 | raw | 672ms
+[2025-10-28 10:26:13.959] GPU_STORAGE_END | 00000000 | raw | 637ms
+[2025-10-28 10:26:13.976] GPU_STORAGE_END | cf673098 | raw | 718ms
+[2025-10-28 10:26:13.988] GPU_STORAGE_END | cc6c6693 | raw | 633ms
+[2025-10-28 10:26:13.999] GPU_STORAGE_END | ea658162 | raw | 659ms
+[2025-10-28 10:26:14.011] GPU_STORAGE_END | cc9631cd | raw | 575ms
+[2025-10-28 10:26:14.026] GPU_STORAGE_END | ee3d1d75 | raw | 575ms
+[2025-10-28 10:26:14.040] GPU_STORAGE_END | a3837385 | raw | 647ms
+[2025-10-28 10:26:14.053] GPU_STORAGE_END | 997166ce | raw | 559ms
+[2025-10-28 10:26:14.069] GPU_STORAGE_END | ccce3231 | raw | 524ms
+[2025-10-28 10:26:14.083] GPU_STORAGE_END | d1d149ff | raw | 618ms
+[2025-10-28 10:26:14.100] GPU_STORAGE_END | d868b71b | raw | 795ms
+[2025-10-28 10:26:14.112] GPU_STORAGE_END | 993364cc | raw | 704ms
+[2025-10-28 10:26:14.123] GPU_STORAGE_END | cc3333cc | raw | 602ms
+[2025-10-28 10:26:14.136] GPU_STORAGE_END | c7105e3a | raw | 629ms
+[2025-10-28 10:26:14.149] GPU_STORAGE_END | cc993366 | raw | 728ms
+[2025-10-28 10:26:14.162] GPU_STORAGE_END | c3a43c1b | raw | 782ms
+[2025-10-28 10:26:14.174] GPU_STORAGE_END | 931ee46f | raw | 570ms
+[2025-10-28 10:26:14.187] GPU_STORAGE_END | cf643093 | raw | 602ms
+[2025-10-28 10:26:14.202] GPU_STORAGE_END | f2ca9736 | raw | 632ms
+[2025-10-28 10:26:14.219] GPU_STORAGE_END | fdcac14b | raw | 587ms
+[2025-10-28 10:26:14.229] GPU_STORAGE_END | 9e0b6569 | raw | 584ms
+[2025-10-28 10:26:14.240] GPU_STORAGE_END | cc993366 | raw | 621ms
+[2025-10-28 10:26:14.252] GPU_STORAGE_END | ebc0e1ea | raw | 553ms
+[2025-10-28 10:26:14.264] GPU_STORAGE_END | b4d907d8 | raw | 523ms
+[2025-10-28 10:26:14.277] GPU_STORAGE_END | c3333ccc | raw | 522ms
+[2025-10-28 10:26:14.290] GPU_STORAGE_END | cc3366cc | raw | 563ms
+[2025-10-28 10:26:14.309] GPU_STORAGE_END | eedecd40 | raw | 652ms
+[2025-10-28 10:26:14.322] GPU_STORAGE_END | 948d5353 | raw | 610ms
+[2025-10-28 10:26:14.334] GPU_STORAGE_END | e49ac963 | raw | 663ms
+[2025-10-28 10:26:14.346] GPU_STORAGE_END | d31f8271 | raw | 661ms
+[2025-10-28 10:26:14.359] GPU_STORAGE_END | 9b582758 | raw | 573ms
+[2025-10-28 10:26:14.416] GPU_STORAGE_END | e273fbdd | raw | 858ms
+[2025-10-28 10:26:14.420] GPU_STORAGE_END | e20f3d30 | raw | 1261ms
+[2025-10-28 10:26:14.430] GPU_STORAGE_END | e9da1065 | raw | 1063ms
+[2025-10-28 10:26:14.443] GPU_STORAGE_END | 8ffa94c9 | raw | 909ms
+[2025-10-28 10:26:14.456] GPU_STORAGE_END | f0524be5 | raw | 975ms
+[2025-10-28 10:26:14.467] GPU_STORAGE_END | da416cb6 | raw | 697ms
+[2025-10-28 10:26:14.480] GPU_BATCH_END | batch_1761672371693 | 2786ms | 47 images
+[2025-10-28 10:26:14.506] GPU_BATCH_START | batch_1761672374505 | 51 images
+[2025-10-28 10:26:14.515] GPU_RECOGNITION_START | batch_1761672374505
+[2025-10-28 10:26:14.572] PAGE_START | site_0003 | https://motherless.com/videos
+[2025-10-28 10:26:14.574] PAGE_END | site_0003 | https://motherless.com/videos | 1ms | 71 candidates
+[2025-10-28 10:26:15.632] PAGE_START | site_0003 | https://motherless.com/galleries/favorited
+[2025-10-28 10:26:15.634] PAGE_END | site_0003 | https://motherless.com/galleries/favorited | 2ms | 365 candidates
+[2025-10-28 10:26:15.665] GPU_RECOGNITION_END | batch_1761672374505 | 1151ms | 1 faces
+[2025-10-28 10:26:15.668] GPU_STORAGE_START | ccec6693 | raw
+[2025-10-28 10:26:15.685] GPU_STORAGE_START | ff2ac836 | raw
+[2025-10-28 10:26:15.704] GPU_STORAGE_START | e992569b | raw
+[2025-10-28 10:26:15.726] GPU_STORAGE_START | d6d38421 | raw
+[2025-10-28 10:26:15.749] GPU_STORAGE_START | aa9d3461 | raw
+[2025-10-28 10:26:15.766] GPU_STORAGE_START | cb28e0ff | raw
+[2025-10-28 10:26:15.781] GPU_STORAGE_START | ccb69e10 | raw
+[2025-10-28 10:26:15.801] GPU_STORAGE_START | bc24fcf0 | raw
+[2025-10-28 10:26:15.819] GPU_STORAGE_START | cb96738c | raw
+[2025-10-28 10:26:15.834] GPU_STORAGE_START | af8ed777 | raw
+[2025-10-28 10:26:15.854] GPU_STORAGE_START | abe0f1e5 | raw
+[2025-10-28 10:26:15.870] GPU_STORAGE_START | cea2fa26 | raw
+[2025-10-28 10:26:15.883] GPU_STORAGE_START | cf63349c | raw
+[2025-10-28 10:26:15.896] GPU_STORAGE_START | ced93126 | raw
+[2025-10-28 10:26:15.913] GPU_STORAGE_START | a5b55a83 | raw
+[2025-10-28 10:26:15.928] GPU_STORAGE_START | ccec6693 | raw
+[2025-10-28 10:26:15.943] GPU_STORAGE_START | cdcf3230 | raw
+[2025-10-28 10:26:15.956] GPU_STORAGE_START | ae3a6861 | raw
+[2025-10-28 10:26:15.973] GPU_STORAGE_START | f394238e | raw
+[2025-10-28 10:26:15.990] GPU_STORAGE_START | ce2d31d2 | raw
+[2025-10-28 10:26:16.006] GPU_STORAGE_START | d98646d9 | raw
+[2025-10-28 10:26:16.020] GPU_STORAGE_START | d5a5efc2 | raw
+[2025-10-28 10:26:16.033] GPU_STORAGE_START | cdce3230 | raw
+[2025-10-28 10:26:16.047] GPU_STORAGE_START | 806a3f7a | raw
+[2025-10-28 10:26:16.062] GPU_STORAGE_START | e9c6c32d | raw
+[2025-10-28 10:26:16.077] GPU_STORAGE_START | db5e2c33 | raw
+[2025-10-28 10:26:16.090] GPU_STORAGE_START | ce993166 | raw
+[2025-10-28 10:26:16.104] GPU_STORAGE_START | 93dc8ce6 | raw
+[2025-10-28 10:26:16.117] GPU_STORAGE_START | d78a68d7 | raw
+[2025-10-28 10:26:16.129] GPU_STORAGE_START | cc3333cc | raw
+[2025-10-28 10:26:16.142] GPU_STORAGE_START | d2898b86 | raw
+[2025-10-28 10:26:16.156] GPU_STORAGE_START | cc663199 | raw
+[2025-10-28 10:26:16.170] GPU_STORAGE_START | ce9361cc | raw
+[2025-10-28 10:26:16.186] GPU_STORAGE_START | 9b7621a7 | raw
+[2025-10-28 10:26:16.200] GPU_STORAGE_START | ce3131cf | raw
+[2025-10-28 10:26:16.212] GPU_STORAGE_START | cc993366 | raw
+[2025-10-28 10:26:16.226] GPU_STORAGE_START | cf883033 | raw
+[2025-10-28 10:26:16.240] GPU_STORAGE_START | cccc6693 | raw
+[2025-10-28 10:26:16.253] GPU_STORAGE_START | ffc7ad36 | raw
+[2025-10-28 10:26:16.264] GPU_STORAGE_START | bd7a6165 | raw
+[2025-10-28 10:26:16.278] GPU_STORAGE_START | e9668692 | raw
+[2025-10-28 10:26:16.291] GPU_STORAGE_START | ce993136 | raw
+[2025-10-28 10:26:16.302] GPU_STORAGE_START | cccc3333 | raw
+[2025-10-28 10:26:16.314] GPU_STORAGE_START | c23dd825 | raw
+[2025-10-28 10:26:16.325] GPU_STORAGE_START | cc9a316d | raw
+[2025-10-28 10:26:16.359] GPU_STORAGE_END | ccec6693 | raw | 691ms
+[2025-10-28 10:26:16.362] GPU_STORAGE_END | e992569b | raw | 658ms
+[2025-10-28 10:26:16.379] GPU_STORAGE_END | ff2ac836 | raw | 694ms
+[2025-10-28 10:26:16.404] GPU_STORAGE_END | ccb69e10 | raw | 623ms
+[2025-10-28 10:26:16.419] GPU_STORAGE_END | aa9d3461 | raw | 670ms
+[2025-10-28 10:26:16.434] GPU_STORAGE_END | d6d38421 | raw | 708ms
+[2025-10-28 10:26:16.447] GPU_STORAGE_END | cb28e0ff | raw | 681ms
+[2025-10-28 10:26:16.459] GPU_STORAGE_END | cea2fa26 | raw | 588ms
+[2025-10-28 10:26:16.471] GPU_STORAGE_END | cb96738c | raw | 652ms
+[2025-10-28 10:26:16.486] GPU_STORAGE_END | bc24fcf0 | raw | 685ms
+[2025-10-28 10:26:16.501] GPU_STORAGE_END | ced93126 | raw | 605ms
+[2025-10-28 10:26:16.518] GPU_STORAGE_END | cf63349c | raw | 636ms
+[2025-10-28 10:26:16.532] GPU_STORAGE_END | cdcf3230 | raw | 589ms
+[2025-10-28 10:26:16.546] GPU_STORAGE_END | abe0f1e5 | raw | 693ms
+[2025-10-28 10:26:16.565] GPU_STORAGE_END | ae3a6861 | raw | 609ms
+[2025-10-28 10:26:16.578] GPU_STORAGE_END | d98646d9 | raw | 572ms
+[2025-10-28 10:26:16.591] GPU_STORAGE_END | ccec6693 | raw | 663ms
+[2025-10-28 10:26:16.609] GPU_STORAGE_END | ce2d31d2 | raw | 618ms
+[2025-10-28 10:26:16.621] GPU_STORAGE_END | a5b55a83 | raw | 708ms
+[2025-10-28 10:26:16.633] GPU_STORAGE_END | f394238e | raw | 660ms
+[2025-10-28 10:26:16.645] GPU_STORAGE_END | cdce3230 | raw | 612ms
+[2025-10-28 10:26:16.658] GPU_STORAGE_END | 806a3f7a | raw | 611ms
+[2025-10-28 10:26:16.670] GPU_STORAGE_END | e9c6c32d | raw | 607ms
+[2025-10-28 10:26:16.681] GPU_STORAGE_END | ce993166 | raw | 591ms
+[2025-10-28 10:26:16.692] GPU_STORAGE_END | db5e2c33 | raw | 615ms
+[2025-10-28 10:26:16.704] GPU_STORAGE_END | d5a5efc2 | raw | 684ms
+[2025-10-28 10:26:16.717] GPU_STORAGE_END | cc3333cc | raw | 587ms
+[2025-10-28 10:26:16.728] GPU_STORAGE_END | d78a68d7 | raw | 611ms
+[2025-10-28 10:26:16.739] GPU_STORAGE_END | 93dc8ce6 | raw | 635ms
+[2025-10-28 10:26:16.754] GPU_STORAGE_END | ce9361cc | raw | 584ms
+[2025-10-28 10:26:16.766] GPU_STORAGE_END | d2898b86 | raw | 624ms
+[2025-10-28 10:26:16.778] GPU_STORAGE_END | cc663199 | raw | 622ms
+[2025-10-28 10:26:16.791] GPU_STORAGE_END | 9b7621a7 | raw | 605ms
+[2025-10-28 10:26:16.807] GPU_STORAGE_END | c23dd825 | raw | 492ms
+[2025-10-28 10:26:16.822] GPU_STORAGE_END | ce993136 | raw | 531ms
+[2025-10-28 10:26:16.835] GPU_STORAGE_END | cf883033 | raw | 609ms
+[2025-10-28 10:26:16.850] GPU_STORAGE_END | ce3131cf | raw | 650ms
+[2025-10-28 10:26:16.864] GPU_STORAGE_END | cccc6693 | raw | 623ms
+[2025-10-28 10:26:16.880] GPU_STORAGE_END | bd7a6165 | raw | 615ms
+[2025-10-28 10:26:16.895] GPU_STORAGE_END | e9668692 | raw | 617ms
+[2025-10-28 10:26:16.909] GPU_STORAGE_END | ffc7ad36 | raw | 657ms
+[2025-10-28 10:26:16.926] GPU_STORAGE_END | cc993366 | raw | 713ms
+[2025-10-28 10:26:16.945] GPU_STORAGE_END | cccc3333 | raw | 643ms
+[2025-10-28 10:26:16.960] GPU_STORAGE_END | cc9a316d | raw | 634ms
+[2025-10-28 10:26:16.995] GPU_STORAGE_END | af8ed777 | raw | 1161ms
+[2025-10-28 10:26:16.999] GPU_BATCH_END | batch_1761672374505 | 2493ms | 45 images
+[2025-10-28 10:26:20.682] PAGE_START | site_0002 | https://forum.candidgirls.io/latest
+[2025-10-28 10:26:20.684] PAGE_END | site_0002 | https://forum.candidgirls.io/latest | 1ms | 103 candidates
+[2025-10-28 10:26:20.750] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/22d042/24.png
+[2025-10-28 10:26:20.764] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/22d042/24.png | 14ms
+[2025-10-28 10:26:21.618] PAGE_START | site_0002 | https://forum.candidgirls.io/top
+[2025-10-28 10:26:21.620] PAGE_END | site_0002 | https://forum.candidgirls.io/top | 2ms | 204 candidates
+[2025-10-28 10:26:21.677] SITE_END | site_0002 | 21272ms | 3 pages | 179 candidates
+[2025-10-28 10:26:21.680] SITE_START | site_0001 | https://candidteens.net
+[2025-10-28 10:26:24.207] PAGE_START | site_0003 | https://motherless.com/porn/amateur/videos
+[2025-10-28 10:26:24.209] PAGE_END | site_0003 | https://motherless.com/porn/amateur/videos | 2ms | 61 candidates
+[2025-10-28 10:26:25.528] PAGE_START | site_0003 | https://motherless.com/porn/anal/videos
+[2025-10-28 10:26:25.529] PAGE_END | site_0003 | https://motherless.com/porn/anal/videos | 2ms | 61 candidates
+[2025-10-28 10:26:26.271] PAGE_START | site_0003 | https://motherless.com/porn/asian/videos
+[2025-10-28 10:26:26.272] PAGE_END | site_0003 | https://motherless.com/porn/asian/videos | 2ms | 61 candidates
+[2025-10-28 10:26:26.303] SITE_END | site_0003 | 36747ms | 7 pages | 161 candidates
+[2025-10-28 10:26:26.305] SITE_START | site_0000 | https://wikifeet.com
+[2025-10-28 10:26:29.823] PAGE_START | site_0001 | https://candidteens.net
+[2025-10-28 10:26:29.825] PAGE_END | site_0001 | https://candidteens.net | 2ms | 16 candidates
+[2025-10-28 10:26:30.143] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761593810103.jpg
+[2025-10-28 10:26:30.212] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761593810103.jpg | 69ms
+[2025-10-28 10:26:30.233] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761574513376-1013x1024.jpg
+[2025-10-28 10:26:30.298] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761574513376-1013x1024.jpg | 64ms
+[2025-10-28 10:26:30.408] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_170552-1024x572.jpg
+[2025-10-28 10:26:30.466] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_170552-1024x572.jpg | 58ms
+[2025-10-28 10:26:30.645] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg
+[2025-10-28 10:26:30.649] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_135205-925x1024.jpg
+[2025-10-28 10:26:30.647] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_004248-1024x571.jpg
+[2025-10-28 10:26:30.650] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_002356-1024x757.jpg
+[2025-10-28 10:26:30.687] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_004248-1024x571.jpg | 40ms
+[2025-10-28 10:26:30.699] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg | 54ms
+[2025-10-28 10:26:30.693] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_135205-925x1024.jpg | 45ms
+[2025-10-28 10:26:30.690] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png
+[2025-10-28 10:26:30.692] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_002356-1024x757.jpg | 42ms
+[2025-10-28 10:26:30.705] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg
+[2025-10-28 10:26:30.705] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251023_184703-583x1024.jpg
+[2025-10-28 10:26:30.705] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251021_223855.jpg
+[2025-10-28 10:26:30.720] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png | 30ms
+[2025-10-28 10:26:30.738] GPU_BATCH_START | batch_1761672390737 | 8 images
+[2025-10-28 10:26:30.742] GPU_RECOGNITION_START | batch_1761672390737
+[2025-10-28 10:26:30.740] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761230545850-576x1024.jpg
+[2025-10-28 10:26:30.751] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251021_223855.jpg | 46ms
+[2025-10-28 10:26:30.744] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg | 39ms
+[2025-10-28 10:26:30.745] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251023_184703-583x1024.jpg | 40ms
+[2025-10-28 10:26:30.773] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761241681876-768x1024.jpg
+[2025-10-28 10:26:30.772] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761239737805-576x1024.jpg
+[2025-10-28 10:26:30.773] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761234630597-576x1024.jpg
+[2025-10-28 10:26:30.792] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761230545850-576x1024.jpg | 52ms
+[2025-10-28 10:26:30.813] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761241681876-768x1024.jpg | 41ms
+[2025-10-28 10:26:30.813] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg
+[2025-10-28 10:26:30.812] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761234630597-576x1024.jpg | 39ms
+[2025-10-28 10:26:30.812] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761239737805-576x1024.jpg | 39ms
+[2025-10-28 10:26:30.844] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg | 31ms
+[2025-10-28 10:26:31.124] GPU_RECOGNITION_END | batch_1761672390737 | 382ms | 1 faces
+[2025-10-28 10:26:31.130] GPU_STORAGE_START | f6dc9b12 | raw
+[2025-10-28 10:26:31.162] GPU_STORAGE_START | ad872a4a | raw
+[2025-10-28 10:26:31.186] GPU_STORAGE_START | ff582984 | raw
+[2025-10-28 10:26:31.214] GPU_STORAGE_START | 99c0771f | raw
+[2025-10-28 10:26:31.238] GPU_STORAGE_START | dae427b4 | raw
+[2025-10-28 10:26:31.261] GPU_STORAGE_START | e0dcef01 | raw
+[2025-10-28 10:26:31.282] GPU_STORAGE_START | b1c2d947 | raw
+[2025-10-28 10:26:31.304] GPU_STORAGE_START | cd6e7691 | raw
+[2025-10-28 10:26:31.354] GPU_STORAGE_END | f6dc9b12 | raw | 223ms
+[2025-10-28 10:26:31.357] GPU_STORAGE_END | e0dcef01 | raw | 96ms
+[2025-10-28 10:26:31.384] GPU_STORAGE_END | ad872a4a | raw | 223ms
+[2025-10-28 10:26:31.413] GPU_STORAGE_END | 99c0771f | raw | 199ms
+[2025-10-28 10:26:31.436] GPU_STORAGE_END | dae427b4 | raw | 198ms
+[2025-10-28 10:26:31.454] GPU_STORAGE_END | b1c2d947 | raw | 172ms
+[2025-10-28 10:26:31.475] GPU_STORAGE_END | cd6e7691 | raw | 171ms
+[2025-10-28 10:26:31.505] GPU_STORAGE_END | ff582984 | raw | 318ms
+[2025-10-28 10:26:31.514] GPU_BATCH_END | batch_1761672390737 | 776ms | 8 images
+[2025-10-28 10:26:31.543] GPU_BATCH_START | batch_1761672391542 | 8 images
+[2025-10-28 10:26:31.549] GPU_RECOGNITION_START | batch_1761672391542
+[2025-10-28 10:26:31.841] GPU_RECOGNITION_END | batch_1761672391542 | 292ms | 1 faces
+[2025-10-28 10:26:31.847] GPU_STORAGE_START | 87a9da93 | raw
+[2025-10-28 10:26:31.873] GPU_STORAGE_START | a49abefe | raw
+[2025-10-28 10:26:31.903] GPU_STORAGE_START | 8697ae5a | raw
+[2025-10-28 10:26:31.929] GPU_STORAGE_START | e6d3453f | raw
+[2025-10-28 10:26:31.954] GPU_STORAGE_START | a3bc3936 | raw
+[2025-10-28 10:26:31.982] GPU_STORAGE_START | e4dc5087 | raw
+[2025-10-28 10:26:32.010] GPU_STORAGE_START | 863241d7 | raw
+[2025-10-28 10:26:32.038] GPU_STORAGE_START | ae69793c | raw
+[2025-10-28 10:26:32.090] GPU_STORAGE_END | 8697ae5a | raw | 187ms
+[2025-10-28 10:26:32.108] GPU_STORAGE_END | a49abefe | raw | 236ms
+[2025-10-28 10:26:32.136] GPU_STORAGE_END | e4dc5087 | raw | 154ms
+[2025-10-28 10:26:32.160] GPU_STORAGE_END | a3bc3936 | raw | 206ms
+[2025-10-28 10:26:32.185] GPU_STORAGE_END | e6d3453f | raw | 255ms
+[2025-10-28 10:26:32.222] GPU_STORAGE_END | 863241d7 | raw | 212ms
+[2025-10-28 10:26:32.251] GPU_STORAGE_END | ae69793c | raw | 213ms
+[2025-10-28 10:26:32.295] GPU_STORAGE_END | 87a9da93 | raw | 449ms
+[2025-10-28 10:26:32.309] GPU_BATCH_END | batch_1761672391542 | 767ms | 8 images
+[2025-10-28 10:26:35.831] PAGE_START | site_0000 | https://wikifeet.com
+[2025-10-28 10:26:35.833] PAGE_END | site_0000 | https://wikifeet.com | 1ms | 99 candidates
+[2025-10-28 10:26:35.920] EXTRACT_START | site_0000 | https://wikifeet.com/wf2023.svg
+[2025-10-28 10:26:35.921] EXTRACT_START | site_0000 | https://imagedelivery.net/_qzvO6832ezfhQ-bZnlb0A/d826bad9-b9fd-4012-745e-01bac3497e00/public
+[2025-10-28 10:26:35.922] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030974.jpg
+[2025-10-28 10:26:35.921] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030975.jpg
+[2025-10-28 10:26:35.982] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030974.jpg | 60ms
+[2025-10-28 10:26:35.988] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032865.jpg
+[2025-10-28 10:26:35.998] EXTRACT_END | site_0000 | https://wikifeet.com/wf2023.svg | 78ms
+[2025-10-28 10:26:35.986] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030975.jpg | 65ms
+[2025-10-28 10:26:36.004] EXTRACT_END | site_0000 | https://imagedelivery.net/_qzvO6832ezfhQ-bZnlb0A/d826bad9-b9fd-4012-745e-01bac3497e00/public | 83ms
+[2025-10-28 10:26:36.003] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031950.jpg
+[2025-10-28 10:26:36.003] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032835.jpg
+[2025-10-28 10:26:36.018] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031951.jpg
+[2025-10-28 10:26:36.017] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032865.jpg | 28ms
+[2025-10-28 10:26:36.033] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031952.jpg
+[2025-10-28 10:26:36.031] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031950.jpg | 28ms
+[2025-10-28 10:26:36.046] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031953.jpg
+[2025-10-28 10:26:36.065] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032835.jpg | 62ms
+[2025-10-28 10:26:36.065] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031952.jpg | 32ms
+[2025-10-28 10:26:36.078] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031953.jpg | 32ms
+[2025-10-28 10:26:36.075] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032798.jpg
+[2025-10-28 10:26:36.075] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032797.jpg
+[2025-10-28 10:26:36.099] GPU_BATCH_START | batch_1761672396099 | 8 images
+[2025-10-28 10:26:36.088] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031951.jpg | 70ms
+[2025-10-28 10:26:36.088] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032852.jpg
+[2025-10-28 10:26:36.104] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032797.jpg | 29ms
+[2025-10-28 10:26:36.104] GPU_RECOGNITION_START | batch_1761672396099
+[2025-10-28 10:26:36.102] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032798.jpg | 27ms
+[2025-10-28 10:26:36.103] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032853.jpg
+[2025-10-28 10:26:36.117] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032855.jpg
+[2025-10-28 10:26:36.117] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032854.jpg
+[2025-10-28 10:26:36.116] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032852.jpg | 28ms
+[2025-10-28 10:26:36.131] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032853.jpg | 28ms
+[2025-10-28 10:26:36.133] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032823.jpg
+[2025-10-28 10:26:36.144] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032854.jpg | 27ms
+[2025-10-28 10:26:36.133] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8607928.jpg
+[2025-10-28 10:26:36.143] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032855.jpg | 25ms
+[2025-10-28 10:26:36.168] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032024.jpg
+[2025-10-28 10:26:36.180] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032823.jpg | 47ms
+[2025-10-28 10:26:36.167] EXTRACT_START | site_0000 | https://sync.intentiq.com/profiles_engine/ProfilesEngineServlet?at=20&mi=10&secure=1&dpi=270675768&iiqidtype=2&iiqpcid=39da7772-142f-bcce-d6e1-5d64b574bc9b&iiqpciddate=1761672387882&tsrnd=739_1761672387970&fbp=1185555945&jsver=6.142&cz=0%3A720%2C1%3A1280%2C2%3A1%2C3%3A720%2C4%3A1280%2C5%3Aen-US&dw=1280&dh=720&dpr=1&lan=en-US&testPercentage=-1&testGroup=U&uh=%7B%220%22%3A%22%5C%22Chromium%5C%22%3Bv%3D%5C%22130%5C%22%2C%20%5C%22HeadlessChrome%5C%22%3Bv%3D%5C%22130%5C%22%2C%20%5C%22Not%3FA_Brand%5C%22%3Bv%3D%5C%2299%5C%22%22%2C%221%22%3A%22%3F0%22%2C%222%22%3A%22%5C%22Windows%5C%22%22%2C%223%22%3A%22%5C%22x64%5C%22%22%2C%224%22%3A%22%5C%2264%5C%22%22%2C%226%22%3A%22%5C%2210.0%5C%22%22%2C%227%22%3A%22%3F0%22%2C%228%22%3A%22%5C%22Chromium%5C%22%3Bv%3D%5C%22130.0.6723.31%5C%22%2C%20%5C%22HeadlessChrome%5C%22%3Bv%3D%5C%22130.0.6723.31%5C%22%2C%20%5C%22Not%3FA_Brand%5C%22%3Bv%3D%5C%2299.0.0.0%5C%22%22%7D&vrref=https%3A%2F%2Fwikifeet.com%2F&gdpr_consent=undefined&gpc=undefined&gdpr=0
+[2025-10-28 10:26:36.183] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8607928.jpg | 50ms
+[2025-10-28 10:26:36.190] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032025.jpg
+[2025-10-28 10:26:36.201] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032024.jpg | 34ms
+[2025-10-28 10:26:36.190] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032026.jpg
+[2025-10-28 10:26:36.210] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032027.jpg
+[2025-10-28 10:26:36.224] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032025.jpg | 34ms
+[2025-10-28 10:26:36.225] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032026.jpg | 34ms
+[2025-10-28 10:26:36.244] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032027.jpg | 34ms
+[2025-10-28 10:26:36.235] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8607927.jpg
+[2025-10-28 10:26:36.233] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8607926.jpg
+[2025-10-28 10:26:36.255] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032822.jpg
+[2025-10-28 10:26:36.287] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032822.jpg | 32ms
+[2025-10-28 10:26:36.277] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8607926.jpg | 44ms
+[2025-10-28 10:26:36.277] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8607927.jpg | 42ms
+[2025-10-28 10:26:36.291] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032825.jpg
+[2025-10-28 10:26:36.291] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032826.jpg
+[2025-10-28 10:26:36.290] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032824.jpg
+[2025-10-28 10:26:36.319] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032825.jpg | 28ms
+[2025-10-28 10:26:36.318] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032824.jpg | 27ms
+[2025-10-28 10:26:36.318] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032826.jpg | 27ms
+[2025-10-28 10:26:36.326] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032116.jpg
+[2025-10-28 10:26:36.325] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032115.jpg
+[2025-10-28 10:26:36.325] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030463.jpg
+[2025-10-28 10:26:36.357] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030463.jpg | 31ms
+[2025-10-28 10:26:36.352] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032115.jpg | 26ms
+[2025-10-28 10:26:36.369] EXTRACT_END | site_0000 | https://sync.intentiq.com/profiles_engine/ProfilesEngineServlet?at=20&mi=10&secure=1&dpi=270675768&iiqidtype=2&iiqpcid=39da7772-142f-bcce-d6e1-5d64b574bc9b&iiqpciddate=1761672387882&tsrnd=739_1761672387970&fbp=1185555945&jsver=6.142&cz=0%3A720%2C1%3A1280%2C2%3A1%2C3%3A720%2C4%3A1280%2C5%3Aen-US&dw=1280&dh=720&dpr=1&lan=en-US&testPercentage=-1&testGroup=U&uh=%7B%220%22%3A%22%5C%22Chromium%5C%22%3Bv%3D%5C%22130%5C%22%2C%20%5C%22HeadlessChrome%5C%22%3Bv%3D%5C%22130%5C%22%2C%20%5C%22Not%3FA_Brand%5C%22%3Bv%3D%5C%2299%5C%22%22%2C%221%22%3A%22%3F0%22%2C%222%22%3A%22%5C%22Windows%5C%22%22%2C%223%22%3A%22%5C%22x64%5C%22%22%2C%224%22%3A%22%5C%2264%5C%22%22%2C%226%22%3A%22%5C%2210.0%5C%22%22%2C%227%22%3A%22%3F0%22%2C%228%22%3A%22%5C%22Chromium%5C%22%3Bv%3D%5C%22130.0.6723.31%5C%22%2C%20%5C%22HeadlessChrome%5C%22%3Bv%3D%5C%22130.0.6723.31%5C%22%2C%20%5C%22Not%3FA_Brand%5C%22%3Bv%3D%5C%2299.0.0.0%5C%22%22%7D&vrref=https%3A%2F%2Fwikifeet.com%2F&gdpr_consent=undefined&gpc=undefined&gdpr=0 | 202ms
+[2025-10-28 10:26:36.362] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032673.jpg
+[2025-10-28 10:26:36.363] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032116.jpg | 37ms
+[2025-10-28 10:26:36.361] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032117.jpg
+[2025-10-28 10:26:36.377] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032674.jpg
+[2025-10-28 10:26:36.388] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032117.jpg | 26ms
+[2025-10-28 10:26:36.378] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032675.jpg
+[2025-10-28 10:26:36.387] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032673.jpg | 25ms
+[2025-10-28 10:26:36.409] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032674.jpg | 32ms
+[2025-10-28 10:26:36.408] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032675.jpg | 30ms
+[2025-10-28 10:26:36.396] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032737.jpg
+[2025-10-28 10:26:36.395] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032676.jpg
+[2025-10-28 10:26:36.428] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032676.jpg | 33ms
+[2025-10-28 10:26:36.429] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032737.jpg | 33ms
+[2025-10-28 10:26:36.414] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032738.jpg
+[2025-10-28 10:26:36.414] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032832.jpg
+[2025-10-28 10:26:36.447] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032832.jpg | 33ms
+[2025-10-28 10:26:36.434] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032833.jpg
+[2025-10-28 10:26:36.434] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032834.jpg
+[2025-10-28 10:26:36.447] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032738.jpg | 33ms
+[2025-10-28 10:26:36.466] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032834.jpg | 32ms
+[2025-10-28 10:26:36.453] GPU_RECOGNITION_END | batch_1761672396099 | 349ms | 8 faces
+[2025-10-28 10:26:36.465] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032833.jpg | 31ms
+[2025-10-28 10:26:36.452] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032862.jpg
+[2025-10-28 10:26:36.452] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032863.jpg
+[2025-10-28 10:26:36.470] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032236.jpg
+[2025-10-28 10:26:36.483] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032863.jpg | 31ms
+[2025-10-28 10:26:36.468] GPU_STORAGE_START | 9143f1d2 | raw
+[2025-10-28 10:26:36.482] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032862.jpg | 31ms
+[2025-10-28 10:26:36.469] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032864.jpg
+[2025-10-28 10:26:36.501] GPU_STORAGE_START | b838c5cc | raw
+[2025-10-28 10:26:36.502] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032237.jpg
+[2025-10-28 10:26:36.512] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032236.jpg | 42ms
+[2025-10-28 10:26:36.502] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032238.jpg
+[2025-10-28 10:26:36.515] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032864.jpg | 46ms
+[2025-10-28 10:26:36.519] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032239.jpg
+[2025-10-28 10:26:36.518] GPU_STORAGE_START | b21b4ab4 | raw
+[2025-10-28 10:26:36.519] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032746.jpg
+[2025-10-28 10:26:36.546] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032239.jpg | 28ms
+[2025-10-28 10:26:36.533] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032237.jpg | 31ms
+[2025-10-28 10:26:36.533] GPU_STORAGE_START | d1852649 | raw
+[2025-10-28 10:26:36.533] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032238.jpg | 31ms
+[2025-10-28 10:26:36.547] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032746.jpg | 28ms
+[2025-10-28 10:26:36.552] GPU_STORAGE_START | edaad358 | raw
+[2025-10-28 10:26:36.553] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030925.jpg
+[2025-10-28 10:26:36.553] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032747.jpg
+[2025-10-28 10:26:36.553] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032901.jpg
+[2025-10-28 10:26:36.553] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032902.jpg
+[2025-10-28 10:26:36.583] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032902.jpg | 30ms
+[2025-10-28 10:26:36.569] GPU_STORAGE_START | e3a304f9 | raw
+[2025-10-28 10:26:36.582] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032747.jpg | 29ms
+[2025-10-28 10:26:36.583] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032901.jpg | 30ms
+[2025-10-28 10:26:36.582] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030925.jpg | 30ms
+[2025-10-28 10:26:36.589] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858354.jpg
+[2025-10-28 10:26:36.589] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858353.jpg
+[2025-10-28 10:26:36.589] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9032903.jpg
+[2025-10-28 10:26:36.588] GPU_STORAGE_START | e6b79949 | raw
+[2025-10-28 10:26:36.590] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858355.jpg
+[2025-10-28 10:26:36.621] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858353.jpg | 31ms
+[2025-10-28 10:26:36.619] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858354.jpg | 30ms
+[2025-10-28 10:26:36.618] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9032903.jpg | 29ms
+[2025-10-28 10:26:36.621] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858355.jpg | 31ms
+[2025-10-28 10:26:36.605] GPU_STORAGE_START | e8abdb5a | raw
+[2025-10-28 10:26:36.624] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858358.jpg
+[2025-10-28 10:26:36.624] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858357.jpg
+[2025-10-28 10:26:36.624] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858359.jpg
+[2025-10-28 10:26:36.624] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858356.jpg
+[2025-10-28 10:26:36.680] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858356.jpg | 56ms
+[2025-10-28 10:26:36.683] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858359.jpg | 59ms
+[2025-10-28 10:26:36.688] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858357.jpg | 64ms
+[2025-10-28 10:26:36.688] GPU_STORAGE_END | d1852649 | raw | 155ms
+[2025-10-28 10:26:36.688] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858358.jpg | 64ms
+[2025-10-28 10:26:36.693] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/5497518.jpg
+[2025-10-28 10:26:36.690] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8377535.jpg
+[2025-10-28 10:26:36.754] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8377535.jpg | 65ms
+[2025-10-28 10:26:36.736] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/5497520.jpg
+[2025-10-28 10:26:36.734] GPU_STORAGE_END | 9143f1d2 | raw | 266ms
+[2025-10-28 10:26:36.752] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/5497518.jpg | 60ms
+[2025-10-28 10:26:36.737] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/7656331.jpg
+[2025-10-28 10:26:36.763] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/7656332.jpg
+[2025-10-28 10:26:36.763] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/7973446.jpg
+[2025-10-28 10:26:36.778] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/5497520.jpg | 42ms
+[2025-10-28 10:26:36.761] GPU_STORAGE_END | e6b79949 | raw | 173ms
+[2025-10-28 10:26:36.778] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/7656331.jpg | 41ms
+[2025-10-28 10:26:36.800] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/7656332.jpg | 37ms
+[2025-10-28 10:26:36.785] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8132937.jpg
+[2025-10-28 10:26:36.801] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/7973446.jpg | 38ms
+[2025-10-28 10:26:36.785] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8132938.jpg
+[2025-10-28 10:26:36.784] GPU_STORAGE_END | e3a304f9 | raw | 215ms
+[2025-10-28 10:26:36.820] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8132937.jpg | 35ms
+[2025-10-28 10:26:36.818] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8132938.jpg | 33ms
+[2025-10-28 10:26:36.806] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9009871.jpg
+[2025-10-28 10:26:36.805] GPU_STORAGE_END | b838c5cc | raw | 304ms
+[2025-10-28 10:26:36.806] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8535497.jpg
+[2025-10-28 10:26:36.832] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9009871.jpg | 26ms
+[2025-10-28 10:26:36.823] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013488.jpg
+[2025-10-28 10:26:36.824] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013526.jpg
+[2025-10-28 10:26:36.822] GPU_STORAGE_END | e8abdb5a | raw | 218ms
+[2025-10-28 10:26:36.840] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013527.jpg
+[2025-10-28 10:26:36.840] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8535497.jpg | 34ms
+[2025-10-28 10:26:36.854] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013488.jpg | 30ms
+[2025-10-28 10:26:36.852] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013526.jpg | 28ms
+[2025-10-28 10:26:36.839] GPU_STORAGE_END | b21b4ab4 | raw | 321ms
+[2025-10-28 10:26:36.858] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013530.jpg
+[2025-10-28 10:26:36.870] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013527.jpg | 30ms
+[2025-10-28 10:26:36.858] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013529.jpg
+[2025-10-28 10:26:36.858] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013528.jpg
+[2025-10-28 10:26:36.857] GPU_STORAGE_END | edaad358 | raw | 305ms
+[2025-10-28 10:26:36.886] GPU_BATCH_END | batch_1761672396099 | 787ms | 8 images
+[2025-10-28 10:26:36.895] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013529.jpg | 37ms
+[2025-10-28 10:26:36.895] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013528.jpg | 36ms
+[2025-10-28 10:26:36.882] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030257.jpg
+[2025-10-28 10:26:36.893] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013530.jpg | 35ms
+[2025-10-28 10:26:36.943] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030257.jpg | 61ms
+[2025-10-28 10:26:36.932] GPU_BATCH_START | batch_1761672396869 | 64 images
+[2025-10-28 10:26:36.964] GPU_RECOGNITION_START | batch_1761672396869
+[2025-10-28 10:26:38.891] PAGE_START | site_0001 | https://candidteens.net/category/candid-teen-ass/
+[2025-10-28 10:26:38.892] PAGE_END | site_0001 | https://candidteens.net/category/candid-teen-ass/ | 2ms | 16 candidates
+[2025-10-28 10:26:39.053] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761593810103.jpg
+[2025-10-28 10:26:39.076] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761593810103.jpg | 23ms
+[2025-10-28 10:26:39.081] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251023_184703-583x1024.jpg
+[2025-10-28 10:26:39.118] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251023_184703-583x1024.jpg | 37ms
+[2025-10-28 10:26:39.338] PAGE_START | site_0001 | https://candidteens.net/category/hidden-cam/
+[2025-10-28 10:26:39.342] PAGE_END | site_0001 | https://candidteens.net/category/hidden-cam/ | 4ms | 16 candidates
+[2025-10-28 10:26:39.363] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251018_031234-1024x842.jpg
+[2025-10-28 10:26:39.401] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251018_031234-1024x842.jpg | 38ms
+[2025-10-28 10:26:39.497] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg
+[2025-10-28 10:26:39.516] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg | 19ms
+[2025-10-28 10:26:39.676] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760440759225.jpg
+[2025-10-28 10:26:39.699] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760440759225.jpg | 23ms
+[2025-10-28 10:26:39.722] PAGE_START | site_0001 | https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+[2025-10-28 10:26:39.723] PAGE_END | site_0001 | https://candidteens.net/category/premium-content-%f0%9f%a4%a4/ | 1ms | 16 candidates
+[2025-10-28 10:26:39.740] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg
+[2025-10-28 10:26:39.773] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg | 33ms
+[2025-10-28 10:26:39.788] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251021_223855.jpg
+[2025-10-28 10:26:39.788] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760179019695-576x1024.jpg
+[2025-10-28 10:26:39.822] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760179019695-576x1024.jpg | 34ms
+[2025-10-28 10:26:39.826] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251021_223855.jpg | 38ms
+[2025-10-28 10:26:39.843] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759604604743-640x1024.png
+[2025-10-28 10:26:39.843] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759574758154-573x1024.jpg
+[2025-10-28 10:26:39.844] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761593810103.jpg
+[2025-10-28 10:26:39.870] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759574758154-573x1024.jpg | 27ms
+[2025-10-28 10:26:39.927] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761593810103.jpg | 84ms
+[2025-10-28 10:26:39.932] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759604604743-640x1024.png | 89ms
+[2025-10-28 10:26:39.957] GPU_RECOGNITION_END | batch_1761672396869 | 2992ms | 72 faces
+[2025-10-28 10:26:39.964] GPU_STORAGE_START | ba0a7aa0 | raw
+[2025-10-28 10:26:39.979] GPU_STORAGE_START | c7788bf4 | raw
+[2025-10-28 10:26:39.982] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg
+[2025-10-28 10:26:39.981] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1757520211307-847x1024.jpg
+[2025-10-28 10:26:39.984] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1758986095903-588x1024.jpg
+[2025-10-28 10:26:39.981] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759602416459-576x1024.png
+[2025-10-28 10:26:39.999] GPU_STORAGE_START | c93f7dc8 | raw
+[2025-10-28 10:26:40.032] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1758986095903-588x1024.jpg | 49ms
+[2025-10-28 10:26:40.035] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg | 53ms
+[2025-10-28 10:26:40.026] GPU_STORAGE_START | 80b6e7c3 | raw
+[2025-10-28 10:26:40.029] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1757520211307-847x1024.jpg | 48ms
+[2025-10-28 10:26:40.053] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/IMG_20250824_180002-1000x1024.jpg
+[2025-10-28 10:26:40.067] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759602416459-576x1024.png | 86ms
+[2025-10-28 10:26:40.053] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761234630597-576x1024.jpg
+[2025-10-28 10:26:40.052] GPU_STORAGE_START | 9a4cf7a1 | raw
+[2025-10-28 10:26:40.054] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1758656069653.jpg
+[2025-10-28 10:26:40.070] GPU_STORAGE_START | 8d79f0e7 | raw
+[2025-10-28 10:26:40.072] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg
+[2025-10-28 10:26:40.119] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg | 48ms
+[2025-10-28 10:26:40.096] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761234630597-576x1024.jpg | 43ms
+[2025-10-28 10:26:40.114] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/IMG_20250824_180002-1000x1024.jpg | 61ms
+[2025-10-28 10:26:40.114] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1758656069653.jpg | 59ms
+[2025-10-28 10:26:40.097] GPU_STORAGE_START | e885c63a | raw
+[2025-10-28 10:26:40.124] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/IMG_20250903_193826-1024x555.jpg
+[2025-10-28 10:26:40.123] GPU_STORAGE_START | c53eb05a | raw
+[2025-10-28 10:26:40.142] GPU_STORAGE_START | fcccc32c | raw
+[2025-10-28 10:26:40.159] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/IMG_20250903_193826-1024x555.jpg | 36ms
+[2025-10-28 10:26:40.160] GPU_STORAGE_START | a880833f | raw
+[2025-10-28 10:26:40.180] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/IMG_20250921_153051-584x1024.jpg
+[2025-10-28 10:26:40.177] GPU_STORAGE_START | 9ae178a6 | raw
+[2025-10-28 10:26:40.178] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg
+[2025-10-28 10:26:40.179] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/Photo_1755516773532-1024x1021.jpg
+[2025-10-28 10:26:40.177] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/IMG_20250922_035844-587x1024.jpg
+[2025-10-28 10:26:40.215] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/IMG_20250922_035844-587x1024.jpg | 38ms
+[2025-10-28 10:26:40.195] GPU_STORAGE_START | dd863dc9 | raw
+[2025-10-28 10:26:40.215] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg | 37ms
+[2025-10-28 10:26:40.220] GPU_STORAGE_START | cd8193cd | raw
+[2025-10-28 10:26:40.221] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png
+[2025-10-28 10:26:40.221] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759765245056-900x1024.jpg
+[2025-10-28 10:26:40.228] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/Photo_1755516773532-1024x1021.jpg | 49ms
+[2025-10-28 10:26:40.222] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/IMG_20250921_153051-584x1024.jpg | 42ms
+[2025-10-28 10:26:40.246] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png
+[2025-10-28 10:26:40.246] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251007_000244-578x1024.png
+[2025-10-28 10:26:40.244] GPU_STORAGE_START | c3e6e6e6 | raw
+[2025-10-28 10:26:40.274] GPU_STORAGE_START | f0430f5a | raw
+[2025-10-28 10:26:40.274] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png | 54ms
+[2025-10-28 10:26:40.300] GPU_STORAGE_START | 8076a35a | raw
+[2025-10-28 10:26:40.301] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759949833788-576x1024.jpg
+[2025-10-28 10:26:40.307] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png | 62ms
+[2025-10-28 10:26:40.297] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759765245056-900x1024.jpg | 77ms
+[2025-10-28 10:26:40.331] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760036121404-576x1024.jpg
+[2025-10-28 10:26:40.329] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/07/IMG_20250702_233230-586x1024.jpg
+[2025-10-28 10:26:40.328] GPU_STORAGE_START | abca9495 | raw
+[2025-10-28 10:26:40.370] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251007_000244-578x1024.png | 124ms
+[2025-10-28 10:26:40.354] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1759949833788-576x1024.jpg | 53ms
+[2025-10-28 10:26:40.352] GPU_STORAGE_START | 8b5b392b | raw
+[2025-10-28 10:26:40.373] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760036121404-576x1024.jpg | 42ms
+[2025-10-28 10:26:40.376] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png
+[2025-10-28 10:26:40.376] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/07/IMG_20250724_012812-611x1024.jpg
+[2025-10-28 10:26:40.373] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/07/IMG_20250702_233230-586x1024.jpg | 45ms
+[2025-10-28 10:26:40.376] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760124738518-698x1024.jpg
+[2025-10-28 10:26:40.375] GPU_STORAGE_START | d942f664 | raw
+[2025-10-28 10:26:40.401] GPU_STORAGE_START | bcc3e1b1 | raw
+[2025-10-28 10:26:40.402] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/07/IMG_20250728_025952-1024x974.jpg
+[2025-10-28 10:26:40.420] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png | 44ms
+[2025-10-28 10:26:40.423] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/07/IMG_20250724_012812-611x1024.jpg | 46ms
+[2025-10-28 10:26:40.427] GPU_STORAGE_START | 99536465 | raw
+[2025-10-28 10:26:40.429] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/IMG_20250906_023906-587x1024.jpg
+[2025-10-28 10:26:40.439] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760124738518-698x1024.jpg | 63ms
+[2025-10-28 10:26:40.428] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760638988298.png
+[2025-10-28 10:26:40.457] GPU_STORAGE_START | ebc91134 | raw
+[2025-10-28 10:26:40.470] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/07/IMG_20250728_025952-1024x974.jpg | 68ms
+[2025-10-28 10:26:40.458] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/IMG_20250801_193141-553x1024.jpg
+[2025-10-28 10:26:40.481] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/IMG_20250906_023906-587x1024.jpg | 52ms
+[2025-10-28 10:26:40.484] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251018_031234-1024x842.jpg
+[2025-10-28 10:26:40.504] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/IMG_20250801_193141-553x1024.jpg | 46ms
+[2025-10-28 10:26:40.503] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760638988298.png | 75ms
+[2025-10-28 10:26:40.483] GPU_STORAGE_START | f87826a6 | raw
+[2025-10-28 10:26:40.549] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/IMG_20250807_235642-1024x993.jpg
+[2025-10-28 10:26:40.550] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251018_031234-1024x842.jpg | 66ms
+[2025-10-28 10:26:40.507] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1757107314454-701x1024.jpg
+[2025-10-28 10:26:40.587] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1757243389976-576x1024.jpg
+[2025-10-28 10:26:40.586] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760811847811-1-618x1024.jpg
+[2025-10-28 10:26:40.585] GPU_STORAGE_START | b9a7d79c | raw
+[2025-10-28 10:26:40.613] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/IMG_20250807_235642-1024x993.jpg | 64ms
+[2025-10-28 10:26:40.610] GPU_STORAGE_START | e2214fbb | raw
+[2025-10-28 10:26:40.610] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1757107314454-701x1024.jpg | 103ms
+[2025-10-28 10:26:40.636] GPU_STORAGE_START | 9aabe5f4 | raw
+[2025-10-28 10:26:40.638] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760823106635.jpg
+[2025-10-28 10:26:40.643] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760811847811-1-618x1024.jpg | 57ms
+[2025-10-28 10:26:40.637] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/IMG_20250809_173836-1024x1014.jpg
+[2025-10-28 10:26:40.638] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1757243389976-576x1024.jpg | 50ms
+[2025-10-28 10:26:40.662] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1757976166878-575x1024.jpg
+[2025-10-28 10:26:40.661] GPU_STORAGE_START | b69359f5 | raw
+[2025-10-28 10:26:40.662] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/Photo_1754743230066-1024x571.jpg
+[2025-10-28 10:26:40.711] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/09/Photo_1757976166878-575x1024.jpg | 49ms
+[2025-10-28 10:26:40.717] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/Photo_1754743230066-1024x571.jpg | 54ms
+[2025-10-28 10:26:40.689] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/08/IMG_20250809_173836-1024x1014.jpg | 52ms
+[2025-10-28 10:26:40.695] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1760823106635.jpg | 57ms
+[2025-10-28 10:26:40.689] GPU_STORAGE_START | ea9c34e3 | raw
+[2025-10-28 10:26:40.746] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761062271944-581x1024.png
+[2025-10-28 10:26:40.745] GPU_STORAGE_START | d5da4ca1 | raw
+[2025-10-28 10:26:40.777] GPU_STORAGE_START | f773d98b | raw
+[2025-10-28 10:26:40.826] GPU_STORAGE_START | c5ff98b0 | raw
+[2025-10-28 10:26:40.849] GPU_STORAGE_START | f3c99632 | raw
+[2025-10-28 10:26:40.876] GPU_STORAGE_START | 8f70869c | raw
+[2025-10-28 10:26:40.878] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761062271944-581x1024.png | 131ms
+[2025-10-28 10:26:40.899] GPU_STORAGE_START | cbeb284c | raw
+[2025-10-28 10:26:40.923] GPU_STORAGE_START | f1789843 | raw
+[2025-10-28 10:26:40.946] GPU_STORAGE_START | e8da926f | raw
+[2025-10-28 10:26:40.971] GPU_STORAGE_START | e5c90cf4 | raw
+[2025-10-28 10:26:40.994] GPU_STORAGE_START | ebee48cd | raw
+[2025-10-28 10:26:41.016] GPU_STORAGE_START | d6608c1b | raw
+[2025-10-28 10:26:41.039] GPU_STORAGE_START | 813a126d | raw
+[2025-10-28 10:26:41.061] GPU_STORAGE_START | b4a75ab9 | raw
+[2025-10-28 10:26:41.084] GPU_STORAGE_START | 8b3934c7 | raw
+[2025-10-28 10:26:41.106] GPU_STORAGE_START | c0603fdb | raw
+[2025-10-28 10:26:41.130] GPU_STORAGE_START | cd5e32c3 | raw
+[2025-10-28 10:26:41.151] GPU_STORAGE_START | b6bd0846 | raw
+[2025-10-28 10:26:41.180] GPU_STORAGE_START | a395f0f2 | raw
+[2025-10-28 10:26:41.203] GPU_STORAGE_START | f7e70ed8 | raw
+[2025-10-28 10:26:41.228] GPU_STORAGE_START | e7ed19c2 | raw
+[2025-10-28 10:26:41.254] GPU_STORAGE_START | b2934fcc | raw
+[2025-10-28 10:26:41.287] GPU_STORAGE_START | f886b3c1 | raw
+[2025-10-28 10:26:41.317] GPU_STORAGE_START | 82cc6d9c | raw
+[2025-10-28 10:26:41.340] GPU_STORAGE_START | d968316c | raw
+[2025-10-28 10:26:41.369] GPU_STORAGE_START | d8a66236 | raw
+[2025-10-28 10:26:41.401] GPU_STORAGE_START | f5a5975e | raw
+[2025-10-28 10:26:41.435] GPU_STORAGE_START | e6a61bf1 | raw
+[2025-10-28 10:26:41.459] GPU_STORAGE_START | f1a5975e | raw
+[2025-10-28 10:26:41.484] GPU_STORAGE_START | 93344e73 | raw
+[2025-10-28 10:26:41.507] GPU_STORAGE_START | f08bdb2d | raw
+[2025-10-28 10:26:41.529] GPU_STORAGE_START | b38c8c33 | raw
+[2025-10-28 10:26:41.552] GPU_STORAGE_START | e3ad0d4a | raw
+[2025-10-28 10:26:41.577] GPU_STORAGE_START | a58ed971 | raw
+[2025-10-28 10:26:41.601] GPU_STORAGE_START | a318542d | raw
+[2025-10-28 10:26:41.626] GPU_STORAGE_START | e612555c | raw
+[2025-10-28 10:26:41.649] GPU_STORAGE_START | e38c5cf9 | raw
+[2025-10-28 10:26:41.755] GPU_STORAGE_END | f3c99632 | raw | 906ms
+[2025-10-28 10:26:41.776] GPU_STORAGE_END | d8a66236 | raw | 407ms
+[2025-10-28 10:26:41.800] GPU_STORAGE_END | 8f70869c | raw | 924ms
+[2025-10-28 10:26:41.820] GPU_STORAGE_END | b6bd0846 | raw | 668ms
+[2025-10-28 10:26:41.842] GPU_STORAGE_END | d6608c1b | raw | 826ms
+[2025-10-28 10:26:42.043] GPU_STORAGE_END | e885c63a | raw | 1946ms
+[2025-10-28 10:26:42.067] GPU_STORAGE_END | 80b6e7c3 | raw | 2041ms
+[2025-10-28 10:26:42.089] GPU_STORAGE_END | c53eb05a | raw | 1966ms
+[2025-10-28 10:26:42.128] GPU_STORAGE_END | dd863dc9 | raw | 1933ms
+[2025-10-28 10:26:42.152] GPU_STORAGE_END | 8d79f0e7 | raw | 2082ms
+[2025-10-28 10:26:42.175] GPU_STORAGE_END | ba0a7aa0 | raw | 2211ms
+[2025-10-28 10:26:42.199] GPU_STORAGE_END | c93f7dc8 | raw | 2200ms
+[2025-10-28 10:26:42.219] GPU_STORAGE_END | 8b5b392b | raw | 1867ms
+[2025-10-28 10:26:42.238] GPU_STORAGE_END | c7788bf4 | raw | 2259ms
+[2025-10-28 10:26:42.257] GPU_STORAGE_END | e2214fbb | raw | 1647ms
+[2025-10-28 10:26:42.278] GPU_STORAGE_END | 9a4cf7a1 | raw | 2225ms
+[2025-10-28 10:26:42.299] GPU_STORAGE_END | 8076a35a | raw | 1999ms
+[2025-10-28 10:26:42.320] GPU_STORAGE_END | a880833f | raw | 2160ms
+[2025-10-28 10:26:42.342] GPU_STORAGE_END | d942f664 | raw | 1967ms
+[2025-10-28 10:26:42.359] GPU_STORAGE_END | c3e6e6e6 | raw | 2115ms
+[2025-10-28 10:26:42.382] GPU_STORAGE_END | 9ae178a6 | raw | 2204ms
+[2025-10-28 10:26:42.405] GPU_STORAGE_END | 99536465 | raw | 1979ms
+[2025-10-28 10:26:42.428] GPU_STORAGE_END | f0430f5a | raw | 2154ms
+[2025-10-28 10:26:42.449] GPU_STORAGE_END | ea9c34e3 | raw | 1760ms
+[2025-10-28 10:26:42.467] GPU_STORAGE_END | fcccc32c | raw | 2325ms
+[2025-10-28 10:26:42.486] GPU_STORAGE_END | b69359f5 | raw | 1825ms
+[2025-10-28 10:26:42.501] GPU_STORAGE_END | cd8193cd | raw | 2281ms
+[2025-10-28 10:26:42.513] GPU_STORAGE_END | c0603fdb | raw | 1407ms
+[2025-10-28 10:26:42.526] GPU_STORAGE_END | f87826a6 | raw | 2043ms
+[2025-10-28 10:26:42.540] GPU_STORAGE_END | c5ff98b0 | raw | 1714ms
+[2025-10-28 10:26:42.552] GPU_STORAGE_END | abca9495 | raw | 2224ms
+[2025-10-28 10:26:42.566] GPU_STORAGE_END | e5c90cf4 | raw | 1595ms
+[2025-10-28 10:26:42.580] GPU_STORAGE_END | d5da4ca1 | raw | 1835ms
+[2025-10-28 10:26:42.593] GPU_STORAGE_END | 9aabe5f4 | raw | 1957ms
+[2025-10-28 10:26:42.605] GPU_STORAGE_END | ebc91134 | raw | 2148ms
+[2025-10-28 10:26:42.616] GPU_STORAGE_END | bcc3e1b1 | raw | 2214ms
+[2025-10-28 10:26:42.627] GPU_STORAGE_END | b4a75ab9 | raw | 1566ms
+[2025-10-28 10:26:42.641] GPU_STORAGE_END | f1789843 | raw | 1718ms
+[2025-10-28 10:26:42.654] GPU_STORAGE_END | ebee48cd | raw | 1660ms
+[2025-10-28 10:26:42.667] GPU_STORAGE_END | cd5e32c3 | raw | 1538ms
+[2025-10-28 10:26:42.681] GPU_STORAGE_END | 8b3934c7 | raw | 1597ms
+[2025-10-28 10:26:42.694] GPU_STORAGE_END | b9a7d79c | raw | 2109ms
+[2025-10-28 10:26:42.709] GPU_STORAGE_END | f773d98b | raw | 1931ms
+[2025-10-28 10:26:42.719] GPU_STORAGE_END | cbeb284c | raw | 1820ms
+[2025-10-28 10:26:42.730] GPU_STORAGE_END | e8da926f | raw | 1784ms
+[2025-10-28 10:26:42.741] GPU_STORAGE_END | a318542d | raw | 1140ms
+[2025-10-28 10:26:42.754] GPU_STORAGE_END | 813a126d | raw | 1715ms
+[2025-10-28 10:26:42.766] GPU_STORAGE_END | e6a61bf1 | raw | 1331ms
+[2025-10-28 10:26:42.779] GPU_STORAGE_END | e612555c | raw | 1153ms
+[2025-10-28 10:26:42.790] GPU_STORAGE_END | a58ed971 | raw | 1214ms
+[2025-10-28 10:26:42.802] GPU_STORAGE_END | f7e70ed8 | raw | 1600ms
+[2025-10-28 10:26:42.815] GPU_STORAGE_END | f5a5975e | raw | 1414ms
+[2025-10-28 10:26:42.828] GPU_STORAGE_END | 93344e73 | raw | 1344ms
+[2025-10-28 10:26:42.840] GPU_STORAGE_END | b38c8c33 | raw | 1311ms
+[2025-10-28 10:26:42.850] GPU_STORAGE_END | a395f0f2 | raw | 1670ms
+[2025-10-28 10:26:42.862] GPU_STORAGE_END | b2934fcc | raw | 1608ms
+[2025-10-28 10:26:42.875] GPU_STORAGE_END | e3ad0d4a | raw | 1323ms
+[2025-10-28 10:26:42.886] GPU_STORAGE_END | 82cc6d9c | raw | 1569ms
+[2025-10-28 10:26:42.900] GPU_STORAGE_END | f886b3c1 | raw | 1613ms
+[2025-10-28 10:26:42.912] GPU_STORAGE_END | f08bdb2d | raw | 1404ms
+[2025-10-28 10:26:42.923] GPU_STORAGE_END | d968316c | raw | 1583ms
+[2025-10-28 10:26:42.933] GPU_STORAGE_END | f1a5975e | raw | 1473ms
+[2025-10-28 10:26:42.944] GPU_STORAGE_END | e7ed19c2 | raw | 1716ms
+[2025-10-28 10:26:42.965] GPU_STORAGE_END | e38c5cf9 | raw | 1316ms
+[2025-10-28 10:26:42.980] GPU_BATCH_END | batch_1761672396869 | 6048ms | 64 images
+[2025-10-28 10:26:42.998] GPU_BATCH_START | batch_1761672402997 | 39 images
+[2025-10-28 10:26:43.011] GPU_RECOGNITION_START | batch_1761672402997
+[2025-10-28 10:26:44.396] GPU_RECOGNITION_END | batch_1761672402997 | 1385ms | 15 faces
+[2025-10-28 10:26:44.398] GPU_STORAGE_START | a35c5c29 | raw
+[2025-10-28 10:26:44.412] GPU_STORAGE_START | b2cc071d | raw
+[2025-10-28 10:26:44.424] GPU_STORAGE_START | a31d542d | raw
+[2025-10-28 10:26:44.438] GPU_STORAGE_START | 96cb6934 | raw
+[2025-10-28 10:26:44.449] GPU_STORAGE_START | a5dec838 | raw
+[2025-10-28 10:26:44.460] GPU_STORAGE_START | 9cbe6bf8 | raw
+[2025-10-28 10:26:44.500] GPU_STORAGE_START | e92e622a | raw
+[2025-10-28 10:26:44.515] GPU_STORAGE_START | 89867e7f | raw
+[2025-10-28 10:26:44.526] GPU_STORAGE_START | d4d90325 | raw
+[2025-10-28 10:26:44.538] GPU_STORAGE_START | baf6c595 | raw
+[2025-10-28 10:26:44.549] GPU_STORAGE_START | 883e79ac | raw
+[2025-10-28 10:26:44.560] GPU_STORAGE_START | a7780f2f | raw
+[2025-10-28 10:26:44.572] GPU_STORAGE_START | a1a39387 | raw
+[2025-10-28 10:26:44.585] GPU_STORAGE_START | f67f0840 | raw
+[2025-10-28 10:26:44.595] GPU_STORAGE_START | ba986733 | raw
+[2025-10-28 10:26:44.606] GPU_STORAGE_START | e9e4e262 | raw
+[2025-10-28 10:26:44.619] GPU_STORAGE_START | a01f2fa5 | raw
+[2025-10-28 10:26:44.631] GPU_STORAGE_START | e1d8586c | raw
+[2025-10-28 10:26:44.643] GPU_STORAGE_START | c5387fa8 | raw
+[2025-10-28 10:26:44.654] GPU_STORAGE_START | f16c429b | raw
+[2025-10-28 10:26:44.668] GPU_STORAGE_START | 925bad29 | raw
+[2025-10-28 10:26:44.681] GPU_STORAGE_START | fee1a552 | raw
+[2025-10-28 10:26:44.692] GPU_STORAGE_START | c5c6b499 | raw
+[2025-10-28 10:26:44.705] GPU_STORAGE_START | c9ecce62 | raw
+[2025-10-28 10:26:44.717] GPU_STORAGE_START | ae716cd1 | raw
+[2025-10-28 10:26:44.730] GPU_STORAGE_START | c7c5eeeb | raw
+[2025-10-28 10:26:44.743] GPU_STORAGE_START | bc67a44d | raw
+[2025-10-28 10:26:44.756] GPU_STORAGE_START | cab6549d | raw
+[2025-10-28 10:26:44.768] GPU_STORAGE_START | 95512a2a | raw
+[2025-10-28 10:26:44.780] GPU_STORAGE_START | a5dec838 | raw
+[2025-10-28 10:26:44.791] GPU_STORAGE_START | d313b7eb | raw
+[2025-10-28 10:26:44.804] GPU_STORAGE_START | b7c6990d | raw
+[2025-10-28 10:26:44.815] GPU_STORAGE_START | 9a9de8ed | raw
+[2025-10-28 10:26:44.827] GPU_STORAGE_START | ad2dc696 | raw
+[2025-10-28 10:26:44.838] GPU_STORAGE_START | e50a527c | raw
+[2025-10-28 10:26:44.849] GPU_STORAGE_START | aed0f705 | raw
+[2025-10-28 10:26:44.860] GPU_STORAGE_START | d5a1ba53 | raw
+[2025-10-28 10:26:44.871] GPU_STORAGE_START | efb35362 | raw
+[2025-10-28 10:26:44.883] GPU_STORAGE_START | dad465cb | raw
+[2025-10-28 10:26:44.925] GPU_STORAGE_END | 9cbe6bf8 | raw | 465ms
+[2025-10-28 10:26:44.929] GPU_STORAGE_END | 89867e7f | raw | 414ms
+[2025-10-28 10:26:44.952] GPU_STORAGE_END | c7c5eeeb | raw | 222ms
+[2025-10-28 10:26:44.966] GPU_STORAGE_END | c9ecce62 | raw | 262ms
+[2025-10-28 10:26:44.981] GPU_STORAGE_END | a5dec838 | raw | 532ms
+[2025-10-28 10:26:44.992] GPU_STORAGE_END | e92e622a | raw | 492ms
+[2025-10-28 10:26:45.004] GPU_STORAGE_END | a1a39387 | raw | 432ms
+[2025-10-28 10:26:45.017] GPU_STORAGE_END | baf6c595 | raw | 479ms
+[2025-10-28 10:26:45.034] GPU_STORAGE_END | ba986733 | raw | 438ms
+[2025-10-28 10:26:45.043] GPU_STORAGE_END | f67f0840 | raw | 458ms
+[2025-10-28 10:26:45.056] GPU_STORAGE_END | 95512a2a | raw | 288ms
+[2025-10-28 10:26:45.068] GPU_STORAGE_END | d4d90325 | raw | 542ms
+[2025-10-28 10:26:45.081] GPU_STORAGE_END | e9e4e262 | raw | 475ms
+[2025-10-28 10:26:45.093] GPU_STORAGE_END | bc67a44d | raw | 350ms
+[2025-10-28 10:26:45.106] GPU_STORAGE_END | ae716cd1 | raw | 389ms
+[2025-10-28 10:26:45.118] GPU_STORAGE_END | a01f2fa5 | raw | 499ms
+[2025-10-28 10:26:45.130] GPU_STORAGE_END | f16c429b | raw | 476ms
+[2025-10-28 10:26:45.141] GPU_STORAGE_END | fee1a552 | raw | 460ms
+[2025-10-28 10:26:45.152] GPU_STORAGE_END | 883e79ac | raw | 603ms
+[2025-10-28 10:26:45.163] GPU_STORAGE_END | 925bad29 | raw | 495ms
+[2025-10-28 10:26:45.174] GPU_STORAGE_END | cab6549d | raw | 419ms
+[2025-10-28 10:26:45.185] GPU_STORAGE_END | a5dec838 | raw | 405ms
+[2025-10-28 10:26:45.199] GPU_STORAGE_END | 9a9de8ed | raw | 384ms
+[2025-10-28 10:26:45.210] GPU_STORAGE_END | e50a527c | raw | 372ms
+[2025-10-28 10:26:45.220] GPU_STORAGE_END | ad2dc696 | raw | 393ms
+[2025-10-28 10:26:45.233] GPU_STORAGE_END | d5a1ba53 | raw | 373ms
+[2025-10-28 10:26:45.260] PAGE_START | site_0000 | https://wikifeet.com/videos
+[2025-10-28 10:26:45.249] GPU_STORAGE_END | efb35362 | raw | 378ms
+[2025-10-28 10:26:45.263] PAGE_END | site_0000 | https://wikifeet.com/videos | 3ms | 0 candidates
+[2025-10-28 10:26:45.271] GPU_STORAGE_END | dad465cb | raw | 388ms
+[2025-10-28 10:26:45.281] SITE_END | site_0000 | 18976ms | 2 pages | 99 candidates
+[2025-10-28 10:26:45.303] GPU_STORAGE_END | b2cc071d | raw | 891ms
+[2025-10-28 10:26:45.313] GPU_STORAGE_END | b7c6990d | raw | 509ms
+[2025-10-28 10:26:45.327] GPU_STORAGE_END | 96cb6934 | raw | 889ms
+[2025-10-28 10:26:45.339] GPU_STORAGE_END | e1d8586c | raw | 708ms
+[2025-10-28 10:26:45.352] GPU_STORAGE_END | a35c5c29 | raw | 954ms
+[2025-10-28 10:26:45.363] GPU_STORAGE_END | a31d542d | raw | 938ms
+[2025-10-28 10:26:45.374] GPU_STORAGE_END | c5387fa8 | raw | 731ms
+[2025-10-28 10:26:45.387] GPU_STORAGE_END | c5c6b499 | raw | 695ms
+[2025-10-28 10:26:45.401] GPU_STORAGE_END | aed0f705 | raw | 551ms
+[2025-10-28 10:26:45.413] GPU_STORAGE_END | d313b7eb | raw | 622ms
+[2025-10-28 10:26:45.425] GPU_STORAGE_END | a7780f2f | raw | 865ms
+[2025-10-28 10:26:45.440] GPU_BATCH_END | batch_1761672402997 | 2443ms | 39 images
+[2025-10-28 10:26:47.813] PAGE_START | site_0001 | https://candidteens.net/category/candidteen-leggings/
+[2025-10-28 10:26:47.815] PAGE_END | site_0001 | https://candidteens.net/category/candidteen-leggings/ | 2ms | 16 candidates
+[2025-10-28 10:26:47.831] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761574513376-1013x1024.jpg
+[2025-10-28 10:26:47.832] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_135205-925x1024.jpg
+[2025-10-28 10:26:47.831] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg
+[2025-10-28 10:26:47.832] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761230545850-576x1024.jpg
+[2025-10-28 10:26:47.860] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761574513376-1013x1024.jpg | 29ms
+[2025-10-28 10:26:47.868] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_135205-925x1024.jpg | 36ms
+[2025-10-28 10:26:47.870] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761230545850-576x1024.jpg | 38ms
+[2025-10-28 10:26:47.863] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg | 32ms
+[2025-10-28 10:26:48.470] PAGE_START | site_0001 | https://candidteens.net/category/candid-bikini-teen-girls/
+[2025-10-28 10:26:48.472] PAGE_END | site_0001 | https://candidteens.net/category/candid-bikini-teen-girls/ | 2ms | 16 candidates
+[2025-10-28 10:26:48.599] PAGE_START | site_0001 | https://candidteens.net/category/featured-creepshots/
+[2025-10-28 10:26:48.600] PAGE_END | site_0001 | https://candidteens.net/category/featured-creepshots/ | 2ms | 16 candidates
+[2025-10-28 10:26:48.618] SITE_END | site_0001 | 26938ms | 7 pages | 80 candidates
+[2025-10-28 10:27:02.173] CRAWL_END | 112229ms | 7 sites | 414 images
+[2025-10-28 10:27:02.176] SYSTEM_SHUTDOWN
