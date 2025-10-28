@@ -1,0 +1,1598 @@
+[2025-10-27 20:55:06.071] SYSTEM_START
+[2025-10-27 20:55:06.072] CRAWL_START
+[2025-10-27 20:55:06.253] SITE_START | site_0006 | https://candidshiny.com
+[2025-10-27 20:55:06.256] SITE_START | site_0005 | https://www.voyeurstyle.com
+[2025-10-27 20:55:13.949] PAGE_START | site_0006 | https://candidshiny.com
+[2025-10-27 20:55:13.951] PAGE_END | site_0006 | https://candidshiny.com | 2ms | 36 candidates
+[2025-10-27 20:55:14.081] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Ax/wn.jpg
+[2025-10-27 20:55:14.081] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/wg/jJ.jpg
+[2025-10-27 20:55:14.082] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/lE/XT.jpg
+[2025-10-27 20:55:14.082] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/kV/oD.jpg
+[2025-10-27 20:55:14.332] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Ax/wn.jpg | 250ms
+[2025-10-27 20:55:14.331] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/wg/jJ.jpg | 251ms
+[2025-10-27 20:55:14.332] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/kV/oD.jpg | 250ms
+[2025-10-27 20:55:14.334] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/lE/XT.jpg | 253ms
+[2025-10-27 20:55:14.334] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/pc/gX.jpg
+[2025-10-27 20:55:14.334] EXTRACT_START | site_0006 | https://candidshiny.com/t.png
+[2025-10-27 20:55:14.334] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/iv/pz.jpg
+[2025-10-27 20:55:14.345] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/o3/pH.jpg
+[2025-10-27 20:55:14.360] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/iv/pz.jpg | 26ms
+[2025-10-27 20:55:14.358] PAGE_START | site_0006 | https://candidshiny.com/new/
+[2025-10-27 20:55:14.355] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/pc/gX.jpg | 21ms
+[2025-10-27 20:55:14.355] EXTRACT_END | site_0006 | https://candidshiny.com/t.png | 21ms
+[2025-10-27 20:55:14.367] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/X9/fZ.jpg
+[2025-10-27 20:55:14.367] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/fx/Uk.jpg
+[2025-10-27 20:55:14.369] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/o3/pH.jpg | 23ms
+[2025-10-27 20:55:14.367] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/w7/Vt.jpg
+[2025-10-27 20:55:14.365] PAGE_END | site_0006 | https://candidshiny.com/new/ | 8ms | 0 candidates
+[2025-10-27 20:55:14.380] PAGE_START | site_0006 | https://candidshiny.com/best/
+[2025-10-27 20:55:14.378] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/9y/pz.jpg
+[2025-10-27 20:55:14.380] GPU_BATCH_START | batch_1761623714379 | 8 images
+[2025-10-27 20:55:14.393] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/w7/Vt.jpg | 26ms
+[2025-10-27 20:55:14.392] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/X9/fZ.jpg | 25ms
+[2025-10-27 20:55:14.397] GPU_RECOGNITION_START | batch_1761623714379
+[2025-10-27 20:55:14.395] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/fx/Uk.jpg | 28ms
+[2025-10-27 20:55:14.391] PAGE_END | site_0006 | https://candidshiny.com/best/ | 11ms | 0 candidates
+[2025-10-27 20:55:14.407] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/9y/pz.jpg | 28ms
+[2025-10-27 20:55:14.406] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/hz/ri.jpg
+[2025-10-27 20:55:14.407] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Es/4w.jpg
+[2025-10-27 20:55:14.420] PAGE_START | site_0006 | https://candidshiny.com/categories
+[2025-10-27 20:55:14.406] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Nr/he.jpg
+[2025-10-27 20:55:14.449] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Es/4w.jpg | 43ms
+[2025-10-27 20:55:14.446] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Nr/he.jpg | 40ms
+[2025-10-27 20:55:14.446] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/hz/ri.jpg | 40ms
+[2025-10-27 20:55:14.433] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/O8/JV.jpg
+[2025-10-27 20:55:14.432] PAGE_END | site_0006 | https://candidshiny.com/categories | 12ms | 0 candidates
+[2025-10-27 20:55:14.465] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/O8/JV.jpg | 31ms
+[2025-10-27 20:55:14.453] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Gh/gL.jpg
+[2025-10-27 20:55:14.453] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/ro/JA.jpg
+[2025-10-27 20:55:14.453] SITE_END | site_0006 | 8199ms | 4 pages | 36 candidates
+[2025-10-27 20:55:14.453] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/aQ/10.jpg
+[2025-10-27 20:55:14.481] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Gh/gL.jpg | 28ms
+[2025-10-27 20:55:14.470] SITE_START | site_0004 | https://www.voyeurshd.com
+[2025-10-27 20:55:14.470] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/9y/Bs.jpg
+[2025-10-27 20:55:14.484] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/aQ/10.jpg | 31ms
+[2025-10-27 20:55:14.486] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/ro/JA.jpg | 33ms
+[2025-10-27 20:55:14.486] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/kj/z3.jpg
+[2025-10-27 20:55:14.486] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/BS/Jv.jpg
+[2025-10-27 20:55:14.501] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/9y/Bs.jpg | 31ms
+[2025-10-27 20:55:14.502] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Eq/Cm.jpg
+[2025-10-27 20:55:14.516] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/kj/z3.jpg | 30ms
+[2025-10-27 20:55:14.517] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/BS/Jv.jpg | 30ms
+[2025-10-27 20:55:14.518] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/fJ/7a.jpg
+[2025-10-27 20:55:14.531] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Eq/Cm.jpg | 30ms
+[2025-10-27 20:55:14.534] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/yr/dT.jpg
+[2025-10-27 20:55:14.534] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/JL/3H.jpg
+[2025-10-27 20:55:14.550] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/8v/RY.jpg
+[2025-10-27 20:55:14.551] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/fJ/7a.jpg | 33ms
+[2025-10-27 20:55:14.562] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/JL/3H.jpg | 28ms
+[2025-10-27 20:55:14.562] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/yr/dT.jpg | 28ms
+[2025-10-27 20:55:14.566] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/DT/Kq.jpg
+[2025-10-27 20:55:14.566] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/3j/Pr.jpg
+[2025-10-27 20:55:14.578] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/8v/RY.jpg | 28ms
+[2025-10-27 20:55:14.566] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Ae/7a.jpg
+[2025-10-27 20:55:14.593] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/DT/Kq.jpg | 27ms
+[2025-10-27 20:55:14.593] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Ae/7a.jpg | 28ms
+[2025-10-27 20:55:14.593] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/3j/Pr.jpg | 27ms
+[2025-10-27 20:55:14.581] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Tu/ed.jpg
+[2025-10-27 20:55:14.596] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/_d/ix.jpg
+[2025-10-27 20:55:14.596] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/gJ/ih.jpg
+[2025-10-27 20:55:14.596] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Tk/eo.jpg
+[2025-10-27 20:55:14.625] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/gJ/ih.jpg | 28ms
+[2025-10-27 20:55:14.624] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Tk/eo.jpg | 28ms
+[2025-10-27 20:55:14.625] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/_d/ix.jpg | 28ms
+[2025-10-27 20:55:14.610] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Tu/ed.jpg | 29ms
+[2025-10-27 20:55:14.628] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/WF/ER.jpg
+[2025-10-27 20:55:14.628] EXTRACT_START | site_0006 | https://candidshiny.com/thumbs/AA/Zf/sp.jpg
+[2025-10-27 20:55:14.641] GPU_RECOGNITION_END | batch_1761623714379 | 244ms | 3 faces
+[2025-10-27 20:55:14.643] GPU_STORAGE_START | cdc6c760 | raw
+[2025-10-27 20:55:14.654] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/WF/ER.jpg | 27ms
+[2025-10-27 20:55:14.656] EXTRACT_END | site_0006 | https://candidshiny.com/thumbs/AA/Zf/sp.jpg | 28ms
+[2025-10-27 20:55:14.658] GPU_STORAGE_START | d6e8b0f9 | raw
+[2025-10-27 20:55:14.674] GPU_STORAGE_START | c53a75c9 | raw
+[2025-10-27 20:55:14.686] GPU_STORAGE_START | 801f7dec | raw
+[2025-10-27 20:55:14.700] GPU_STORAGE_START | 9455dfb1 | raw
+[2025-10-27 20:55:14.713] GPU_STORAGE_START | 80000000 | raw
+[2025-10-27 20:55:14.727] GPU_STORAGE_START | 8e90ad02 | raw
+[2025-10-27 20:55:14.740] GPU_STORAGE_START | eabf5320 | raw
+[2025-10-27 20:55:14.771] GPU_STORAGE_END | cdc6c760 | raw | 129ms
+[2025-10-27 20:55:14.776] GPU_STORAGE_END | c53a75c9 | raw | 102ms
+[2025-10-27 20:55:14.790] GPU_STORAGE_END | d6e8b0f9 | raw | 132ms
+[2025-10-27 20:55:14.804] GPU_STORAGE_END | 9455dfb1 | raw | 104ms
+[2025-10-27 20:55:14.816] GPU_STORAGE_END | 801f7dec | raw | 130ms
+[2025-10-27 20:55:14.829] GPU_STORAGE_END | 80000000 | raw | 115ms
+[2025-10-27 20:55:14.843] GPU_STORAGE_END | eabf5320 | raw | 102ms
+[2025-10-27 20:55:14.877] GPU_STORAGE_END | 8e90ad02 | raw | 150ms
+[2025-10-27 20:55:14.880] GPU_BATCH_END | batch_1761623714379 | 500ms | 8 images
+[2025-10-27 20:55:14.895] GPU_BATCH_START | batch_1761623714650 | 17 images
+[2025-10-27 20:55:14.913] GPU_RECOGNITION_START | batch_1761623714650
+[2025-10-27 20:55:15.265] GPU_RECOGNITION_END | batch_1761623714650 | 353ms | 3 faces
+[2025-10-27 20:55:15.267] GPU_STORAGE_START | ff8f0263 | raw
+[2025-10-27 20:55:15.282] GPU_STORAGE_START | bd555aa4 | raw
+[2025-10-27 20:55:15.297] GPU_STORAGE_START | 99e64f96 | raw
+[2025-10-27 20:55:15.313] GPU_STORAGE_START | 93e4cfb8 | raw
+[2025-10-27 20:55:15.326] GPU_STORAGE_START | a5e686d5 | raw
+[2025-10-27 20:55:15.340] GPU_STORAGE_START | dea34466 | raw
+[2025-10-27 20:55:15.354] GPU_STORAGE_START | aa8cfb80 | raw
+[2025-10-27 20:55:15.368] GPU_STORAGE_START | f1c6e512 | raw
+[2025-10-27 20:55:15.381] GPU_STORAGE_START | e6a67935 | raw
+[2025-10-27 20:55:15.393] GPU_STORAGE_START | af5217e7 | raw
+[2025-10-27 20:55:15.405] GPU_STORAGE_START | 8a46d384 | raw
+[2025-10-27 20:55:15.419] GPU_STORAGE_START | ddb0b8f0 | raw
+[2025-10-27 20:55:15.430] GPU_STORAGE_START | ce215ab8 | raw
+[2025-10-27 20:55:15.442] GPU_STORAGE_START | 9a49fc0b | raw
+[2025-10-27 20:55:15.454] GPU_STORAGE_START | ae52a856 | raw
+[2025-10-27 20:55:15.467] GPU_STORAGE_START | e71e10e0 | raw
+[2025-10-27 20:55:15.479] GPU_STORAGE_START | d70a29a9 | raw
+[2025-10-27 20:55:15.513] GPU_STORAGE_END | aa8cfb80 | raw | 159ms
+[2025-10-27 20:55:15.520] GPU_STORAGE_END | f1c6e512 | raw | 152ms
+[2025-10-27 20:55:15.532] GPU_STORAGE_END | a5e686d5 | raw | 206ms
+[2025-10-27 20:55:15.545] GPU_STORAGE_END | e6a67935 | raw | 164ms
+[2025-10-27 20:55:15.557] GPU_STORAGE_END | 93e4cfb8 | raw | 245ms
+[2025-10-27 20:55:15.569] GPU_STORAGE_END | 9a49fc0b | raw | 126ms
+[2025-10-27 20:55:15.580] GPU_STORAGE_END | dea34466 | raw | 240ms
+[2025-10-27 20:55:15.594] GPU_STORAGE_END | ff8f0263 | raw | 326ms
+[2025-10-27 20:55:15.605] GPU_STORAGE_END | ce215ab8 | raw | 175ms
+[2025-10-27 20:55:15.616] GPU_STORAGE_END | d70a29a9 | raw | 138ms
+[2025-10-27 20:55:15.627] GPU_STORAGE_END | ddb0b8f0 | raw | 208ms
+[2025-10-27 20:55:15.639] GPU_STORAGE_END | e71e10e0 | raw | 172ms
+[2025-10-27 20:55:15.651] GPU_STORAGE_END | af5217e7 | raw | 258ms
+[2025-10-27 20:55:15.662] GPU_STORAGE_END | bd555aa4 | raw | 380ms
+[2025-10-27 20:55:15.673] GPU_STORAGE_END | ae52a856 | raw | 219ms
+[2025-10-27 20:55:15.694] GPU_STORAGE_END | 99e64f96 | raw | 397ms
+[2025-10-27 20:55:15.699] GPU_STORAGE_END | 8a46d384 | raw | 294ms
+[2025-10-27 20:55:15.711] GPU_BATCH_END | batch_1761623714650 | 816ms | 17 images
+[2025-10-27 20:55:15.724] GPU_BATCH_START | batch_1761623714482 | 9 images
+[2025-10-27 20:55:15.736] GPU_RECOGNITION_START | batch_1761623714482
+[2025-10-27 20:55:16.090] GPU_RECOGNITION_END | batch_1761623714482 | 355ms | 7 faces
+[2025-10-27 20:55:16.093] GPU_STORAGE_START | c5efb01b | raw
+[2025-10-27 20:55:16.105] GPU_STORAGE_START | eef7c1c0 | raw
+[2025-10-27 20:55:16.117] GPU_STORAGE_START | d91c4ee9 | raw
+[2025-10-27 20:55:16.129] GPU_STORAGE_START | ab91a600 | raw
+[2025-10-27 20:55:16.142] GPU_STORAGE_START | dd408b68 | raw
+[2025-10-27 20:55:16.153] GPU_STORAGE_START | 8a51b62b | raw
+[2025-10-27 20:55:16.165] GPU_STORAGE_START | 93d59bf0 | raw
+[2025-10-27 20:55:16.178] GPU_STORAGE_START | 9c2e9548 | raw
+[2025-10-27 20:55:16.191] GPU_STORAGE_START | 827a8f64 | raw
+[2025-10-27 20:55:16.223] GPU_STORAGE_END | dd408b68 | raw | 81ms
+[2025-10-27 20:55:16.227] GPU_STORAGE_END | eef7c1c0 | raw | 122ms
+[2025-10-27 20:55:16.244] GPU_STORAGE_END | ab91a600 | raw | 116ms
+[2025-10-27 20:55:16.260] GPU_STORAGE_END | c5efb01b | raw | 167ms
+[2025-10-27 20:55:16.273] GPU_STORAGE_END | 827a8f64 | raw | 81ms
+[2025-10-27 20:55:16.304] GPU_STORAGE_END | 93d59bf0 | raw | 139ms
+[2025-10-27 20:55:16.306] GPU_STORAGE_END | 9c2e9548 | raw | 128ms
+[2025-10-27 20:55:16.318] GPU_STORAGE_END | d91c4ee9 | raw | 201ms
+[2025-10-27 20:55:16.329] GPU_STORAGE_END | 8a51b62b | raw | 176ms
+[2025-10-27 20:55:16.342] GPU_BATCH_END | batch_1761623714482 | 619ms | 9 images
+[2025-10-27 20:55:22.465] PAGE_START | site_0004 | https://www.voyeurshd.com
+[2025-10-27 20:55:22.467] PAGE_END | site_0004 | https://www.voyeurshd.com | 2ms | 51 candidates
+[2025-10-27 20:55:22.481] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0587/41660/main.jpg
+[2025-10-27 20:55:22.549] EXTRACT_START | site_0004 | https://www.voyeurshd.com/stp/images/extra-new/hdicon.png
+[2025-10-27 20:55:22.549] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0565/40112/main.jpg
+[2025-10-27 20:55:22.550] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0699/39800/main.jpg
+[2025-10-27 20:55:22.698] PAGE_START | site_0004 | https://www.voyeurshd.com/galleries/
+[2025-10-27 20:55:22.699] PAGE_END | site_0004 | https://www.voyeurshd.com/galleries/ | 2ms | 25 candidates
+[2025-10-27 20:55:22.798] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0699/39800/main.jpg | 248ms
+[2025-10-27 20:55:22.801] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0294/1000/main.jpg
+[2025-10-27 20:55:22.837] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0587/41660/main.jpg | 356ms
+[2025-10-27 20:55:22.839] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0251/1002/main.jpg
+[2025-10-27 20:55:22.857] EXTRACT_END | site_0004 | https://www.voyeurshd.com/stp/images/extra-new/hdicon.png | 308ms
+[2025-10-27 20:55:22.868] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0092/1005/main.jpg
+[2025-10-27 20:55:22.882] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0294/1000/main.jpg | 81ms
+[2025-10-27 20:55:22.897] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0179/1006/main.jpg
+[2025-10-27 20:55:22.921] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0565/40112/main.jpg | 372ms
+[2025-10-27 20:55:22.925] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0327/1004/main.jpg
+[2025-10-27 20:55:22.968] PAGE_START | site_0004 | https://www.voyeurshd.com/videos/videos/
+[2025-10-27 20:55:22.976] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0251/1002/main.jpg | 137ms
+[2025-10-27 20:55:22.972] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0179/1006/main.jpg | 75ms
+[2025-10-27 20:55:22.970] PAGE_END | site_0004 | https://www.voyeurshd.com/videos/videos/ | 2ms | 41 candidates
+[2025-10-27 20:55:22.985] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0847/1008/main.jpg
+[2025-10-27 20:55:22.985] GPU_BATCH_START | batch_1761623722984 | 8 images
+[2025-10-27 20:55:22.984] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0579/1007/main.jpg
+[2025-10-27 20:55:22.999] GPU_RECOGNITION_START | batch_1761623722984
+[2025-10-27 20:55:23.027] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0327/1004/main.jpg | 102ms
+[2025-10-27 20:55:23.033] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0092/1005/main.jpg | 165ms
+[2025-10-27 20:55:23.030] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0017/1009/main.jpg
+[2025-10-27 20:55:23.044] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0478/1011/main.jpg
+[2025-10-27 20:55:23.059] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0579/1007/main.jpg | 75ms
+[2025-10-27 20:55:23.058] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0847/1008/main.jpg | 72ms
+[2025-10-27 20:55:23.070] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0225/1012/main.jpg
+[2025-10-27 20:55:23.070] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/galleries/0506/1013/main.jpg
+[2025-10-27 20:55:23.089] PAGE_START | site_0004 | https://www.voyeurshd.com/videos/bonus/
+[2025-10-27 20:55:23.105] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0017/1009/main.jpg | 75ms
+[2025-10-27 20:55:23.096] PAGE_END | site_0004 | https://www.voyeurshd.com/videos/bonus/ | 7ms | 41 candidates
+[2025-10-27 20:55:23.111] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0465/43943/main.jpg
+[2025-10-27 20:55:23.117] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0478/1011/main.jpg | 73ms
+[2025-10-27 20:55:23.130] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0849/43053/main.jpg
+[2025-10-27 20:55:23.132] SITE_END | site_0004 | 8663ms | 4 pages | 158 candidates
+[2025-10-27 20:55:23.145] SITE_START | site_0003 | https://motherless.com
+[2025-10-27 20:55:23.146] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0225/1012/main.jpg | 77ms
+[2025-10-27 20:55:23.160] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0673/43440/main.jpg
+[2025-10-27 20:55:23.191] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0465/43943/main.jpg | 80ms
+[2025-10-27 20:55:23.193] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0498/41318/main.jpg
+[2025-10-27 20:55:23.210] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0849/43053/main.jpg | 80ms
+[2025-10-27 20:55:23.210] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/galleries/0506/1013/main.jpg | 140ms
+[2025-10-27 20:55:23.224] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0478/42972/main.jpg
+[2025-10-27 20:55:23.224] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0868/43425/main.jpg
+[2025-10-27 20:55:23.238] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0673/43440/main.jpg | 78ms
+[2025-10-27 20:55:23.256] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0583/41939/main.jpg
+[2025-10-27 20:55:23.268] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0498/41318/main.jpg | 75ms
+[2025-10-27 20:55:23.284] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0703/43378/main.jpg
+[2025-10-27 20:55:23.307] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0478/42972/main.jpg | 83ms
+[2025-10-27 20:55:23.307] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0868/43425/main.jpg | 83ms
+[2025-10-27 20:55:23.313] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0424/41176/main.jpg
+[2025-10-27 20:55:23.313] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0310/42477/main.jpg
+[2025-10-27 20:55:23.358] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0703/43378/main.jpg | 74ms
+[2025-10-27 20:55:23.361] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0979/45796/main.jpg
+[2025-10-27 20:55:23.392] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0424/41176/main.jpg | 79ms
+[2025-10-27 20:55:23.392] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0310/42477/main.jpg | 79ms
+[2025-10-27 20:55:23.395] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0040/41849/main.jpg
+[2025-10-27 20:55:23.396] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0583/41939/main.jpg | 140ms
+[2025-10-27 20:55:23.395] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0685/42962/main.jpg
+[2025-10-27 20:55:23.410] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0329/44165/main.jpg
+[2025-10-27 20:55:23.440] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0979/45796/main.jpg | 78ms
+[2025-10-27 20:55:23.442] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0793/45851/main.jpg
+[2025-10-27 20:55:23.469] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0685/42962/main.jpg | 74ms
+[2025-10-27 20:55:23.472] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0810/41761/main.jpg
+[2025-10-27 20:55:23.471] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0040/41849/main.jpg | 76ms
+[2025-10-27 20:55:23.488] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0482/41204/main.jpg
+[2025-10-27 20:55:23.487] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0329/44165/main.jpg | 76ms
+[2025-10-27 20:55:23.502] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0391/44270/main.jpg
+[2025-10-27 20:55:23.516] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0793/45851/main.jpg | 74ms
+[2025-10-27 20:55:23.517] GPU_RECOGNITION_END | batch_1761623722984 | 518ms | 11 faces
+[2025-10-27 20:55:23.530] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0983/42071/main.jpg
+[2025-10-27 20:55:23.529] GPU_STORAGE_START | a0bc2f46 | raw
+[2025-10-27 20:55:23.547] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0810/41761/main.jpg | 75ms
+[2025-10-27 20:55:23.543] GPU_STORAGE_START | b231f9e4 | raw
+[2025-10-27 20:55:23.564] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0482/41204/main.jpg | 76ms
+[2025-10-27 20:55:23.559] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0121/41616/main.jpg
+[2025-10-27 20:55:23.558] GPU_STORAGE_START | b3e0079e | raw
+[2025-10-27 20:55:23.571] GPU_STORAGE_START | a8ddb2e2 | raw
+[2025-10-27 20:55:23.572] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0759/45909/main.jpg
+[2025-10-27 20:55:23.586] GPU_STORAGE_START | 95277ad8 | raw
+[2025-10-27 20:55:23.606] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0983/42071/main.jpg | 76ms
+[2025-10-27 20:55:23.600] GPU_STORAGE_START | e6121bec | raw
+[2025-10-27 20:55:23.614] GPU_STORAGE_START | d8c02f4c | raw
+[2025-10-27 20:55:23.614] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0226/41931/main.jpg
+[2025-10-27 20:55:23.626] GPU_STORAGE_START | 845fd29a | raw
+[2025-10-27 20:55:23.637] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0391/44270/main.jpg | 135ms
+[2025-10-27 20:55:23.632] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0121/41616/main.jpg | 73ms
+[2025-10-27 20:55:23.650] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0759/45909/main.jpg | 78ms
+[2025-10-27 20:55:23.641] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0710/43951/main.jpg
+[2025-10-27 20:55:23.641] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0038/41034/main.jpg
+[2025-10-27 20:55:23.662] GPU_STORAGE_END | 95277ad8 | raw | 77ms
+[2025-10-27 20:55:23.661] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0574/41078/main.jpg
+[2025-10-27 20:55:23.675] GPU_STORAGE_END | a8ddb2e2 | raw | 104ms
+[2025-10-27 20:55:23.687] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0226/41931/main.jpg | 73ms
+[2025-10-27 20:55:23.688] GPU_STORAGE_END | b231f9e4 | raw | 145ms
+[2025-10-27 20:55:23.690] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0916/44158/main.jpg
+[2025-10-27 20:55:23.723] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0038/41034/main.jpg | 82ms
+[2025-10-27 20:55:23.722] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0710/43951/main.jpg | 80ms
+[2025-10-27 20:55:23.738] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0574/41078/main.jpg | 77ms
+[2025-10-27 20:55:23.733] GPU_STORAGE_END | a0bc2f46 | raw | 204ms
+[2025-10-27 20:55:23.731] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0059/41930/main.jpg
+[2025-10-27 20:55:23.731] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0054/45917/main.jpg
+[2025-10-27 20:55:23.746] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0883/36967/main.jpg
+[2025-10-27 20:55:23.745] GPU_STORAGE_END | b3e0079e | raw | 187ms
+[2025-10-27 20:55:23.760] GPU_STORAGE_END | e6121bec | raw | 159ms
+[2025-10-27 20:55:23.776] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0916/44158/main.jpg | 86ms
+[2025-10-27 20:55:23.772] GPU_STORAGE_END | 845fd29a | raw | 146ms
+[2025-10-27 20:55:23.786] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0700/44324/main.jpg
+[2025-10-27 20:55:23.785] GPU_STORAGE_END | d8c02f4c | raw | 171ms
+[2025-10-27 20:55:23.809] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0059/41930/main.jpg | 78ms
+[2025-10-27 20:55:23.806] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0054/45917/main.jpg | 76ms
+[2025-10-27 20:55:23.800] GPU_BATCH_END | batch_1761623722984 | 816ms | 8 images
+[2025-10-27 20:55:23.824] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0883/36967/main.jpg | 78ms
+[2025-10-27 20:55:23.815] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0397/43386/main.jpg
+[2025-10-27 20:55:23.815] GPU_BATCH_START | batch_1761623723762 | 10 images
+[2025-10-27 20:55:23.815] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0706/39219/main.jpg
+[2025-10-27 20:55:23.829] GPU_RECOGNITION_START | batch_1761623723762
+[2025-10-27 20:55:23.828] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0005/43130/main.jpg
+[2025-10-27 20:55:23.888] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0706/39219/main.jpg | 73ms
+[2025-10-27 20:55:23.902] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0005/43130/main.jpg | 74ms
+[2025-10-27 20:55:23.892] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0564/41910/main.jpg
+[2025-10-27 20:55:23.891] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0397/43386/main.jpg | 76ms
+[2025-10-27 20:55:23.906] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0519/41636/main.jpg
+[2025-10-27 20:55:23.906] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0210/43162/main.jpg
+[2025-10-27 20:55:23.919] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0700/44324/main.jpg | 133ms
+[2025-10-27 20:55:23.934] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0012/34916/main.jpg
+[2025-10-27 20:55:23.965] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0564/41910/main.jpg | 74ms
+[2025-10-27 20:55:23.969] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0126/43920/main.jpg
+[2025-10-27 20:55:23.983] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0210/43162/main.jpg | 77ms
+[2025-10-27 20:55:23.986] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0227/43184/main.jpg
+[2025-10-27 20:55:24.008] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0012/34916/main.jpg | 74ms
+[2025-10-27 20:55:24.014] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0383/32664/main.jpg
+[2025-10-27 20:55:24.040] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0519/41636/main.jpg | 134ms
+[2025-10-27 20:55:24.043] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0208/43278/main.jpg
+[2025-10-27 20:55:24.063] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0227/43184/main.jpg | 77ms
+[2025-10-27 20:55:24.070] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0570/41380/main.jpg
+[2025-10-27 20:55:24.104] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0126/43920/main.jpg | 135ms
+[2025-10-27 20:55:24.118] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0208/43278/main.jpg | 76ms
+[2025-10-27 20:55:24.107] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0581/42986/main.jpg
+[2025-10-27 20:55:24.123] GPU_RECOGNITION_END | batch_1761623723762 | 294ms | 4 faces
+[2025-10-27 20:55:24.122] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0474/44546/main.jpg
+[2025-10-27 20:55:24.135] GPU_STORAGE_START | 96782b93 | raw
+[2025-10-27 20:55:24.148] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0383/32664/main.jpg | 134ms
+[2025-10-27 20:55:24.148] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0570/41380/main.jpg | 78ms
+[2025-10-27 20:55:24.151] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0239/41816/main.jpg
+[2025-10-27 20:55:24.150] GPU_STORAGE_START | d6934788 | raw
+[2025-10-27 20:55:24.150] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0304/34889/main.jpg
+[2025-10-27 20:55:24.177] GPU_STORAGE_START | 9f72529b | raw
+[2025-10-27 20:55:24.191] GPU_STORAGE_START | ba899db0 | raw
+[2025-10-27 20:55:24.191] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0581/42986/main.jpg | 84ms
+[2025-10-27 20:55:24.200] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0474/44546/main.jpg | 77ms
+[2025-10-27 20:55:24.207] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0234/38209/main.jpg
+[2025-10-27 20:55:24.206] GPU_STORAGE_START | b214114f | raw
+[2025-10-27 20:55:24.207] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0412/43987/main.jpg
+[2025-10-27 20:55:24.220] GPU_STORAGE_START | b323e68c | raw
+[2025-10-27 20:55:24.239] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0239/41816/main.jpg | 88ms
+[2025-10-27 20:55:24.239] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0304/34889/main.jpg | 89ms
+[2025-10-27 20:55:24.234] GPU_STORAGE_START | 916966ca | raw
+[2025-10-27 20:55:24.251] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0711/43432/main.jpg
+[2025-10-27 20:55:24.249] GPU_STORAGE_START | f878526e | raw
+[2025-10-27 20:55:24.251] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0744/45853/main.jpg
+[2025-10-27 20:55:24.265] GPU_STORAGE_START | f276a178 | raw
+[2025-10-27 20:55:24.282] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0234/38209/main.jpg | 75ms
+[2025-10-27 20:55:24.278] GPU_STORAGE_START | d7c8ec9f | raw
+[2025-10-27 20:55:24.280] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0412/43987/main.jpg | 73ms
+[2025-10-27 20:55:24.309] GPU_STORAGE_END | 9f72529b | raw | 133ms
+[2025-10-27 20:55:24.294] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0278/43258/main.jpg
+[2025-10-27 20:55:24.294] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0777/36119/main.jpg
+[2025-10-27 20:55:24.313] GPU_STORAGE_END | ba899db0 | raw | 121ms
+[2025-10-27 20:55:24.327] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0744/45853/main.jpg | 76ms
+[2025-10-27 20:55:24.328] GPU_STORAGE_END | f276a178 | raw | 63ms
+[2025-10-27 20:55:24.327] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0711/43432/main.jpg | 76ms
+[2025-10-27 20:55:24.343] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0426/43239/main.jpg
+[2025-10-27 20:55:24.342] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0236/41987/main.jpg
+[2025-10-27 20:55:24.341] GPU_STORAGE_END | f878526e | raw | 92ms
+[2025-10-27 20:55:24.354] GPU_STORAGE_END | b214114f | raw | 148ms
+[2025-10-27 20:55:24.374] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0278/43258/main.jpg | 80ms
+[2025-10-27 20:55:24.368] GPU_STORAGE_END | d7c8ec9f | raw | 90ms
+[2025-10-27 20:55:24.382] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0469/45971/main.jpg
+[2025-10-27 20:55:24.394] GPU_STORAGE_END | b323e68c | raw | 174ms
+[2025-10-27 20:55:24.417] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0426/43239/main.jpg | 75ms
+[2025-10-27 20:55:24.407] GPU_STORAGE_END | 916966ca | raw | 173ms
+[2025-10-27 20:55:24.420] GPU_STORAGE_END | 96782b93 | raw | 284ms
+[2025-10-27 20:55:24.421] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0842/43237/main.jpg
+[2025-10-27 20:55:24.435] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0777/36119/main.jpg | 141ms
+[2025-10-27 20:55:24.432] GPU_STORAGE_END | d6934788 | raw | 283ms
+[2025-10-27 20:55:24.448] EXTRACT_START | site_0004 | https://www.voyeurshd.com/images/videos/0925/45686/main.jpg
+[2025-10-27 20:55:24.449] GPU_BATCH_END | batch_1761623723762 | 634ms | 10 images
+[2025-10-27 20:55:24.453] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0469/45971/main.jpg | 71ms
+[2025-10-27 20:55:24.461] GPU_BATCH_START | batch_1761623724382 | 9 images
+[2025-10-27 20:55:24.476] GPU_RECOGNITION_START | batch_1761623724382
+[2025-10-27 20:55:24.494] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0842/43237/main.jpg | 74ms
+[2025-10-27 20:55:24.486] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0236/41987/main.jpg | 144ms
+[2025-10-27 20:55:24.580] EXTRACT_END | site_0004 | https://www.voyeurshd.com/images/videos/0925/45686/main.jpg | 132ms
+[2025-10-27 20:55:24.824] GPU_RECOGNITION_END | batch_1761623724382 | 348ms | 8 faces
+[2025-10-27 20:55:24.826] GPU_STORAGE_START | 8619a65a | raw
+[2025-10-27 20:55:24.840] GPU_STORAGE_START | d2152d6a | raw
+[2025-10-27 20:55:24.854] GPU_STORAGE_START | a7b5b5c2 | raw
+[2025-10-27 20:55:24.866] GPU_STORAGE_START | cc531428 | raw
+[2025-10-27 20:55:24.879] GPU_STORAGE_START | fae5b985 | raw
+[2025-10-27 20:55:24.891] GPU_STORAGE_START | f249ab3b | raw
+[2025-10-27 20:55:24.903] GPU_STORAGE_START | 87481a4b | raw
+[2025-10-27 20:55:24.916] GPU_STORAGE_START | b9e243c6 | raw
+[2025-10-27 20:55:24.928] GPU_STORAGE_START | ac9794b5 | raw
+[2025-10-27 20:55:24.953] GPU_STORAGE_END | b9e243c6 | raw | 37ms
+[2025-10-27 20:55:24.974] GPU_STORAGE_END | 8619a65a | raw | 148ms
+[2025-10-27 20:55:24.978] GPU_STORAGE_END | a7b5b5c2 | raw | 124ms
+[2025-10-27 20:55:24.990] GPU_STORAGE_END | fae5b985 | raw | 111ms
+[2025-10-27 20:55:25.002] GPU_STORAGE_END | d2152d6a | raw | 162ms
+[2025-10-27 20:55:25.013] GPU_STORAGE_END | f249ab3b | raw | 122ms
+[2025-10-27 20:55:25.026] GPU_STORAGE_END | 87481a4b | raw | 123ms
+[2025-10-27 20:55:25.038] GPU_STORAGE_END | cc531428 | raw | 172ms
+[2025-10-27 20:55:25.050] GPU_STORAGE_END | ac9794b5 | raw | 122ms
+[2025-10-27 20:55:25.065] GPU_BATCH_END | batch_1761623724382 | 604ms | 9 images
+[2025-10-27 20:55:25.076] GPU_BATCH_START | batch_1761623724171 | 8 images
+[2025-10-27 20:55:25.089] GPU_RECOGNITION_START | batch_1761623724171
+[2025-10-27 20:55:25.444] GPU_RECOGNITION_END | batch_1761623724171 | 354ms | 9 faces
+[2025-10-27 20:55:25.446] GPU_STORAGE_START | 9ece3199 | raw
+[2025-10-27 20:55:25.462] GPU_STORAGE_START | 9a6663c9 | raw
+[2025-10-27 20:55:25.477] GPU_STORAGE_START | cc9bb7b0 | raw
+[2025-10-27 20:55:25.494] GPU_STORAGE_START | 9b389c67 | raw
+[2025-10-27 20:55:25.508] GPU_STORAGE_START | da79678c | raw
+[2025-10-27 20:55:25.520] GPU_STORAGE_START | d842356f | raw
+[2025-10-27 20:55:25.533] GPU_STORAGE_START | 989e743a | raw
+[2025-10-27 20:55:25.545] GPU_STORAGE_START | c78639cb | raw
+[2025-10-27 20:55:25.575] GPU_STORAGE_END | 989e743a | raw | 41ms
+[2025-10-27 20:55:25.594] GPU_STORAGE_END | 9ece3199 | raw | 148ms
+[2025-10-27 20:55:25.597] GPU_STORAGE_END | 9a6663c9 | raw | 135ms
+[2025-10-27 20:55:25.610] GPU_STORAGE_END | 9b389c67 | raw | 117ms
+[2025-10-27 20:55:25.623] GPU_STORAGE_END | cc9bb7b0 | raw | 146ms
+[2025-10-27 20:55:25.636] GPU_STORAGE_END | d842356f | raw | 116ms
+[2025-10-27 20:55:25.648] GPU_STORAGE_END | da79678c | raw | 140ms
+[2025-10-27 20:55:25.672] GPU_STORAGE_END | c78639cb | raw | 127ms
+[2025-10-27 20:55:25.675] GPU_BATCH_END | batch_1761623724171 | 599ms | 8 images
+[2025-10-27 20:55:25.687] GPU_BATCH_START | batch_1761623723967 | 9 images
+[2025-10-27 20:55:25.700] GPU_RECOGNITION_START | batch_1761623723967
+[2025-10-27 20:55:26.130] GPU_RECOGNITION_END | batch_1761623723967 | 430ms | 10 faces
+[2025-10-27 20:55:26.132] GPU_STORAGE_START | d5c6c64c | raw
+[2025-10-27 20:55:26.145] GPU_STORAGE_START | fcf78c11 | raw
+[2025-10-27 20:55:26.158] GPU_STORAGE_START | c5ca4b32 | raw
+[2025-10-27 20:55:26.170] GPU_STORAGE_START | 9d962268 | raw
+[2025-10-27 20:55:26.182] GPU_STORAGE_START | acc9da33 | raw
+[2025-10-27 20:55:26.195] GPU_STORAGE_START | b379fba6 | raw
+[2025-10-27 20:55:26.207] GPU_STORAGE_START | eb63d826 | raw
+[2025-10-27 20:55:26.221] GPU_STORAGE_START | d9a4268c | raw
+[2025-10-27 20:55:26.233] GPU_STORAGE_START | e94365f5 | raw
+[2025-10-27 20:55:26.273] GPU_STORAGE_END | fcf78c11 | raw | 128ms
+[2025-10-27 20:55:26.276] GPU_STORAGE_END | d5c6c64c | raw | 144ms
+[2025-10-27 20:55:26.292] GPU_STORAGE_END | c5ca4b32 | raw | 134ms
+[2025-10-27 20:55:26.304] GPU_STORAGE_END | acc9da33 | raw | 122ms
+[2025-10-27 20:55:26.335] GPU_STORAGE_END | eb63d826 | raw | 127ms
+[2025-10-27 20:55:26.339] GPU_STORAGE_END | b379fba6 | raw | 144ms
+[2025-10-27 20:55:26.352] GPU_STORAGE_END | 9d962268 | raw | 182ms
+[2025-10-27 20:55:26.364] GPU_STORAGE_END | d9a4268c | raw | 144ms
+[2025-10-27 20:55:26.377] GPU_STORAGE_END | e94365f5 | raw | 143ms
+[2025-10-27 20:55:26.390] GPU_BATCH_END | batch_1761623723967 | 703ms | 9 images
+[2025-10-27 20:55:26.400] GPU_BATCH_START | batch_1761623723542 | 8 images
+[2025-10-27 20:55:26.412] GPU_RECOGNITION_START | batch_1761623723542
+[2025-10-27 20:55:26.716] GPU_RECOGNITION_END | batch_1761623723542 | 304ms | 6 faces
+[2025-10-27 20:55:26.718] GPU_STORAGE_START | d15f8867 | raw
+[2025-10-27 20:55:26.731] GPU_STORAGE_START | b14c6221 | raw
+[2025-10-27 20:55:26.742] GPU_STORAGE_START | d2196e2c | raw
+[2025-10-27 20:55:26.753] GPU_STORAGE_START | faea01d2 | raw
+[2025-10-27 20:55:26.765] GPU_STORAGE_START | eb698386 | raw
+[2025-10-27 20:55:26.775] GPU_STORAGE_START | e35d9825 | raw
+[2025-10-27 20:55:26.786] GPU_STORAGE_START | c59c2798 | raw
+[2025-10-27 20:55:26.797] GPU_STORAGE_START | e87e0ff1 | raw
+[2025-10-27 20:55:26.824] GPU_STORAGE_END | b14c6221 | raw | 93ms
+[2025-10-27 20:55:26.841] GPU_STORAGE_END | e35d9825 | raw | 65ms
+[2025-10-27 20:55:26.843] GPU_STORAGE_END | d15f8867 | raw | 125ms
+[2025-10-27 20:55:26.854] GPU_STORAGE_END | e87e0ff1 | raw | 57ms
+[2025-10-27 20:55:26.866] GPU_STORAGE_END | d2196e2c | raw | 124ms
+[2025-10-27 20:55:26.876] GPU_STORAGE_END | c59c2798 | raw | 90ms
+[2025-10-27 20:55:26.890] GPU_STORAGE_END | faea01d2 | raw | 137ms
+[2025-10-27 20:55:26.901] GPU_STORAGE_END | eb698386 | raw | 136ms
+[2025-10-27 20:55:26.914] GPU_BATCH_END | batch_1761623723542 | 514ms | 8 images
+[2025-10-27 20:55:26.924] GPU_BATCH_START | batch_1761623723372 | 8 images
+[2025-10-27 20:55:26.937] GPU_RECOGNITION_START | batch_1761623723372
+[2025-10-27 20:55:27.184] GPU_RECOGNITION_END | batch_1761623723372 | 247ms | 4 faces
+[2025-10-27 20:55:27.185] GPU_STORAGE_START | 8c585973 | raw
+[2025-10-27 20:55:27.201] GPU_STORAGE_START | f68db467 | raw
+[2025-10-27 20:55:27.213] GPU_STORAGE_START | 968c1fe2 | raw
+[2025-10-27 20:55:27.224] GPU_STORAGE_START | d9ca2e99 | raw
+[2025-10-27 20:55:27.237] GPU_STORAGE_START | a08a8b99 | raw
+[2025-10-27 20:55:27.249] GPU_STORAGE_START | db31619c | raw
+[2025-10-27 20:55:27.262] GPU_STORAGE_START | 909e1ec7 | raw
+[2025-10-27 20:55:27.275] GPU_STORAGE_START | 885cf16b | raw
+[2025-10-27 20:55:27.305] GPU_STORAGE_END | f68db467 | raw | 104ms
+[2025-10-27 20:55:27.309] GPU_STORAGE_END | 909e1ec7 | raw | 47ms
+[2025-10-27 20:55:27.320] GPU_STORAGE_END | 968c1fe2 | raw | 106ms
+[2025-10-27 20:55:27.333] GPU_STORAGE_END | 8c585973 | raw | 147ms
+[2025-10-27 20:55:27.344] GPU_STORAGE_END | db31619c | raw | 95ms
+[2025-10-27 20:55:27.376] GPU_STORAGE_END | d9ca2e99 | raw | 152ms
+[2025-10-27 20:55:27.378] GPU_STORAGE_END | a08a8b99 | raw | 141ms
+[2025-10-27 20:55:27.390] GPU_STORAGE_END | 885cf16b | raw | 115ms
+[2025-10-27 20:55:27.403] GPU_BATCH_END | batch_1761623723372 | 479ms | 8 images
+[2025-10-27 20:55:27.417] GPU_BATCH_START | batch_1761623723170 | 8 images
+[2025-10-27 20:55:27.429] GPU_RECOGNITION_START | batch_1761623723170
+[2025-10-27 20:55:27.846] GPU_RECOGNITION_END | batch_1761623723170 | 417ms | 12 faces
+[2025-10-27 20:55:27.848] GPU_STORAGE_START | e8d18765 | raw
+[2025-10-27 20:55:27.861] GPU_STORAGE_START | aad4871f | raw
+[2025-10-27 20:55:27.874] GPU_STORAGE_START | a71c1836 | raw
+[2025-10-27 20:55:27.885] GPU_STORAGE_START | 857231cf | raw
+[2025-10-27 20:55:27.897] GPU_STORAGE_START | f4d79c1a | raw
+[2025-10-27 20:55:27.909] GPU_STORAGE_START | ba1c2b2b | raw
+[2025-10-27 20:55:27.922] GPU_STORAGE_START | 9473638e | raw
+[2025-10-27 20:55:27.933] GPU_STORAGE_START | ca22b5a9 | raw
+[2025-10-27 20:55:27.964] GPU_STORAGE_END | aad4871f | raw | 104ms
+[2025-10-27 20:55:27.993] GPU_STORAGE_END | e8d18765 | raw | 144ms
+[2025-10-27 20:55:27.995] GPU_STORAGE_END | a71c1836 | raw | 121ms
+[2025-10-27 20:55:28.007] GPU_STORAGE_END | 857231cf | raw | 122ms
+[2025-10-27 20:55:28.019] GPU_STORAGE_END | f4d79c1a | raw | 122ms
+[2025-10-27 20:55:28.030] GPU_STORAGE_END | ba1c2b2b | raw | 121ms
+[2025-10-27 20:55:28.042] GPU_STORAGE_END | 9473638e | raw | 120ms
+[2025-10-27 20:55:28.053] GPU_STORAGE_END | ca22b5a9 | raw | 120ms
+[2025-10-27 20:55:28.066] GPU_BATCH_END | batch_1761623723170 | 650ms | 8 images
+[2025-10-27 20:55:32.234] PAGE_START | site_0005 | https://www.voyeurstyle.com
+[2025-10-27 20:55:32.236] PAGE_END | site_0005 | https://www.voyeurstyle.com | 2ms | 40 candidates
+[2025-10-27 20:55:32.309] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16346/240x180/13.jpg
+[2025-10-27 20:55:32.310] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16345/240x180/7.jpg
+[2025-10-27 20:55:32.310] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16344/240x180/2.jpg
+[2025-10-27 20:55:32.311] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16343/240x180/4.jpg
+[2025-10-27 20:55:32.596] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16346/240x180/13.jpg | 287ms
+[2025-10-27 20:55:32.599] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16303/240x180/20.jpg
+[2025-10-27 20:55:32.617] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16344/240x180/2.jpg | 307ms
+[2025-10-27 20:55:32.624] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16304/240x180/13.jpg
+[2025-10-27 20:55:32.624] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16345/240x180/7.jpg | 314ms
+[2025-10-27 20:55:32.639] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16343/240x180/4.jpg | 329ms
+[2025-10-27 20:55:32.636] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16305/240x180/18.jpg
+[2025-10-27 20:55:32.647] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16306/240x180/13.jpg
+[2025-10-27 20:55:32.668] GPU_BATCH_START | batch_1761623732668 | 8 images
+[2025-10-27 20:55:32.682] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16303/240x180/20.jpg | 83ms
+[2025-10-27 20:55:32.673] GPU_RECOGNITION_START | batch_1761623732668
+[2025-10-27 20:55:32.685] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16308/240x180/3.jpg
+[2025-10-27 20:55:32.706] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16304/240x180/13.jpg | 82ms
+[2025-10-27 20:55:32.710] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16311/240x180/1.jpg
+[2025-10-27 20:55:32.732] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16306/240x180/13.jpg | 85ms
+[2025-10-27 20:55:32.724] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16305/240x180/18.jpg | 88ms
+[2025-10-27 20:55:32.737] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16312/240x180/6.jpg
+[2025-10-27 20:55:32.737] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16313/240x180/13.jpg
+[2025-10-27 20:55:32.763] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16308/240x180/3.jpg | 78ms
+[2025-10-27 20:55:32.766] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16314/240x180/10.jpg
+[2025-10-27 20:55:32.792] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16311/240x180/1.jpg | 82ms
+[2025-10-27 20:55:32.800] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16317/240x180/11.jpg
+[2025-10-27 20:55:32.822] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16313/240x180/13.jpg | 85ms
+[2025-10-27 20:55:32.822] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16312/240x180/6.jpg | 85ms
+[2025-10-27 20:55:32.834] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16319/240x180/19.jpg
+[2025-10-27 20:55:32.834] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16318/240x180/5.jpg
+[2025-10-27 20:55:32.850] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16314/240x180/10.jpg | 83ms
+[2025-10-27 20:55:32.865] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16320/240x180/7.jpg
+[2025-10-27 20:55:32.890] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16317/240x180/11.jpg | 90ms
+[2025-10-27 20:55:32.897] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16321/240x180/7.jpg
+[2025-10-27 20:55:32.924] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16319/240x180/19.jpg | 90ms
+[2025-10-27 20:55:32.924] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16318/240x180/5.jpg | 90ms
+[2025-10-27 20:55:32.928] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16322/240x180/3.jpg
+[2025-10-27 20:55:32.928] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16323/240x180/14.jpg
+[2025-10-27 20:55:32.949] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16320/240x180/7.jpg | 85ms
+[2025-10-27 20:55:32.963] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16324/240x180/1.jpg
+[2025-10-27 20:55:32.978] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16321/240x180/7.jpg | 81ms
+[2025-10-27 20:55:32.995] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16327/240x180/2.jpg
+[2025-10-27 20:55:33.025] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16323/240x180/14.jpg | 98ms
+[2025-10-27 20:55:33.025] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16322/240x180/3.jpg | 98ms
+[2025-10-27 20:55:33.028] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16328/240x180/9.jpg
+[2025-10-27 20:55:33.028] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16329/240x180/1.jpg
+[2025-10-27 20:55:33.043] GPU_RECOGNITION_END | batch_1761623732668 | 370ms | 7 faces
+[2025-10-27 20:55:33.045] GPU_STORAGE_START | c0ba7d0d | raw
+[2025-10-27 20:55:33.046] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16324/240x180/1.jpg | 83ms
+[2025-10-27 20:55:33.079] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16327/240x180/2.jpg | 84ms
+[2025-10-27 20:55:33.074] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16330/240x180/5.jpg
+[2025-10-27 20:55:33.074] GPU_STORAGE_START | c932443c | raw
+[2025-10-27 20:55:33.090] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16331/240x180/2.jpg
+[2025-10-27 20:55:33.089] GPU_STORAGE_START | 929b989a | raw
+[2025-10-27 20:55:33.118] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16329/240x180/1.jpg | 89ms
+[2025-10-27 20:55:33.118] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16328/240x180/9.jpg | 90ms
+[2025-10-27 20:55:33.104] GPU_STORAGE_START | e4df8600 | raw
+[2025-10-27 20:55:33.121] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/9000/9800/240x180/3.jpg
+[2025-10-27 20:55:33.120] GPU_STORAGE_START | efbdf450 | raw
+[2025-10-27 20:55:33.121] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15364/240x180/4.jpg
+[2025-10-27 20:55:33.136] GPU_STORAGE_START | e49c46da | raw
+[2025-10-27 20:55:33.159] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16330/240x180/5.jpg | 85ms
+[2025-10-27 20:55:33.149] GPU_STORAGE_START | 82826e5f | raw
+[2025-10-27 20:55:33.162] GPU_STORAGE_START | c0c06dc8 | raw
+[2025-10-27 20:55:33.163] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/10000/10137/240x180/16.jpg
+[2025-10-27 20:55:33.180] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16331/240x180/2.jpg | 90ms
+[2025-10-27 20:55:33.196] GPU_STORAGE_END | 82826e5f | raw | 47ms
+[2025-10-27 20:55:33.198] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15357/240x180/17.jpg
+[2025-10-27 20:55:33.211] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/9000/9800/240x180/3.jpg | 90ms
+[2025-10-27 20:55:33.213] GPU_STORAGE_END | c0c06dc8 | raw | 50ms
+[2025-10-27 20:55:33.211] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15364/240x180/4.jpg | 90ms
+[2025-10-27 20:55:33.226] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16332/240x180/1.jpg
+[2025-10-27 20:55:33.255] GPU_STORAGE_END | c932443c | raw | 181ms
+[2025-10-27 20:55:33.244] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/10000/10137/240x180/16.jpg | 81ms
+[2025-10-27 20:55:33.268] GPU_STORAGE_END | e49c46da | raw | 132ms
+[2025-10-27 20:55:33.269] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16334/240x180/2.jpg
+[2025-10-27 20:55:33.269] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16333/240x180/2.jpg
+[2025-10-27 20:55:33.283] GPU_STORAGE_END | efbdf450 | raw | 163ms
+[2025-10-27 20:55:33.290] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15357/240x180/17.jpg | 92ms
+[2025-10-27 20:55:33.298] GPU_STORAGE_END | e4df8600 | raw | 194ms
+[2025-10-27 20:55:33.299] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16336/240x180/4.jpg
+[2025-10-27 20:55:33.314] GPU_STORAGE_END | c0ba7d0d | raw | 269ms
+[2025-10-27 20:55:33.330] GPU_STORAGE_END | 929b989a | raw | 241ms
+[2025-10-27 20:55:33.353] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16334/240x180/2.jpg | 84ms
+[2025-10-27 20:55:33.357] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16333/240x180/2.jpg | 88ms
+[2025-10-27 20:55:33.348] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16332/240x180/1.jpg | 122ms
+[2025-10-27 20:55:33.349] GPU_BATCH_END | batch_1761623732668 | 681ms | 8 images
+[2025-10-27 20:55:33.365] GPU_BATCH_START | batch_1761623733191 | 8 images
+[2025-10-27 20:55:33.365] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16339/240x180/4.jpg
+[2025-10-27 20:55:33.365] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16337/240x180/7.jpg
+[2025-10-27 20:55:33.365] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16338/240x180/1.jpg
+[2025-10-27 20:55:33.386] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16336/240x180/4.jpg | 86ms
+[2025-10-27 20:55:33.380] GPU_RECOGNITION_START | batch_1761623733191
+[2025-10-27 20:55:33.394] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg
+[2025-10-27 20:55:33.445] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16337/240x180/7.jpg | 80ms
+[2025-10-27 20:55:33.458] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16339/240x180/4.jpg | 93ms
+[2025-10-27 20:55:33.458] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16338/240x180/1.jpg | 93ms
+[2025-10-27 20:55:33.447] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16341/240x180/7.jpg
+[2025-10-27 20:55:33.463] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16342/240x180/17.jpg
+[2025-10-27 20:55:33.480] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg | 86ms
+[2025-10-27 20:55:33.530] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16341/240x180/7.jpg | 82ms
+[2025-10-27 20:55:33.555] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16342/240x180/17.jpg | 92ms
+[2025-10-27 20:55:33.708] GPU_RECOGNITION_END | batch_1761623733191 | 328ms | 2 faces
+[2025-10-27 20:55:33.710] GPU_STORAGE_START | 95ff300e | raw
+[2025-10-27 20:55:33.728] GPU_STORAGE_START | f1cd5147 | raw
+[2025-10-27 20:55:33.743] GPU_STORAGE_START | b280c8ba | raw
+[2025-10-27 20:55:33.757] GPU_STORAGE_START | eaeab839 | raw
+[2025-10-27 20:55:33.775] GPU_STORAGE_START | 8084e0bd | raw
+[2025-10-27 20:55:33.791] GPU_STORAGE_START | f601dd71 | raw
+[2025-10-27 20:55:33.806] GPU_STORAGE_START | e36302c1 | raw
+[2025-10-27 20:55:33.821] GPU_STORAGE_START | 815e4b2d | raw
+[2025-10-27 20:55:33.856] GPU_STORAGE_END | 8084e0bd | raw | 81ms
+[2025-10-27 20:55:33.858] GPU_STORAGE_END | b280c8ba | raw | 116ms
+[2025-10-27 20:55:33.876] GPU_STORAGE_END | eaeab839 | raw | 118ms
+[2025-10-27 20:55:33.890] GPU_STORAGE_END | 95ff300e | raw | 180ms
+[2025-10-27 20:55:33.906] GPU_STORAGE_END | e36302c1 | raw | 100ms
+[2025-10-27 20:55:33.923] GPU_STORAGE_END | 815e4b2d | raw | 102ms
+[2025-10-27 20:55:33.952] GPU_STORAGE_END | f1cd5147 | raw | 224ms
+[2025-10-27 20:55:33.959] GPU_STORAGE_END | f601dd71 | raw | 168ms
+[2025-10-27 20:55:33.976] GPU_BATCH_END | batch_1761623733191 | 611ms | 8 images
+[2025-10-27 20:55:33.996] GPU_BATCH_START | batch_1761623733394 | 8 images
+[2025-10-27 20:55:34.022] GPU_RECOGNITION_START | batch_1761623733394
+[2025-10-27 20:55:34.393] GPU_RECOGNITION_END | batch_1761623733394 | 370ms | 6 faces
+[2025-10-27 20:55:34.395] GPU_STORAGE_START | f8fef0c2 | raw
+[2025-10-27 20:55:34.421] GPU_STORAGE_START | 8acadb69 | raw
+[2025-10-27 20:55:34.440] GPU_STORAGE_START | f8a0b195 | raw
+[2025-10-27 20:55:34.455] GPU_STORAGE_START | 89293954 | raw
+[2025-10-27 20:55:34.471] GPU_STORAGE_START | e44c33c6 | raw
+[2025-10-27 20:55:34.488] GPU_STORAGE_START | 8f7e9a83 | raw
+[2025-10-27 20:55:34.502] GPU_STORAGE_START | 9e323093 | raw
+[2025-10-27 20:55:34.515] GPU_STORAGE_START | afa5666b | raw
+[2025-10-27 20:55:34.545] GPU_STORAGE_END | 89293954 | raw | 91ms
+[2025-10-27 20:55:34.549] GPU_STORAGE_END | f8a0b195 | raw | 110ms
+[2025-10-27 20:55:34.581] GPU_STORAGE_END | afa5666b | raw | 66ms
+[2025-10-27 20:55:34.586] GPU_STORAGE_END | 8f7e9a83 | raw | 98ms
+[2025-10-27 20:55:34.598] GPU_STORAGE_END | e44c33c6 | raw | 128ms
+[2025-10-27 20:55:34.617] GPU_STORAGE_END | 8acadb69 | raw | 196ms
+[2025-10-27 20:55:34.634] GPU_STORAGE_END | f8fef0c2 | raw | 239ms
+[2025-10-27 20:55:34.649] GPU_STORAGE_END | 9e323093 | raw | 146ms
+[2025-10-27 20:55:34.667] GPU_BATCH_END | batch_1761623733394 | 671ms | 8 images
+[2025-10-27 20:55:34.680] GPU_BATCH_START | batch_1761623732985 | 8 images
+[2025-10-27 20:55:34.697] GPU_RECOGNITION_START | batch_1761623732985
+[2025-10-27 20:55:34.929] GPU_RECOGNITION_END | batch_1761623732985 | 232ms | 3 faces
+[2025-10-27 20:55:34.931] GPU_STORAGE_START | b30bccb5 | raw
+[2025-10-27 20:55:34.944] GPU_STORAGE_START | e4163bf8 | raw
+[2025-10-27 20:55:34.956] GPU_STORAGE_START | cb8ba461 | raw
+[2025-10-27 20:55:34.968] GPU_STORAGE_START | abc7cdca | raw
+[2025-10-27 20:55:34.979] GPU_STORAGE_START | b0e9657a | raw
+[2025-10-27 20:55:34.991] GPU_STORAGE_START | bf308a41 | raw
+[2025-10-27 20:55:35.002] GPU_STORAGE_START | 8f58e084 | raw
+[2025-10-27 20:55:35.012] GPU_STORAGE_START | bc2c7ce3 | raw
+[2025-10-27 20:55:35.040] GPU_STORAGE_END | abc7cdca | raw | 72ms
+[2025-10-27 20:55:35.045] GPU_STORAGE_END | e4163bf8 | raw | 101ms
+[2025-10-27 20:55:35.056] GPU_STORAGE_END | bf308a41 | raw | 65ms
+[2025-10-27 20:55:35.070] GPU_STORAGE_END | b0e9657a | raw | 90ms
+[2025-10-27 20:55:35.084] GPU_STORAGE_END | bc2c7ce3 | raw | 72ms
+[2025-10-27 20:55:35.096] GPU_STORAGE_END | cb8ba461 | raw | 139ms
+[2025-10-27 20:55:35.110] GPU_STORAGE_END | b30bccb5 | raw | 179ms
+[2025-10-27 20:55:35.122] GPU_STORAGE_END | 8f58e084 | raw | 121ms
+[2025-10-27 20:55:35.135] GPU_BATCH_END | batch_1761623732985 | 455ms | 8 images
+[2025-10-27 20:55:35.147] GPU_BATCH_START | batch_1761623732794 | 8 images
+[2025-10-27 20:55:35.158] GPU_RECOGNITION_START | batch_1761623732794
+[2025-10-27 20:55:35.318] GPU_RECOGNITION_END | batch_1761623732794 | 160ms | 1 faces
+[2025-10-27 20:55:35.320] GPU_STORAGE_START | 9a0f3df8 | raw
+[2025-10-27 20:55:35.333] GPU_STORAGE_START | e8a1d20e | raw
+[2025-10-27 20:55:35.344] GPU_STORAGE_START | c26b6bdc | raw
+[2025-10-27 20:55:35.357] GPU_STORAGE_START | a4d19967 | raw
+[2025-10-27 20:55:35.368] GPU_STORAGE_START | c899ee27 | raw
+[2025-10-27 20:55:35.379] GPU_STORAGE_START | c7199585 | raw
+[2025-10-27 20:55:35.389] GPU_STORAGE_START | c5cf5e70 | raw
+[2025-10-27 20:55:35.399] GPU_STORAGE_START | b1cdcc66 | raw
+[2025-10-27 20:55:35.422] GPU_STORAGE_END | 9a0f3df8 | raw | 102ms
+[2025-10-27 20:55:35.429] GPU_STORAGE_END | e8a1d20e | raw | 97ms
+[2025-10-27 20:55:35.436] GPU_STORAGE_END | a4d19967 | raw | 79ms
+[2025-10-27 20:55:35.446] GPU_STORAGE_END | c7199585 | raw | 67ms
+[2025-10-27 20:55:35.456] GPU_STORAGE_END | c5cf5e70 | raw | 67ms
+[2025-10-27 20:55:35.466] GPU_STORAGE_END | c26b6bdc | raw | 122ms
+[2025-10-27 20:55:35.477] GPU_STORAGE_END | c899ee27 | raw | 109ms
+[2025-10-27 20:55:35.490] GPU_STORAGE_END | b1cdcc66 | raw | 90ms
+[2025-10-27 20:55:35.501] GPU_BATCH_END | batch_1761623732794 | 354ms | 8 images
+[2025-10-27 20:55:45.028] PAGE_START | site_0005 | https://www.voyeurstyle.com/categories/amateur-webcam/
+[2025-10-27 20:55:45.030] PAGE_END | site_0005 | https://www.voyeurstyle.com/categories/amateur-webcam/ | 2ms | 40 candidates
+[2025-10-27 20:55:45.048] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16333/240x180/2.jpg
+[2025-10-27 20:55:45.048] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16334/240x180/2.jpg
+[2025-10-27 20:55:45.049] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15364/240x180/4.jpg
+[2025-10-27 20:55:45.047] EXTRACT_START | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg
+[2025-10-27 20:55:45.062] SITE_END | site_0005 | 38806ms | 2 pages | 80 candidates
+[2025-10-27 20:55:45.069] SITE_START | site_0002 | https://forum.candidgirls.io
+[2025-10-27 20:55:45.125] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16334/240x180/2.jpg | 78ms
+[2025-10-27 20:55:45.128] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16333/240x180/2.jpg | 80ms
+[2025-10-27 20:55:45.129] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/16000/16340/240x180/14.jpg | 82ms
+[2025-10-27 20:55:45.189] EXTRACT_END | site_0005 | https://www.voyeurstyle.com/contents/videos_screenshots/15000/15364/240x180/4.jpg | 140ms
+[2025-10-27 20:55:45.601] PAGE_START | site_0003 | https://motherless.com
+[2025-10-27 20:55:45.603] PAGE_END | site_0003 | https://motherless.com | 2ms | 161 candidates
+[2025-10-27 20:55:46.175] EXTRACT_START | site_0003 | https://cdn5-static.motherlessmedia.com/images/plc.gif
+[2025-10-27 20:55:46.175] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/020F62F-small-2.jpg
+[2025-10-27 20:55:46.176] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/E776E2B-small-7.jpg
+[2025-10-27 20:55:46.176] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/E23FAD7-small-7.jpg
+[2025-10-27 20:55:46.220] EXTRACT_END | site_0003 | https://cdn5-static.motherlessmedia.com/images/plc.gif | 45ms
+[2025-10-27 20:55:46.222] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/AC89435-small.jpg
+[2025-10-27 20:55:46.680] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/E776E2B-small-7.jpg | 504ms
+[2025-10-27 20:55:46.683] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/0A9DF81-zoom.jpg
+[2025-10-27 20:55:46.700] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/020F62F-small-2.jpg | 525ms
+[2025-10-27 20:55:46.714] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8EDDEB6-zoom.jpg
+[2025-10-27 20:55:46.732] GPU_BATCH_START | batch_1761623746732 | 8 images
+[2025-10-27 20:55:46.742] GPU_RECOGNITION_START | batch_1761623746732
+[2025-10-27 20:55:46.753] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/AC89435-small.jpg | 531ms
+[2025-10-27 20:55:46.769] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/5B62F0F-zoom.jpg
+[2025-10-27 20:55:46.811] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/E23FAD7-small-7.jpg | 634ms
+[2025-10-27 20:55:46.814] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/78101FD-zoom.jpg
+[2025-10-27 20:55:46.872] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/0A9DF81-zoom.jpg | 189ms
+[2025-10-27 20:55:46.874] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/D87878C-zoom.jpg
+[2025-10-27 20:55:46.891] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8EDDEB6-zoom.jpg | 177ms
+[2025-10-27 20:55:46.906] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/B904DB9-zoom.jpg
+[2025-10-27 20:55:46.953] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/5B62F0F-zoom.jpg | 184ms
+[2025-10-27 20:55:46.956] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9E27CC2-zoom.jpg
+[2025-10-27 20:55:46.982] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/78101FD-zoom.jpg | 169ms
+[2025-10-27 20:55:46.987] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9DA6A2-zoom.jpg
+[2025-10-27 20:55:47.041] GPU_RECOGNITION_END | batch_1761623746732 | 299ms | 2 faces
+[2025-10-27 20:55:47.043] GPU_STORAGE_START | 80c87d93 | raw
+[2025-10-27 20:55:47.051] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/D87878C-zoom.jpg | 177ms
+[2025-10-27 20:55:47.060] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/DB9E893-zoom.jpg
+[2025-10-27 20:55:47.059] GPU_STORAGE_START | ecc65b34 | raw
+[2025-10-27 20:55:47.088] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/B904DB9-zoom.jpg | 182ms
+[2025-10-27 20:55:47.078] GPU_STORAGE_START | 874369be | raw
+[2025-10-27 20:55:47.093] GPU_STORAGE_START | b5ca4c0d | raw
+[2025-10-27 20:55:47.094] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/91EC7CD-zoom.jpg
+[2025-10-27 20:55:47.108] GPU_STORAGE_START | cda4d595 | raw
+[2025-10-27 20:55:47.124] GPU_STORAGE_START | 8f583996 | raw
+[2025-10-27 20:55:47.138] GPU_STORAGE_START | b5ca4c0d | raw
+[2025-10-27 20:55:47.147] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9E27CC2-zoom.jpg | 191ms
+[2025-10-27 20:55:47.157] GPU_STORAGE_START | e23bc1c0 | raw
+[2025-10-27 20:55:47.157] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/9DA6A2-zoom.jpg | 170ms
+[2025-10-27 20:55:47.159] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8556498-zoom.jpg
+[2025-10-27 20:55:47.190] GPU_STORAGE_END | 80c87d93 | raw | 147ms
+[2025-10-27 20:55:47.177] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/2C3D314-zoom.jpg
+[2025-10-27 20:55:47.199] GPU_STORAGE_END | ecc65b34 | raw | 140ms
+[2025-10-27 20:55:47.216] GPU_STORAGE_END | b5ca4c0d | raw | 124ms
+[2025-10-27 20:55:47.238] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/DB9E893-zoom.jpg | 178ms
+[2025-10-27 20:55:47.231] GPU_STORAGE_END | cda4d595 | raw | 123ms
+[2025-10-27 20:55:47.247] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/59BD3D7-zoom.jpg
+[2025-10-27 20:55:47.246] GPU_STORAGE_END | e23bc1c0 | raw | 89ms
+[2025-10-27 20:55:47.275] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/91EC7CD-zoom.jpg | 181ms
+[2025-10-27 20:55:47.263] GPU_STORAGE_END | b5ca4c0d | raw | 124ms
+[2025-10-27 20:55:47.283] GPU_STORAGE_END | 8f583996 | raw | 159ms
+[2025-10-27 20:55:47.283] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/23853CA-zoom.jpg
+[2025-10-27 20:55:47.298] GPU_STORAGE_END | 874369be | raw | 220ms
+[2025-10-27 20:55:47.316] GPU_BATCH_END | batch_1761623746732 | 583ms | 8 images
+[2025-10-27 20:55:47.328] GPU_BATCH_START | batch_1761623747080 | 8 images
+[2025-10-27 20:55:47.344] GPU_RECOGNITION_START | batch_1761623747080
+[2025-10-27 20:55:47.360] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/2C3D314-zoom.jpg | 183ms
+[2025-10-27 20:55:47.359] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8556498-zoom.jpg | 200ms
+[2025-10-27 20:55:47.373] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8AA4116-zoom.jpg
+[2025-10-27 20:55:47.372] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/40675B9-small.jpg
+[2025-10-27 20:55:47.423] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/59BD3D7-zoom.jpg | 175ms
+[2025-10-27 20:55:47.425] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/CF2D3A8-zoom.jpg
+[2025-10-27 20:55:47.474] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/23853CA-zoom.jpg | 191ms
+[2025-10-27 20:55:47.477] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/3083D88-zoom.jpg
+[2025-10-27 20:55:47.549] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/40675B9-small.jpg | 177ms
+[2025-10-27 20:55:47.556] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/8AA4116-zoom.jpg | 183ms
+[2025-10-27 20:55:47.552] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/7D42099-zoom.jpg
+[2025-10-27 20:55:47.566] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/A2586CB-zoom.jpg
+[2025-10-27 20:55:47.601] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/CF2D3A8-zoom.jpg | 176ms
+[2025-10-27 20:55:47.604] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/97997F5-small.jpg
+[2025-10-27 20:55:47.636] GPU_RECOGNITION_END | batch_1761623747080 | 292ms | 7 faces
+[2025-10-27 20:55:47.638] GPU_STORAGE_START | 9899cd31 | raw
+[2025-10-27 20:55:47.653] GPU_STORAGE_START | 976ce846 | raw
+[2025-10-27 20:55:47.659] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/3083D88-zoom.jpg | 182ms
+[2025-10-27 20:55:47.667] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/F2D3444-zoom.jpg
+[2025-10-27 20:55:47.665] GPU_STORAGE_START | eda43373 | raw
+[2025-10-27 20:55:47.679] GPU_STORAGE_START | cf6facc0 | raw
+[2025-10-27 20:55:47.692] GPU_STORAGE_START | fe9e18d1 | raw
+[2025-10-27 20:55:47.706] GPU_STORAGE_START | c66ef595 | raw
+[2025-10-27 20:55:47.720] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/7D42099-zoom.jpg | 167ms
+[2025-10-27 20:55:47.720] GPU_STORAGE_START | a6669868 | raw
+[2025-10-27 20:55:47.733] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/B727B47-zoom.jpg
+[2025-10-27 20:55:47.732] GPU_STORAGE_START | 83bdecc4 | raw
+[2025-10-27 20:55:47.748] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/A2586CB-zoom.jpg | 182ms
+[2025-10-27 20:55:47.755] GPU_STORAGE_END | eda43373 | raw | 90ms
+[2025-10-27 20:55:47.767] GPU_STORAGE_END | fe9e18d1 | raw | 76ms
+[2025-10-27 20:55:47.763] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/67F82F8-zoom.jpg
+[2025-10-27 20:55:47.777] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/97997F5-small.jpg | 173ms
+[2025-10-27 20:55:47.777] GPU_STORAGE_END | c66ef595 | raw | 70ms
+[2025-10-27 20:55:47.792] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/E4CD49E-small.jpg
+[2025-10-27 20:55:47.806] GPU_STORAGE_END | 9899cd31 | raw | 168ms
+[2025-10-27 20:55:47.820] GPU_STORAGE_END | a6669868 | raw | 101ms
+[2025-10-27 20:55:47.833] GPU_STORAGE_END | 976ce846 | raw | 180ms
+[2025-10-27 20:55:47.845] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/F2D3444-zoom.jpg | 178ms
+[2025-10-27 20:55:47.845] GPU_STORAGE_END | cf6facc0 | raw | 167ms
+[2025-10-27 20:55:47.859] GPU_STORAGE_END | 83bdecc4 | raw | 127ms
+[2025-10-27 20:55:47.860] EXTRACT_START | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/69C29CA-zoom.jpg
+[2025-10-27 20:55:47.875] GPU_BATCH_END | batch_1761623747080 | 547ms | 8 images
+[2025-10-27 20:55:47.887] GPU_BATCH_START | batch_1761623747782 | 8 images
+[2025-10-27 20:55:47.904] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/B727B47-zoom.jpg | 172ms
+[2025-10-27 20:55:47.904] GPU_RECOGNITION_START | batch_1761623747782
+[2025-10-27 20:55:47.948] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/67F82F8-zoom.jpg | 185ms
+[2025-10-27 20:55:47.967] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/E4CD49E-small.jpg | 175ms
+[2025-10-27 20:55:48.040] EXTRACT_END | site_0003 | https://cdn5-thumbs.motherlessmedia.com/thumbs/69C29CA-zoom.jpg | 180ms
+[2025-10-27 20:55:48.140] GPU_RECOGNITION_END | batch_1761623747782 | 237ms | 5 faces
+[2025-10-27 20:55:48.142] GPU_STORAGE_START | b741d85e | raw
+[2025-10-27 20:55:48.156] GPU_STORAGE_START | e8e1a1e7 | raw
+[2025-10-27 20:55:48.169] GPU_STORAGE_START | ebe48d92 | raw
+[2025-10-27 20:55:48.181] GPU_STORAGE_START | c4db5821 | raw
+[2025-10-27 20:55:48.194] GPU_STORAGE_START | d6c64cc0 | raw
+[2025-10-27 20:55:48.207] GPU_STORAGE_START | c9f26ec4 | raw
+[2025-10-27 20:55:48.220] GPU_STORAGE_START | e1cf1c90 | raw
+[2025-10-27 20:55:48.233] GPU_STORAGE_START | 9cdeb2ad | raw
+[2025-10-27 20:55:48.261] GPU_STORAGE_END | c4db5821 | raw | 80ms
+[2025-10-27 20:55:48.266] GPU_STORAGE_END | c9f26ec4 | raw | 58ms
+[2025-10-27 20:55:48.279] GPU_STORAGE_END | ebe48d92 | raw | 110ms
+[2025-10-27 20:55:48.296] GPU_STORAGE_END | e8e1a1e7 | raw | 140ms
+[2025-10-27 20:55:48.325] GPU_STORAGE_END | 9cdeb2ad | raw | 92ms
+[2025-10-27 20:55:48.329] GPU_STORAGE_END | e1cf1c90 | raw | 110ms
+[2025-10-27 20:55:48.345] GPU_STORAGE_END | b741d85e | raw | 203ms
+[2025-10-27 20:55:48.358] GPU_STORAGE_END | d6c64cc0 | raw | 164ms
+[2025-10-27 20:55:48.373] GPU_BATCH_END | batch_1761623747782 | 486ms | 8 images
+[2025-10-27 20:55:48.384] GPU_BATCH_START | batch_1761623747450 | 8 images
+[2025-10-27 20:55:48.398] GPU_RECOGNITION_START | batch_1761623747450
+[2025-10-27 20:55:48.776] GPU_RECOGNITION_END | batch_1761623747450 | 378ms | 10 faces
+[2025-10-27 20:55:48.778] GPU_STORAGE_START | 8613476f | raw
+[2025-10-27 20:55:48.793] GPU_STORAGE_START | c959db73 | raw
+[2025-10-27 20:55:48.806] GPU_STORAGE_START | 8c2d7097 | raw
+[2025-10-27 20:55:48.818] GPU_STORAGE_START | e13193e3 | raw
+[2025-10-27 20:55:48.832] GPU_STORAGE_START | 85f132b4 | raw
+[2025-10-27 20:55:48.844] GPU_STORAGE_START | 9a90f15b | raw
+[2025-10-27 20:55:48.857] GPU_STORAGE_START | d8952677 | raw
+[2025-10-27 20:55:48.871] GPU_STORAGE_START | f29901fe | raw
+[2025-10-27 20:55:48.909] GPU_STORAGE_END | d8952677 | raw | 52ms
+[2025-10-27 20:55:48.935] GPU_STORAGE_END | c959db73 | raw | 142ms
+[2025-10-27 20:55:48.938] GPU_STORAGE_END | e13193e3 | raw | 119ms
+[2025-10-27 20:55:48.951] GPU_STORAGE_END | 8613476f | raw | 173ms
+[2025-10-27 20:55:48.963] GPU_STORAGE_END | 85f132b4 | raw | 131ms
+[2025-10-27 20:55:48.975] GPU_STORAGE_END | 8c2d7097 | raw | 169ms
+[2025-10-27 20:55:48.987] GPU_STORAGE_END | 9a90f15b | raw | 143ms
+[2025-10-27 20:55:49.000] GPU_STORAGE_END | f29901fe | raw | 128ms
+[2025-10-27 20:55:49.016] GPU_BATCH_END | batch_1761623747450 | 632ms | 8 images
+[2025-10-27 20:55:55.450] PAGE_START | site_0002 | https://forum.candidgirls.io
+[2025-10-27 20:55:55.451] PAGE_END | site_0002 | https://forum.candidgirls.io | 2ms | 75 candidates
+[2025-10-27 20:55:55.471] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/a/3ec8ea/24.png
+[2025-10-27 20:55:55.536] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/a/3ec8ea/24.png | 65ms
+[2025-10-27 20:55:55.683] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/c/a5b964/24.png
+[2025-10-27 20:55:55.683] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mr.backside/24/1656232_2.png
+[2025-10-27 20:55:55.684] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/fbc32d/24.png
+[2025-10-27 20:55:55.684] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/k/f04885/24.png
+[2025-10-27 20:55:55.699] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/k/f04885/24.png | 15ms
+[2025-10-27 20:55:55.712] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/fuckrico/24/525671_2.png
+[2025-10-27 20:55:55.734] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/fuckrico/24/525671_2.png | 22ms
+[2025-10-27 20:55:55.731] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/fbc32d/24.png | 48ms
+[2025-10-27 20:55:55.725] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/c/a5b964/24.png | 42ms
+[2025-10-27 20:55:55.739] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/frodo_baggins/24/142031_2.png
+[2025-10-27 20:55:55.738] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/w/f4b2a3/24.png
+[2025-10-27 20:55:55.738] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/rich99_6ix/24/547365_2.png
+[2025-10-27 20:55:55.738] GPU_BATCH_START | batch_1761623755738 | 8 images
+[2025-10-27 20:55:55.737] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mr.backside/24/1656232_2.png | 54ms
+[2025-10-27 20:55:55.761] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/rich99_6ix/24/547365_2.png | 22ms
+[2025-10-27 20:55:55.752] GPU_RECOGNITION_START | batch_1761623755738
+[2025-10-27 20:55:55.751] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/aca169/24.png
+[2025-10-27 20:55:55.763] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/frodo_baggins/24/142031_2.png | 24ms
+[2025-10-27 20:55:55.763] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/w/f4b2a3/24.png | 25ms
+[2025-10-27 20:55:55.778] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/aca169/24.png | 27ms
+[2025-10-27 20:55:55.767] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/nocontrol/24/1657206_2.png
+[2025-10-27 20:55:55.767] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/bombsr14/24/915196_2.png
+[2025-10-27 20:55:55.766] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user7540/24/1211126_2.png
+[2025-10-27 20:55:55.803] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/bombsr14/24/915196_2.png | 36ms
+[2025-10-27 20:55:55.803] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user7540/24/1211126_2.png | 37ms
+[2025-10-27 20:55:55.793] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user68893/24/1304364_2.png
+[2025-10-27 20:55:55.804] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/nocontrol/24/1657206_2.png | 36ms
+[2025-10-27 20:55:55.809] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mahglueballoons/24/1079732_2.png
+[2025-10-27 20:55:55.809] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/reservationking43/24/1616295_2.png
+[2025-10-27 20:55:55.809] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/41988e/24.png
+[2025-10-27 20:55:55.835] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/mahglueballoons/24/1079732_2.png | 27ms
+[2025-10-27 20:55:55.834] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/reservationking43/24/1616295_2.png | 26ms
+[2025-10-27 20:55:55.835] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/41988e/24.png | 27ms
+[2025-10-27 20:55:55.820] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user68893/24/1304364_2.png | 27ms
+[2025-10-27 20:55:55.839] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/edb3f5/24.png
+[2025-10-27 20:55:55.839] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/candidnewb/24/1670120_2.png
+[2025-10-27 20:55:55.839] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/a9a28c/24.png
+[2025-10-27 20:55:55.839] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/candidgeneral/24/797466_2.png
+[2025-10-27 20:55:55.865] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/s/edb3f5/24.png | 26ms
+[2025-10-27 20:55:55.871] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/candidnewb/24/1670120_2.png | 32ms
+[2025-10-27 20:55:55.871] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/a9a28c/24.png | 32ms
+[2025-10-27 20:55:55.868] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/prollins1/24/707729_2.png
+[2025-10-27 20:55:55.867] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/candidgeneral/24/797466_2.png | 28ms
+[2025-10-27 20:55:55.893] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/prollins1/24/707729_2.png | 25ms
+[2025-10-27 20:55:55.883] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/r/b4bc9f/24.png
+[2025-10-27 20:55:55.884] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/capman2000/24/313519_2.png
+[2025-10-27 20:55:55.883] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/the.chinese.asses/24/1659456_2.png
+[2025-10-27 20:55:55.910] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/capman2000/24/313519_2.png | 26ms
+[2025-10-27 20:55:55.909] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/r/b4bc9f/24.png | 26ms
+[2025-10-27 20:55:55.909] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/the.chinese.asses/24/1659456_2.png | 26ms
+[2025-10-27 20:55:55.898] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user0123/24/541465_2.png
+[2025-10-27 20:55:55.913] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/covertshoota/24/1456578_2.png
+[2025-10-27 20:55:55.913] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/candidnoob7/24/1079546_2.png
+[2025-10-27 20:55:55.913] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/a5b964/24.png
+[2025-10-27 20:55:55.938] PAGE_START | site_0002 | https://forum.candidgirls.io/t/hot-ass-latina-in-leggings-oc/686866
+[2025-10-27 20:55:55.927] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user0123/24/541465_2.png | 30ms
+[2025-10-27 20:55:55.937] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/covertshoota/24/1456578_2.png | 24ms
+[2025-10-27 20:55:55.937] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/candidnoob7/24/1079546_2.png | 24ms
+[2025-10-27 20:55:55.941] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/a5b964/24.png | 29ms
+[2025-10-27 20:55:55.944] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/hon/24/1528679_2.png
+[2025-10-27 20:55:55.944] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/54ee81/24.png
+[2025-10-27 20:55:55.944] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/zedude/24/1434246_2.png
+[2025-10-27 20:55:55.944] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/fast-cap/24/1122295_2.png
+[2025-10-27 20:55:55.942] PAGE_END | site_0002 | https://forum.candidgirls.io/t/hot-ass-latina-in-leggings-oc/686866 | 5ms | 0 candidates
+[2025-10-27 20:55:55.970] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/g/54ee81/24.png | 26ms
+[2025-10-27 20:55:55.972] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/fast-cap/24/1122295_2.png | 28ms
+[2025-10-27 20:55:55.971] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/zedude/24/1434246_2.png | 27ms
+[2025-10-27 20:55:55.972] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/hon/24/1528679_2.png | 28ms
+[2025-10-27 20:55:55.975] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/ebca7d/24.png
+[2025-10-27 20:55:55.975] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/asslover28/24/1544847_2.png
+[2025-10-27 20:55:55.975] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/rd32435/24/1658459_2.png
+[2025-10-27 20:55:55.975] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/omgfat84/24/1627488_2.png
+[2025-10-27 20:55:55.984] GPU_RECOGNITION_END | batch_1761623755738 | 232ms | 3 faces
+[2025-10-27 20:55:55.999] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/omgfat84/24/1627488_2.png | 25ms
+[2025-10-27 20:55:55.988] GPU_STORAGE_START | fcb0e0df | raw
+[2025-10-27 20:55:56.000] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/rd32435/24/1658459_2.png | 26ms
+[2025-10-27 20:55:55.998] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/ebca7d/24.png | 23ms
+[2025-10-27 20:55:55.999] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/asslover28/24/1544847_2.png | 24ms
+[2025-10-27 20:55:56.005] GPU_STORAGE_START | 9ab206d2 | raw
+[2025-10-27 20:55:56.006] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user25983/24/1666253_2.png
+[2025-10-27 20:55:56.006] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/ea5d25/24.png
+[2025-10-27 20:55:56.006] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/d2c977/24.png
+[2025-10-27 20:55:56.006] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/3ab097/24.png
+[2025-10-27 20:55:56.007] PAGE_START | site_0002 | https://forum.candidgirls.io/t/hot-ass-latina-in-leggings-oc/686866/1
+[2025-10-27 20:55:56.033] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user25983/24/1666253_2.png | 27ms
+[2025-10-27 20:55:56.020] GPU_STORAGE_START | c26bf4bc | raw
+[2025-10-27 20:55:56.034] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/ea5d25/24.png | 27ms
+[2025-10-27 20:55:56.033] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/3ab097/24.png | 27ms
+[2025-10-27 20:55:56.020] PAGE_END | site_0002 | https://forum.candidgirls.io/t/hot-ass-latina-in-leggings-oc/686866/1 | 13ms | 0 candidates
+[2025-10-27 20:55:56.032] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/d2c977/24.png | 25ms
+[2025-10-27 20:55:56.050] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/skylertyler/24/135459_2.png
+[2025-10-27 20:55:56.049] GPU_STORAGE_START | eec0a4b9 | raw
+[2025-10-27 20:55:56.055] PAGE_START | site_0002 | https://forum.candidgirls.io/latest
+[2025-10-27 20:55:56.050] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/f19dbf/24.png
+[2025-10-27 20:55:56.050] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/scar147/24/1060625_2.png
+[2025-10-27 20:55:56.050] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/ispywithmyeye/24/1230010_2.png
+[2025-10-27 20:55:56.091] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/scar147/24/1060625_2.png | 42ms
+[2025-10-27 20:55:56.072] GPU_STORAGE_START | 8257fe28 | raw
+[2025-10-27 20:55:56.071] PAGE_END | site_0002 | https://forum.candidgirls.io/latest | 16ms | 0 candidates
+[2025-10-27 20:55:56.095] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/f19dbf/24.png | 45ms
+[2025-10-27 20:55:56.091] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/ispywithmyeye/24/1230010_2.png | 41ms
+[2025-10-27 20:55:56.091] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/skylertyler/24/135459_2.png | 41ms
+[2025-10-27 20:55:56.120] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/xerca9/24/1649258_2.png
+[2025-10-27 20:55:56.116] SITE_END | site_0002 | 11047ms | 4 pages | 75 candidates
+[2025-10-27 20:55:56.117] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user24364/24/546477_2.png
+[2025-10-27 20:55:56.117] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/a183cd/24.png
+[2025-10-27 20:55:56.115] GPU_STORAGE_START | cd0c32d3 | raw
+[2025-10-27 20:55:56.119] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/l/35a633/24.png
+[2025-10-27 20:55:56.152] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/xerca9/24/1649258_2.png | 32ms
+[2025-10-27 20:55:56.151] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/l/35a633/24.png | 32ms
+[2025-10-27 20:55:56.136] SITE_START | site_0001 | https://candidteens.net
+[2025-10-27 20:55:56.152] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/a183cd/24.png | 35ms
+[2025-10-27 20:55:56.151] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user24364/24/546477_2.png | 34ms
+[2025-10-27 20:55:56.136] GPU_STORAGE_START | cccc3333 | raw
+[2025-10-27 20:55:56.173] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/soteloj/24/1104347_2.png
+[2025-10-27 20:55:56.168] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/cc9497/24.png
+[2025-10-27 20:55:56.174] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/4da419/24.png
+[2025-10-27 20:55:56.167] GPU_STORAGE_START | cc9e3169 | raw
+[2025-10-27 20:55:56.173] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/nit010/24/1305208_2.png
+[2025-10-27 20:55:56.205] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/4da419/24.png | 31ms
+[2025-10-27 20:55:56.212] GPU_STORAGE_END | eec0a4b9 | raw | 163ms
+[2025-10-27 20:55:56.207] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/cc9497/24.png | 39ms
+[2025-10-27 20:55:56.204] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/soteloj/24/1104347_2.png | 31ms
+[2025-10-27 20:55:56.204] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/nit010/24/1305208_2.png | 31ms
+[2025-10-27 20:55:56.219] GPU_STORAGE_END | cd0c32d3 | raw | 103ms
+[2025-10-27 20:55:56.217] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/bootyfreak/24/1652531_2.png
+[2025-10-27 20:55:56.217] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/eztatik1642/24/1541549_2.png
+[2025-10-27 20:55:56.217] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/65b543/24.png
+[2025-10-27 20:55:56.221] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/jd1748/24/1428905_2.png
+[2025-10-27 20:55:56.271] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/eztatik1642/24/1541549_2.png | 54ms
+[2025-10-27 20:55:56.271] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/jd1748/24/1428905_2.png | 50ms
+[2025-10-27 20:55:56.274] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/bootyfreak/24/1652531_2.png | 57ms
+[2025-10-27 20:55:56.270] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/65b543/24.png | 53ms
+[2025-10-27 20:55:56.257] GPU_STORAGE_END | 9ab206d2 | raw | 251ms
+[2025-10-27 20:55:56.283] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/skydash/24/1668666_2.png
+[2025-10-27 20:55:56.283] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/ecd19e/24.png
+[2025-10-27 20:55:56.283] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/deejay55/24/1205643_2.png
+[2025-10-27 20:55:56.283] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/actnormal/24/1059209_2.png
+[2025-10-27 20:55:56.283] GPU_STORAGE_END | cccc3333 | raw | 147ms
+[2025-10-27 20:55:56.303] GPU_STORAGE_END | fcb0e0df | raw | 315ms
+[2025-10-27 20:55:56.318] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/actnormal/24/1059209_2.png | 35ms
+[2025-10-27 20:55:56.319] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/p/ecd19e/24.png | 36ms
+[2025-10-27 20:55:56.316] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/deejay55/24/1205643_2.png | 33ms
+[2025-10-27 20:55:56.316] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/skydash/24/1668666_2.png | 33ms
+[2025-10-27 20:55:56.326] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/pkfire/24/1661393_2.png
+[2025-10-27 20:55:56.326] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user19477/24/1304695_2.png
+[2025-10-27 20:55:56.326] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/royalchef/24/1172923_2.png
+[2025-10-27 20:55:56.326] GPU_STORAGE_END | c26bf4bc | raw | 305ms
+[2025-10-27 20:55:56.327] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/breanna/24/1577348_2.png
+[2025-10-27 20:55:56.352] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user19477/24/1304695_2.png | 26ms
+[2025-10-27 20:55:56.352] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/royalchef/24/1172923_2.png | 26ms
+[2025-10-27 20:55:56.351] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/pkfire/24/1661393_2.png | 24ms
+[2025-10-27 20:55:56.340] GPU_STORAGE_END | cc9e3169 | raw | 173ms
+[2025-10-27 20:55:56.354] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/breanna/24/1577348_2.png | 27ms
+[2025-10-27 20:55:56.360] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/asslvr11/24/1387678_2.png
+[2025-10-27 20:55:56.360] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/b9e5f3/24.png
+[2025-10-27 20:55:56.360] GPU_STORAGE_END | 8257fe28 | raw | 288ms
+[2025-10-27 20:55:56.360] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/b_grizzly/24/1278521_2.png
+[2025-10-27 20:55:56.361] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/d9b06d/24.png
+[2025-10-27 20:55:56.396] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/b_grizzly/24/1278521_2.png | 36ms
+[2025-10-27 20:55:56.395] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/asslvr11/24/1387678_2.png | 35ms
+[2025-10-27 20:55:56.383] GPU_BATCH_END | batch_1761623755738 | 645ms | 8 images
+[2025-10-27 20:55:56.395] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/j/d9b06d/24.png | 34ms
+[2025-10-27 20:55:56.395] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/b/b9e5f3/24.png | 35ms
+[2025-10-27 20:55:56.402] GPU_BATCH_START | batch_1761623756259 | 9 images
+[2025-10-27 20:55:56.403] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/58956e/24.png
+[2025-10-27 20:55:56.403] EXTRACT_START | site_0002 | https://forum.candidgirls.io/images/emoji/apple/face_holding_back_tears.png?v=14
+[2025-10-27 20:55:56.403] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/kaktu/24/1111095_2.png
+[2025-10-27 20:55:56.403] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user24089/24/758018_2.png
+[2025-10-27 20:55:56.430] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/user24089/24/758018_2.png | 27ms
+[2025-10-27 20:55:56.419] GPU_RECOGNITION_START | batch_1761623756259
+[2025-10-27 20:55:56.430] EXTRACT_END | site_0002 | https://forum.candidgirls.io/images/emoji/apple/face_holding_back_tears.png?v=14 | 27ms
+[2025-10-27 20:55:56.429] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/kaktu/24/1111095_2.png | 27ms
+[2025-10-27 20:55:56.428] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/t/58956e/24.png | 26ms
+[2025-10-27 20:55:56.435] EXTRACT_START | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/eada6e/24.png
+[2025-10-27 20:55:56.434] EXTRACT_START | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/gloryyholecandids/24/830087_2.png
+[2025-10-27 20:55:56.462] EXTRACT_END | site_0002 | https://forum.candidgirls.io/letter_avatar_proxy/v4/letter/u/eada6e/24.png | 27ms
+[2025-10-27 20:55:56.460] EXTRACT_END | site_0002 | https://forum.candidgirls.io/user_avatar/forum.candidgirls.io/gloryyholecandids/24/830087_2.png | 25ms
+[2025-10-27 20:55:56.598] GPU_RECOGNITION_END | batch_1761623756259 | 179ms | 0 faces
+[2025-10-27 20:55:56.600] GPU_STORAGE_START | ce993166 | raw
+[2025-10-27 20:55:56.615] GPU_STORAGE_START | 9a64659b | raw
+[2025-10-27 20:55:56.628] GPU_STORAGE_START | cc663399 | raw
+[2025-10-27 20:55:56.644] GPU_STORAGE_START | cc993366 | raw
+[2025-10-27 20:55:56.657] GPU_STORAGE_START | fb92a00d | raw
+[2025-10-27 20:55:56.672] GPU_STORAGE_START | eaf0529a | raw
+[2025-10-27 20:55:56.684] GPU_STORAGE_START | ff09ae68 | raw
+[2025-10-27 20:55:56.698] GPU_STORAGE_START | cf673098 | raw
+[2025-10-27 20:55:56.711] GPU_STORAGE_START | ccce3231 | raw
+[2025-10-27 20:55:56.738] GPU_STORAGE_END | ce993166 | raw | 138ms
+[2025-10-27 20:55:56.742] GPU_STORAGE_END | 9a64659b | raw | 127ms
+[2025-10-27 20:55:56.754] GPU_STORAGE_END | cc663399 | raw | 125ms
+[2025-10-27 20:55:56.767] GPU_STORAGE_END | fb92a00d | raw | 110ms
+[2025-10-27 20:55:56.781] GPU_STORAGE_END | ff09ae68 | raw | 96ms
+[2025-10-27 20:55:56.794] GPU_STORAGE_END | cf673098 | raw | 97ms
+[2025-10-27 20:55:56.807] GPU_STORAGE_END | cc993366 | raw | 163ms
+[2025-10-27 20:55:56.819] GPU_STORAGE_END | eaf0529a | raw | 147ms
+[2025-10-27 20:55:56.833] GPU_STORAGE_END | ccce3231 | raw | 122ms
+[2025-10-27 20:55:56.847] GPU_BATCH_END | batch_1761623756259 | 445ms | 9 images
+[2025-10-27 20:55:56.860] GPU_BATCH_START | batch_1761623756428 | 16 images
+[2025-10-27 20:55:56.875] GPU_RECOGNITION_START | batch_1761623756428
+[2025-10-27 20:55:57.289] GPU_RECOGNITION_END | batch_1761623756428 | 414ms | 0 faces
+[2025-10-27 20:55:57.296] GPU_STORAGE_START | cecd3132 | raw
+[2025-10-27 20:55:57.312] GPU_STORAGE_START | ebdc8164 | raw
+[2025-10-27 20:55:57.332] GPU_STORAGE_START | ff852424 | raw
+[2025-10-27 20:55:57.347] GPU_STORAGE_START | 806a3f7a | raw
+[2025-10-27 20:55:57.366] GPU_STORAGE_START | de9d45c0 | raw
+[2025-10-27 20:55:57.383] GPU_STORAGE_START | c156cb3d | raw
+[2025-10-27 20:55:57.399] GPU_STORAGE_START | 993364cc | raw
+[2025-10-27 20:55:57.413] GPU_STORAGE_START | cc993366 | raw
+[2025-10-27 20:55:57.427] GPU_STORAGE_START | d31f8271 | raw
+[2025-10-27 20:55:57.440] GPU_STORAGE_START | ce3131cf | raw
+[2025-10-27 20:55:57.452] GPU_STORAGE_START | cc643293 | raw
+[2025-10-27 20:55:57.467] GPU_STORAGE_START | b118730d | raw
+[2025-10-27 20:55:57.483] GPU_STORAGE_START | cc3366cc | raw
+[2025-10-27 20:55:57.500] GPU_STORAGE_START | b0bfd2bc | raw
+[2025-10-27 20:55:57.514] GPU_STORAGE_START | ada11636 | raw
+[2025-10-27 20:55:57.545] GPU_STORAGE_END | cecd3132 | raw | 249ms
+[2025-10-27 20:55:57.550] GPU_STORAGE_END | 806a3f7a | raw | 202ms
+[2025-10-27 20:55:57.564] GPU_STORAGE_END | ebdc8164 | raw | 252ms
+[2025-10-27 20:55:57.577] GPU_STORAGE_END | c156cb3d | raw | 194ms
+[2025-10-27 20:55:57.589] GPU_STORAGE_END | ff852424 | raw | 258ms
+[2025-10-27 20:55:57.602] GPU_STORAGE_END | cc643293 | raw | 150ms
+[2025-10-27 20:55:57.614] GPU_STORAGE_END | de9d45c0 | raw | 248ms
+[2025-10-27 20:55:57.627] GPU_STORAGE_END | 993364cc | raw | 229ms
+[2025-10-27 20:55:57.642] GPU_STORAGE_END | cc3366cc | raw | 159ms
+[2025-10-27 20:55:57.660] GPU_STORAGE_END | b118730d | raw | 194ms
+[2025-10-27 20:55:57.677] GPU_STORAGE_END | ce3131cf | raw | 238ms
+[2025-10-27 20:55:57.695] GPU_STORAGE_END | b0bfd2bc | raw | 195ms
+[2025-10-27 20:55:57.718] GPU_STORAGE_END | ada11636 | raw | 204ms
+[2025-10-27 20:55:57.736] GPU_STORAGE_END | cc993366 | raw | 323ms
+[2025-10-27 20:55:57.752] GPU_STORAGE_END | d31f8271 | raw | 326ms
+[2025-10-27 20:55:57.779] GPU_BATCH_END | batch_1761623756428 | 918ms | 15 images
+[2025-10-27 20:55:57.792] GPU_BATCH_START | batch_1761623756092 | 23 images
+[2025-10-27 20:55:57.810] GPU_RECOGNITION_START | batch_1761623756092
+[2025-10-27 20:55:58.178] PAGE_START | site_0003 | https://motherless.com/galleries/favorited
+[2025-10-27 20:55:58.180] PAGE_END | site_0003 | https://motherless.com/galleries/favorited | 2ms | 365 candidates
+[2025-10-27 20:55:58.290] GPU_RECOGNITION_END | batch_1761623756092 | 480ms | 0 faces
+[2025-10-27 20:55:58.293] GPU_STORAGE_START | e50acb6d | raw
+[2025-10-27 20:55:58.309] GPU_STORAGE_START | cecc3133 | raw
+[2025-10-27 20:55:58.321] GPU_STORAGE_START | d5dede7a | raw
+[2025-10-27 20:55:58.334] GPU_STORAGE_START | daa9a354 | raw
+[2025-10-27 20:55:58.346] GPU_STORAGE_START | ce64319b | raw
+[2025-10-27 20:55:58.358] GPU_STORAGE_START | 96cc4ab3 | raw
+[2025-10-27 20:55:58.370] GPU_STORAGE_START | c7105e3a | raw
+[2025-10-27 20:55:58.382] GPU_STORAGE_START | cf643093 | raw
+[2025-10-27 20:55:58.394] GPU_STORAGE_START | 9b7621a7 | raw
+[2025-10-27 20:55:58.405] GPU_STORAGE_START | 93dc8ce6 | raw
+[2025-10-27 20:55:58.417] GPU_STORAGE_START | 8285dd7a | raw
+[2025-10-27 20:55:58.429] GPU_STORAGE_START | ce993136 | raw
+[2025-10-27 20:55:58.440] GPU_STORAGE_START | fa78280d | raw
+[2025-10-27 20:55:58.452] GPU_STORAGE_START | ebc0e1ea | raw
+[2025-10-27 20:55:58.463] GPU_STORAGE_START | bd369789 | raw
+[2025-10-27 20:55:58.473] GPU_STORAGE_START | ccce3331 | raw
+[2025-10-27 20:55:58.484] GPU_STORAGE_START | ae3a6861 | raw
+[2025-10-27 20:55:58.499] GPU_STORAGE_START | ced93136 | raw
+[2025-10-27 20:55:58.511] GPU_STORAGE_START | 9964669b | raw
+[2025-10-27 20:55:58.522] GPU_STORAGE_START | a6351986 | raw
+[2025-10-27 20:55:58.533] GPU_STORAGE_START | ce3131c6 | raw
+[2025-10-27 20:55:58.568] GPU_STORAGE_END | e50acb6d | raw | 274ms
+[2025-10-27 20:55:58.571] GPU_STORAGE_END | cecc3133 | raw | 261ms
+[2025-10-27 20:55:58.585] GPU_STORAGE_END | ce64319b | raw | 239ms
+[2025-10-27 20:55:58.596] GPU_STORAGE_END | d5dede7a | raw | 275ms
+[2025-10-27 20:55:58.608] GPU_STORAGE_END | 93dc8ce6 | raw | 203ms
+[2025-10-27 20:55:58.619] GPU_STORAGE_END | cf643093 | raw | 237ms
+[2025-10-27 20:55:58.636] GPU_STORAGE_END | 9b7621a7 | raw | 242ms
+[2025-10-27 20:55:58.648] GPU_STORAGE_END | c7105e3a | raw | 278ms
+[2025-10-27 20:55:58.660] GPU_STORAGE_END | ebc0e1ea | raw | 208ms
+[2025-10-27 20:55:58.670] GPU_STORAGE_END | bd369789 | raw | 207ms
+[2025-10-27 20:55:58.680] GPU_STORAGE_END | ce993136 | raw | 252ms
+[2025-10-27 20:55:58.691] GPU_STORAGE_END | daa9a354 | raw | 357ms
+[2025-10-27 20:55:58.701] GPU_STORAGE_END | 8285dd7a | raw | 284ms
+[2025-10-27 20:55:58.718] GPU_STORAGE_END | fa78280d | raw | 278ms
+[2025-10-27 20:55:58.731] GPU_STORAGE_END | 96cc4ab3 | raw | 373ms
+[2025-10-27 20:55:58.742] GPU_STORAGE_END | ae3a6861 | raw | 257ms
+[2025-10-27 20:55:58.754] GPU_STORAGE_END | ccce3331 | raw | 280ms
+[2025-10-27 20:55:58.766] GPU_STORAGE_END | a6351986 | raw | 244ms
+[2025-10-27 20:55:58.777] GPU_STORAGE_END | 9964669b | raw | 266ms
+[2025-10-27 20:55:58.787] GPU_STORAGE_END | ced93136 | raw | 288ms
+[2025-10-27 20:55:58.798] GPU_STORAGE_END | ce3131c6 | raw | 265ms
+[2025-10-27 20:55:58.814] GPU_BATCH_END | batch_1761623756092 | 1022ms | 21 images
+[2025-10-27 20:55:58.819] GPU_BATCH_START | batch_1761623755883 | 18 images
+[2025-10-27 20:55:58.833] GPU_RECOGNITION_START | batch_1761623755883
+[2025-10-27 20:55:59.129] GPU_RECOGNITION_END | batch_1761623755883 | 296ms | 0 faces
+[2025-10-27 20:55:59.131] GPU_STORAGE_START | c84bd7d7 | raw
+[2025-10-27 20:55:59.144] GPU_STORAGE_START | eedecd40 | raw
+[2025-10-27 20:55:59.154] GPU_STORAGE_START | cf8c3033 | raw
+[2025-10-27 20:55:59.166] GPU_STORAGE_START | bcb6d0c2 | raw
+[2025-10-27 20:55:59.178] GPU_STORAGE_START | c3e43c1b | raw
+[2025-10-27 20:55:59.188] GPU_STORAGE_START | a19cdac8 | raw
+[2025-10-27 20:55:59.198] GPU_STORAGE_START | ff8e8116 | raw
+[2025-10-27 20:55:59.209] GPU_STORAGE_START | eacfc968 | raw
+[2025-10-27 20:55:59.220] GPU_STORAGE_START | e3c71f1f | raw
+[2025-10-27 20:55:59.231] GPU_STORAGE_START | cf643093 | raw
+[2025-10-27 20:55:59.242] GPU_STORAGE_START | 86783493 | raw
+[2025-10-27 20:55:59.254] GPU_STORAGE_START | ccec6693 | raw
+[2025-10-27 20:55:59.265] GPU_STORAGE_START | ced17e32 | raw
+[2025-10-27 20:55:59.277] GPU_STORAGE_START | c2e5d2ab | raw
+[2025-10-27 20:55:59.306] GPU_STORAGE_END | cf8c3033 | raw | 151ms
+[2025-10-27 20:55:59.308] GPU_STORAGE_END | c84bd7d7 | raw | 176ms
+[2025-10-27 20:55:59.320] GPU_STORAGE_END | c3e43c1b | raw | 142ms
+[2025-10-27 20:55:59.331] GPU_STORAGE_END | a19cdac8 | raw | 143ms
+[2025-10-27 20:55:59.341] GPU_STORAGE_END | bcb6d0c2 | raw | 175ms
+[2025-10-27 20:55:59.357] GPU_STORAGE_END | ff8e8116 | raw | 159ms
+[2025-10-27 20:55:59.368] GPU_STORAGE_END | eacfc968 | raw | 159ms
+[2025-10-27 20:55:59.379] GPU_STORAGE_END | eedecd40 | raw | 236ms
+[2025-10-27 20:55:59.396] GPU_STORAGE_END | ced17e32 | raw | 132ms
+[2025-10-27 20:55:59.408] GPU_STORAGE_END | 86783493 | raw | 165ms
+[2025-10-27 20:55:59.419] GPU_STORAGE_END | ccec6693 | raw | 165ms
+[2025-10-27 20:55:59.435] GPU_STORAGE_END | c2e5d2ab | raw | 158ms
+[2025-10-27 20:55:59.447] GPU_STORAGE_END | cf643093 | raw | 215ms
+[2025-10-27 20:55:59.458] GPU_STORAGE_END | e3c71f1f | raw | 238ms
+[2025-10-27 20:55:59.473] GPU_BATCH_END | batch_1761623755883 | 654ms | 14 images
+[2025-10-27 20:55:59.902] SITE_END | site_0003 | 36757ms | 2 pages | 161 candidates
+[2025-10-27 20:55:59.904] SITE_START | site_0000 | https://wikifeet.com
+[2025-10-27 20:56:04.626] PAGE_START | site_0001 | https://candidteens.net
+[2025-10-27 20:56:04.628] PAGE_END | site_0001 | https://candidteens.net | 2ms | 16 candidates
+[2025-10-27 20:56:04.731] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761593810103.jpg
+[2025-10-27 20:56:04.731] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761574513376-1013x1024.jpg
+[2025-10-27 20:56:04.732] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg
+[2025-10-27 20:56:04.732] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_170552-1024x572.jpg
+[2025-10-27 20:56:04.790] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761574513376-1013x1024.jpg | 58ms
+[2025-10-27 20:56:04.793] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_170552-1024x572.jpg | 61ms
+[2025-10-27 20:56:04.797] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png
+[2025-10-27 20:56:04.795] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761476938810-576x1024.jpg | 63ms
+[2025-10-27 20:56:04.797] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251021_223855.jpg
+[2025-10-27 20:56:04.800] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761593810103.jpg | 69ms
+[2025-10-27 20:56:04.811] GPU_BATCH_START | batch_1761623764810 | 8 images
+[2025-10-27 20:56:04.810] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg
+[2025-10-27 20:56:04.810] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251023_184703-583x1024.jpg
+[2025-10-27 20:56:04.825] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2024/02/IMG_20240225_174739.png | 28ms
+[2025-10-27 20:56:04.825] GPU_RECOGNITION_START | batch_1761623764810
+[2025-10-27 20:56:04.840] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761230545850-576x1024.jpg
+[2025-10-27 20:56:04.845] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251021_223855.jpg | 48ms
+[2025-10-27 20:56:04.842] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761116918214-641x1024.jpg | 32ms
+[2025-10-27 20:56:04.842] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251023_184703-583x1024.jpg | 32ms
+[2025-10-27 20:56:04.855] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761241681876-768x1024.jpg
+[2025-10-27 20:56:04.854] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761234630597-576x1024.jpg
+[2025-10-27 20:56:04.854] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761239737805-576x1024.jpg
+[2025-10-27 20:56:04.874] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761230545850-576x1024.jpg | 35ms
+[2025-10-27 20:56:04.888] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761239737805-576x1024.jpg | 34ms
+[2025-10-27 20:56:04.888] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg
+[2025-10-27 20:56:04.888] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761234630597-576x1024.jpg | 34ms
+[2025-10-27 20:56:04.891] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/Photo_1761241681876-768x1024.jpg | 37ms
+[2025-10-27 20:56:04.903] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_004248-1024x571.jpg
+[2025-10-27 20:56:04.903] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_002356-1024x757.jpg
+[2025-10-27 20:56:04.903] EXTRACT_START | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_135205-925x1024.jpg
+[2025-10-27 20:56:04.917] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251024_015815-576x1024.jpg | 28ms
+[2025-10-27 20:56:04.947] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_135205-925x1024.jpg | 44ms
+[2025-10-27 20:56:04.939] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251026_004248-1024x571.jpg | 37ms
+[2025-10-27 20:56:04.943] EXTRACT_END | site_0001 | https://candidteens.net/wp-content/uploads/2025/10/IMG_20251025_002356-1024x757.jpg | 40ms
+[2025-10-27 20:56:05.026] GPU_RECOGNITION_END | batch_1761623764810 | 201ms | 2 faces
+[2025-10-27 20:56:05.028] GPU_STORAGE_START | cdcf3230 | raw
+[2025-10-27 20:56:05.043] GPU_STORAGE_START | fb9926a8 | raw
+[2025-10-27 20:56:05.056] GPU_STORAGE_START | d1d906a6 | raw
+[2025-10-27 20:56:05.068] GPU_STORAGE_START | c35ebd65 | raw
+[2025-10-27 20:56:05.082] GPU_STORAGE_START | e9da1065 | raw
+[2025-10-27 20:56:05.094] GPU_STORAGE_START | cf63349c | raw
+[2025-10-27 20:56:05.109] GPU_STORAGE_START | ad872a4a | raw
+[2025-10-27 20:56:05.121] GPU_STORAGE_START | ff582984 | raw
+[2025-10-27 20:56:05.147] GPU_STORAGE_END | d1d906a6 | raw | 91ms
+[2025-10-27 20:56:05.150] GPU_STORAGE_END | fb9926a8 | raw | 107ms
+[2025-10-27 20:56:05.162] GPU_STORAGE_END | cdcf3230 | raw | 134ms
+[2025-10-27 20:56:05.175] GPU_STORAGE_END | cf63349c | raw | 80ms
+[2025-10-27 20:56:05.180] PAGE_START | site_0001 | https://candidteens.net/category/hidden-cam/
+[2025-10-27 20:56:05.188] GPU_STORAGE_END | ad872a4a | raw | 80ms
+[2025-10-27 20:56:05.187] PAGE_END | site_0001 | https://candidteens.net/category/hidden-cam/ | 7ms | 0 candidates
+[2025-10-27 20:56:05.200] GPU_STORAGE_END | c35ebd65 | raw | 132ms
+[2025-10-27 20:56:05.206] PAGE_START | site_0001 | https://candidteens.net/category/premium-content-%f0%9f%a4%a4/
+[2025-10-27 20:56:05.213] PAGE_END | site_0001 | https://candidteens.net/category/premium-content-%f0%9f%a4%a4/ | 7ms | 0 candidates
+[2025-10-27 20:56:05.232] PAGE_START | site_0001 | https://candidteens.net/category/candid-teen-ass/
+[2025-10-27 20:56:05.226] GPU_STORAGE_END | e9da1065 | raw | 144ms
+[2025-10-27 20:56:05.240] PAGE_END | site_0001 | https://candidteens.net/category/candid-teen-ass/ | 8ms | 0 candidates
+[2025-10-27 20:56:05.240] GPU_STORAGE_END | ff582984 | raw | 120ms
+[2025-10-27 20:56:05.254] GPU_BATCH_END | batch_1761623764810 | 443ms | 8 images
+[2025-10-27 20:56:05.253] SITE_END | site_0001 | 9116ms | 4 pages | 16 candidates
+[2025-10-27 20:56:05.265] GPU_BATCH_START | batch_1761623764927 | 11 images
+[2025-10-27 20:56:05.281] GPU_RECOGNITION_START | batch_1761623764927
+[2025-10-27 20:56:05.512] GPU_RECOGNITION_END | batch_1761623764927 | 231ms | 1 faces
+[2025-10-27 20:56:05.514] GPU_STORAGE_START | b1c2d947 | raw
+[2025-10-27 20:56:05.528] GPU_STORAGE_START | f6dc9b12 | raw
+[2025-10-27 20:56:05.543] GPU_STORAGE_START | cd6e7691 | raw
+[2025-10-27 20:56:05.556] GPU_STORAGE_START | 87a9da93 | raw
+[2025-10-27 20:56:05.568] GPU_STORAGE_START | a49abefe | raw
+[2025-10-27 20:56:05.580] GPU_STORAGE_START | 8697ae5a | raw
+[2025-10-27 20:56:05.592] GPU_STORAGE_START | e6d3453f | raw
+[2025-10-27 20:56:05.605] GPU_STORAGE_START | a3bc3936 | raw
+[2025-10-27 20:56:05.617] GPU_STORAGE_START | e4dc5087 | raw
+[2025-10-27 20:56:05.628] GPU_STORAGE_START | 863241d7 | raw
+[2025-10-27 20:56:05.639] GPU_STORAGE_START | ae69793c | raw
+[2025-10-27 20:56:05.668] GPU_STORAGE_END | cd6e7691 | raw | 125ms
+[2025-10-27 20:56:05.673] GPU_STORAGE_END | e6d3453f | raw | 81ms
+[2025-10-27 20:56:05.684] GPU_STORAGE_END | b1c2d947 | raw | 170ms
+[2025-10-27 20:56:05.696] GPU_STORAGE_END | a49abefe | raw | 128ms
+[2025-10-27 20:56:05.708] GPU_STORAGE_END | a3bc3936 | raw | 102ms
+[2025-10-27 20:56:05.719] GPU_STORAGE_END | e4dc5087 | raw | 102ms
+[2025-10-27 20:56:05.730] GPU_STORAGE_END | 863241d7 | raw | 102ms
+[2025-10-27 20:56:05.742] GPU_STORAGE_END | f6dc9b12 | raw | 215ms
+[2025-10-27 20:56:05.755] GPU_STORAGE_END | 8697ae5a | raw | 175ms
+[2025-10-27 20:56:05.766] GPU_STORAGE_END | ae69793c | raw | 127ms
+[2025-10-27 20:56:05.777] GPU_STORAGE_END | 87a9da93 | raw | 220ms
+[2025-10-27 20:56:05.790] GPU_BATCH_END | batch_1761623764927 | 525ms | 11 images
+[2025-10-27 20:56:09.125] PAGE_START | site_0000 | https://wikifeet.com
+[2025-10-27 20:56:09.127] PAGE_END | site_0000 | https://wikifeet.com | 2ms | 84 candidates
+[2025-10-27 20:56:09.172] EXTRACT_START | site_0000 | https://imagedelivery.net/_qzvO6832ezfhQ-bZnlb0A/d57b68a5-d02c-4dac-965f-1a7e8035be00/public
+[2025-10-27 20:56:09.197] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031444.jpg
+[2025-10-27 20:56:09.197] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031443.jpg
+[2025-10-27 20:56:09.197] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8810856.jpg
+[2025-10-27 20:56:09.245] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031444.jpg | 49ms
+[2025-10-27 20:56:09.252] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031443.jpg | 56ms
+[2025-10-27 20:56:09.259] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8810856.jpg | 62ms
+[2025-10-27 20:56:09.248] EXTRACT_START | site_0000 | https://sync.intentiq.com/profiles_engine/ProfilesEngineServlet?at=20&mi=10&secure=1&dpi=270675768&iiqidtype=2&iiqpcid=13af4b81-dd73-73b1-636a-fe3619aa3710&iiqpciddate=1761623761246&tsrnd=7_1761623761302&fbp=1185555945&jsver=6.142&cz=0%3A720%2C1%3A1280%2C2%3A1%2C3%3A720%2C4%3A1280%2C5%3Aen-US&dw=1280&dh=720&dpr=1&lan=en-US&testPercentage=-1&testGroup=U&uh=%7B%220%22%3A%22%5C%22Chromium%5C%22%3Bv%3D%5C%22130%5C%22%2C%20%5C%22HeadlessChrome%5C%22%3Bv%3D%5C%22130%5C%22%2C%20%5C%22Not%3FA_Brand%5C%22%3Bv%3D%5C%2299%5C%22%22%2C%221%22%3A%22%3F0%22%2C%222%22%3A%22%5C%22Windows%5C%22%22%2C%223%22%3A%22%5C%22x64%5C%22%22%2C%224%22%3A%22%5C%2264%5C%22%22%2C%226%22%3A%22%5C%2210.0%5C%22%22%2C%227%22%3A%22%3F0%22%2C%228%22%3A%22%5C%22Chromium%5C%22%3Bv%3D%5C%22130.0.6723.31%5C%22%2C%20%5C%22HeadlessChrome%5C%22%3Bv%3D%5C%22130.0.6723.31%5C%22%2C%20%5C%22Not%3FA_Brand%5C%22%3Bv%3D%5C%2299.0.0.0%5C%22%22%7D&vrref=https%3A%2F%2Fwikifeet.com%2F&gdpr_consent=undefined&gpc=undefined&gdpr=0
+[2025-10-27 20:56:09.262] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8956580.jpg
+[2025-10-27 20:56:09.262] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8953768.jpg
+[2025-10-27 20:56:09.261] EXTRACT_END | site_0000 | https://imagedelivery.net/_qzvO6832ezfhQ-bZnlb0A/d57b68a5-d02c-4dac-965f-1a7e8035be00/public | 90ms
+[2025-10-27 20:56:09.274] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8956581.jpg
+[2025-10-27 20:56:09.288] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8953768.jpg | 26ms
+[2025-10-27 20:56:09.289] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8956580.jpg | 27ms
+[2025-10-27 20:56:09.302] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031434.jpg
+[2025-10-27 20:56:09.302] GPU_BATCH_START | batch_1761623769301 | 8 images
+[2025-10-27 20:56:09.301] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031445.jpg
+[2025-10-27 20:56:09.315] GPU_RECOGNITION_START | batch_1761623769301
+[2025-10-27 20:56:09.334] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8956581.jpg | 60ms
+[2025-10-27 20:56:09.330] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031445.jpg | 29ms
+[2025-10-27 20:56:09.329] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031434.jpg | 27ms
+[2025-10-27 20:56:09.342] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031436.jpg
+[2025-10-27 20:56:09.342] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031435.jpg
+[2025-10-27 20:56:09.342] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031437.jpg
+[2025-10-27 20:56:09.370] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031435.jpg | 28ms
+[2025-10-27 20:56:09.370] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031437.jpg | 27ms
+[2025-10-27 20:56:09.372] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8893105.jpg
+[2025-10-27 20:56:09.372] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8909543.jpg
+[2025-10-27 20:56:09.371] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031436.jpg | 28ms
+[2025-10-27 20:56:09.390] EXTRACT_END | site_0000 | https://sync.intentiq.com/profiles_engine/ProfilesEngineServlet?at=20&mi=10&secure=1&dpi=270675768&iiqidtype=2&iiqpcid=13af4b81-dd73-73b1-636a-fe3619aa3710&iiqpciddate=1761623761246&tsrnd=7_1761623761302&fbp=1185555945&jsver=6.142&cz=0%3A720%2C1%3A1280%2C2%3A1%2C3%3A720%2C4%3A1280%2C5%3Aen-US&dw=1280&dh=720&dpr=1&lan=en-US&testPercentage=-1&testGroup=U&uh=%7B%220%22%3A%22%5C%22Chromium%5C%22%3Bv%3D%5C%22130%5C%22%2C%20%5C%22HeadlessChrome%5C%22%3Bv%3D%5C%22130%5C%22%2C%20%5C%22Not%3FA_Brand%5C%22%3Bv%3D%5C%2299%5C%22%22%2C%221%22%3A%22%3F0%22%2C%222%22%3A%22%5C%22Windows%5C%22%22%2C%223%22%3A%22%5C%22x64%5C%22%22%2C%224%22%3A%22%5C%2264%5C%22%22%2C%226%22%3A%22%5C%2210.0%5C%22%22%2C%227%22%3A%22%3F0%22%2C%228%22%3A%22%5C%22Chromium%5C%22%3Bv%3D%5C%22130.0.6723.31%5C%22%2C%20%5C%22HeadlessChrome%5C%22%3Bv%3D%5C%22130.0.6723.31%5C%22%2C%20%5C%22Not%3FA_Brand%5C%22%3Bv%3D%5C%2299.0.0.0%5C%22%22%7D&vrref=https%3A%2F%2Fwikifeet.com%2F&gdpr_consent=undefined&gpc=undefined&gdpr=0 | 142ms
+[2025-10-27 20:56:09.386] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8977446.jpg
+[2025-10-27 20:56:09.400] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8909543.jpg | 28ms
+[2025-10-27 20:56:09.399] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031438.jpg
+[2025-10-27 20:56:09.399] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8893105.jpg | 27ms
+[2025-10-27 20:56:09.412] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8977446.jpg | 27ms
+[2025-10-27 20:56:09.413] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031446.jpg
+[2025-10-27 20:56:09.414] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8973582.jpg
+[2025-10-27 20:56:09.441] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8973582.jpg | 27ms
+[2025-10-27 20:56:09.440] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031446.jpg | 27ms
+[2025-10-27 20:56:09.427] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031438.jpg | 28ms
+[2025-10-27 20:56:09.428] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8994569.jpg
+[2025-10-27 20:56:09.444] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031426.jpg
+[2025-10-27 20:56:09.444] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8994601.jpg
+[2025-10-27 20:56:09.444] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031429.jpg
+[2025-10-27 20:56:09.457] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8994569.jpg | 29ms
+[2025-10-27 20:56:09.460] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031430.jpg
+[2025-10-27 20:56:09.474] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8994601.jpg | 30ms
+[2025-10-27 20:56:09.474] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031429.jpg | 31ms
+[2025-10-27 20:56:09.474] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031426.jpg | 30ms
+[2025-10-27 20:56:09.492] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031432.jpg
+[2025-10-27 20:56:09.491] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031431.jpg
+[2025-10-27 20:56:09.492] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8910170.jpg
+[2025-10-27 20:56:09.491] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031430.jpg | 31ms
+[2025-10-27 20:56:09.506] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8910171.jpg
+[2025-10-27 20:56:09.522] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031432.jpg | 31ms
+[2025-10-27 20:56:09.522] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8910170.jpg | 30ms
+[2025-10-27 20:56:09.522] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031431.jpg | 31ms
+[2025-10-27 20:56:09.538] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031448.jpg
+[2025-10-27 20:56:09.539] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031449.jpg
+[2025-10-27 20:56:09.537] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8910171.jpg | 31ms
+[2025-10-27 20:56:09.538] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8910172.jpg
+[2025-10-27 20:56:09.553] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031451.jpg
+[2025-10-27 20:56:09.570] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031448.jpg | 32ms
+[2025-10-27 20:56:09.571] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8910172.jpg | 33ms
+[2025-10-27 20:56:09.572] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031449.jpg | 33ms
+[2025-10-27 20:56:09.573] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031452.jpg
+[2025-10-27 20:56:09.587] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031451.jpg | 34ms
+[2025-10-27 20:56:09.602] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031452.jpg | 29ms
+[2025-10-27 20:56:09.589] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031453.jpg
+[2025-10-27 20:56:09.589] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031454.jpg
+[2025-10-27 20:56:09.605] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031276.jpg
+[2025-10-27 20:56:09.618] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031282.jpg
+[2025-10-27 20:56:09.633] PAGE_START | site_0000 | https://wikifeet.com/videos
+[2025-10-27 20:56:09.661] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031282.jpg | 43ms
+[2025-10-27 20:56:09.661] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031276.jpg | 55ms
+[2025-10-27 20:56:09.645] PAGE_END | site_0000 | https://wikifeet.com/videos | 12ms | 0 candidates
+[2025-10-27 20:56:09.663] SITE_END | site_0000 | 9759ms | 2 pages | 84 candidates
+[2025-10-27 20:56:09.664] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031456.jpg
+[2025-10-27 20:56:09.662] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031454.jpg | 72ms
+[2025-10-27 20:56:09.662] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031453.jpg | 72ms
+[2025-10-27 20:56:09.663] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031283.jpg
+[2025-10-27 20:56:09.692] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031283.jpg | 28ms
+[2025-10-27 20:56:09.690] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031456.jpg | 26ms
+[2025-10-27 20:56:09.678] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031458.jpg
+[2025-10-27 20:56:09.678] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9031457.jpg
+[2025-10-27 20:56:09.695] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858353.jpg
+[2025-10-27 20:56:09.696] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858354.jpg
+[2025-10-27 20:56:09.706] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031458.jpg | 27ms
+[2025-10-27 20:56:09.700] GPU_RECOGNITION_END | batch_1761623769301 | 385ms | 5 faces
+[2025-10-27 20:56:09.723] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858354.jpg | 27ms
+[2025-10-27 20:56:09.710] GPU_STORAGE_START | 99c0771f | raw
+[2025-10-27 20:56:09.710] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9031457.jpg | 32ms
+[2025-10-27 20:56:09.711] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858355.jpg
+[2025-10-27 20:56:09.726] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858356.jpg
+[2025-10-27 20:56:09.725] GPU_STORAGE_START | dae427b4 | raw
+[2025-10-27 20:56:09.727] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858357.jpg
+[2025-10-27 20:56:09.724] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858353.jpg | 29ms
+[2025-10-27 20:56:09.740] GPU_STORAGE_START | e0dcef01 | raw
+[2025-10-27 20:56:09.742] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858358.jpg
+[2025-10-27 20:56:09.741] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858355.jpg | 30ms
+[2025-10-27 20:56:09.757] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858357.jpg | 30ms
+[2025-10-27 20:56:09.773] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858358.jpg | 32ms
+[2025-10-27 20:56:09.760] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8377535.jpg
+[2025-10-27 20:56:09.757] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858356.jpg | 31ms
+[2025-10-27 20:56:09.760] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/4858359.jpg
+[2025-10-27 20:56:09.758] GPU_STORAGE_START | 89c14128 | raw
+[2025-10-27 20:56:09.790] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/4858359.jpg | 31ms
+[2025-10-27 20:56:09.777] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/5497520.jpg
+[2025-10-27 20:56:09.777] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/5497518.jpg
+[2025-10-27 20:56:09.777] GPU_STORAGE_START | e6c41d3b | raw
+[2025-10-27 20:56:09.793] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/7656331.jpg
+[2025-10-27 20:56:09.793] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8377535.jpg | 33ms
+[2025-10-27 20:56:09.792] GPU_STORAGE_START | f205167a | raw
+[2025-10-27 20:56:09.807] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/5497520.jpg | 30ms
+[2025-10-27 20:56:09.808] GPU_STORAGE_START | e34b773c | raw
+[2025-10-27 20:56:09.808] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/5497518.jpg | 32ms
+[2025-10-27 20:56:09.809] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/7656332.jpg
+[2025-10-27 20:56:09.822] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/7656331.jpg | 29ms
+[2025-10-27 20:56:09.824] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/7973446.jpg
+[2025-10-27 20:56:09.823] GPU_STORAGE_START | e3b33333 | raw
+[2025-10-27 20:56:09.824] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8132937.jpg
+[2025-10-27 20:56:09.851] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/7973446.jpg | 27ms
+[2025-10-27 20:56:09.838] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/7656332.jpg | 29ms
+[2025-10-27 20:56:09.851] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8132937.jpg | 26ms
+[2025-10-27 20:56:09.839] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8132938.jpg
+[2025-10-27 20:56:09.853] GPU_STORAGE_END | 99c0771f | raw | 143ms
+[2025-10-27 20:56:09.858] GPU_STORAGE_END | dae427b4 | raw | 132ms
+[2025-10-27 20:56:09.859] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8535497.jpg
+[2025-10-27 20:56:09.859] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9009871.jpg
+[2025-10-27 20:56:09.860] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013488.jpg
+[2025-10-27 20:56:09.874] GPU_STORAGE_END | 89c14128 | raw | 116ms
+[2025-10-27 20:56:09.872] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8132938.jpg | 34ms
+[2025-10-27 20:56:09.890] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013526.jpg
+[2025-10-27 20:56:09.889] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9009871.jpg | 30ms
+[2025-10-27 20:56:09.889] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8535497.jpg | 30ms
+[2025-10-27 20:56:09.888] GPU_STORAGE_END | e0dcef01 | raw | 148ms
+[2025-10-27 20:56:09.890] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013488.jpg | 30ms
+[2025-10-27 20:56:09.917] GPU_STORAGE_END | e6c41d3b | raw | 141ms
+[2025-10-27 20:56:09.904] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013527.jpg
+[2025-10-27 20:56:09.904] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013528.jpg
+[2025-10-27 20:56:09.904] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013529.jpg
+[2025-10-27 20:56:09.917] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013526.jpg | 28ms
+[2025-10-27 20:56:09.944] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013528.jpg | 40ms
+[2025-10-27 20:56:09.942] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013527.jpg | 39ms
+[2025-10-27 20:56:09.931] GPU_STORAGE_END | e34b773c | raw | 123ms
+[2025-10-27 20:56:09.932] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9013530.jpg
+[2025-10-27 20:56:09.943] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013529.jpg | 39ms
+[2025-10-27 20:56:09.947] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8996549.jpg
+[2025-10-27 20:56:09.946] GPU_STORAGE_END | f205167a | raw | 154ms
+[2025-10-27 20:56:09.947] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8996551.jpg
+[2025-10-27 20:56:09.947] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030257.jpg
+[2025-10-27 20:56:09.960] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9013530.jpg | 28ms
+[2025-10-27 20:56:09.960] GPU_STORAGE_END | e3b33333 | raw | 137ms
+[2025-10-27 20:56:09.975] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8996551.jpg | 27ms
+[2025-10-27 20:56:09.977] GPU_BATCH_END | batch_1761623769301 | 675ms | 8 images
+[2025-10-27 20:56:09.976] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8996552.jpg
+[2025-10-27 20:56:09.975] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8996549.jpg | 27ms
+[2025-10-27 20:56:09.975] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030257.jpg | 28ms
+[2025-10-27 20:56:09.993] GPU_BATCH_START | batch_1761623769962 | 18 images
+[2025-10-27 20:56:09.993] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8996553.jpg
+[2025-10-27 20:56:09.993] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8996554.jpg
+[2025-10-27 20:56:09.993] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8996555.jpg
+[2025-10-27 20:56:10.005] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8996552.jpg | 29ms
+[2025-10-27 20:56:10.011] GPU_RECOGNITION_START | batch_1761623769962
+[2025-10-27 20:56:10.022] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8996555.jpg | 29ms
+[2025-10-27 20:56:10.022] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8996553.jpg | 29ms
+[2025-10-27 20:56:10.008] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8996556.jpg
+[2025-10-27 20:56:10.021] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8996554.jpg | 27ms
+[2025-10-27 20:56:10.050] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8996556.jpg | 42ms
+[2025-10-27 20:56:10.037] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8996557.jpg
+[2025-10-27 20:56:10.037] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/8376630.jpg
+[2025-10-27 20:56:10.037] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/1617798.jpg
+[2025-10-27 20:56:10.066] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8996557.jpg | 30ms
+[2025-10-27 20:56:10.054] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9029586.jpg
+[2025-10-27 20:56:10.068] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/1617798.jpg | 32ms
+[2025-10-27 20:56:10.070] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/8376630.jpg | 33ms
+[2025-10-27 20:56:10.069] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9029587.jpg
+[2025-10-27 20:56:10.084] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030971.jpg
+[2025-10-27 20:56:10.084] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030970.jpg
+[2025-10-27 20:56:10.084] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9029586.jpg | 30ms
+[2025-10-27 20:56:10.115] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030971.jpg | 31ms
+[2025-10-27 20:56:10.099] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9029587.jpg | 29ms
+[2025-10-27 20:56:10.115] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030970.jpg | 31ms
+[2025-10-27 20:56:10.100] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030972.jpg
+[2025-10-27 20:56:10.120] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030973.jpg
+[2025-10-27 20:56:10.120] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030974.jpg
+[2025-10-27 20:56:10.120] EXTRACT_START | site_0000 | https://thumbs.wikifeet.com/9030975.jpg
+[2025-10-27 20:56:10.135] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030972.jpg | 35ms
+[2025-10-27 20:56:10.152] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030975.jpg | 32ms
+[2025-10-27 20:56:10.151] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030973.jpg | 31ms
+[2025-10-27 20:56:10.149] EXTRACT_END | site_0000 | https://thumbs.wikifeet.com/9030974.jpg | 29ms
+[2025-10-27 20:56:10.156] EXTRACT_START | site_0000 | https://wikifeet.com/wf2023.svg
+[2025-10-27 20:56:10.237] EXTRACT_END | site_0000 | https://wikifeet.com/wf2023.svg | 81ms
+[2025-10-27 20:56:10.702] GPU_RECOGNITION_END | batch_1761623769962 | 691ms | 19 faces
+[2025-10-27 20:56:10.704] GPU_STORAGE_START | f886b3c1 | raw
+[2025-10-27 20:56:10.719] GPU_STORAGE_START | b2934fcc | raw
+[2025-10-27 20:56:10.733] GPU_STORAGE_START | d8a66236 | raw
+[2025-10-27 20:56:10.749] GPU_STORAGE_START | e6a61bf1 | raw
+[2025-10-27 20:56:10.764] GPU_STORAGE_START | d968316c | raw
+[2025-10-27 20:56:10.777] GPU_STORAGE_START | f5a5975e | raw
+[2025-10-27 20:56:10.790] GPU_STORAGE_START | f1a5975e | raw
+[2025-10-27 20:56:10.804] GPU_STORAGE_START | b38c8c33 | raw
+[2025-10-27 20:56:10.818] GPU_STORAGE_START | 93344e73 | raw
+[2025-10-27 20:56:10.831] GPU_STORAGE_START | f08bdb2d | raw
+[2025-10-27 20:56:10.844] GPU_STORAGE_START | e3ad0d4a | raw
+[2025-10-27 20:56:10.857] GPU_STORAGE_START | a58ed971 | raw
+[2025-10-27 20:56:10.870] GPU_STORAGE_START | e612555c | raw
+[2025-10-27 20:56:10.884] GPU_STORAGE_START | a318542d | raw
+[2025-10-27 20:56:10.897] GPU_STORAGE_START | e38c5cf9 | raw
+[2025-10-27 20:56:10.909] GPU_STORAGE_START | a31d542d | raw
+[2025-10-27 20:56:10.922] GPU_STORAGE_START | b2cc071d | raw
+[2025-10-27 20:56:10.934] GPU_STORAGE_START | a35c5c29 | raw
+[2025-10-27 20:56:10.975] GPU_STORAGE_END | d8a66236 | raw | 242ms
+[2025-10-27 20:56:11.012] GPU_STORAGE_END | b2934fcc | raw | 293ms
+[2025-10-27 20:56:11.025] GPU_STORAGE_END | b38c8c33 | raw | 221ms
+[2025-10-27 20:56:11.036] GPU_STORAGE_END | a35c5c29 | raw | 102ms
+[2025-10-27 20:56:11.050] GPU_STORAGE_END | f886b3c1 | raw | 346ms
+[2025-10-27 20:56:11.063] GPU_STORAGE_END | f5a5975e | raw | 287ms
+[2025-10-27 20:56:11.076] GPU_STORAGE_END | e38c5cf9 | raw | 179ms
+[2025-10-27 20:56:11.088] GPU_STORAGE_END | f08bdb2d | raw | 257ms
+[2025-10-27 20:56:11.101] GPU_STORAGE_END | e6a61bf1 | raw | 352ms
+[2025-10-27 20:56:11.114] GPU_STORAGE_END | a31d542d | raw | 205ms
+[2025-10-27 20:56:11.126] GPU_STORAGE_END | f1a5975e | raw | 336ms
+[2025-10-27 20:56:11.139] GPU_STORAGE_END | 93344e73 | raw | 321ms
+[2025-10-27 20:56:11.152] GPU_STORAGE_END | e612555c | raw | 282ms
+[2025-10-27 20:56:11.166] GPU_STORAGE_END | b2cc071d | raw | 244ms
+[2025-10-27 20:56:11.179] GPU_STORAGE_END | e3ad0d4a | raw | 334ms
+[2025-10-27 20:56:11.191] GPU_STORAGE_END | a58ed971 | raw | 333ms
+[2025-10-27 20:56:11.202] GPU_STORAGE_END | d968316c | raw | 439ms
+[2025-10-27 20:56:11.215] GPU_STORAGE_END | a318542d | raw | 332ms
+[2025-10-27 20:56:11.232] GPU_BATCH_END | batch_1761623769962 | 1239ms | 18 images
+[2025-10-27 20:56:11.241] GPU_BATCH_START | batch_1761623770167 | 19 images
+[2025-10-27 20:56:11.256] GPU_RECOGNITION_START | batch_1761623770167
+[2025-10-27 20:56:11.970] GPU_RECOGNITION_END | batch_1761623770167 | 714ms | 24 faces
+[2025-10-27 20:56:11.972] GPU_STORAGE_START | b45ca2ae | raw
+[2025-10-27 20:56:11.985] GPU_STORAGE_START | b4e6837b | raw
+[2025-10-27 20:56:11.998] GPU_STORAGE_START | 96cb6934 | raw
+[2025-10-27 20:56:12.010] GPU_STORAGE_START | b6e8299b | raw
+[2025-10-27 20:56:12.021] GPU_STORAGE_START | bbb0d28e | raw
+[2025-10-27 20:56:12.032] GPU_STORAGE_START | d272ad4c | raw
+[2025-10-27 20:56:12.043] GPU_STORAGE_START | a6e6ca1b | raw
+[2025-10-27 20:56:12.055] GPU_STORAGE_START | b09cc9f8 | raw
+[2025-10-27 20:56:12.068] GPU_STORAGE_START | e69f9c6a | raw
+[2025-10-27 20:56:12.079] GPU_STORAGE_START | a6a29c1d | raw
+[2025-10-27 20:56:12.089] GPU_STORAGE_START | b6b6b8b8 | raw
+[2025-10-27 20:56:12.100] GPU_STORAGE_START | edb212c0 | raw
+[2025-10-27 20:56:12.112] GPU_STORAGE_START | edb212c0 | raw
+[2025-10-27 20:56:12.122] GPU_STORAGE_START | f27e1115 | raw
+[2025-10-27 20:56:12.132] GPU_STORAGE_START | ab6c8311 | raw
+[2025-10-27 20:56:12.142] GPU_STORAGE_START | f06d7a0f | raw
+[2025-10-27 20:56:12.153] GPU_STORAGE_START | 9143f1d2 | raw
+[2025-10-27 20:56:12.166] GPU_STORAGE_START | be0fc11c | raw
+[2025-10-27 20:56:12.177] GPU_STORAGE_START | b838c5cc | raw
+[2025-10-27 20:56:12.261] GPU_STORAGE_END | b6b6b8b8 | raw | 172ms
+[2025-10-27 20:56:12.266] GPU_STORAGE_END | bbb0d28e | raw | 245ms
+[2025-10-27 20:56:12.279] GPU_STORAGE_END | 96cb6934 | raw | 281ms
+[2025-10-27 20:56:12.290] GPU_STORAGE_END | d272ad4c | raw | 258ms
+[2025-10-27 20:56:12.302] GPU_STORAGE_END | b6e8299b | raw | 291ms
+[2025-10-27 20:56:12.312] GPU_STORAGE_END | a6e6ca1b | raw | 269ms
+[2025-10-27 20:56:12.325] GPU_STORAGE_END | b45ca2ae | raw | 353ms
+[2025-10-27 20:56:12.338] GPU_STORAGE_END | a6a29c1d | raw | 259ms
+[2025-10-27 20:56:12.348] GPU_STORAGE_END | b4e6837b | raw | 362ms
+[2025-10-27 20:56:12.358] GPU_STORAGE_END | edb212c0 | raw | 258ms
+[2025-10-27 20:56:12.367] GPU_STORAGE_END | f27e1115 | raw | 245ms
+[2025-10-27 20:56:12.377] GPU_STORAGE_END | e69f9c6a | raw | 309ms
+[2025-10-27 20:56:12.388] GPU_STORAGE_END | b09cc9f8 | raw | 333ms
+[2025-10-27 20:56:12.400] GPU_STORAGE_END | be0fc11c | raw | 234ms
+[2025-10-27 20:56:12.410] GPU_STORAGE_END | 9143f1d2 | raw | 257ms
+[2025-10-27 20:56:12.420] GPU_STORAGE_END | f06d7a0f | raw | 277ms
+[2025-10-27 20:56:12.430] GPU_STORAGE_END | ab6c8311 | raw | 297ms
+[2025-10-27 20:56:12.440] GPU_STORAGE_END | b838c5cc | raw | 263ms
+[2025-10-27 20:56:12.451] GPU_STORAGE_END | edb212c0 | raw | 340ms
+[2025-10-27 20:56:12.467] GPU_BATCH_END | batch_1761623770167 | 1226ms | 19 images
+[2025-10-27 20:56:12.473] GPU_BATCH_START | batch_1761623769760 | 14 images
+[2025-10-27 20:56:12.485] GPU_RECOGNITION_START | batch_1761623769760
+[2025-10-27 20:56:12.972] GPU_RECOGNITION_END | batch_1761623769760 | 487ms | 14 faces
+[2025-10-27 20:56:12.974] GPU_STORAGE_START | edf25269 | raw
+[2025-10-27 20:56:12.985] GPU_STORAGE_START | fcbc3ca4 | raw
+[2025-10-27 20:56:12.996] GPU_STORAGE_START | c2dbfba0 | raw
+[2025-10-27 20:56:13.007] GPU_STORAGE_START | a72d3356 | raw
+[2025-10-27 20:56:13.018] GPU_STORAGE_START | a6995b06 | raw
+[2025-10-27 20:56:13.029] GPU_STORAGE_START | cc81094e | raw
+[2025-10-27 20:56:13.040] GPU_STORAGE_START | 82053d6e | raw
+[2025-10-27 20:56:13.050] GPU_STORAGE_START | c6d926cd | raw
+[2025-10-27 20:56:13.061] GPU_STORAGE_START | f98644f9 | raw
+[2025-10-27 20:56:13.071] GPU_STORAGE_START | b6bd0846 | raw
+[2025-10-27 20:56:13.082] GPU_STORAGE_START | a395f0f2 | raw
+[2025-10-27 20:56:13.092] GPU_STORAGE_START | f7e70ed8 | raw
+[2025-10-27 20:56:13.102] GPU_STORAGE_START | 82cc6d9c | raw
+[2025-10-27 20:56:13.113] GPU_STORAGE_START | e7ed19c2 | raw
+[2025-10-27 20:56:13.145] GPU_STORAGE_END | c6d926cd | raw | 96ms
+[2025-10-27 20:56:13.149] GPU_STORAGE_END | f98644f9 | raw | 88ms
+[2025-10-27 20:56:13.162] GPU_STORAGE_END | a6995b06 | raw | 144ms
+[2025-10-27 20:56:13.176] GPU_STORAGE_END | b6bd0846 | raw | 105ms
+[2025-10-27 20:56:13.186] GPU_STORAGE_END | 82053d6e | raw | 146ms
+[2025-10-27 20:56:13.197] GPU_STORAGE_END | a72d3356 | raw | 190ms
+[2025-10-27 20:56:13.229] GPU_STORAGE_END | edf25269 | raw | 255ms
+[2025-10-27 20:56:13.232] GPU_STORAGE_END | fcbc3ca4 | raw | 247ms
+[2025-10-27 20:56:13.243] GPU_STORAGE_END | cc81094e | raw | 214ms
+[2025-10-27 20:56:13.253] GPU_STORAGE_END | c2dbfba0 | raw | 257ms
+[2025-10-27 20:56:13.265] GPU_STORAGE_END | f7e70ed8 | raw | 173ms
+[2025-10-27 20:56:13.276] GPU_STORAGE_END | e7ed19c2 | raw | 163ms
+[2025-10-27 20:56:13.285] GPU_STORAGE_END | a395f0f2 | raw | 203ms
+[2025-10-27 20:56:13.295] GPU_STORAGE_END | 82cc6d9c | raw | 193ms
+[2025-10-27 20:56:13.307] GPU_BATCH_END | batch_1761623769760 | 834ms | 14 images
+[2025-10-27 20:56:13.315] GPU_BATCH_START | batch_1761623769592 | 17 images
+[2025-10-27 20:56:13.328] GPU_RECOGNITION_START | batch_1761623769592
+[2025-10-27 20:56:13.772] GPU_RECOGNITION_END | batch_1761623769592 | 444ms | 10 faces
+[2025-10-27 20:56:13.774] GPU_STORAGE_START | bb08503e | raw
+[2025-10-27 20:56:13.786] GPU_STORAGE_START | c9c97e9e | raw
+[2025-10-27 20:56:13.797] GPU_STORAGE_START | b893476a | raw
+[2025-10-27 20:56:13.808] GPU_STORAGE_START | ada47226 | raw
+[2025-10-27 20:56:13.820] GPU_STORAGE_START | b0c92fd6 | raw
+[2025-10-27 20:56:13.830] GPU_STORAGE_START | cb981cf9 | raw
+[2025-10-27 20:56:13.840] GPU_STORAGE_START | ca8a7842 | raw
+[2025-10-27 20:56:13.850] GPU_STORAGE_START | cd336324 | raw
+[2025-10-27 20:56:13.861] GPU_STORAGE_START | a53d1be2 | raw
+[2025-10-27 20:56:13.871] GPU_STORAGE_START | 934e87ed | raw
+[2025-10-27 20:56:13.882] GPU_STORAGE_START | 892b3496 | raw
+[2025-10-27 20:56:13.892] GPU_STORAGE_START | d0ac50d9 | raw
+[2025-10-27 20:56:13.903] GPU_STORAGE_START | d2c082d0 | raw
+[2025-10-27 20:56:13.914] GPU_STORAGE_START | a6e82d93 | raw
+[2025-10-27 20:56:13.923] GPU_STORAGE_START | b34c8ee3 | raw
+[2025-10-27 20:56:13.933] GPU_STORAGE_START | cfa3204e | raw
+[2025-10-27 20:56:13.943] GPU_STORAGE_START | ddd01371 | raw
+[2025-10-27 20:56:13.976] GPU_STORAGE_END | cb981cf9 | raw | 146ms
+[2025-10-27 20:56:13.978] GPU_STORAGE_END | ca8a7842 | raw | 138ms
+[2025-10-27 20:56:13.991] GPU_STORAGE_END | 934e87ed | raw | 120ms
+[2025-10-27 20:56:14.002] GPU_STORAGE_END | b0c92fd6 | raw | 182ms
+[2025-10-27 20:56:14.014] GPU_STORAGE_END | d0ac50d9 | raw | 122ms
+[2025-10-27 20:56:14.024] GPU_STORAGE_END | bb08503e | raw | 250ms
+[2025-10-27 20:56:14.035] GPU_STORAGE_END | a6e82d93 | raw | 122ms
+[2025-10-27 20:56:14.064] GPU_STORAGE_END | c9c97e9e | raw | 278ms
+[2025-10-27 20:56:14.065] GPU_STORAGE_END | cd336324 | raw | 216ms
+[2025-10-27 20:56:14.078] GPU_STORAGE_END | b893476a | raw | 281ms
+[2025-10-27 20:56:14.088] GPU_STORAGE_END | 892b3496 | raw | 206ms
+[2025-10-27 20:56:14.098] GPU_STORAGE_END | d2c082d0 | raw | 195ms
+[2025-10-27 20:56:14.109] GPU_STORAGE_END | a53d1be2 | raw | 248ms
+[2025-10-27 20:56:14.120] GPU_STORAGE_END | ada47226 | raw | 312ms
+[2025-10-27 20:56:14.130] GPU_STORAGE_END | b34c8ee3 | raw | 207ms
+[2025-10-27 20:56:14.141] GPU_STORAGE_END | ddd01371 | raw | 198ms
+[2025-10-27 20:56:14.150] GPU_STORAGE_END | cfa3204e | raw | 217ms
+[2025-10-27 20:56:14.164] GPU_BATCH_END | batch_1761623769592 | 849ms | 17 images
+[2025-10-27 20:56:14.173] GPU_BATCH_START | batch_1761623769411 | 8 images
+[2025-10-27 20:56:14.184] GPU_RECOGNITION_START | batch_1761623769411
+[2025-10-27 20:56:14.409] GPU_RECOGNITION_END | batch_1761623769411 | 225ms | 5 faces
+[2025-10-27 20:56:14.411] GPU_STORAGE_START | f0b06895 | raw
+[2025-10-27 20:56:14.424] GPU_STORAGE_START | abcc96b1 | raw
+[2025-10-27 20:56:14.434] GPU_STORAGE_START | e1b33373 | raw
+[2025-10-27 20:56:14.446] GPU_STORAGE_START | fec1dae4 | raw
+[2025-10-27 20:56:14.457] GPU_STORAGE_START | e3c1c4de | raw
+[2025-10-27 20:56:14.467] GPU_STORAGE_START | e0c0e0d3 | raw
+[2025-10-27 20:56:14.478] GPU_STORAGE_START | 898bd534 | raw
+[2025-10-27 20:56:14.489] GPU_STORAGE_START | efb99086 | raw
+[2025-10-27 20:56:14.514] GPU_STORAGE_END | f0b06895 | raw | 103ms
+[2025-10-27 20:56:14.521] GPU_STORAGE_END | fec1dae4 | raw | 75ms
+[2025-10-27 20:56:14.529] GPU_STORAGE_END | e0c0e0d3 | raw | 62ms
+[2025-10-27 20:56:14.539] GPU_STORAGE_END | 898bd534 | raw | 61ms
+[2025-10-27 20:56:14.550] GPU_STORAGE_END | abcc96b1 | raw | 127ms
+[2025-10-27 20:56:14.572] GPU_STORAGE_END | e1b33373 | raw | 138ms
+[2025-10-27 20:56:14.575] GPU_STORAGE_END | efb99086 | raw | 86ms
+[2025-10-27 20:56:14.586] GPU_STORAGE_END | e3c1c4de | raw | 129ms
+[2025-10-27 20:56:14.598] GPU_BATCH_END | batch_1761623769411 | 425ms | 8 images
+[2025-10-27 20:56:28.261] CRAWL_END | 82177ms | 7 sites | 351 images
+[2025-10-27 20:56:28.264] SYSTEM_SHUTDOWN

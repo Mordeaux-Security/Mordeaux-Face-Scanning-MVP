@@ -129,15 +129,33 @@ class HTTPUtils:
             try:
                 # Dual-fetch compare on first visit if enabled
                 if force_compare_first_visit and PLAYWRIGHT_AVAILABLE and self.config.nc_js_first_visit_compare:
-                    http_html, http_err = await self._fetch_with_redirects(url)
-                    js_html, js_err = await self._fetch_with_js(url)
+                    start = time.time()
+                    # Run HTTP and JS concurrently with soft timeouts
+                    async def _http_task():
+                        return await self._fetch_with_redirects(url)
+                    async def _js_task():
+                        return await self._fetch_with_js(url)
+                    http_task = asyncio.create_task(_http_task())
+                    js_task = asyncio.create_task(_js_task())
+                    done, pending = await asyncio.wait(
+                        {http_task, js_task},
+                        timeout=self.config.nc_js_render_timeout + 5,
+                        return_when=asyncio.ALL_COMPLETED
+                    )
+                    http_html, http_err = (None, "TIMEOUT")
+                    js_html, js_err = (None, "TIMEOUT")
+                    if http_task in done:
+                        http_html, http_err = http_task.result()
+                    if js_task in done:
+                        js_html, js_err = js_task.result()
+                    # Cancel any stragglers
+                    for p in pending:
+                        p.cancel()
                     http_count = await self._estimate_img_candidates(http_html, url) if http_html else 0
                     js_count = await self._estimate_img_candidates(js_html, url) if js_html else 0
-                    logger.info(f"First-visit compare for {url}: HTTP={http_count}, JS={js_count}")
-                    # Prefer JS if significantly better
+                    logger.info(f"First-visit compare for {url}: HTTP={http_count}, JS={js_count}, elapsed={(time.time()-start)*1000:.1f}ms")
                     if js_count >= max(5, 2 * http_count):
                         return js_html, "SUCCESS"
-                    # Fallback to HTTP if available, else JS
                     return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED"))
 
                 # Try standard HTTP first
@@ -369,6 +387,7 @@ class BrowserPool:
         self._browsers: List[Browser] = []
         self._playwright = None
         self._lock = asyncio.Lock()
+        self._js_semaphore: Optional[asyncio.Semaphore] = None
     
     async def __aenter__(self):
         """Async context manager entry."""
@@ -386,6 +405,10 @@ class BrowserPool:
                         args=['--no-sandbox', '--disable-dev-shm-usage']
                     )
                     self._browsers.append(browser)
+                # Initialize JS concurrency semaphore
+                from .config import get_config
+                cfg = get_config()
+                self._js_semaphore = asyncio.Semaphore(max(1, int(getattr(cfg, 'nc_js_concurrency', 4))))
         
         return self
     
@@ -423,6 +446,9 @@ class BrowserPool:
         browser = self._browsers[0]
         
         try:
+            # Concurrency gate for JS rendering
+            sem = self._js_semaphore or asyncio.Semaphore(4)
+            await sem.acquire()
             # Align Playwright UA with httpx-selected UA for the process
             pw_ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             try:
@@ -516,6 +542,11 @@ class BrowserPool:
         except Exception as e:
             logger.warning(f"JavaScript rendering failed for {url}: {e}")
             raise
+        finally:
+            try:
+                sem.release()
+            except Exception:
+                pass
 
 
 

@@ -18,6 +18,7 @@ import json
 from .config import get_config
 from .redis_manager import get_redis_manager
 from .data_structures import SiteTask, ProcessingStats, SystemMetrics, CrawlResults, FaceResult
+from .timing_logger import get_timing_logger
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class Orchestrator:
     def __init__(self):
         self.config = get_config()
         self.redis = get_redis_manager()
+        self.timing_logger = get_timing_logger()
         
         # Process management
         self.crawler_processes: List[Process] = []
@@ -51,6 +53,9 @@ class Orchestrator:
         self.total_sites_processed = 0
         self.total_images_processed = 0
         self.total_faces_detected = 0
+        
+        # Log system start
+        self.timing_logger.log_system_start()
         
         # Setup signal handlers
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -409,6 +414,17 @@ class Orchestrator:
                     active_tasks = await asyncio.to_thread(self.redis.get_active_task_count)
                 except Exception:
                     pass
+                # Fast-drain: if all sites hit image limit, purge candidate/image queues
+                try:
+                    if self.site_stats:
+                        site_ids = list(self.site_stats.keys())
+                        all_limits = await self.redis.all_sites_limit_reached_async(site_ids)
+                        if all_limits:
+                            await self.redis.clear_queue_async('candidates')
+                            await self.redis.clear_queue_async('images')
+                            logger.info("All sites reached image limits; purged candidates/images queues for fast shutdown")
+                except Exception:
+                    pass
                 if queues_empty and active_tasks == 0:
                     # Grace period to avoid racing with late JS callbacks
                     if idle_grace_start is None:
@@ -444,6 +460,9 @@ class Orchestrator:
         self.start_time = time.time()
         self.running = True
         
+        # Log crawl start
+        self.timing_logger.log_crawl_start()
+        
         try:
             # Clear queues, stats, and shared batch
             self.redis.clear_queues()
@@ -458,6 +477,22 @@ class Orchestrator:
             
             # Push sites to queue
             self.push_sites(sites)
+            
+            # Check GPU worker availability before starting workers
+            logger.info("Checking GPU worker availability...")
+            try:
+                from .gpu_interface import get_gpu_interface
+                gpu_interface = get_gpu_interface()
+                gpu_available = await gpu_interface._check_health()
+                
+                if not gpu_available:
+                    logger.warning("GPU worker not available - will use CPU fallback")
+                    logger.warning("To start GPU worker, run: .\\start-gpu-worker.ps1 -SkipDocker")
+                else:
+                    logger.info("✓ GPU worker is available")
+            except Exception as e:
+                logger.warning(f"Failed to check GPU worker availability: {e}")
+                logger.warning("Will use CPU fallback")
             
             # Start workers
             self.start_workers()
@@ -543,6 +578,10 @@ class Orchestrator:
             )
             
             logger.info(f"Crawl completed in {total_time:.1f}s, success rate: {success_rate:.1f}%, throughput: {overall_images_per_second:.2f} images/second")
+            
+            # Log crawl end
+            self.timing_logger.log_crawl_end(total_time * 1000, len(sites), results.total_images_processed)
+            
             return results
             
         except Exception as e:
@@ -550,6 +589,8 @@ class Orchestrator:
             raise
         finally:
             self.running = False
+            # Log system shutdown
+            self.timing_logger.log_system_shutdown()
     
     def stop(self):
         """Stop the orchestrator."""

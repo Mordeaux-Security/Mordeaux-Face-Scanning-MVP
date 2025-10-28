@@ -10,7 +10,9 @@ import logging
 import multiprocessing
 import os
 import signal
+import tempfile
 import time
+import shutil
 from datetime import datetime
 from typing import List, Optional, Dict
 
@@ -20,6 +22,7 @@ from .cache_manager import get_cache_manager
 from .gpu_interface import get_gpu_interface
 from .storage_manager import get_storage_manager
 from .data_structures import BatchRequest, FaceResult, FaceDetection, TaskStatus, ImageTask
+from .timing_logger import get_timing_logger
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,7 @@ class GPUProcessorWorker:
         self.cache = get_cache_manager()
         self.gpu_interface = get_gpu_interface()
         self.storage = get_storage_manager()
+        self.timing_logger = get_timing_logger()
         
         # Worker state
         self.running = False
@@ -48,20 +52,44 @@ class GPUProcessorWorker:
     
     async def process_batch(self, batch_request: BatchRequest) -> int:
         """Process a batch of image tasks."""
+        batch_start_time = time.time()
         try:
-            # Track GPU processing start time per site
-            site_ids = list(set(task.candidate.site_id for task in batch_request.image_tasks))
-            gpu_start_time = datetime.now()
-            
-            # Update GPU processing start time for all sites in batch
-            for site_id in site_ids:
-                await self.redis.update_site_stats_async(
-                    site_id,
-                    {'gpu_processing_start_time': gpu_start_time}
-                )
-            
             logger.info(f"[GPU Processor {self.worker_id}] Processing batch: {batch_request.batch_id}, "
                        f"{len(batch_request.image_tasks)} images")
+            
+            # Log GPU batch start
+            self.timing_logger.log_gpu_batch_start(batch_request.batch_id, len(batch_request.image_tasks))
+            await self.redis.set_gpu_processing_async(batch_request.batch_id)
+            
+            # CRITICAL FIX: Copy temp files to GPU processor ownership
+            # This prevents race condition where extractor deletes temp files before GPU can access them
+            gpu_temp_dir = tempfile.mkdtemp(prefix=f"gpu_{self.worker_id}_")
+            logger.debug(f"[GPU Processor {self.worker_id}] Created temp dir: {gpu_temp_dir}")
+            
+            # Track GPU temp paths separately (don't mutate image_task)
+            gpu_temp_paths = {}  # Map: original_path -> gpu_path
+            
+            # Copy all temp files to GPU's ownership
+            for image_task in batch_request.image_tasks:
+                original_path = image_task.temp_path
+                gpu_path = os.path.join(gpu_temp_dir, os.path.basename(original_path))
+                
+                try:
+                    if os.path.exists(original_path):
+                        shutil.copy2(original_path, gpu_path)
+                        gpu_temp_paths[original_path] = gpu_path
+                        logger.debug(f"[GPU Processor {self.worker_id}] Copied temp file: {original_path} -> {gpu_path}")
+                    else:
+                        logger.warning(f"[GPU Processor {self.worker_id}] Temp file missing: {original_path}")
+                except Exception as e:
+                    logger.error(f"[GPU Processor {self.worker_id}] Failed to copy temp file {original_path}: {e}")
+            
+            # Temporarily replace temp paths for GPU processing
+            original_temp_paths = {}  # Map: task_index -> original_path
+            for i, image_task in enumerate(batch_request.image_tasks):
+                original_temp_paths[i] = image_task.temp_path
+                if image_task.temp_path in gpu_temp_paths:
+                    image_task.temp_path = gpu_temp_paths[image_task.temp_path]
             
             start_time = time.time()
             compute_type = "GPU"  # Track compute type
@@ -74,22 +102,25 @@ class GPUProcessorWorker:
                 face_results = await _process_batch_cpu_fallback(batch_request.image_tasks)
             else:
                 # Process batch with GPU interface
+                recognition_start = time.time()
+                self.timing_logger.log_gpu_recognition_start(batch_request.batch_id)
                 face_results = await self.gpu_interface.process_batch(batch_request.image_tasks)
+                recognition_duration = (time.time() - recognition_start) * 1000
+                face_count = sum(len(faces) for faces in face_results) if face_results else 0
+                self.timing_logger.log_gpu_recognition_end(batch_request.batch_id, recognition_duration, face_count)
                 # Check if GPU fallback occurred
                 if not face_results or all(not faces for faces in face_results):
                     compute_type = "CPU (fallback)"
             
+            # CRITICAL: Restore original temp paths so storage can access extractor files
+            for i, image_task in enumerate(batch_request.image_tasks):
+                if i in original_temp_paths:
+                    image_task.temp_path = original_temp_paths[i]
+                    logger.debug(f"[GPU Processor {self.worker_id}] Restored original temp path: {image_task.temp_path}")
+            
             if not face_results:
                 logger.warning(f"[GPU Processor {self.worker_id}] No face results from batch: {batch_request.batch_id}")
                 return 0
-            
-            # Track GPU processing end time
-            gpu_end_time = datetime.now()
-            for site_id in site_ids:
-                await self.redis.update_site_stats_async(
-                    site_id,
-                    {'gpu_processing_end_time': gpu_end_time}
-                )
             
             # Process each image result concurrently
             processed_count = 0
@@ -116,11 +147,26 @@ class GPUProcessorWorker:
             logger.info(f"[GPU Processor {self.worker_id}] Batch completed: {processed_count}/{len(batch_request.image_tasks)} "
                        f"images processed in {processing_time:.1f}ms using {compute_type}")
             
+            # Log GPU batch end
+            batch_duration = (time.time() - batch_start_time) * 1000
+            self.timing_logger.log_gpu_batch_end(batch_request.batch_id, batch_duration, processed_count)
+            await self.redis.clear_gpu_processing_async()
+            
             return processed_count
             
         except Exception as e:
             logger.error(f"[GPU Processor {self.worker_id}] Error processing batch {batch_request.batch_id}: {e}")
+            await self.redis.clear_gpu_processing_async()
             return 0
+        finally:
+            # Cleanup GPU temp directory after batch processing
+            # (Original extractor temp files still exist for storage access)
+            try:
+                if 'gpu_temp_dir' in locals() and os.path.exists(gpu_temp_dir):
+                    shutil.rmtree(gpu_temp_dir, ignore_errors=True)
+                    logger.debug(f"[GPU Processor {self.worker_id}] Cleaned up GPU temp dir: {gpu_temp_dir}")
+            except Exception as e:
+                logger.error(f"[GPU Processor {self.worker_id}] Error cleaning up GPU temp dir: {e}")
 
     async def _process_and_save_single_image(self, image_task: ImageTask, 
                                             face_detections: List[FaceDetection],
@@ -169,9 +215,13 @@ class GPUProcessorWorker:
             # See: docs/architecture/clean-storage-separation.md (future)
             
             # Save to storage (async with concurrent thumbnails)
+            storage_start = time.time()
+            self.timing_logger.log_gpu_storage_start(image_task.phash[:8], "raw")
             face_result, save_counts = await self.storage.save_face_result_async(
                 image_task, face_result
             )
+            storage_duration = (time.time() - storage_start) * 1000
+            self.timing_logger.log_gpu_storage_end(image_task.phash[:8], "raw", storage_duration)
             
             # No local tracking needed - Redis stats are source of truth
             

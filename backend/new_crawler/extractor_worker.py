@@ -20,6 +20,7 @@ from .redis_manager import get_redis_manager
 from .cache_manager import get_cache_manager
 from .http_utils import get_http_utils
 from .data_structures import CandidateImage, ImageTask, BatchRequest, TaskStatus
+from .timing_logger import get_timing_logger
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class ExtractorWorker:
         self.redis = get_redis_manager()
         self.cache = get_cache_manager()
         self.http_utils = get_http_utils()
+        self.timing_logger = get_timing_logger()
         
         # Worker state
         self.running = False
@@ -59,9 +61,13 @@ class ExtractorWorker:
     
     async def process_candidate(self, candidate: CandidateImage) -> Optional[ImageTask]:
         """Process a single candidate image."""
+        extraction_start_time = time.time()
         async with self._semaphore:  # Limit concurrent downloads
             try:
                 logger.debug(f"[Extractor {self.worker_id}] Processing candidate: {candidate.img_url}")
+                
+                # Log extraction start
+                self.timing_logger.log_extraction_start(candidate.site_id, candidate.img_url)
                 
                 # If we have metadata from HTML, skip HEAD check entirely!
                 if candidate.content_type and candidate.width and candidate.height:
@@ -75,6 +81,9 @@ class ExtractorWorker:
                     is_valid, head_info = await self.http_utils.head_check(candidate.img_url)
                     if not is_valid:
                         logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - FAILED")
+                        # Log extraction end
+                        extraction_duration = (time.time() - extraction_start_time) * 1000
+                        self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
                         return None
                     logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - OK")
                 else:
@@ -89,6 +98,9 @@ class ExtractorWorker:
                 
                 if not temp_path:
                     logger.debug(f"[EXTRACTOR-{self.worker_id}] Download: {candidate.img_url} - FAILED")
+                    # Log extraction end
+                    extraction_duration = (time.time() - extraction_start_time) * 1000
+                    self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
                     return None
                 
                 file_size = download_info.get('content_length', 0)
@@ -101,6 +113,9 @@ class ExtractorWorker:
                 if not phash:
                     logger.debug(f"[EXTRACTOR-{self.worker_id}] Phash: {temp_path} - FAILED")
                     os.remove(temp_path)
+                    # Log extraction end
+                    extraction_duration = (time.time() - extraction_start_time) * 1000
+                    self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
                     return None
                 
                 # Check cache
@@ -112,6 +127,9 @@ class ExtractorWorker:
                 if is_cached:
                     os.remove(temp_path)
                     self.cached_images += 1
+                    # Log extraction end
+                    extraction_duration = (time.time() - extraction_start_time) * 1000
+                    self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
                     return None
                 
                 # Create image task
@@ -129,38 +147,24 @@ class ExtractorWorker:
                 
                 # Try to flush if batch is ready (atomic operation)
                 if new_batch_size >= self.batch_size_threshold:
-                    # BATCH-LEVEL CUTOFF CHECK:
-                    # Check if primary site in this batch has reached thumbnail limit
+                    # Flush batch to GPU (site limit already checked at candidate level)
                     site_id = candidate.site_id
-                    
-                    # Get current thumbnail count for this site from Redis
-                    site_stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
-                    thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
-                    
-                    if thumbnails_saved >= self.config.nc_max_images_per_site:
-                        # Site has reached limit - STOP feeding this site to GPU
-                        logger.info(f"[EXTRACTOR-{self.worker_id}] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping GPU feed")
-                        
-                        # Do NOT flush batch - let it accumulate but don't send to GPU
-                        # The batch will be processed by other extractors or timeout
-                        logger.info(f"[EXTRACTOR-{self.worker_id}] Skipping batch flush for site {site_id} (limit reached)")
-                        
-                        # Update stats for skipped batch
-                        await self.redis.update_site_stats_async(site_id, {
-                            'images_skipped_limit': self.batch_size_threshold
-                        })
-                    else:
-                        # Site still under limit - flush ALL images in batch to GPU
-                        flushed = await self.redis.flush_shared_batch_if_ready_async(self.batch_size_threshold)
-                        if flushed:
-                            logger.info(f"[EXTRACTOR-{self.worker_id}] Flushed shared batch: {self.batch_size_threshold} images (site {site_id} at {thumbnails_saved}/{self.config.nc_max_images_per_site} thumbnails)")
-                            self.batches_created += 1
+                    flushed = await self.redis.flush_shared_batch_if_ready_async(self.batch_size_threshold)
+                    if flushed:
+                        logger.info(f"[EXTRACTOR-{self.worker_id}] Flushed shared batch: {self.batch_size_threshold} images (site {site_id})")
+                        self.batches_created += 1
                 
                 logger.debug(f"[Extractor {self.worker_id}] Created image task: {phash[:8]}...")
+                # Log extraction end
+                extraction_duration = (time.time() - extraction_start_time) * 1000
+                self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
                 return image_task
                 
             except Exception as e:
                 logger.error(f"[Extractor {self.worker_id}] Error processing candidate {candidate.img_url}: {e}")
+                # Log extraction end
+                extraction_duration = (time.time() - extraction_start_time) * 1000
+                self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
                 return None
     
     
@@ -170,6 +174,39 @@ class ExtractorWorker:
         logger.info(f"[Extractor {self.worker_id}] Starting extractor worker")
         self.running = True
         
+        # Background task: time-based stale batch flush
+        async def _stale_flusher():
+            try:
+                while self.running:
+                    try:
+                        gpu_idle = await self.redis.is_gpu_idle_async()
+                        batch_size = await self.redis.get_shared_batch_size_async()
+                        
+                        # TIER 1: GPU idle + min batch ready = flush immediately
+                        if gpu_idle and batch_size >= self.config.gpu_min_batch_size:
+                            flushed = await self.redis.flush_shared_batch_if_ready_async(
+                                self.config.gpu_min_batch_size
+                            )
+                            if flushed:
+                                logger.info(f"[EXTRACTOR-{self.worker_id}] GPU-idle flush: {batch_size} images")
+                            await asyncio.sleep(0.05)  # Check every 50ms when GPU idle
+                            
+                        # TIER 2: Normal operation - let stale flush handle it
+                        else:
+                            await self.redis.flush_shared_batch_if_stale_async(
+                                stale_ms=150,  # Reduced from 300ms
+                                min_items=self.config.gpu_min_batch_size,
+                                max_batch_size=self.batch_size_threshold
+                            )
+                            await asyncio.sleep(0.1)
+                            
+                    except Exception:
+                        pass
+                        
+            except asyncio.CancelledError:
+                return
+        flusher_task = asyncio.create_task(_stale_flusher())
+
         # Track first and last extraction times per site
         site_extraction_times = {}  # {site_id: {'start': datetime, 'end': datetime}}
         
@@ -185,6 +222,14 @@ class ExtractorWorker:
                     continue
                 
                 site_id = candidate.site_id
+                # If site already reached limit, drop immediately (log once per site)
+                if await self.redis.is_site_limit_reached_async(site_id):
+                    if site_id not in site_extraction_times:
+                        logger.info(f"[EXTRACTOR-{self.worker_id}] Dropping candidate for {site_id} (limit reached)")
+                        site_extraction_times[site_id] = {'start': None, 'end': None}
+                    else:
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] Skipping candidate (limit reached): {candidate.img_url}")
+                    continue
                 
                 # Track extraction start time
                 if site_id not in site_extraction_times:
@@ -213,6 +258,11 @@ class ExtractorWorker:
                             'extraction_end_time': site_extraction_times[site_id]['end']
                         }
                     )
+                # Check and set site limit flag if reached
+                stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
+                thumbs = stats.get('images_saved_thumbs', 0) if stats else 0
+                if thumbs >= self.config.nc_max_images_per_site:
+                    await self.redis.set_site_limit_reached_async(site_id)
                 
                 self.processed_candidates += 1
                 
@@ -222,6 +272,10 @@ class ExtractorWorker:
                                f"{self.downloaded_images} downloaded, {self.cached_images} cached, "
                                f"{self.batches_created} batches created")
         finally:
+            try:
+                flusher_task.cancel()
+            except Exception:
+                pass
             # Flush any remaining images in shared batch (don't wait for threshold)
             remaining = await self.redis.get_shared_batch_size_async()
             if remaining > 0:
@@ -231,15 +285,15 @@ class ExtractorWorker:
             self._cleanup_temp_dir()
     
     def _cleanup_temp_dir(self):
-        """Cleanup temporary files."""
+        """Cleanup temporary files with delay to prevent race condition."""
         try:
-            # Remove temp directory
-            import shutil
-            if os.path.exists(self.temp_dir):
-                shutil.rmtree(self.temp_dir)
-                logger.info(f"[Extractor {self.worker_id}] Cleaned up temp directory: {self.temp_dir}")
+            # Don't cleanup immediately - give GPU processor time to copy files
+            # Files will be cleaned by OS tmpfs or periodic cleanup
+            # This prevents race condition where GPU processor can't access temp files
+            logger.info(f"[Extractor {self.worker_id}] Temp files in {self.temp_dir} will be cleaned by system")
+            logger.info(f"[Extractor {self.worker_id}] Delaying cleanup to prevent race condition with GPU processor")
         except Exception as e:
-            logger.error(f"[Extractor {self.worker_id}] Error cleaning up: {e}")
+            logger.error(f"[Extractor {self.worker_id}] Error during cleanup: {e}")
     
     def cleanup(self):
         """Cleanup temporary files."""

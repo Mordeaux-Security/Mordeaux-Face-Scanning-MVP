@@ -19,6 +19,7 @@ from .redis_manager import get_redis_manager
 from .selector_miner import get_selector_miner
 from .http_utils import get_http_utils
 from .data_structures import SiteTask, CandidateImage, TaskStatus
+from .timing_logger import get_timing_logger
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ class CrawlerWorker:
         self.redis = get_redis_manager()
         self.selector_miner = get_selector_miner()
         self.http_utils = get_http_utils()
+        self.timing_logger = get_timing_logger()
         
         # Worker state
         self.running = False
@@ -42,31 +44,64 @@ class CrawlerWorker:
         self._active_tasks_incr = self.redis.incr_active_tasks
         self._active_tasks_decr = self.redis.decr_active_tasks
         
+    async def _enqueue_candidates(self, candidates: List[CandidateImage]) -> int:
+        """Enqueue a batch of candidates to Redis queue."""
+        candidates_pushed = 0
+        for candidate in candidates:
+            # Skip enqueue if site limit already reached
+            if await self.redis.is_site_limit_reached_async(candidate.site_id):
+                logger.debug(f"[Crawler {self.worker_id}] Not enqueueing candidate (limit reached): {candidate.img_url}")
+                continue
+            if await self.redis.push_candidate_async(candidate):
+                candidates_pushed += 1
+            else:
+                logger.warning(f"[Crawler {self.worker_id}] Failed to push candidate: {candidate.img_url}")
+        return candidates_pushed
+
     async def process_site(self, site_task: SiteTask) -> int:
         """Process a single site task."""
+        site_start_time = time.time()
         try:
             logger.debug(f"[CRAWLER-{self.worker_id}] Starting site: {site_task.url}, max_pages={site_task.max_pages}")
             
-            # Mine selectors from site
+            # Log site start
+            self.timing_logger.log_site_start(site_task.site_id, site_task.url)
+            
+            # Mine selectors from site using streaming approach
             # Increment active tasks counter for duration of JS/HTTP crawl
             self._active_tasks_incr(1)
             try:
-                candidates = await self.selector_miner.mine_with_3x3_crawl(
+                enqueue_tasks = []
+                total_pages = 0
+                async for page_url, page_candidates in self.selector_miner.mine_with_3x3_crawl(
                     site_task.url, site_task.site_id, site_task.max_pages
-                )
+                ):
+                    # Log page start/end timing
+                    page_start_time = time.time()
+                    self.timing_logger.log_page_start(site_task.site_id, page_url)
+                    
+                    # Enqueue candidates in background while we continue crawling
+                    task = asyncio.create_task(self._enqueue_candidates(page_candidates))
+                    enqueue_tasks.append(task)
+                    
+                    # Log page end
+                    page_duration = (time.time() - page_start_time) * 1000
+                    self.timing_logger.log_page_end(site_task.site_id, page_url, page_duration, len(page_candidates))
+                    total_pages += 1
+                
+                # After crawl completes, wait for all enqueues to finish
+                results = await asyncio.gather(*enqueue_tasks)
+                total_enqueued = sum(results)
+                
             finally:
                 self._active_tasks_decr(1)
             
-            # Push candidates to queue
-            candidates_pushed = 0
-            for candidate in candidates:
-                if await self.redis.push_candidate_async(candidate):
-                    candidates_pushed += 1
-                else:
-                    logger.warning(f"[Crawler {self.worker_id}] Failed to push candidate: {candidate.img_url}")
+            # Log site end
+            site_duration = (time.time() - site_start_time) * 1000
+            self.timing_logger.log_site_end(site_task.site_id, site_duration, total_pages, total_enqueued)
             
-            logger.debug(f"[CRAWLER-{self.worker_id}] Site complete: {site_task.url}, found {candidates_pushed} candidates")
-            return candidates_pushed
+            logger.debug(f"[CRAWLER-{self.worker_id}] Site complete: {site_task.url}, found {total_enqueued} candidates")
+            return total_enqueued
             
         except Exception as e:
             logger.error(f"[Crawler {self.worker_id}] Error processing site {site_task.url}: {e}")

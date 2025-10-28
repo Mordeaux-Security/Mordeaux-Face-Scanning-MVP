@@ -44,7 +44,7 @@ def download_thumbnails():
     
     # Use environment variables if settings not available
     if settings is None:
-        s3_endpoint = os.getenv("S3_ENDPOINT", "http://minio:9000")
+        s3_endpoint = os.getenv("S3_ENDPOINT", "http://localhost:9000")
         s3_access_key = os.getenv("S3_ACCESS_KEY", "minioadmin")
         s3_secret_key = os.getenv("S3_SECRET_KEY", "minioadmin")
         s3_use_ssl = os.getenv("S3_USE_SSL", "false").lower() == "true"
@@ -53,7 +53,7 @@ def download_thumbnails():
     # Check required settings
     if not s3_endpoint or not s3_access_key or not s3_secret_key:
         print("Error: Missing MinIO configuration (S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY)")
-        return
+        sys.exit(1)
     
     print(f"Endpoint: {s3_endpoint}")
     print(f"Bucket: {bucket_name}")
@@ -79,7 +79,7 @@ def download_thumbnails():
         
     except Exception as e:
         print(f"Error connecting to MinIO: {e}")
-        return
+        sys.exit(1)
     
     # Download all objects from thumbnails bucket
     try:
@@ -118,12 +118,14 @@ def download_thumbnails():
                 print(f"  Error downloading {obj.object_name}: {e}")
                 continue
         
-        print(f"\n✓ Downloaded {count} images to {thumbs_dir.absolute()}")
+        print(f"\nDownloaded {count} images to {thumbs_dir.absolute()}")
         
     except S3Error as e:
         print(f"Error accessing bucket: {e}")
+        sys.exit(1)
     except Exception as e:
         print(f"Error: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     print("=== Downloading Thumbnails from MinIO ===")

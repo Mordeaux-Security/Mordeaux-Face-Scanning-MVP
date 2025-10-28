@@ -40,6 +40,8 @@ class RedisManager:
         self._async_client: Optional[aioredis.Redis] = None
         # Active task counter key
         self._active_tasks_key = "nc:active_tasks"
+        # Site limit flag prefix
+        self._site_limit_flag_prefix = "nc:site:limit:"  # nc:site:limit:{site_id}
         
     def _get_pool(self) -> ConnectionPool:
         """Get or create Redis connection pool."""
@@ -676,11 +678,14 @@ class RedisManager:
         try:
             client = await self._get_async_client()
             batch_key = "batch:accumulator"
+            ts_key = "batch:accumulator:last_ts"
             data = self._serialize(image_task)
             # Push and get new length atomically
             async with client.pipeline() as pipeline:
                 await pipeline.rpush(batch_key, data)
                 await pipeline.llen(batch_key)
+                # Only set timestamp if batch was empty (first push after flush)
+                await pipeline.setnx(ts_key, int(time.time() * 1000))
                 results = await pipeline.execute()
             new_size = results[1]
             return new_size
@@ -732,6 +737,125 @@ class RedisManager:
             logger.error(f"Failed to flush shared batch: {e}")
             return False
 
+    async def flush_shared_batch_if_stale_async(self, stale_ms: int, min_items: int, max_batch_size: int) -> bool:
+        """Flush shared batch if stale time exceeded and at least min_items present. Returns True if flushed."""
+        try:
+            client = await self._get_async_client()
+            batch_key = "batch:accumulator"
+            ts_key = "batch:accumulator:last_ts"
+            now_ms = int(time.time() * 1000)
+            lua_script = """
+            local batch_key = KEYS[1]
+            local ts_key = KEYS[2]
+            local stale_ms = tonumber(ARGV[1])
+            local min_items = tonumber(ARGV[2])
+            local max_batch = tonumber(ARGV[3])
+            local now_ms = tonumber(ARGV[4])
+            local current_size = redis.call('LLEN', batch_key)
+            if current_size == 0 then
+                return {0, {}}
+            end
+            local last_ts = tonumber(redis.call('GET', ts_key) or '0')
+            -- Flush if ANY condition is true:
+            -- 1. Batch full (size-based immediate flush)
+            -- 2. Batch has min items AND is stale (time-based flush)
+            if (current_size >= max_batch) or (current_size >= min_items and (now_ms - last_ts) >= stale_ms) then
+                local n = max_batch
+                if current_size < n then n = current_size end
+                local items = redis.call('LRANGE', batch_key, 0, n - 1)
+                redis.call('LTRIM', batch_key, n, -1)
+                -- CRITICAL: Delete timestamp so next push creates new one
+                redis.call('DEL', ts_key)
+                return {1, items}
+            else
+                return {0, {}}
+            end
+            """
+            result = await client.eval(lua_script, 2, batch_key, ts_key, stale_ms, min_items, max_batch_size, now_ms)
+            if result[0] == 1:
+                items = result[1]
+                image_tasks = []
+                for item in items:
+                    if isinstance(item, str):
+                        item = item.encode('utf-8')
+                    image_tasks.append(self._deserialize(item, ImageTask))
+                await self.push_image_batch_async(image_tasks)
+                logger.info(f"Flushed stale shared batch: {len(image_tasks)} images")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Failed to flush stale shared batch: {e}")
+            return False
+
+    # Site limit flags
+    def set_site_limit_reached(self, site_id: str) -> bool:
+        try:
+            client = self._get_client()
+            key = f"{self._site_limit_flag_prefix}{site_id}"
+            client.set(key, 1)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to set site limit flag for {site_id}: {e}")
+            return False
+
+    async def set_site_limit_reached_async(self, site_id: str) -> bool:
+        try:
+            client = await self._get_async_client()
+            key = f"{self._site_limit_flag_prefix}{site_id}"
+            await client.set(key, 1)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to set site limit flag for {site_id} (async): {e}")
+            return False
+
+    def is_site_limit_reached(self, site_id: str) -> bool:
+        try:
+            client = self._get_client()
+            key = f"{self._site_limit_flag_prefix}{site_id}"
+            return bool(client.exists(key))
+        except Exception:
+            return False
+
+    async def is_site_limit_reached_async(self, site_id: str) -> bool:
+        try:
+            client = await self._get_async_client()
+            key = f"{self._site_limit_flag_prefix}{site_id}"
+            return bool(await client.exists(key))
+        except Exception:
+            return False
+
+    async def all_sites_limit_reached_async(self, site_ids: List[str]) -> bool:
+        try:
+            client = await self._get_async_client()
+            keys = [f"{self._site_limit_flag_prefix}{sid}" for sid in site_ids]
+            if not keys:
+                return False
+            exists = await client.exists(*keys)
+            return int(exists) == len(keys)
+        except Exception:
+            return False
+
+    # Queue clearing helpers
+    def clear_queue(self, queue_type: str) -> bool:
+        try:
+            client = self._get_client()
+            qn = self.config.get_queue_name(queue_type)
+            client.delete(qn)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear queue {queue_type}: {e}")
+            return False
+
+    async def clear_queue_async(self, queue_type: str) -> bool:
+        try:
+            client = await self._get_async_client()
+            qn = self.config.get_queue_name(queue_type)
+            await client.delete(qn)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear queue {queue_type} (async): {e}")
+            return False
+
     def get_shared_batch_size(self) -> int:
         """Get current size of shared batch accumulator."""
         try:
@@ -749,6 +873,34 @@ class RedisManager:
         except Exception as e:
             logger.error(f"Failed to get shared batch size (async): {e}")
             return 0
+
+    async def set_gpu_processing_async(self, batch_id: str) -> bool:
+        """Mark GPU as processing a batch."""
+        try:
+            client = await self._get_async_client()
+            await client.setex("gpu:processing", 60, batch_id)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to set GPU processing: {e}")
+            return False
+
+    async def clear_gpu_processing_async(self) -> bool:
+        """Mark GPU as idle."""
+        try:
+            client = await self._get_async_client()
+            await client.delete("gpu:processing")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear GPU processing: {e}")
+            return False
+
+    async def is_gpu_idle_async(self) -> bool:
+        """Check if GPU is idle (not processing a batch)."""
+        try:
+            client = await self._get_async_client()
+            return not await client.exists("gpu:processing")
+        except Exception:
+            return True
 
     # Cleanup
     

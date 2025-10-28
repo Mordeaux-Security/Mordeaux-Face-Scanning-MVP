@@ -32,22 +32,32 @@ class StorageManager:
         self.config = get_config()
         self._minio_client = None
         self._s3_client = None
-        self._async_minio_client = None  # NEW
-        self._async_s3_client = None      # NEW
         
     def _get_client(self):
-        """Get MinIO/S3 client."""
+        """Get MinIO/S3 client with connection pooling."""
         if self.config.s3_endpoint:
             # Using MinIO
             if self._minio_client is None:
                 try:
                     from minio import Minio
+                    from urllib3 import PoolManager
+                    
+                    # Create connection pool to prevent connection exhaustion
+                    http_client = PoolManager(
+                        maxsize=self.config.minio_max_pool_size,  # Max connections in pool
+                        retries=3,
+                        timeout=self.config.minio_pool_timeout,
+                        block=False  # Don't block if pool is full
+                    )
+                    
                     self._minio_client = Minio(
                         self.config.s3_endpoint.replace('http://', '').replace('https://', ''),
                         access_key=self.config.s3_access_key,
                         secret_key=self.config.s3_secret_key,
-                        secure=self.config.s3_use_ssl
+                        secure=self.config.s3_use_ssl,
+                        http_client=http_client  # Use connection pool
                     )
+                    logger.debug(f"Created MinIO client with connection pooling (maxsize={self.config.minio_max_pool_size})")
                 except ImportError:
                     logger.error("MinIO client not available. Install with: pip install minio")
                     raise
@@ -67,40 +77,6 @@ class StorageManager:
                     logger.error("Boto3 not available. Install with: pip install boto3")
                     raise
             return self._s3_client
-    
-    async def _get_async_client(self):
-        """Get async MinIO/S3 client."""
-        if self.config.s3_endpoint:
-            # Using MinIO with async client
-            if self._async_minio_client is None:
-                try:
-                    from minio_async import Minio
-                    self._async_minio_client = Minio(
-                        self.config.s3_endpoint.replace('http://', '').replace('https://', ''),
-                        access_key=self.config.s3_access_key,
-                        secret_key=self.config.s3_secret_key,
-                        secure=self.config.s3_use_ssl
-                    )
-                except ImportError:
-                    logger.warning("minio-async not available, falling back to sync")
-                    return None
-            return self._async_minio_client
-        else:
-            # Using AWS S3 with aioboto3
-            if self._async_s3_client is None:
-                try:
-                    import aioboto3
-                    session = aioboto3.Session()
-                    self._async_s3_client = session.client(
-                        's3',
-                        region_name=self.config.s3_region,
-                        aws_access_key_id=self.config.s3_access_key,
-                        aws_secret_access_key=self.config.s3_secret_key
-                    )
-                except ImportError:
-                    logger.warning("aioboto3 not available, falling back to sync")
-                    return None
-            return self._async_s3_client
     
     def _compute_content_hash(self, data: bytes) -> str:
         """Compute SHA256 hash of content."""
@@ -195,38 +171,10 @@ class StorageManager:
     # Benefits: Atomic operations, easier cleanup, clearer organization
     
     async def save_raw_image_async(self, image_task: ImageTask) -> Tuple[Optional[str], Optional[str]]:
-        """Save raw image to MinIO (async)."""
+        """Save raw image to MinIO (async wrapper around sync)."""
         try:
-            client = await self._get_async_client()
-            
-            # Fallback to sync if async client not available
-            if client is None:
-                return await asyncio.to_thread(self.save_raw_image, image_task)
-            
-            # Read image bytes from temp file (in thread pool - file I/O)
-            image_data = await asyncio.to_thread(
-                lambda: open(image_task.temp_path, 'rb').read()
-            )
-            
-            # Generate key
-            key = f"{image_task.phash}.jpg"
-            
-            # Save to MinIO with retry (async)
-            for attempt in range(3):
-                try:
-                    await client.put_object(
-                        bucket_name=self.config.s3_bucket_raw,
-                        object_name=key,
-                        data=io.BytesIO(image_data),
-                        length=len(image_data),
-                        content_type=image_task.mime_type
-                    )
-                    logger.debug(f"[STORAGE] Raw image saved: {key}, size={len(image_data)}bytes")
-                    return key, f"s3://{self.config.s3_bucket_raw}/{key}"
-                except Exception as e:
-                    if attempt == 2:
-                        raise
-                    await asyncio.sleep(1.0)
+            # Use sync client in thread pool for async behavior
+            return await asyncio.to_thread(self.save_raw_image, image_task)
         except Exception as e:
             logger.error(f"Failed to save raw image: {e}")
             return None, None
@@ -277,43 +225,12 @@ class StorageManager:
     
     async def save_face_thumbnail_async(self, face_crop_data: bytes, face_detection: FaceDetection, 
                                        base_hash: str, face_index: int) -> Tuple[Optional[str], Optional[str]]:
-        """Save face thumbnail to MinIO (async)."""
+        """Save face thumbnail to MinIO (async wrapper around sync)."""
         try:
-            # Compute content hash (CPU-bound, run in thread pool)
-            content_hash = await asyncio.to_thread(
-                self._compute_content_hash, face_crop_data
+            # Use sync client in thread pool for async behavior
+            return await asyncio.to_thread(
+                self.save_face_thumbnail, face_crop_data, face_detection, base_hash, face_index
             )
-            
-            # Get storage key
-            key = self._get_content_key(content_hash, '.jpg')
-            
-            # Get client
-            client = await self._get_async_client()
-            
-            # Fallback to sync if async client not available
-            if client is None:
-                return await asyncio.to_thread(
-                    self.save_face_thumbnail, face_crop_data, face_detection, base_hash, face_index
-                )
-            
-            # Upload to MinIO (async)
-            await client.put_object(
-                bucket_name=self.config.s3_bucket_thumbs,
-                object_name=key,
-                data=io.BytesIO(face_crop_data),
-                length=len(face_crop_data),
-                content_type='image/jpeg'
-            )
-            
-            # Generate URL
-            if self.config.s3_endpoint:
-                url = f"{self.config.s3_endpoint}/{self.config.s3_bucket_thumbs}/{key}"
-            else:
-                url = f"https://{self.config.s3_bucket_thumbs}.s3.{self.config.s3_region}.amazonaws.com/{key}"
-            
-            logger.debug(f"Saved face thumbnail to {key}")
-            return key, url
-            
         except Exception as e:
             logger.error(f"Failed to save face thumbnail: {e}")
             return None, None
@@ -364,41 +281,12 @@ class StorageManager:
     
     async def save_metadata_async(self, image_task: ImageTask, face_result: FaceResult, 
                                  raw_key: str, thumbnail_keys: List[str]) -> bool:
-        """Save metadata sidecar file (async)."""
+        """Save metadata sidecar file (async wrapper around sync)."""
         try:
-            # Create metadata (CPU-bound, but fast)
-            metadata = self._create_metadata(image_task, face_result)
-            metadata['raw_image_key'] = raw_key
-            metadata['thumbnail_keys'] = thumbnail_keys
-            
-            # Convert to JSON
-            metadata_json = json.dumps(metadata, indent=2)
-            metadata_data = metadata_json.encode('utf-8')
-            
-            # Get metadata key
-            metadata_key = raw_key.replace('.jpg', '.meta.json')
-            
-            # Get client
-            client = await self._get_async_client()
-            
-            # Fallback to sync if async client not available
-            if client is None:
-                return await asyncio.to_thread(
-                    self.save_metadata, image_task, face_result, raw_key, thumbnail_keys
-                )
-            
-            # Upload metadata (async)
-            await client.put_object(
-                bucket_name=self.config.s3_bucket_raw,
-                object_name=metadata_key,
-                data=io.BytesIO(metadata_data),
-                length=len(metadata_data),
-                content_type='application/json'
+            # Use sync client in thread pool for async behavior
+            return await asyncio.to_thread(
+                self.save_metadata, image_task, face_result, raw_key, thumbnail_keys
             )
-            
-            logger.debug(f"Saved metadata to {metadata_key}")
-            return True
-            
         except Exception as e:
             logger.error(f"Failed to save metadata: {e}")
             return False

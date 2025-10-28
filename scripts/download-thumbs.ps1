@@ -25,5 +25,5 @@ try {
 }
 
 Write-Host ""
-Write-Host "✓ Done!" -ForegroundColor Green
+Write-Host "Done!" -ForegroundColor Green
 

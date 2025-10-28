@@ -28,7 +28,7 @@ class CrawlerConfig(BaseSettings):
     
     # Redis Configuration
     redis_url: str = "redis://redis:6379/0"
-    redis_max_connections: int = 20
+    redis_max_connections: int = 200
     redis_retry_on_timeout: bool = True
     
     # Crawling Limits
@@ -60,6 +60,12 @@ class CrawlerConfig(BaseSettings):
     gpu_worker_timeout: float = 60.0
     gpu_worker_max_retries: int = 3
     gpu_min_batch_size: int = 8
+    # Time-based batch flush to smooth throughput (milliseconds)
+    gpu_batch_flush_ms: int = 3000
+    
+    # MinIO Connection Pool Configuration
+    minio_max_pool_size: int = 50
+    minio_pool_timeout: float = 30.0
     
     # HTTP Configuration
     nc_http_timeout: float = 30.0
@@ -73,6 +79,8 @@ class CrawlerConfig(BaseSettings):
     nc_js_networkidle_timeout: float = 3.0  # timeout for network idle strategy
     # First visit strategy: fetch both HTTP and JS, pick best by candidate count
     nc_js_first_visit_compare: bool = True
+    # Max concurrent Playwright renders
+    nc_js_concurrency: int = 4
     
     # Image Extraction Configuration
     nc_extract_background_images: bool = True
