@@ -31,12 +31,8 @@ from PIL import Image, ImageFile
 # ============================================================================
 
 # URL Security Configuration
-            from PIL import Image
-            import io
-
-            # Open image and remove EXIF
-            from PIL import Image
-            import io
+from PIL import Image
+import io
 
             # Open image to get dimensions
 

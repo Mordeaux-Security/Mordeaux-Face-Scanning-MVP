@@ -2,13 +2,11 @@ import uuid
 from typing import List, Dict, Any
 
 # Lazy singletons
-    from qdrant_client import QdrantClient
-    from pinecone import Pinecone
+from qdrant_client import QdrantClient
+from pinecone import Pinecone
+from qdrant_client.http import models as qm
 
 from ..core.config import get_settings
-    from qdrant_client.http import models as qm
-    from qdrant_client.http import models as qm
-    from qdrant_client.http import models as qm
 
 _qdrant_client = None
 _pinecone_index = None

@@ -68,9 +68,239 @@ Comprehensive readiness endpoint that checks if MinIO and Qdrant are reachable a
 
 ## API Endpoints
 
+### Health & Monitoring
+
+#### GET /healthz
+Basic health check endpoint that returns simple system status.
+
+**Success Response (200 OK)**:
+```json
+{
+  "ok": true,
+  "status": "healthy"
+}
+```
+
+#### GET /healthz/detailed
+Comprehensive health check that tests all system components including database, Redis, storage, vector database, and face processing service.
+
+**Success Response (200 OK)**:
+```json
+{
+  "status": "healthy",
+  "timestamp": 1640995200.0,
+  "total_check_time_ms": 150.5,
+  "environment": "development",
+  "services": {
+    "database": {
+      "status": "healthy",
+      "response_time_ms": 25.3
+    },
+    "redis": {
+      "status": "healthy",
+      "response_time_ms": 12.1
+    },
+    "storage": {
+      "status": "healthy",
+      "response_time_ms": 45.2
+    },
+    "vector_db": {
+      "status": "healthy",
+      "response_time_ms": 38.7
+    },
+    "face_service": {
+      "status": "healthy",
+      "response_time_ms": 28.2
+    }
+  },
+  "summary": {
+    "total_services": 5,
+    "healthy_services": 5,
+    "degraded_services": 0,
+    "unhealthy_services": 0
+  }
+}
+```
+
+**Error Responses**:
+- **503 Service Unavailable**: One or more services are unhealthy
+
+#### GET /healthz/database
+Database-specific health check.
+
+#### GET /healthz/redis
+Redis-specific health check.
+
+#### GET /healthz/storage
+Storage-specific health check.
+
+#### GET /healthz/vector
+Vector database-specific health check.
+
+#### GET /healthz/face
+Face service-specific health check.
+
+### Configuration & Metrics
+
+#### GET /config
+Get current configuration (without sensitive data).
+
+**Success Response (200 OK)**:
+```json
+{
+  "environment": "development",
+  "log_level": "info",
+  "rate_limiting": {
+    "per_minute": 60,
+    "per_hour": 1000,
+    "sustained_rate_per_second": 10.0,
+    "burst_capacity": 50
+  },
+  "presigned_url_ttl": 600,
+  "crawled_thumbs_retention_days": 90,
+  "user_query_images_retention_hours": 24,
+  "max_image_size_mb": 10,
+  "p95_latency_threshold_seconds": 5.0,
+  "using_pinecone": false,
+  "using_minio": true,
+  "vector_index": "faces_v1",
+  "s3_bucket_raw": "raw-images",
+  "s3_bucket_thumbs": "thumbnails",
+  "tenant_allowlist": {
+    "enabled": false,
+    "allowed_tenant_count": 0,
+    "allowed_tenant_ids": null
+  }
+}
+```
+
+#### GET /metrics
+Get performance metrics and monitoring data.
+
+#### GET /metrics/p95
+Get P95 latency metrics specifically.
+
+#### GET /performance/recommendations
+Get performance recommendations based on current metrics.
+
+#### GET /performance/thresholds
+Monitor performance thresholds and alert if exceeded.
+
+### Cache Management
+
+#### GET /cache/stats
+Get cache statistics and performance metrics.
+
+**Success Response (200 OK)**:
+```json
+{
+  "total_items": 450,
+  "hit_rate": 0.85,
+  "memory_usage": "12.5MB",
+  "tenant_stats": {
+    "tenant123": {
+      "items": 150,
+      "hit_rate": 0.90
+    }
+  }
+}
+```
+
+#### DELETE /cache/tenant/{tenant_id}
+Clear all cached data for a specific tenant.
+
+**Success Response (200 OK)**:
+```json
+{
+  "message": "Cleared 150 cache entries for tenant tenant123",
+  "deleted_count": 150
+}
+```
+
+#### DELETE /cache/all
+Clear all cached data (use with caution).
+
+**Success Response (200 OK)**:
+```json
+{
+  "message": "All cache data cleared",
+  "success": true
+}
+```
+
+### Metrics Dashboard
+
+#### GET /dashboard/overview
+Get high-level system overview with health, performance, and usage metrics.
+
+#### GET /dashboard/performance
+Get detailed performance metrics and trends.
+
+#### GET /dashboard/analytics
+Get usage analytics and trends for the system.
+
+#### GET /dashboard/tenant/{tenant_id}
+Get metrics specific to a particular tenant.
+
+#### GET /dashboard/health
+Get comprehensive health dashboard data for all system components.
+
+### Administration
+
+#### GET /admin/db/performance
+Analyze database query performance and identify optimization opportunities.
+
+#### GET /admin/db/health
+Get comprehensive database health metrics including size, connections, and locks.
+
+#### POST /admin/db/optimize
+Run database optimization tasks including ANALYZE and VACUUM operations.
+
+#### POST /admin/db/cleanup
+Clean up old audit logs based on retention policy.
+
+#### POST /admin/tenants
+Create a new tenant with specified configuration.
+
+#### GET /admin/tenants
+List all tenants with optional filtering by status.
+
+#### GET /admin/tenants/{tenant_id}
+Get detailed information about a specific tenant.
+
+#### PUT /admin/tenants/{tenant_id}
+Update tenant information.
+
+#### POST /admin/tenants/{tenant_id}/suspend
+Suspend a tenant to prevent further operations.
+
+#### POST /admin/tenants/{tenant_id}/activate
+Activate a suspended tenant.
+
+#### DELETE /admin/tenants/{tenant_id}
+Delete a tenant (soft delete by default).
+
+#### GET /admin/tenants/{tenant_id}/stats
+Get usage statistics for a specific tenant.
+
+#### GET /admin/tenants/usage/summary
+Get usage summary across all tenants.
+
+#### GET /admin/export/audit-logs
+Export audit logs in JSON or CSV format with optional filtering.
+
+#### GET /admin/export/search-logs
+Export search audit logs in JSON or CSV format with optional filtering.
+
+#### GET /admin/export/tenant/{tenant_id}
+Export all data for a specific tenant including images, faces, and audit logs.
+
+#### GET /admin/export/system-metrics
+Export system-wide metrics and statistics in JSON or CSV format.
+
 ### Face Operations
 
-#### POST /index_face
+#### POST /api/index_face
 Upload an image, extract face embeddings, and store them in the vector database.
 
 **Success Response (200 OK)**:
@@ -89,7 +319,7 @@ Upload an image, extract face embeddings, and store them in the vector database.
 - **429 Too Many Requests**: Rate limit exceeded
 - **500 Internal Server Error**: Processing failure
 
-#### POST /search_face
+#### POST /api/search_face
 Upload an image, extract face embeddings, and find similar faces in the database.
 
 **Success Response (200 OK)**:
@@ -123,7 +353,7 @@ Upload an image, extract face embeddings, and find similar faces in the database
 - **429 Too Many Requests**: Rate limit exceeded
 - **500 Internal Server Error**: Processing failure
 
-#### POST /compare_face
+#### POST /api/compare_face
 Compare an uploaded image against existing faces without storing the image.
 
 **Success Response (200 OK)**:
@@ -159,7 +389,7 @@ Compare an uploaded image against existing faces without storing the image.
 
 ### Batch Processing
 
-#### POST /batch/index
+#### POST /api/batch/index
 Create a new batch job to process multiple images for face indexing.
 
 **Success Response (200 OK)**:
@@ -177,7 +407,7 @@ Create a new batch job to process multiple images for face indexing.
 - **429 Too Many Requests**: Rate limit exceeded
 - **500 Internal Server Error**: Batch creation failure
 
-#### GET /batch/{batch_id}/status
+#### GET /api/batch/{batch_id}/status
 Get the status of a batch job.
 
 **Success Response (200 OK)**:
@@ -204,7 +434,7 @@ Get the status of a batch job.
 - **404 Not Found**: Batch job not found
 - **403 Forbidden**: Access denied to batch job
 
-#### GET /batch/list
+#### GET /api/batch/list
 List batch jobs for the current tenant.
 
 **Success Response (200 OK)**:
@@ -229,7 +459,7 @@ List batch jobs for the current tenant.
 }
 ```
 
-#### DELETE /batch/{batch_id}
+#### DELETE /api/batch/{batch_id}
 Cancel a batch job.
 
 **Success Response (200 OK)**:
@@ -248,7 +478,7 @@ Cancel a batch job.
 
 ### Webhooks
 
-#### POST /webhooks/register
+#### POST /api/webhooks/register
 Register a new webhook endpoint.
 
 **Success Response (200 OK)**:
@@ -265,7 +495,7 @@ Register a new webhook endpoint.
 - **400 Bad Request**: Invalid webhook configuration or events
 - **500 Internal Server Error**: Registration failure
 
-#### GET /webhooks/list
+#### GET /api/webhooks/list
 List all webhook endpoints for the current tenant.
 
 **Success Response (200 OK)**:
@@ -287,7 +517,7 @@ List all webhook endpoints for the current tenant.
 }
 ```
 
-#### DELETE /webhooks/unregister
+#### DELETE /api/webhooks/unregister
 Unregister a webhook endpoint.
 
 **Success Response (200 OK)**:
@@ -301,7 +531,7 @@ Unregister a webhook endpoint.
 **Error Responses**:
 - **404 Not Found**: Webhook not found
 
-#### POST /webhooks/test
+#### POST /api/webhooks/test
 Test a webhook endpoint.
 
 **Success Response (200 OK)**:
@@ -318,7 +548,7 @@ Test a webhook endpoint.
 }
 ```
 
-#### GET /webhooks/stats
+#### GET /api/webhooks/stats
 Get webhook delivery statistics.
 
 **Success Response (200 OK)**:
@@ -342,7 +572,7 @@ Get webhook delivery statistics.
 
 ### Admin Operations
 
-#### POST /admin/cleanup
+#### POST /api/admin/cleanup
 Run cleanup jobs manually.
 
 **Success Response (200 OK)**:
@@ -360,7 +590,7 @@ Run cleanup jobs manually.
 **Error Responses**:
 - **500 Internal Server Error**: Cleanup failure
 
-#### POST /batch/cleanup
+#### POST /api/batch/cleanup
 Clean up old completed batch jobs.
 
 **Success Response (200 OK)**:
@@ -654,7 +884,7 @@ curl -X GET "http://localhost:8000/ready" \
 
 #### Test Face Indexing
 ```bash
-curl -X POST "http://{{base_url}}/index_face" \
+curl -X POST "http://{{base_url}}/api/index_face" \
   -H "X-Tenant-ID: tenant123" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -668,7 +898,7 @@ curl -X POST "http://{{base_url}}/index_face" \
 
 #### Test Face Search
 ```bash
-curl -X POST "http://{{base_url}}/search_face?top_k=10&threshold=0.25" \
+curl -X POST "http://{{base_url}}/api/search_face?top_k=10&threshold=0.25" \
   -H "X-Tenant-ID: tenant123" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -682,7 +912,7 @@ curl -X POST "http://{{base_url}}/search_face?top_k=10&threshold=0.25" \
 
 #### Test Face Comparison (Search Only)
 ```bash
-curl -X POST "http://{{base_url}}/compare_face?top_k=5&threshold=0.5" \
+curl -X POST "http://{{base_url}}/api/compare_face?top_k=5&threshold=0.5" \
   -H "X-Tenant-ID: tenant123" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -698,7 +928,7 @@ curl -X POST "http://{{base_url}}/compare_face?top_k=5&threshold=0.5" \
 
 #### Create Batch Job
 ```bash
-curl -X POST "http://{{base_url}}/batch/index" \
+curl -X POST "http://{{base_url}}/api/batch/index" \
   -H "X-Tenant-ID: tenant123" \
   -H "Content-Type: application/json" \
   -d '{
@@ -721,7 +951,7 @@ curl -X POST "http://{{base_url}}/batch/index" \
 
 #### Check Batch Status
 ```bash
-curl -X GET "http://{{base_url}}/batch/batch-123e4567-e89b-12d3-a456-426614174000/status" \
+curl -X GET "http://{{base_url}}/api/batch/batch-123e4567-e89b-12d3-a456-426614174000/status" \
   -H "X-Tenant-ID: tenant123" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -733,7 +963,7 @@ curl -X GET "http://{{base_url}}/batch/batch-123e4567-e89b-12d3-a456-42661417400
 
 #### List Batch Jobs
 ```bash
-curl -X GET "http://{{base_url}}/batch/list?limit=10&offset=0" \
+curl -X GET "http://{{base_url}}/api/batch/list?limit=10&offset=0" \
   -H "X-Tenant-ID: tenant123" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -743,7 +973,7 @@ curl -X GET "http://{{base_url}}/batch/list?limit=10&offset=0" \
 
 #### Cancel Batch Job
 ```bash
-curl -X DELETE "http://{{base_url}}/batch/batch-123e4567-e89b-12d3-a456-426614174000" \
+curl -X DELETE "http://{{base_url}}/api/batch/batch-123e4567-e89b-12d3-a456-426614174000" \
   -H "X-Tenant-ID: tenant123" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -758,7 +988,7 @@ curl -X DELETE "http://{{base_url}}/batch/batch-123e4567-e89b-12d3-a456-42661417
 
 #### Register Webhook
 ```bash
-curl -X POST "http://{{base_url}}/webhooks/register" \
+curl -X POST "http://{{base_url}}/api/webhooks/register" \
   -H "X-Tenant-ID: tenant123" \
   -H "Content-Type: application/json" \
   -d '{
@@ -777,7 +1007,7 @@ curl -X POST "http://{{base_url}}/webhooks/register" \
 
 #### List Webhooks
 ```bash
-curl -X GET "http://{{base_url}}/webhooks/list" \
+curl -X GET "http://{{base_url}}/api/webhooks/list" \
   -H "X-Tenant-ID: tenant123" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -787,7 +1017,7 @@ curl -X GET "http://{{base_url}}/webhooks/list" \
 
 #### Test Webhook
 ```bash
-curl -X POST "http://{{base_url}}/webhooks/test" \
+curl -X POST "http://{{base_url}}/api/webhooks/test" \
   -H "X-Tenant-ID: tenant123" \
   -H "Content-Type: application/json" \
   -d '{
@@ -801,7 +1031,7 @@ curl -X POST "http://{{base_url}}/webhooks/test" \
 
 #### Get Webhook Statistics
 ```bash
-curl -X GET "http://{{base_url}}/webhooks/stats" \
+curl -X GET "http://{{base_url}}/api/webhooks/stats" \
   -H "X-Tenant-ID: tenant123" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -811,7 +1041,7 @@ curl -X GET "http://{{base_url}}/webhooks/stats" \
 
 #### Unregister Webhook
 ```bash
-curl -X DELETE "http://{{base_url}}/webhooks/unregister?url=https://example.com/webhook" \
+curl -X DELETE "http://{{base_url}}/api/webhooks/unregister?url=https://example.com/webhook" \
   -H "X-Tenant-ID: tenant123" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -824,7 +1054,7 @@ curl -X DELETE "http://{{base_url}}/webhooks/unregister?url=https://example.com/
 
 #### Run Cleanup Jobs
 ```bash
-curl -X POST "http://{{base_url}}/admin/cleanup" \
+curl -X POST "http://{{base_url}}/api/admin/cleanup" \
   -H "X-Tenant-ID: tenant123" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -835,7 +1065,7 @@ curl -X POST "http://{{base_url}}/admin/cleanup" \
 
 #### Clean Up Old Batch Jobs
 ```bash
-curl -X POST "http://{{base_url}}/batch/cleanup?max_age_hours=24" \
+curl -X POST "http://{{base_url}}/api/batch/cleanup?max_age_hours=24" \
   -H "X-Tenant-ID: tenant123" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -847,7 +1077,7 @@ curl -X POST "http://{{base_url}}/batch/cleanup?max_age_hours=24" \
 
 #### Test Missing Tenant ID
 ```bash
-curl -X POST "http://{{base_url}}/index_face" \
+curl -X POST "http://{{base_url}}/api/index_face" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
 ```
@@ -857,7 +1087,7 @@ curl -X POST "http://{{base_url}}/index_face" \
 
 #### Test Invalid Tenant ID
 ```bash
-curl -X POST "http://{{base_url}}/index_face" \
+curl -X POST "http://{{base_url}}/api/index_face" \
   -H "X-Tenant-ID: ab" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -868,7 +1098,7 @@ curl -X POST "http://{{base_url}}/index_face" \
 
 #### Test Invalid Image Format
 ```bash
-curl -X POST "http://{{base_url}}/index_face" \
+curl -X POST "http://{{base_url}}/api/index_face" \
   -H "X-Tenant-ID: tenant123" \
   -F "file=@test_document.pdf" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -879,7 +1109,7 @@ curl -X POST "http://{{base_url}}/index_face" \
 
 #### Test Image Too Large
 ```bash
-curl -X POST "http://{{base_url}}/index_face" \
+curl -X POST "http://{{base_url}}/api/index_face" \
   -H "X-Tenant-ID: tenant123" \
   -F "file=@large_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\n"
@@ -894,7 +1124,7 @@ curl -X POST "http://{{base_url}}/index_face" \
 ```bash
 # Send multiple requests quickly to trigger rate limiting
 for i in {1..60}; do
-  curl -X POST "http://{{base_url}}/index_face" \
+  curl -X POST "http://{{base_url}}/api/index_face" \
     -H "X-Tenant-ID: tenant123" \
     -F "file=@test_image.jpg" \
     -w "HTTP Status: %{http_code}\n" \
@@ -910,7 +1140,7 @@ done
 
 #### Test Response Times
 ```bash
-curl -X POST "http://{{base_url}}/search_face" \
+curl -X POST "http://{{base_url}}/api/search_face" \
   -H "X-Tenant-ID: tenant123" \
   -F "file=@test_image.jpg" \
   -w "HTTP Status: %{http_code}\nTotal Time: %{time_total}s\nTime to First Byte: %{time_starttransfer}s\n"
@@ -940,7 +1170,7 @@ curl -f -s "$BASE_URL/ready" || { echo "Health check failed"; exit 1; }
 
 # Test face indexing
 echo "Testing face indexing..."
-INDEX_RESPONSE=$(curl -s -w "%{http_code}" -X POST "$BASE_URL/index_face" \
+INDEX_RESPONSE=$(curl -s -w "%{http_code}" -X POST "$BASE_URL/api/index_face" \
   -H "X-Tenant-ID: $TENANT_ID" \
   -F "file=@$TEST_IMAGE")
 
@@ -949,6 +1179,22 @@ if [ "$INDEX_STATUS" != "200" ]; then
   echo "Face indexing failed with status $INDEX_STATUS"
   exit 1
 fi
+
+echo "Face indexing passed"
+
+# Test face search
+echo "Testing face search..."
+SEARCH_RESPONSE=$(curl -s -w "%{http_code}" -X POST "$BASE_URL/api/search_face?top_k=5" \
+  -H "X-Tenant-ID: $TENANT_ID" \
+  -F "file=@$TEST_IMAGE")
+
+SEARCH_STATUS="${SEARCH_RESPONSE: -3}"
+if [ "$SEARCH_STATUS" != "200" ]; then
+  echo "Face search failed with status $SEARCH_STATUS"
+  exit 1
+fi
+
+echo "Face search passed"
 
 echo "Integration tests completed successfully!"
 ```

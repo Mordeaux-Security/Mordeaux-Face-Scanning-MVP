@@ -1,5 +1,7 @@
-# Face Pipeline Dockerfile - Optimized Multi-Stage Build
+# Face Pipeline Dockerfile - GPU Optimized Multi-Stage Build
+ARG ENABLE_GPU=0
 FROM python:3.11-slim as builder
+ARG ENABLE_GPU
 
 # Install build dependencies for InsightFace compilation
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -26,6 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Production stage - minimal runtime image
 FROM python:3.11-slim as production
+ARG ENABLE_GPU
 
 # Install only runtime dependencies (no build tools)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -40,9 +43,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     INSIGHTFACE_HOME=/models/insightface \
-    ONNX_PROVIDERS_CSV=CPUExecutionProvider \
     DET_SCORE_THRESH=0.20 \
     DET_SIZE=1280,1280
+
+# Set GPU-specific environment variables if enabled
+ENV ONNX_PROVIDERS_CSV=CPUExecutionProvider
 
 WORKDIR /app
 

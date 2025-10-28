@@ -4,12 +4,11 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import redis
 from psycopg import connect, Connection
-
-            import gc
+import gc
 
 from concurrent.futures import ThreadPoolExecutor
 from psycopg.rows import dict_row
@@ -105,7 +104,7 @@ class HybridCacheService:
             'embedding_cache': 3600,      # 1 hour
             'search_cache': 300,          # 5 minutes
             'phash_cache': 7200,          # 2 hours
-            'face_detection_cache': 3600, # 1 hour
+            'face_detection_cache': 3600,  # 1 hour
             'crawl_cache': 86400,         # 24 hours
         }
 

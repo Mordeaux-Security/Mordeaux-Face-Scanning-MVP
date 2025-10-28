@@ -1,0 +1,207 @@
+x-common-env: &common-env
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  TZ: ${TZ:-America/Los_Angeles}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_BUCKET_RAW: ${S3_BUCKET_RAW:-raw-images}
+  S3_BUCKET_THUMBS: ${S3_BUCKET_THUMBS:-thumbnails}
+  S3_BUCKET_AUDIT: ${S3_BUCKET_AUDIT:-audit-logs}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+  S3_SECRET_KEY: ${S3_SECRET_KEY}
+  S3_USE_SSL: ${S3_USE_SSL:-false}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: ${POSTGRES_DB:-mordeaux}
+  POSTGRES_USER: ${POSTGRES_USER:-mordeaux}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  QDRANT_URL: http://qdrant:6333
+  VECTOR_INDEX: ${VECTOR_INDEX:-faces_v1}
+  PINECONE_API_KEY: ${PINECONE_API_KEY:-}
+  PINECONE_INDEX: ${PINECONE_INDEX:-faces_v1}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mordeaux}
+      POSTGRES_USER: ${POSTGRES_USER:-mordeaux}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/00_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mordeaux} -d ${POSTGRES_DB:-mordeaux}"]
+      start_period: 10s
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrantdata:/qdrant/storage
+
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+
+  backend-gpu:
+    build:
+      context: ./backend
+      args:
+        ENABLE_GPU: 0
+    env_file: [.env.gpu]
+    environment:
+      <<: *common-env
+      ASGI_WORKERS: ${ASGI_WORKERS:-2}
+      CUDA_VISIBLE_DEVICES: 0
+      ONNX_PROVIDERS: CUDAExecutionProvider,CPUExecutionProvider
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      minio:
+        condition: service_started
+    command: ["/bin/sh", "-c", "python -m app.prestart || true && gunicorn -k uvicorn.workers.UvicornWorker -c uvicorn_gunicorn_config.py app.main:app"]
+    volumes:
+      - ./backend:/app
+      - insightface_models:/root/.insightface
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  worker-gpu:
+    build:
+      context: ./worker
+      args:
+        ENABLE_GPU: 0
+    env_file: [.env.gpu]
+    environment:
+      <<: *common-env
+      CUDA_VISIBLE_DEVICES: 0
+      ONNX_PROVIDERS: CUDAExecutionProvider,CPUExecutionProvider
+    depends_on:
+      backend-gpu:
+        condition: service_started
+      redis:
+        condition: service_started
+    command: ["celery", "-A", "worker", "worker", "--loglevel=INFO", "-Q", "faces,ingest"]
+    volumes:
+      - insightface_models:/root/.insightface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  face-pipeline-gpu:
+    build:
+      context: ./face-pipeline
+      args:
+        ENABLE_GPU: 0
+    env_file: [.env.gpu]
+    environment:
+      <<: *common-env
+      API_HOST: 0.0.0.0
+      API_PORT: 8001
+      CUDA_VISIBLE_DEVICES: 0
+      ONNX_PROVIDERS: CUDAExecutionProvider,CPUExecutionProvider
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      minio:
+        condition: service_started
+      redis:
+        condition: service_started
+    ports:
+      - "8001:8000"
+    volumes:
+      - insightface_models:/root/.insightface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
+    depends_on:
+      - backend-gpu
+    ports:
+      - "3000:80"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+  nginx:
+    build: ./nginx
+    depends_on:
+      - frontend
+      - backend-gpu
+    ports:
+      - "80:80"
+    environment:
+      NGINX_MAX_BODY: ${NGINX_MAX_BODY:-50m}
+
+volumes:
+  pgdata:
+  qdrantdata:
+  miniodata:
+  redisdata:
+  insightface_models:

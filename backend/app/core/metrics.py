@@ -6,8 +6,7 @@ import logging
 from threading import Lock
 import json
 
-
-        from .config import get_settings
+from .config import get_settings
 
 logger = logging.getLogger(__name__)
 

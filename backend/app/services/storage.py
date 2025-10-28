@@ -1,8 +1,5 @@
 import io
-import os
 import uuid
-import time
-import hashlib
 import logging
 import gc
 from typing import Tuple, Optional, List, Dict, Any
@@ -11,15 +8,13 @@ import asyncio
 from PIL import Image, ImageFile
 import urllib3
 import blake3
-
-
-    from minio import Minio  # lazy import for prod lightness
-    import boto3  # lazy import
-            from datetime import timedelta
+from minio import Minio  # lazy import for prod lightness
+import boto3  # lazy import
+from datetime import timedelta
 
 from concurrent.futures import ThreadPoolExecutor
 from ..core.config import get_settings
-        from minio.error import S3Error  # type: ignore
+from minio.error import S3Error  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -353,7 +348,7 @@ async def save_raw_and_thumb_content_addressed_async(image_bytes: bytes, thumbna
         return save_raw_and_thumb_content_addressed(image_bytes, thumbnail_bytes, tenant_id, source_url)
 
 
-def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "") -> Tuple[str, str]:
+def save_raw_image_only(image_bytes: bytes, tenant_id: str, key_prefix: str = "", source_url: Optional[str] = None) -> Tuple[str, str]:
     """
     Store raw image to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg only
     Returns (raw_key, raw_url)
@@ -386,13 +381,13 @@ async def save_raw_and_thumb_async(image_bytes: bytes, tenant_id: str, key_prefi
         thumbnail_bytes = _make_thumbnail(image_bytes)
         result = await loop.run_in_executor(thread_pool, save_raw_and_thumb_with_precreated_thumb, image_bytes, thumbnail_bytes, tenant_id, key_prefix)
         return result
-    except Exception as e:
+    except Exception:
         # Fallback to sync version if async fails
         thumbnail_bytes = _make_thumbnail(image_bytes)
         return save_raw_and_thumb_with_precreated_thumb(image_bytes, thumbnail_bytes, tenant_id, key_prefix)
 
 
-def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "", source_url: str = None) -> Tuple[str, str, str, str]:
+def save_raw_and_thumb_with_precreated_thumb(image_bytes: bytes, thumbnail_bytes: bytes, tenant_id: str, key_prefix: str = "", source_url: Optional[str] = None) -> Tuple[str, str, str, str]:
     """
     Store raw JPG to BUCKET_RAW/<tenant_id>/<prefix><uuid>.jpg and pre-created thumbnail to BUCKET_THUMBS/<tenant_id>/<prefix><uuid>.jpg
     Returns (raw_key, raw_url, thumb_key, thumb_url)

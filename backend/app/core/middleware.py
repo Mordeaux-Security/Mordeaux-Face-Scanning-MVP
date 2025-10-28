@@ -8,7 +8,7 @@ import logging
 from fastapi.responses import Response
 from .config import get_settings
 from .metrics import record_request_metrics
-        from ..services.tenant_management import get_tenant_management_service
+from ..services.tenant_management import get_tenant_management_service
 
 logger = logging.getLogger(__name__)
 
