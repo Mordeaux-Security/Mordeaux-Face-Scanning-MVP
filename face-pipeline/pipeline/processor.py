@@ -108,6 +108,9 @@ def process_image(message: dict) -> dict:
     from pipeline.utils import compute_phash, phash_prefix, now_iso
     from pipeline.dedup import is_duplicate, mark_processed
     from pipeline.stats import increment_processed, increment_rejected, increment_dup_skipped, inc, timer, add_time_ms
+    
+    # Start total timing for end-to-end processing
+    start_time = time.perf_counter()
 
     # Counters for results
     faces_total = 0
@@ -252,31 +255,32 @@ def process_image(message: dict) -> dict:
         meta_key = f"{msg.tenant_id}/{base}.json"
 
         # Write JPEG crop/thumbnail to MinIO
-        # Crop
-        _, enc = cv2.imencode(".jpg", crop_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
-        put_bytes(settings.MINIO_BUCKET_CROPS, crop_key, enc.tobytes(), "image/jpeg")
+        with timer("storage_ms"):
+            # Crop
+            _, enc = cv2.imencode(".jpg", crop_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+            put_bytes(settings.MINIO_BUCKET_CROPS, crop_key, enc.tobytes(), "image/jpeg")
 
-        # Thumb (64x64, keep aspect via cv2.resize then center-crop or just direct resize for now)
-        thumb = cv2.resize(crop_bgr, (64, 64), interpolation=cv2.INTER_AREA)
-        _, enc_t = cv2.imencode(".jpg", thumb, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-        put_bytes(settings.MINIO_BUCKET_THUMBS, thumb_key, enc_t.tobytes(), "image/jpeg")
+            # Thumb (64x64, keep aspect via cv2.resize then center-crop or just direct resize for now)
+            thumb = cv2.resize(crop_bgr, (64, 64), interpolation=cv2.INTER_AREA)
+            _, enc_t = cv2.imencode(".jpg", thumb, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+            put_bytes(settings.MINIO_BUCKET_THUMBS, thumb_key, enc_t.tobytes(), "image/jpeg")
 
-        # Metadata JSON
-        meta = {
-            "face_id": f"{msg.image_sha256}:face_{i}",
-            "image_sha256": msg.image_sha256,
-            "bbox": fd.get("bbox"),
-            "landmarks": fd.get("landmarks"),
-            "quality": q,
-            "tenant_id": msg.tenant_id,
-            "site": msg.site,
-            "url": str(msg.url),
-            "p_hash": phex,
-            "p_hash_prefix": pfx,
-            "created_at": now_iso(),
-        }
-        meta_bytes = json.dumps(meta, ensure_ascii=False).encode("utf-8")
-        put_bytes(settings.MINIO_BUCKET_METADATA, meta_key, meta_bytes, "application/json")
+            # Metadata JSON
+            meta = {
+                "face_id": f"{msg.image_sha256}:face_{i}",
+                "image_sha256": msg.image_sha256,
+                "bbox": fd.get("bbox"),
+                "landmarks": fd.get("landmarks"),
+                "quality": q,
+                "tenant_id": msg.tenant_id,
+                "site": msg.site,
+                "url": str(msg.url),
+                "p_hash": phex,
+                "p_hash_prefix": pfx,
+                "created_at": now_iso(),
+            }
+            meta_bytes = json.dumps(meta, ensure_ascii=False).encode("utf-8")
+            put_bytes(settings.MINIO_BUCKET_METADATA, meta_key, meta_bytes, "application/json")
 
         # Prepare Qdrant point
         payload = {
@@ -305,7 +309,9 @@ def process_image(message: dict) -> dict:
 
     # Batch upsert to Qdrant
     if points:
-        upsert(points)
+        with timer("upsert_ms"):
+            upsert(points)
+        inc("upserts_total", len(points))
 
     # ========================================================================
     # STEP 12: UPDATE STATISTICS
@@ -324,6 +330,10 @@ def process_image(message: dict) -> dict:
     except Exception as e:
         logger.error(f"Failed to update statistics: {e}")
         # Don't fail the entire pipeline for stats errors
+
+    # Record total processing time
+    total_elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+    add_time_ms("total_ms", total_elapsed_ms)
 
     # Build summary for return
     summary = {

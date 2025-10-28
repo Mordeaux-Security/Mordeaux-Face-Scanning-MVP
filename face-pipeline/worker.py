@@ -33,6 +33,7 @@ from typing import Dict, Any, Optional
 import redis.asyncio as aioredis
 from config.settings import settings
 from pipeline.processor import process_image
+from pipeline.stats import inc
 
 # Configure logging
 logging.basicConfig(
@@ -162,6 +163,7 @@ async def handle_message(
         
         # Acknowledge to remove from pending
         await r.xack(settings.redis_stream_name, settings.redis_group_name, message_id)
+        inc("worker_msgs_dlq", 1)
         return False
     
     # Validate required fields
@@ -182,6 +184,7 @@ async def handle_message(
         })
         
         await r.xack(settings.redis_stream_name, settings.redis_group_name, message_id)
+        inc("worker_msgs_dlq", 1)
         return False
     
     # Process through face pipeline
@@ -203,6 +206,7 @@ async def handle_message(
             })
             
             await r.xack(settings.redis_stream_name, settings.redis_group_name, message_id)
+            inc("worker_msgs_dlq", 1)
             return False
         
         # Success - log and acknowledge
@@ -216,6 +220,7 @@ async def handle_message(
         )
         
         await r.xack(settings.redis_stream_name, settings.redis_group_name, message_id)
+        inc("worker_msgs_acked", 1)
         return True
         
     except Exception as e:
@@ -231,6 +236,7 @@ async def handle_message(
         
         # Acknowledge to remove from pending
         await r.xack(settings.redis_stream_name, settings.redis_group_name, message_id)
+        inc("worker_msgs_dlq", 1)
         return False
 
 

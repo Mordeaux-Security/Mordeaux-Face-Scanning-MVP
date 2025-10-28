@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, status
@@ -27,6 +28,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Track startup time for uptime calculation
+start_time = time.time()
 
 # ============================================================================
 # Lifespan Context Manager
@@ -200,6 +203,7 @@ def ready():
         - ready: bool - True if ready, False otherwise
         - reason: str - Explanation if not ready
         - checks: dict - Individual check statuses
+        - meta: dict - Optional metadata (version, uptime)
     """
     checks = {}
     all_ready = True
@@ -253,11 +257,36 @@ def ready():
     
     reason = "ok" if all_ready else "; ".join(reasons)
     
-    return {
+    # Optional metadata enrichment
+    meta = {}
+    try:
+        # Read version from VERSION file
+        import os
+        version_file = os.path.join(os.path.dirname(__file__), "VERSION")
+        if os.path.exists(version_file):
+            with open(version_file, 'r') as f:
+                version_line = f.readline().strip()
+                if version_line:
+                    meta["version"] = version_line
+        
+        # Calculate uptime (approximate)
+        import time
+        meta["uptime_sec"] = int(time.time() - start_time) if 'start_time' in globals() else 0
+    except Exception:
+        # Don't fail the ready check for metadata errors
+        pass
+    
+    result = {
         "ready": all_ready,
         "reason": reason,
         "checks": checks
     }
+    
+    # Add meta if we have any data
+    if meta:
+        result["meta"] = meta
+    
+    return result
 
 
 @app.get("/info", status_code=status.HTTP_200_OK)
