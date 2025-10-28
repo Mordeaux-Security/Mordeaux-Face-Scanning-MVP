@@ -1,12 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request, BackgroundTasks, Query
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import uuid
 import io
 import asyncio
 import time
-
+from fastapi.responses import StreamingResponse
 from ..services.face import get_face_service
 from ..services.storage import save_raw_and_thumb_async, get_object_from_storage, get_presigned_url
 from ..services.vector import get_vector_client
@@ -14,22 +13,14 @@ from ..services.cache import get_cache_service
 from ..services.batch import get_batch_processor
 from ..services.webhook import get_webhook_service, WebhookEvent
 from ..core.audit import get_audit_logger
+from ..core.errors import (
+    create_http_exception, handle_mordeaux_error, handle_generic_error,
+    MordeauxError, ValidationError, StorageError,
+    VectorDBError, FaceProcessingError, BatchProcessingError, 
+    ResourceNotFoundError, AuthorizationError
+)
 from ..core.config import get_settings
 from ..services.cleanup import run_cleanup_jobs
-from ..core.errors import (
-    ValidationError,
-    AuthenticationError,
-    AuthorizationError,
-    RateLimitError,
-    ResourceNotFoundError,
-    StorageError,
-    VectorDBError,
-    FaceProcessingError,
-    BatchProcessingError,
-    CacheError,
-    handle_generic_error,
-    create_http_exception
-)
 router = APIRouter()
 
 # Batch processing models
@@ -144,8 +135,6 @@ async def index_face(request: Request, file: UploadFile = File(...)):
     content = await file.read()
     request_id = getattr(request.state, "request_id", None)
     _require_image(file, content, request_id)
-    
-    vec = get_vector_client()
 
     # Get tenant_id from request state (set by middleware)
     tenant_id = request.state.tenant_id
@@ -280,8 +269,6 @@ async def search_face(
     content = await file.read()
     request_id = getattr(request.state, "request_id", None)
     _require_image(file, content, request_id)
-    
-    vec = get_vector_client()
 
     # Get tenant_id from request state (set by middleware)
     tenant_id = request.state.tenant_id
@@ -462,8 +449,6 @@ async def compare_face(
     content = await file.read()
     request_id = getattr(request.state, "request_id", None)
     _require_image(file, content, request_id)
-    
-    vec = get_vector_client()
 
     # Get tenant_id from request state (set by middleware)
     tenant_id = request.state.tenant_id

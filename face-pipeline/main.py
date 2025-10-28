@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, status
@@ -27,6 +28,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Track startup time for uptime calculation
+start_time = time.time()
 
 # ============================================================================
 # Lifespan Context Manager
@@ -189,6 +192,9 @@ def ready():
 
     Checks if the application is ready to serve requests by verifying:
     - ML models are loaded (detector + embedder)
+    - MinIO connectivity (storage)
+    - Qdrant connectivity (vector database)
+    - Redis connectivity (stats and dedup)
 
     Returns 503 (Service Unavailable) if not ready, 200 OK when ready.
 
@@ -197,20 +203,90 @@ def ready():
         - ready: bool - True if ready, False otherwise
         - reason: str - Explanation if not ready
         - checks: dict - Individual check statuses
+        - meta: dict - Optional metadata (version, uptime)
     """
-    ok = True
-    reason = "ok"
+    checks = {}
+    all_ready = True
+    reasons = []
+    
+    # Check ML models
     try:
         from pipeline.detector import load_detector
         from pipeline.embedder import load_model
         
         load_detector()
         load_model()
+        checks["models"] = True
     except Exception as e:
-        ok = False
-        reason = f"models_not_ready: {e.__class__.__name__}"
+        checks["models"] = False
+        all_ready = False
+        reasons.append(f"models_not_ready: {e.__class__.__name__}")
     
-    return {"ready": ok, "reason": reason, "checks": {"models": ok}}
+    # Check MinIO storage
+    try:
+        from pipeline.storage import get_minio_client
+        client = get_minio_client()
+        client.list_buckets()
+        checks["storage"] = True
+    except Exception as e:
+        checks["storage"] = False
+        all_ready = False
+        reasons.append(f"storage_not_ready: {e.__class__.__name__}")
+    
+    # Check Qdrant vector database
+    try:
+        from pipeline.indexer import get_qdrant_client
+        client = get_qdrant_client()
+        client.get_collections()
+        checks["vector_db"] = True
+    except Exception as e:
+        checks["vector_db"] = False
+        all_ready = False
+        reasons.append(f"vector_db_not_ready: {e.__class__.__name__}")
+    
+    # Check Redis
+    try:
+        from pipeline.stats import get_redis_client
+        r = get_redis_client()
+        r.ping()
+        checks["redis"] = True
+    except Exception as e:
+        checks["redis"] = False
+        all_ready = False
+        reasons.append(f"redis_not_ready: {e.__class__.__name__}")
+    
+    reason = "ok" if all_ready else "; ".join(reasons)
+    
+    # Optional metadata enrichment
+    meta = {}
+    try:
+        # Read version from VERSION file
+        import os
+        version_file = os.path.join(os.path.dirname(__file__), "VERSION")
+        if os.path.exists(version_file):
+            with open(version_file, 'r') as f:
+                version_line = f.readline().strip()
+                if version_line:
+                    meta["version"] = version_line
+        
+        # Calculate uptime (approximate)
+        import time
+        meta["uptime_sec"] = int(time.time() - start_time) if 'start_time' in globals() else 0
+    except Exception:
+        # Don't fail the ready check for metadata errors
+        pass
+    
+    result = {
+        "ready": all_ready,
+        "reason": reason,
+        "checks": checks
+    }
+    
+    # Add meta if we have any data
+    if meta:
+        result["meta"] = meta
+    
+    return result
 
 
 @app.get("/info", status_code=status.HTTP_200_OK)
@@ -231,7 +307,7 @@ async def info():
             "max_concurrent": settings.max_concurrent,
             "min_face_size": settings.min_face_size,
             "blur_min_variance": settings.blur_min_variance,
-            "presign_ttl_sec": settings.presign_ttl_sec,
+            "presign_ttl_sec": settings.PRESIGN_TTL_SEC,
         },
         "features": {
             "face_detection": "planned",

@@ -1,4 +1,4 @@
-const api = (import.meta.env.VITE_API_BASE || "") + "/api";
+const api = (import.meta.env.VITE_API_BASE || "http://localhost:8001") + "/api";
 const app = document.getElementById("app");
 
 console.log("🚀 Mordeaux Frontend Starting...");
@@ -89,23 +89,21 @@ document.getElementById("f").addEventListener("submit", async (e) => {
   const topK = parseInt(document.getElementById("topK").value) || 10;
   const threshold = parseFloat(document.getElementById("threshold").value) || 0.25;
   
+  // Get tenant ID from environment or use default
+  const tenantId = window.TENANT_ID || "demo-tenant";
+  
   // Build URL with query parameters
-  const url = new URL(api + "/search_face");
+  const url = new URL(api + "/v1/search/file");
+  url.searchParams.append('tenant_id', tenantId);
   url.searchParams.append('top_k', topK);
   url.searchParams.append('threshold', threshold);
   
   console.log("📤 Sending request to:", url.toString());
   
   try {
-    // Get tenant ID from environment or use default
-    const tenantId = window.TENANT_ID || "demo-tenant";
-    
     const res = await fetch(url.toString(), { 
       method: "POST", 
-      body: fd,
-      headers: {
-        "X-Tenant-ID": tenantId
-      }
+      body: fd
     });
     console.log("📡 Response status:", res.status, res.statusText);
     

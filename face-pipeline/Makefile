@@ -145,6 +145,40 @@ phase1-ready: ## Check Phase 1 readiness (models loaded)
 	python -c "from main import app; from fastapi.testclient import TestClient; client = TestClient(app); response = client.get('/ready'); print('Ready:', response.json()['ready'])"
 
 # ============================================================================
+# Phase 3 (Face Pipeline)
+# ============================================================================
+
+PHASE3_PY ?= python
+REDIS_URL ?= redis://localhost:6379/0
+
+phase3-install: ## Install/update face-pipeline dependencies
+	$(PHASE3_PY) -m pip install -r requirements.txt
+
+phase3-ensure: ## Ensure MinIO buckets & Qdrant collection are ready
+	$(PHASE3_PY) - <<'PY'
+from pipeline.storage import ensure_buckets
+from pipeline.indexer import ensure_collection
+ensure_buckets(); ensure_collection()
+print("✓ MinIO buckets & Qdrant collection ready")
+PY
+
+worker: ## Start async Redis stream worker (long-running)
+	$(PHASE3_PY) worker.py --max-batch 16
+
+worker-once: ## Process a single batch then exit (good for CI)
+	$(PHASE3_PY) worker.py --once --max-batch 8
+
+dedup-flush: ## Flush Redis DB used for dedup/stats
+	redis-cli -u $(REDIS_URL) FLUSHDB
+
+stats: ## Print aggregated counters & timings snapshot
+	$(PHASE3_PY) - <<'PY'
+from stats import snapshot
+import json
+print(json.dumps(snapshot(), indent=2))
+PY
+
+# ============================================================================
 # Quick shortcuts
 # ============================================================================
 

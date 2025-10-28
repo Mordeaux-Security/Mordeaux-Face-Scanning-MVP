@@ -153,7 +153,7 @@ class StatsResponse(BaseModel):
     """
     Response model for GET /stats.
 
-    Returns pipeline processing statistics.
+    Returns pipeline processing statistics including counters and timing metrics.
     """
     processed: int = Field(
         default=0,
@@ -166,6 +166,14 @@ class StatsResponse(BaseModel):
     dup_skipped: int = Field(
         default=0,
         description="Total faces skipped as duplicates"
+    )
+    counts: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Detailed counter metrics (images_total, faces_detected, etc.)"
+    )
+    timings_ms: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Accumulated timing metrics in milliseconds"
     )
 
 
@@ -448,51 +456,50 @@ async def get_face_by_id(
     response_model=StatsResponse,
     status_code=status.HTTP_200_OK
 )
-async def get_pipeline_stats() -> StatsResponse:
+async def get_pipeline_stats(
+    response: Response,
+    tenant_id: Optional[str] = None
+) -> StatsResponse:
     """
     Get pipeline processing statistics.
 
-    **TODO - DEV2 Implementation Steps**:
-    1. Query Qdrant for total face count:
-       - Use qdrant_client.count(collection_name)
-       - This gives us 'processed' count
-    2. Calculate rejected count:
-       - Option A: Track in separate database/cache (Redis counter)
-       - Option B: Query application logs/metrics
-       - Option C: Return 0 for now, implement tracking in processor.py
-    3. Calculate dup_skipped count:
-       - Same as rejected - track during pipeline processing
-       - Access from metrics or dedicated counter
-    4. Return StatsResponse with all counts
+    Returns real-time statistics from Redis counters:
+    - processed: Number of faces successfully indexed
+    - rejected: Number of faces rejected by quality checks
+    - dup_skipped: Number of faces skipped as duplicates
 
-    **Implementation Notes**:
-    - For now, returns placeholder values (all zeros)
-    - In DEV2, add counters to pipeline.processor.process_image()
-    - Consider using Prometheus metrics or Redis for real-time stats
+    Args:
+        tenant_id: Optional tenant ID to get tenant-specific stats
+        response: FastAPI response object for headers
 
     Returns:
-        StatsResponse with processed=0, rejected=0, dup_skipped=0 (placeholders)
+        StatsResponse with current statistics
     """
-    logger.info("[STUB] Get pipeline stats")
-
-    # TODO: Implement statistics collection (see docstring above)
-    # from pipeline.indexer import get_client
-    # client = get_client()
-    # count_result = client.count(collection_name=settings.qdrant_collection)
-    # processed = count_result.count
-    #
-    # # TODO: Get rejected and dup_skipped from metrics/database
-    # rejected = 0  # Track in processor.py
-    # dup_skipped = 0  # Track in processor.py
-    #
-    # return StatsResponse(processed=processed, rejected=rejected, dup_skipped=dup_skipped)
-
-    # Placeholder response
-    return StatsResponse(
-        processed=0,  # TODO: Query Qdrant for actual count
-        rejected=0,  # TODO: Track during pipeline processing
-        dup_skipped=0,  # TODO: Track during deduplication
-    )
+    try:
+        from pipeline.stats import get_stats, snapshot
+        
+        # Get both legacy stats and new metrics snapshot
+        stats_data = get_stats(tenant_id)
+        metrics_snapshot = snapshot()
+        
+        logger.info(f"Retrieved stats: {stats_data}")
+        logger.debug(f"Metrics snapshot: {metrics_snapshot}")
+        
+        # Add version header
+        response.headers["X-API-Version"] = "v0.1"
+        
+        return StatsResponse(
+            processed=stats_data["processed"],
+            rejected=stats_data["rejected"],
+            dup_skipped=stats_data["dup_skipped"],
+            counts=metrics_snapshot.get("counts"),
+            timings_ms=metrics_snapshot.get("timings_ms")
+        )
+        
+    except Exception as e:
+        logger.error(f"Error retrieving statistics: {e}")
+        # Return zeros on error to maintain API contract
+        return StatsResponse(processed=0, rejected=0, dup_skipped=0, counts={}, timings_ms={})
 
 
 # ============================================================================
@@ -525,12 +532,24 @@ async def process_image(request: Request) -> Dict[str, Any]:
         from datetime import datetime
         
         # Create a message for the processor
+        import hashlib
+        image_sha256 = hashlib.sha256(image_bytes).hexdigest()
+        
+        # Upload image to MinIO first
+        from pipeline.storage import put_bytes, ensure_buckets
+        ensure_buckets()
+        key = f"test/{image_sha256}.jpg"
+        put_bytes("raw-images", key, image_bytes, "image/jpeg")
+        
         message = {
             "tenant_id": "demo-tenant",
             "site": "test-site",
             "url": "http://test.com/image.jpg",
-            "image_sha256": "test-hash-" + str(uuid.uuid4().hex[:8]),
-            "image_bytes": image_bytes
+            "image_sha256": image_sha256,
+            "bucket": "raw-images",
+            "key": key,
+            "image_phash": "test-phash-12345678",  # Placeholder - would be computed from image
+            "face_hints": []
         }
         
         # Process the image
