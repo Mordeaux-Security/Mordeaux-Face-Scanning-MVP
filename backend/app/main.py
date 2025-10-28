@@ -33,9 +33,9 @@ app = FastAPI(
 )
 
 # Add middleware
-app.add_middleware(tenant_middleware)
-app.add_middleware(performance_middleware)
-app.add_middleware(request_size_middleware)
+# app.middleware("http")(tenant_middleware)
+# app.middleware("http")(performance_middleware)
+# app.middleware("http")(request_size_middleware)
 
 # Include routers
 app.include_router(router, prefix="/api/v1")
@@ -46,7 +46,7 @@ async def health_check():
     """Health check endpoint"""
     try:
         health_service = get_health_service()
-        health_status = await health_service.check_health()
+        health_status = await health_service.get_comprehensive_health()
         return health_status
     except Exception as e:
         logger.error(f"Health check failed: {e}")

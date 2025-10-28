@@ -45,9 +45,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Face Pipeline starting up...")
     logger.info(f"📝 Configuration loaded:")
-    logger.info(f"   - MinIO: {settings.MINIO_ENDPOINT}")
-    logger.info(f"   - Qdrant: {settings.QDRANT_URL}")
-    logger.info(f"   - Collection: {settings.QDRANT_COLLECTION}")
+    logger.info(f"   - MinIO: {settings.minio_endpoint}")
+    logger.info(f"   - Qdrant: {settings.qdrant_url}")
+    logger.info(f"   - Collection: {settings.qdrant_collection}")
     logger.info(f"   - Max Concurrent: {settings.max_concurrent}")
     logger.info(f"   - Face Min Size: {settings.min_face_size}")
     logger.info(f"   - Blur Min Variance: {settings.blur_min_variance}")
@@ -301,9 +301,9 @@ async def info():
         "service": "Face Processing Pipeline",
         "version": "0.1.0",
         "configuration": {
-            "minio_endpoint": settings.MINIO_ENDPOINT,
-            "qdrant_url": settings.QDRANT_URL,
-            "qdrant_collection": settings.QDRANT_COLLECTION,
+            "minio_endpoint": settings.minio_endpoint,
+            "qdrant_url": settings.qdrant_url,
+            "qdrant_collection": settings.qdrant_collection,
             "max_concurrent": settings.max_concurrent,
             "min_face_size": settings.min_face_size,
             "blur_min_variance": settings.blur_min_variance,

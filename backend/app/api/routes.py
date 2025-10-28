@@ -15,7 +15,7 @@ from ..services.webhook import get_webhook_service, WebhookEvent
 from ..core.audit import get_audit_logger
 from ..core.errors import (
     create_http_exception, handle_mordeaux_error, handle_generic_error,
-    MordeauxError, ValidationError, ProcessingError, StorageError,
+    MordeauxError, ValidationError, StorageError,
     VectorDBError, FaceProcessingError, BatchProcessingError, 
     ResourceNotFoundError, AuthorizationError
 )
