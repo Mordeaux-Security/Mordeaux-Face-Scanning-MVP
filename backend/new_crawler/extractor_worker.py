@@ -182,23 +182,16 @@ class ExtractorWorker:
                         gpu_idle = await self.redis.is_gpu_idle_async()
                         batch_size = await self.redis.get_shared_batch_size_async()
                         
-                        # TIER 1: GPU idle + min batch ready = flush immediately
+                        # GPU idle + min batch ready = flush immediately
                         if gpu_idle and batch_size >= self.config.gpu_min_batch_size:
-                            flushed = await self.redis.flush_shared_batch_if_ready_async(
-                                self.config.gpu_min_batch_size
-                            )
+                            # Flush entire batch (up to max) when GPU is idle
+                            flush_size = min(batch_size, self.batch_size_threshold)
+                            flushed = await self.redis.flush_shared_batch_if_ready_async(flush_size)
                             if flushed:
                                 logger.info(f"[EXTRACTOR-{self.worker_id}] GPU-idle flush: {batch_size} images")
-                            await asyncio.sleep(0.05)  # Check every 50ms when GPU idle
-                            
-                        # TIER 2: Normal operation - let stale flush handle it
-                        else:
-                            await self.redis.flush_shared_batch_if_stale_async(
-                                stale_ms=150,  # Reduced from 300ms
-                                min_items=self.config.gpu_min_batch_size,
-                                max_batch_size=self.batch_size_threshold
-                            )
-                            await asyncio.sleep(0.1)
+                        
+                        # Check every 50ms regardless of GPU status
+                        await asyncio.sleep(0.05)
                             
                     except Exception:
                         pass
