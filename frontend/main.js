@@ -121,12 +121,26 @@ document.getElementById("f").addEventListener("submit", async (e) => {
     document.getElementById("out").textContent = JSON.stringify(json, null, 2);
     
     const img = document.getElementById("thumb");
+    let displayUrl = null;
     if (json.thumb_url) {
-      console.log("🖼️ Setting thumbnail:", json.thumb_url);
-      img.src = json.thumb_url;
+      displayUrl = json.thumb_url;
+    } else if (Array.isArray(json.hits) && json.hits.length > 0) {
+      const h = json.hits[0];
+      displayUrl = h.image_url || h.thumb_url || null;
+    } else if (Array.isArray(json.results) && json.results.length > 0) {
+      // Backend /search_face shape: results[].metadata.thumb_url
+      const r0 = json.results[0];
+      if (r0 && r0.metadata) {
+        displayUrl = r0.metadata.image_url || r0.metadata.thumb_url || null;
+      }
+    }
+    if (displayUrl) {
+      console.log("🖼️ Setting display image:", displayUrl);
+      img.src = displayUrl;
       img.style.display = "block";
     } else {
-      console.log("⚠️ No thumbnail URL in response");
+      console.log("⚠️ No displayable image URL in response");
+      img.style.display = "none";
     }
     
   } catch (error) {

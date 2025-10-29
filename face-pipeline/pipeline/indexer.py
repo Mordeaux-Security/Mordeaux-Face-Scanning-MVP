@@ -25,6 +25,15 @@ def get_client() -> QdrantClient:
     )
     return _client
 
+
+def scoredpoint_to_dict(sp: ScoredPoint) -> dict:
+    return {
+        "id": sp.id,
+        "score": float(sp.score),
+        "payload": sp.payload or {},
+        "vector": getattr(sp, "vector", None),
+    }
+
 def ensure_collection() -> None:
     qc = get_client()
     coll = settings.QDRANT_COLLECTION
@@ -84,11 +93,20 @@ def build_filter(tenant_id: str, site: Optional[str] = None, pfx: Optional[str] 
         must.append(FieldCondition(key="p_hash_prefix", match=MatchValue(value=pfx)))
     return Filter(must=must)
 
-def search(vector: list[float], top_k: int, tenant_id: str,
-           threshold: float | None = None, site: Optional[str] = None) -> List[ScoredPoint]:
+def search(
+    vector: list[float],
+    top_k: int,
+    *,
+    tenant_id: Optional[str] = None,
+    threshold: float | None = None,
+    site: Optional[str] = None,
+    flt: Optional[Filter] = None,
+) -> List[ScoredPoint]:
     qc = get_client()
     ensure_collection()
-    flt = build_filter(tenant_id=tenant_id, site=site)
+    # Build a filter if not provided
+    if flt is None and tenant_id:
+        flt = build_filter(tenant_id=tenant_id, site=site)
     res = qc.search(
         collection_name=settings.QDRANT_COLLECTION,
         query_vector=vector,
@@ -96,5 +114,26 @@ def search(vector: list[float], top_k: int, tenant_id: str,
         score_threshold=threshold or settings.SIMILARITY_THRESHOLD,
         query_filter=flt,
         with_payload=True,
+        with_vectors=False,
     )
     return res
+
+
+def search_dict(
+    vector: list[float],
+    top_k: int,
+    *,
+    tenant_id: Optional[str] = None,
+    threshold: float | None = None,
+    site: Optional[str] = None,
+    flt: Optional[Filter] = None,
+) -> List[dict]:
+    points = search(
+        vector=vector,
+        top_k=top_k,
+        tenant_id=tenant_id,
+        threshold=threshold,
+        site=site,
+        flt=flt,
+    )
+    return [scoredpoint_to_dict(p) for p in points]

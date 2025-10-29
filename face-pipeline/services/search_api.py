@@ -107,6 +107,14 @@ class SearchHit(BaseModel):
         None,
         description="Presigned URL for face thumbnail (TTL: 10 minutes max, 256px longest side)"
     )
+    crop_url: Optional[str] = Field(
+        None,
+        description="Presigned URL for face crop image (112x112 typical)"
+    )
+    image_url: Optional[str] = Field(
+        None,
+        description="Presigned URL for a displayable image (thumbnail or crop)"
+    )
 
 
 class SearchResponse(BaseModel):
@@ -159,6 +167,55 @@ class StatsResponse(BaseModel):
         default=0,
         description="Total faces processed and indexed"
     )
+
+
+# ==========================================================================
+# Helpers to derive/display image URLs for hits
+# ==========================================================================
+
+def _derive_keys_from_id(face_id: str, tenant_id: str) -> tuple[str | None, str | None]:
+    """Derive crop/thumb keys from a face id like "{image_sha256}:face_{i}".
+    Returns (crop_key, thumb_key) or (None, None) on failure.
+    """
+    try:
+        image_sha256, face_tag = face_id.split(":", 1)
+        if not face_tag.startswith("face_"):
+            return None, None
+        idx = int(face_tag.split("_")[1])
+        base = f"{image_sha256}_face_{idx}"
+        crop_key = f"{tenant_id}/{base}.jpg"
+        thumb_key = f"{tenant_id}/{base}_thumb.jpg"
+        return crop_key, thumb_key
+    except Exception:
+        return None, None
+
+
+def _urls_for_hit(hit) -> dict:
+    """Build presigned URLs for a Qdrant ScoredPoint hit.
+    Prefers payload-provided keys; falls back to deriving from id and tenant_id.
+    """
+    payload = getattr(hit, "payload", {}) or {}
+    tenant_id = payload.get("tenant_id")
+    crop_key = payload.get("crop_key")
+    thumb_key = payload.get("thumb_key")
+
+    if (not crop_key or not thumb_key) and tenant_id:
+        dk, tk = _derive_keys_from_id(str(getattr(hit, "id", "")), tenant_id)
+        crop_key = crop_key or dk
+        thumb_key = thumb_key or tk
+
+    urls: dict = {}
+    try:
+        if crop_key:
+            urls["crop_url"] = presign(getattr(settings, "MINIO_BUCKET_CROPS", "face-crops"), crop_key)
+    except Exception:
+        pass
+    try:
+        if thumb_key:
+            urls["thumb_url"] = presign(getattr(settings, "MINIO_BUCKET_THUMBS", "thumbnails"), thumb_key)
+    except Exception:
+        pass
+    return urls
     rejected: int = Field(
         default=0,
         description="Total faces rejected (quality checks failed)"
@@ -291,20 +348,22 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
 
         # Query Qdrant using our indexer module
         from pipeline.indexer import search
-        
+
         search_results = search(
             vector=embedding.tolist(),
             top_k=request.top_k,
-            filters={"tenant_id": request.tenant_id}
+            tenant_id=request.tenant_id,
+            threshold=request.threshold,
         )
         
         # Filter by threshold
-        search_results = [r for r in search_results if r["score"] >= request.threshold]
+        # search_results are Qdrant ScoredPoint objects
+        search_results = [r for r in search_results if float(getattr(r, "score", 0.0)) >= request.threshold]
 
         # Process results with presigned URLs and filtered metadata
         hits = []
         for result in search_results:
-            original_payload = result.get("payload", {})
+            original_payload = getattr(result, "payload", {}) or {}
 
             # Filter metadata to only include allowed fields
             filtered_payload = {}
@@ -313,21 +372,24 @@ async def search_faces(request: SearchRequest) -> SearchResponse:
                 if field in original_payload:
                     filtered_payload[field] = original_payload[field]
 
-            # Generate presigned thumbnail URL (TTL: 10 minutes max)
-            thumb_url = None
-            thumb_key = original_payload.get('thumb_key')
-            if thumb_key:
-                thumb_url = presign(
-                    bucket=settings.minio_bucket_thumbs,
-                    key=thumb_key,
-                    ttl_sec=600  # 10 minutes
-                )
+            # Generate presigned URLs from payload or derived keys
+            url_fields = _urls_for_hit(result)
+            thumb_url = url_fields.get("thumb_url")
+            crop_url = url_fields.get("crop_url")
+            # Prefer thumbnail for display; fallback to crop
+            image_url = thumb_url or crop_url
+
+            # Extract id/score from ScoredPoint
+            res_id = getattr(result, "id", None)
+            res_score = getattr(result, "score", 0.0)
 
             hits.append(SearchHit(
-                face_id=str(result["id"]),
-                score=float(result["score"]),
+                face_id=str(res_id),
+                score=float(res_score),
                 payload=filtered_payload,
-                thumb_url=thumb_url
+                thumb_url=thumb_url,
+                crop_url=crop_url,
+                image_url=image_url
             ))
 
         return SearchResponse(

@@ -22,6 +22,8 @@ class Settings(BaseModel):
 
     # ----- Qdrant -----
     qdrant_url: str = os.getenv("QDRANT_URL", "http://localhost:6333")
+    # Backward/alternate attribute used by some modules
+    QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
     qdrant_collection: str = os.getenv("QDRANT_COLLECTION", "faces_v1")
     QDRANT_API_KEY: str | None = os.getenv("QDRANT_API_KEY") or None
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "faces_v1")

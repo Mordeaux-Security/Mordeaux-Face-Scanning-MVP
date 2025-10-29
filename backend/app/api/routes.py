@@ -335,6 +335,8 @@ async def search_face(
                 original_metadata.get("thumb_key", ""),
                 "GET"
             )
+            # Provide image_url alias for easy display
+            filtered_metadata["image_url"] = filtered_metadata["thumb_url"]
 
             results.append({
                 "id": result["id"],
