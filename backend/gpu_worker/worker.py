@@ -26,6 +26,14 @@ import insightface
 from insightface.app import FaceAnalysis
 import onnxruntime as ort
 
+# Conditional imports for Windows-specific modules
+try:
+    import win32api
+    import win32con
+    WINDOWS_FEATURES_AVAILABLE = True
+except ImportError:
+    WINDOWS_FEATURES_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

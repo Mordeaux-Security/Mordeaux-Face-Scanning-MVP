@@ -447,7 +447,7 @@ class Orchestrator:
                            f"images={queue_info.get('queue_lengths', {}).get('images', 0)}, "
                            f"results={queue_info.get('queue_lengths', {}).get('results', 0)}")
                 
-                await asyncio.sleep(10.0)
+                await asyncio.sleep(5.0)  # Reduced from 10.0 for faster completion detection
         finally:
             if self._backpressure_task:
                 self._backpressure_task.cancel()

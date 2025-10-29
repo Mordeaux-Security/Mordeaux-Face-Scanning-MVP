@@ -254,36 +254,64 @@ class GPUProcessorWorker:
             logger.error(f"[GPU Processor {self.worker_id}] Error processing image: {e}")
             return False
     
+    async def _process_batch_task(self, batch_request: BatchRequest):
+        """Process a single batch task with statistics tracking."""
+        try:
+            # Process batch
+            processed_count = await self.process_batch(batch_request)
+            
+            # Update statistics
+            self.processed_batches += 1
+            self.processed_images += processed_count
+            
+            # Log progress periodically
+            if self.processed_batches % 10 == 0:
+                logger.info(f"[GPU Processor {self.worker_id}] Processed {self.processed_batches} batches, "
+                           f"{self.processed_images} images, {self.faces_detected} faces, "
+                           f"{self.raw_images_saved} raw images, {self.thumbnails_saved} thumbnails")
+        
+        except Exception as e:
+            logger.error(f"[GPU Processor {self.worker_id}] Error processing batch {batch_request.batch_id}: {e}")
+    
     async def run(self):
-        """Main worker loop."""
-        logger.info(f"[GPU Processor {self.worker_id}] Starting GPU processor worker")
+        """Main worker loop with concurrent batch processing."""
+        logger.info(f"[GPU Processor {self.worker_id}] Starting GPU processor worker with concurrent batch processing")
         self.running = True
+        
+        # Track active batch processing tasks
+        active_batch_tasks = set()
+        max_concurrent_batches = self.config.nc_max_concurrent_batches_per_worker
         
         while self.running:
             try:
-                # Get batch from queue
-                batch_request = self.redis.pop_image_batch(timeout=5)
+                # Clean up completed tasks
+                active_batch_tasks = {t for t in active_batch_tasks if not t.done()}
                 
-                if batch_request:
-                    # Process batch
-                    processed_count = await self.process_batch(batch_request)
+                # If we have capacity, try to pop a new batch
+                if len(active_batch_tasks) < max_concurrent_batches:
+                    batch_request = self.redis.pop_image_batch(timeout=2.0)  # Reduced from 5.0
                     
-                    # Update statistics
-                    self.processed_batches += 1
-                    self.processed_images += processed_count
-                    
-                    # Log progress periodically
-                    if self.processed_batches % 10 == 0:
-                        logger.info(f"[GPU Processor {self.worker_id}] Processed {self.processed_batches} batches, "
-                                   f"{self.processed_images} images, {self.faces_detected} faces, "
-                                   f"{self.raw_images_saved} raw images, {self.thumbnails_saved} thumbnails")
+                    if batch_request:
+                        # Start processing batch in background
+                        task = asyncio.create_task(self._process_batch_task(batch_request))
+                        active_batch_tasks.add(task)
+                        logger.info(f"[GPU Processor {self.worker_id}] Started batch {batch_request.batch_id} "
+                                   f"({len(active_batch_tasks)}/{max_concurrent_batches} active)")
+                
+                # Brief pause before checking for more batches
+                await asyncio.sleep(0.1)
                 
             except KeyboardInterrupt:
                 logger.info(f"[GPU Processor {self.worker_id}] Interrupted, shutting down")
                 break
             except Exception as e:
                 logger.error(f"[GPU Processor {self.worker_id}] Error in main loop: {e}")
-                await asyncio.sleep(1)  # Brief pause before retry
+                await asyncio.sleep(1)
+        
+        # Wait for active tasks to complete
+        if active_batch_tasks:
+            logger.info(f"[GPU Processor {self.worker_id}] Waiting for {len(active_batch_tasks)} active batches to complete")
+            await asyncio.gather(*active_batch_tasks, return_exceptions=True)
         
         logger.info(f"[GPU Processor {self.worker_id}] GPU processor worker stopped")
     

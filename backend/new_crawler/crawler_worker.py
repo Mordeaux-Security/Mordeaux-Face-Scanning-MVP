@@ -93,6 +93,15 @@ class CrawlerWorker:
                 results = await asyncio.gather(*enqueue_tasks)
                 total_enqueued = sum(results)
                 
+                # Persist accurate pages crawled and images found for this site
+                await self.redis.update_site_stats_async(
+                    site_task.site_id,
+                    {
+                        'pages_crawled': total_pages,
+                        'images_found': total_enqueued
+                    }
+                )
+                
             finally:
                 self._active_tasks_decr(1)
             
@@ -107,41 +116,60 @@ class CrawlerWorker:
             logger.error(f"[Crawler {self.worker_id}] Error processing site {site_task.url}: {e}")
             return 0
     
+    async def _process_site_task(self, site_task: SiteTask):
+        """Process a single site task with statistics tracking."""
+        try:
+            # Process site
+            candidates_count = await self.process_site(site_task)
+            
+            # Update statistics in Redis
+            await self.redis.update_site_stats_async(
+                site_task.site_id,
+                {
+                    'images_found': candidates_count
+                }
+            )
+            
+            # Update local statistics
+            self.processed_sites += 1
+            self.total_candidates += candidates_count
+            
+            logger.info(f"[Crawler {self.worker_id}] Completed site {site_task.site_id}: "
+                       f"{candidates_count} candidates. Total: {self.processed_sites} sites, "
+                       f"{self.total_candidates} candidates")
+        
+        except Exception as e:
+            logger.error(f"[Crawler {self.worker_id}] Error processing site {site_task.url}: {e}")
+    
     async def run(self):
-        """Main worker loop."""
-        logger.info(f"[Crawler {self.worker_id}] Starting worker")
+        """Main worker loop with concurrent site processing."""
+        logger.info(f"[Crawler {self.worker_id}] Starting worker with concurrent site processing")
         self.running = True
+        
+        # Track active site processing tasks
+        active_site_tasks = set()
+        max_concurrent_sites = self.config.nc_max_concurrent_sites_per_worker
         
         while self.running and not self._shutdown_event.is_set():
             try:
-                # Non-blocking pop with timeout
-                site_task = await asyncio.to_thread(
-                    self.redis.pop_site, timeout=10.0  # Increased from 2.0 to 10.0 seconds
-                )
+                # Clean up completed tasks
+                active_site_tasks = {t for t in active_site_tasks if not t.done()}
                 
-                if site_task is None:
-                    # Check shutdown every 2 seconds
-                    await asyncio.sleep(0.1)
-                    continue
+                # If we have capacity, try to pop a new site
+                if len(active_site_tasks) < max_concurrent_sites:
+                    site_task = await asyncio.to_thread(
+                        self.redis.pop_site, timeout=2.0  # Reduced from 10.0
+                    )
+                    
+                    if site_task:
+                        # Start processing site in background
+                        task = asyncio.create_task(self._process_site_task(site_task))
+                        active_site_tasks.add(task)
+                        logger.info(f"[Crawler {self.worker_id}] Started site {site_task.site_id} "
+                                   f"({len(active_site_tasks)}/{max_concurrent_sites} active)")
                 
-                # Process site
-                candidates_count = await self.process_site(site_task)
-                
-                # Update statistics in Redis
-                await self.redis.update_site_stats_async(
-                    site_task.site_id,
-                    {
-                        'pages_crawled': 1,  # Each site task represents 1 page crawled
-                        'images_found': candidates_count
-                    }
-                )
-                
-                # Update local statistics
-                self.processed_sites += 1
-                self.total_candidates += candidates_count
-                
-                logger.info(f"[Crawler {self.worker_id}] Processed {self.processed_sites} sites, "
-                           f"{self.total_candidates} total candidates")
+                # Brief pause before checking for more sites
+                await asyncio.sleep(0.1)
                 
             except asyncio.CancelledError:
                 logger.info(f"[Crawler {self.worker_id}] Cancelled, shutting down")
@@ -149,6 +177,11 @@ class CrawlerWorker:
             except Exception as e:
                 logger.error(f"[Crawler {self.worker_id}] Error in main loop: {e}")
                 await asyncio.sleep(1)
+        
+        # Wait for active tasks to complete
+        if active_site_tasks:
+            logger.info(f"[Crawler {self.worker_id}] Waiting for {len(active_site_tasks)} active sites to complete")
+            await asyncio.gather(*active_site_tasks, return_exceptions=True)
         
         # Cleanup
         await self.http_utils.close()

@@ -30,7 +30,7 @@ class SelectorMiner:
     def __init__(self):
         self.config = get_config()
         self.http_utils = get_http_utils()
-        self._semaphore = asyncio.Semaphore(3)  # Max 3 concurrent page fetches
+        self._semaphore = asyncio.Semaphore(12)  # Max 12 concurrent page fetches
         
         # Core selector patterns (cleaned up from bloated original)
         self.core_patterns = [

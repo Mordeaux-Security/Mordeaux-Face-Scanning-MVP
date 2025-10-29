@@ -42,16 +42,23 @@ class CrawlerConfig(BaseSettings):
     # Queue Configuration
     nc_batch_size: int = 64
     nc_max_queue_depth: int = 512
-    nc_crawler_concurrency: int = 32
-    nc_extractor_concurrency: int = 64  # Increased from 16 to 64 for 4x more concurrent downloads
+    nc_extractor_concurrency: int = 64  # Total concurrent downloads across all extractor workers (divided among workers)
     nc_cache_ttl_days: int = 90
     
     # HTTP Performance Configuration
     nc_skip_head_check: bool = True  # Skip HEAD requests when HTML metadata is available
     
+    # Crawler Performance Configuration
+    nc_max_concurrent_sites_per_worker: int = 4  # Max sites processed concurrently per crawler worker (eliminates site switching delays)
+    
+    # GPU Performance Configuration
+    nc_max_concurrent_batches_per_worker: int = 2  # Max batches processed concurrently per GPU worker (improves GPU utilization)
+    nc_batch_flush_timeout: float = 5.0  # Max seconds before forcing batch flush (prevents batches from sitting idle)
+    
     # Worker Configuration adds to 7 (8 cores-1 for Orchestrator)
+    # Each extractor worker runs nc_extractor_concurrency // num_extractors concurrent download tasks
     num_crawlers: int = 2
-    num_extractors: int = 4
+    num_extractors: int = 4  # 4 workers × 16 concurrent downloads each = 64 total
     num_gpu_processors: int = 1
     
     # GPU Worker Configuration
@@ -303,8 +310,10 @@ class CrawlerConfig(BaseSettings):
         logger.info(f"Batch Size: {self.nc_batch_size}")
         logger.info(f"GPU Min Batch Size: {self.gpu_min_batch_size}")
         logger.info(f"Max Queue Depth: {self.nc_max_queue_depth}")
-        logger.info(f"Crawler Concurrency: {self.nc_crawler_concurrency}")
         logger.info(f"Extractor Concurrency: {self.nc_extractor_concurrency}")
+        logger.info(f"Max Concurrent Sites per Worker: {self.nc_max_concurrent_sites_per_worker}")
+        logger.info(f"Max Concurrent Batches per Worker: {self.nc_max_concurrent_batches_per_worker}")
+        logger.info(f"Batch Flush Timeout: {self.nc_batch_flush_timeout}s")
         logger.info(f"Use 3x3 Mining: {self.nc_use_3x3_mining}")
         logger.info(f"Max Selector Patterns: {self.nc_max_selector_patterns}")
         logger.info(f"HTTP Timeout: {self.nc_http_timeout}s")

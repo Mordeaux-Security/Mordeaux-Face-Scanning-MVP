@@ -41,7 +41,7 @@ class HTTPUtils:
         self._playwright = None
         self._browser = None
         self._browser_pool = None
-        self._semaphore = asyncio.Semaphore(self.config.nc_crawler_concurrency)
+        self._browser_pool_lock = asyncio.Lock()
         
         # User agents for rotation
         self.user_agents = [
@@ -128,68 +128,67 @@ class HTTPUtils:
         Returns: (html, status_message, comparison_stats)
         comparison_stats is None unless force_compare_first_visit=True, then it's {'http_count': N, 'js_count': M}
         """
-        async with self._semaphore:  # Limit concurrency
-            try:
-                # Dual-fetch compare on first visit if enabled
-                if force_compare_first_visit and PLAYWRIGHT_AVAILABLE and self.config.nc_js_first_visit_compare:
-                    start = time.time()
-                    # Run HTTP and JS concurrently with soft timeouts
-                    async def _http_task():
-                        return await self._fetch_with_redirects(url)
-                    async def _js_task():
-                        return await self._fetch_with_js(url)
-                    http_task = asyncio.create_task(_http_task())
-                    js_task = asyncio.create_task(_js_task())
-                    done, pending = await asyncio.wait(
-                        {http_task, js_task},
-                        timeout=self.config.nc_js_render_timeout + 5,
-                        return_when=asyncio.ALL_COMPLETED
-                    )
-                    http_html, http_err = (None, "TIMEOUT")
-                    js_html, js_err = (None, "TIMEOUT")
-                    if http_task in done:
-                        http_html, http_err = http_task.result()
-                    if js_task in done:
-                        js_html, js_err = js_task.result()
-                    # Cancel any stragglers
-                    for p in pending:
-                        p.cancel()
-                    http_count = await self._estimate_img_candidates(http_html, url) if http_html else 0
-                    js_count = await self._estimate_img_candidates(js_html, url) if js_html else 0
-                    logger.info(f"First-visit compare for {url}: HTTP={http_count}, JS={js_count}, elapsed={(time.time()-start)*1000:.1f}ms")
-                    
-                    # Return comparison stats WITHOUT storing strategy yet
-                    comparison_stats = {'http_count': http_count, 'js_count': js_count}
-                    
-                    # Return the better HTML
-                    if js_count >= max(5, 2 * http_count):
-                        return js_html, "SUCCESS", comparison_stats
-                    return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED")), comparison_stats
+        try:
+            # Dual-fetch compare on first visit if enabled
+            if force_compare_first_visit and PLAYWRIGHT_AVAILABLE and self.config.nc_js_first_visit_compare:
+                start = time.time()
+                # Run HTTP and JS concurrently with soft timeouts
+                async def _http_task():
+                    return await self._fetch_with_redirects(url)
+                async def _js_task():
+                    return await self._fetch_with_js(url)
+                http_task = asyncio.create_task(_http_task())
+                js_task = asyncio.create_task(_js_task())
+                done, pending = await asyncio.wait(
+                    {http_task, js_task},
+                    timeout=self.config.nc_js_render_timeout + 5,
+                    return_when=asyncio.ALL_COMPLETED
+                )
+                http_html, http_err = (None, "TIMEOUT")
+                js_html, js_err = (None, "TIMEOUT")
+                if http_task in done:
+                    http_html, http_err = http_task.result()
+                if js_task in done:
+                    js_html, js_err = js_task.result()
+                # Cancel any stragglers
+                for p in pending:
+                    p.cancel()
+                http_count = await self._estimate_img_candidates(http_html, url) if http_html else 0
+                js_count = await self._estimate_img_candidates(js_html, url) if js_html else 0
+                logger.info(f"First-visit compare for {url}: HTTP={http_count}, JS={js_count}, elapsed={(time.time()-start)*1000:.1f}ms")
+                
+                # Return comparison stats WITHOUT storing strategy yet
+                comparison_stats = {'http_count': http_count, 'js_count': js_count}
+                
+                # Return the better HTML
+                if js_count >= max(5, 2 * http_count):
+                    return js_html, "SUCCESS", comparison_stats
+                return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED")), comparison_stats
 
-                # Try standard HTTP first
-                html, error = await self._fetch_with_redirects(url)
+            # Try standard HTTP first
+            html, error = await self._fetch_with_redirects(url)
+            
+            if html and not self._needs_js_rendering(html):
+                logger.debug(f"Standard HTTP successful for {url}")
+                return html, "SUCCESS", None
+            
+            # Try JavaScript rendering if needed and enabled
+            if use_js_fallback and PLAYWRIGHT_AVAILABLE:
+                logger.info(f"Standard HTTP failed or needs JS rendering for {url}")
+                js_html, js_error = await self._fetch_with_js(url)
                 
-                if html and not self._needs_js_rendering(html):
-                    logger.debug(f"Standard HTTP successful for {url}")
-                    return html, "SUCCESS", None
-                
-                # Try JavaScript rendering if needed and enabled
-                if use_js_fallback and PLAYWRIGHT_AVAILABLE:
-                    logger.info(f"Standard HTTP failed or needs JS rendering for {url}")
-                    js_html, js_error = await self._fetch_with_js(url)
-                    
-                    if js_html:
-                        logger.info(f"JavaScript rendering successful for {url}")
-                        return js_html, "SUCCESS", None
-                    else:
-                        logger.warning(f"JavaScript rendering also failed for {url}: {js_error}")
-                
-                # Return whatever we got from standard HTTP
-                return html, error or "FAILED", None
-                
-            except Exception as e:
-                logger.error(f"Error fetching HTML from {url}: {e}")
-                return None, f"ERROR: {str(e)}", None
+                if js_html:
+                    logger.info(f"JavaScript rendering successful for {url}")
+                    return js_html, "SUCCESS", None
+                else:
+                    logger.warning(f"JavaScript rendering also failed for {url}: {js_error}")
+            
+            # Return whatever we got from standard HTTP
+            return html, error or "FAILED", None
+            
+        except Exception as e:
+            logger.error(f"Error fetching HTML from {url}: {e}")
+            return None, f"ERROR: {str(e)}", None
 
     async def _estimate_img_candidates(self, html: Optional[str], base_url: str) -> int:
         """Rudimentary estimator: count <img> tags and common patterns to pick better HTML source."""
@@ -270,10 +269,17 @@ class HTTPUtils:
             if not PLAYWRIGHT_AVAILABLE:
                 return None, "PLAYWRIGHT_NOT_AVAILABLE"
             
-            # Get browser pool
-            if not self._browser_pool:
-                self._browser_pool = BrowserPool()
-                await self._browser_pool.__aenter__()
+            # Ensure browser pool is initialized atomically
+            # Initialize if pool is missing or browsers aren't ready yet
+            if self._browser_pool is None or not getattr(self._browser_pool, '_browsers', []):
+                async with self._browser_pool_lock:
+                    # Double-check after acquiring lock in case another coroutine initialized it
+                    if self._browser_pool is None or not getattr(self._browser_pool, '_browsers', []):
+                        logger.info("Initializing browser pool for JavaScript rendering")
+                        pool = BrowserPool()
+                        await pool.__aenter__()
+                        self._browser_pool = pool
+                        logger.info(f"Browser pool initialized with {len(pool._browsers)} browsers")
             
             html, network_images = await self._browser_pool.render_page(url, timeout=self.config.nc_js_render_timeout)
             
