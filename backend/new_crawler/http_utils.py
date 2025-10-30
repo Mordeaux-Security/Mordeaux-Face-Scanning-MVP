@@ -312,13 +312,18 @@ class HTTPUtils:
             content_type = info['content_type'].lower()
             is_image = any(img_type in content_type for img_type in ['image/', 'jpeg', 'jpg', 'png', 'gif', 'webp'])
             
-            # Check content length
+            # Disallow SVG (often useless for faces)
+            if 'svg' in content_type:
+                return False, info
+            
+            # Enforce size bounds (mirror extractor defaults or keep local)
+            min_bytes = getattr(self.config, 'nc_min_image_bytes', 4_096)
+            max_bytes = getattr(self.config, 'nc_max_image_bytes', 10_000_000)
             content_length = info['content_length']
             if content_length:
                 try:
-                    size_mb = int(content_length) / (1024 * 1024)
-                    if size_mb > 10:  # 10MB limit
-                        logger.warning(f"Image too large: {url} ({size_mb:.1f}MB)")
+                    size = int(content_length)
+                    if size < min_bytes or size > max_bytes:
                         return False, info
                 except (ValueError, TypeError):
                     pass

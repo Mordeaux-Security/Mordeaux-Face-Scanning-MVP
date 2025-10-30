@@ -64,7 +64,71 @@ class ExtractorWorker:
         
         # Track last flush time for time-based flushing
         self._last_flush_time = time.time()
+
+        # Sensible defaults with config overrides for metadata/HEAD gating
+        self.min_image_bytes = getattr(self.config, "nc_min_image_bytes", 4_096)
+        self.max_image_bytes = getattr(self.config, "nc_max_image_bytes", 25_000_000)
+        self.min_side_px = getattr(self.config, "nc_min_side_px", 64)
+        self.max_aspect_ratio = getattr(self.config, "nc_max_aspect", 4.0)
+        self.disallow_svg = getattr(self.config, "nc_disallow_svg", True)
     
+    def _metadata_gate(self, candidate) -> tuple[bool, dict, str]:
+        """
+        Use HTML-derived hints to decide if we can skip HEAD.
+        Returns (ok, head_info_like_dict, reason).
+        """
+        ct = (candidate.content_type or "").lower()
+        w = candidate.width
+        h = candidate.height
+        est_size = getattr(candidate, 'estimated_size', None)
+
+        if not (ct or w or h or est_size):
+            return False, {}, "no_metadata"
+
+        # Content type must look like a real raster image, if present.
+        if ct:
+            if "image" not in ct:
+                return False, {}, f"ctype_not_image:{ct}"
+            if self.disallow_svg and "svg" in ct:
+                return False, {}, "svg_disallowed"
+        else:
+            # No content-type from HTML: rely on URL extension + keep SVG ban
+            url_lower = (getattr(candidate, "img_url", "") or "").lower()
+            if self.disallow_svg and url_lower.endswith(".svg"):
+                return False, {}, "svg_disallowed"
+            if not url_lower.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")):
+                return False, {}, "ext_not_raster"
+
+        # Dimensions, if present, must be sane
+        if w and h:
+            if min(w, h) < self.min_side_px:
+                return False, {}, f"too_small:{w}x{h}"
+            ar = (w / h) if h else 0
+            if ar and (ar > self.max_aspect_ratio or ar < 1 / self.max_aspect_ratio):
+                return False, {}, f"extreme_aspect:{ar:.2f}"
+
+        # Estimated size, if present, must be within range
+        if est_size is not None:
+            try:
+                # allow string/num
+                size_val = int(est_size)
+            except Exception:
+                size_val = None
+            if size_val is not None:
+                if size_val < self.min_image_bytes:
+                    return False, {}, f"too_tiny:{size_val}"
+                if size_val > self.max_image_bytes:
+                    return False, {}, f"too_large:{size_val}"
+
+        # Looks good enough to skip HEAD; fabricate a minimal head_info
+        head_info = {
+            "content_type": ct,
+            "content_length": str(est_size) if est_size is not None else None,
+            "last_modified": None,
+            "etag": None,
+        }
+        return True, head_info, "html_metadata_ok"
+
     async def process_candidate(self, candidate: CandidateImage) -> Optional[ImageTask]:
         """Process a single candidate image."""
         extraction_start_time = time.time()
@@ -75,27 +139,37 @@ class ExtractorWorker:
                 # Log extraction start
                 self.timing_logger.log_extraction_start(candidate.site_id, candidate.img_url)
                 
-                # If we have metadata from HTML, skip HEAD check entirely!
-                if candidate.content_type and candidate.width and candidate.height:
-                    logger.debug(f"[EXTRACTOR-{self.worker_id}] Using HTML metadata, skipping HEAD check")
-                    head_info = {
-                        'content_type': candidate.content_type,
-                        'content_length': candidate.estimated_size or 0
-                    }
-                elif not self.config.nc_skip_head_check:
-                    # Fallback: HEAD check if metadata not available
-                    is_valid, head_info = await self.http_utils.head_check(candidate.img_url)
-                    if not is_valid:
-                        logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - FAILED")
-                        # Log extraction end
-                        extraction_duration = (time.time() - extraction_start_time) * 1000
-                        self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
-                        return None
-                    logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - OK")
-                else:
-                    # No metadata, no HEAD check - just proceed
-                    logger.debug(f"[EXTRACTOR-{self.worker_id}] Skipping HEAD check (config enabled)")
-                    head_info = {}
+                # --- BEGIN: reconciled metadata/HEAD gating ---
+                use_meta = False
+                head_info = {}
+
+                # 1) Try to use HTML metadata if strong enough
+                ok_meta = False
+                if candidate.content_type or candidate.width or candidate.height or getattr(candidate, 'estimated_size', None) is not None:
+                    ok_meta, head_info, reason = self._metadata_gate(candidate)
+                    if ok_meta:
+                        use_meta = True
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] Using HTML metadata (skip HEAD): {reason}")
+                    else:
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] HTML metadata not sufficient: {reason}. Will consider HEAD.")
+
+                # 2) If HTML metadata wasn’t strong, try HEAD (unless globally skipped)
+                if not use_meta:
+                    if not self.config.nc_skip_head_check:
+                        is_valid, hi = await self.http_utils.head_check(candidate.img_url)
+                        head_info = hi or {}
+                        if not is_valid:
+                            logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - FAILED")
+                            extraction_duration = (time.time() - extraction_start_time) * 1000
+                            self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
+                            return None
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] HEAD check: {candidate.img_url} - OK")
+                    else:
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] Skipping HEAD check (config nc_skip_head_check=true)")
+                        head_info = {}
+
+                # 3) Proceed to download — we have either trusted HTML or passed HEAD
+                # --- END: reconciled metadata/HEAD gating ---
                 
                 # Download image to temp file (only necessary HTTP request!)
                 temp_path, download_info = await self.http_utils.download_to_temp(
