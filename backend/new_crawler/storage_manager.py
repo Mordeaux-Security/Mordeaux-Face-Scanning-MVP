@@ -371,11 +371,16 @@ class StorageManager:
                     logger.warning(f"Invalid face bounds: ({x1}, {y1}, {x2}, {y2})")
                     return None
                 
+                if x2 - x1 < self.config.min_face_size or y2 - y1 < self.config.min_face_size:
+                    logger.info(f"[CROP DEBUG] Skipping tiny face: ({x2 - x1}x{y2 - y1}) < {self.config.min_face_size}")
+                    return None
+
+                logger.info(f"[CROP DEBUG] crop_px=({x1},{y1},{x2},{y2})")
                 # Crop the face
                 face_crop = img.crop((x1, y1, x2, y2))
                 
                 # Resize to thumbnail size
-                face_crop.thumbnail((256, 256), Image.Resampling.LANCZOS)
+                #face_crop.thumbnail((256, 256), Image.Resampling.LANCZOS)
                 
                 # Convert to bytes
                 output = io.BytesIO()

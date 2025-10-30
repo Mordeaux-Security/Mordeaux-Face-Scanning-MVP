@@ -40,19 +40,19 @@ class CrawlerConfig(BaseSettings):
     nc_gpu_worker_logging: bool = True
     
     # Queue Configuration
-    nc_batch_size: int = 64
-    nc_max_queue_depth: int = 512
-    nc_extractor_concurrency: int = 64  # Total concurrent downloads across all extractor workers (divided among workers)
+    nc_batch_size: int = 256
+    nc_max_queue_depth: int = 1024
+    nc_extractor_concurrency: int = 256  # Total concurrent downloads across all extractor workers (divided among workers)
     nc_cache_ttl_days: int = 90
     
     # HTTP Performance Configuration
     nc_skip_head_check: bool = True  # Skip HEAD requests when HTML metadata is available
     
     # Crawler Performance Configuration
-    nc_max_concurrent_sites_per_worker: int = 4  # Max sites processed concurrently per crawler worker (eliminates site switching delays)
+    nc_max_concurrent_sites_per_worker: int = 16  # Max sites processed concurrently per crawler worker (eliminates site switching delays)
     
     # GPU Performance Configuration
-    nc_max_concurrent_batches_per_worker: int = 2  # Max batches processed concurrently per GPU worker (improves GPU utilization)
+    nc_max_concurrent_batches_per_worker: int = 1  # Max batches processed concurrently per GPU worker (improves GPU utilization)
     nc_batch_flush_timeout: float = 5.0  # Max seconds before forcing batch flush (prevents batches from sitting idle)
     
     # Worker Configuration adds to 7 (8 cores-1 for Orchestrator)
@@ -66,7 +66,7 @@ class CrawlerConfig(BaseSettings):
     gpu_worker_url: str = "http://host.docker.internal:8765"
     gpu_worker_timeout: float = 60.0
     gpu_worker_max_retries: int = 3
-    gpu_min_batch_size: int = 8
+    gpu_min_batch_size: int = 64
     # Time-based batch flush to smooth throughput (milliseconds)
     gpu_batch_flush_ms: int = 3000
     
@@ -121,7 +121,7 @@ class CrawlerConfig(BaseSettings):
     
     # Face Detection Configuration
     min_face_quality: float = 0.5
-    min_face_size: int = 80
+    min_face_size: int = 30
     face_margin: float = 0.2
     
     # Back-pressure Configuration
