@@ -46,17 +46,47 @@ class CrawlerWorker:
         
     async def _enqueue_candidates(self, candidates: List[CandidateImage]) -> int:
         """Enqueue a batch of candidates to Redis queue."""
-        candidates_pushed = 0
+        # Filter out candidates from sites that reached limit
+        valid_candidates = []
         for candidate in candidates:
             # Skip enqueue if site limit already reached
             if await self.redis.is_site_limit_reached_async(candidate.site_id):
                 logger.debug(f"[Crawler {self.worker_id}] Not enqueueing candidate (limit reached): {candidate.img_url}")
                 continue
-            if await self.redis.push_candidate_async(candidate):
-                candidates_pushed += 1
-            else:
-                logger.warning(f"[Crawler {self.worker_id}] Failed to push candidate: {candidate.img_url}")
-        return candidates_pushed
+            valid_candidates.append(candidate)
+        
+        if not valid_candidates:
+            return 0
+        
+        # Batch push all valid candidates at once
+        queue_name = self.config.get_queue_name('candidates')
+        payloads = [self.redis._serialize(c) for c in valid_candidates]
+        pushed = await asyncio.to_thread(self.redis.push_many, queue_name, payloads)
+        
+        # Diagnostic logging
+        if self.config.nc_diagnostic_logging:
+            queue_depth = await self.redis.get_queue_length_by_key_async(queue_name)
+            
+            # Track candidates/second rate
+            now = time.time()
+            if not hasattr(self, '_last_enqueue_time'):
+                self._last_enqueue_time = now
+                self._last_enqueue_count = 0
+                self._enqueue_count_window = 0
+                self._enqueue_time_window = now
+            
+            self._enqueue_count_window += pushed
+            elapsed = now - self._enqueue_time_window
+            if elapsed >= 1.0:  # Calculate rate every second
+                candidates_per_sec = self._enqueue_count_window / elapsed if elapsed > 0 else 0
+                logger.info(f"[CRAWLER-DIAG-{self.worker_id}] Throughput: {candidates_per_sec:.1f} candidates/sec, "
+                          f"queue_depth={queue_depth}")
+                self._enqueue_count_window = 0
+                self._enqueue_time_window = now
+            
+            logger.debug(f"[CRAWLER-DIAG-{self.worker_id}] Pushed {pushed} candidates, queue_depth={queue_depth}")
+        
+        return pushed if pushed else 0
 
     async def process_site(self, site_task: SiteTask) -> int:
         """Process a single site task."""

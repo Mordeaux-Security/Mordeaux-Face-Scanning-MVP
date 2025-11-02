@@ -363,7 +363,7 @@ class SelectorMiner:
             total_http_candidates = 0
             total_js_candidates = 0
             sample_pages_count = 0
-            max_sample_pages = min(7, max_pages)  # 1+3+3 = 7 pages for sampling
+            max_sample_pages = 7 if max_pages == -1 else min(7, max_pages)  # 1+3+3 = 7 pages for sampling
             
             # PHASE 1: Sample crawl - fetch ALL sample pages with comparison
             
@@ -396,16 +396,25 @@ class SelectorMiner:
             
             # Step 2: Fetch up to 6 more sample pages in PARALLEL with comparison
             sample_tasks = []
+            # Track URLs being processed to avoid duplicates, but don't mark as checked until success
+            in_progress_urls = set()
+            # Store URL-task pairs to track which URL corresponds to which task
+            url_task_map = {}
             for category_url in category_urls[:6]:  # Take up to 6 more (for total of 7)
-                if category_url not in checked_urls and sample_pages_count < max_sample_pages:
-                    checked_urls.add(category_url)
+                if category_url not in checked_urls and category_url not in in_progress_urls and sample_pages_count < max_sample_pages:
+                    in_progress_urls.add(category_url)  # Track in progress
                     task = asyncio.create_task(self._fetch_and_compare_page(category_url, site_id))
                     sample_tasks.append(task)
+                    url_task_map[task] = category_url  # Map task to URL
             
             # Process sample pages as they complete
             for task in asyncio.as_completed(sample_tasks):
+                original_url = url_task_map.get(task)  # Get original URL from task map
+                url = original_url  # Initialize with original
                 try:
-                    candidates, url, comparison_stats = await task
+                    candidates, returned_url, comparison_stats = await task
+                    # Use returned_url in case it differs from mapped url
+                    url = returned_url
                     pages_crawled += 1
                     sample_pages_count += 1
                     
@@ -413,11 +422,22 @@ class SelectorMiner:
                         total_http_candidates += comparison_stats['http_count']
                         total_js_candidates += comparison_stats['js_count']
                     
+                    # Mark as checked ONLY after successful processing
+                    checked_urls.add(url)
+                    # Clean up BOTH original and returned URLs from in_progress
+                    in_progress_urls.discard(url)  # Remove returned URL
+                    if url != original_url and original_url:
+                        in_progress_urls.discard(original_url)  # Also remove original if different
+                    
                     logger.info(f"[3x3-SAMPLE] Page {sample_pages_count}/{max_sample_pages} yielded {len(candidates)} candidates")
                     yield url, candidates
                     
                 except Exception as e:
                     logger.debug(f"Error processing sample page: {e}")
+                    # Don't mark failed URLs as checked - they can be retried in BFS phase
+                    # Always clean up the original URL (it was the one we added to in_progress)
+                    if original_url:
+                        in_progress_urls.discard(original_url)
             
             # PHASE 2: Aggregate and store strategy
             logger.info(f"[3x3-SAMPLE] Completed {sample_pages_count} sample pages")
@@ -431,41 +451,79 @@ class SelectorMiner:
             )
             logger.info(f"[3x3-STRATEGY] Stored strategy for {domain}: use_js={use_js}")
             
-            # PHASE 3: Remaining pages (if any) use the learned strategy
-            if pages_crawled >= max_pages:
+            # PHASE 3: BFS crawl using learned strategy
+            if pages_crawled >= max_pages and max_pages != -1:
                 return
             
-            # Check if thumbnail limit reached before continuing
+            # Check thumbnail limit
             site_stats = await asyncio.to_thread(redis.get_site_stats, site_id)
             thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
             
             if thumbnails_saved >= self.config.nc_max_images_per_site:
-                logger.info(f"[3x3-CRAWL] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping crawl")
+                logger.info(f"[3x3-BFS] Site {site_id} reached image limit: {thumbnails_saved}")
                 return
             
-            # Continue with remaining pages using learned strategy
-            remaining_urls = []
-            for category_url in category_urls[6:]:  # Any remaining URLs beyond the sample
-                if category_url not in checked_urls and pages_crawled < max_pages:
-                    remaining_urls.append(category_url)
+            # BFS queue: start with remaining category URLs from initial discovery
+            url_queue = [url for url in category_urls if url not in checked_urls]
             
-            # Process remaining pages with learned strategy
-            for url in remaining_urls:
-                if pages_crawled >= max_pages:
-                    break
+            # If queue is empty or small, discover additional links from base page to seed BFS
+            # This ensures we have URLs to process even if all category URLs were sampled
+            if len(url_queue) < 5:  # Threshold: if less than 5 URLs, discover more
+                try:
+                    # Use the base page HTML we already fetched (from line 373)
+                    # Parse it and discover all same-domain links
+                    base_soup = BeautifulSoup(html, 'html.parser')
+                    additional_urls = await self._discover_all_same_domain_links(base_soup, base_url)
                     
-                candidates, _ = await self._fetch_and_mine_page(url, site_id)
-                pages_crawled += 1
-                yield url, candidates
+                    # Add new URLs that haven't been checked
+                    for new_url in additional_urls:
+                        if new_url not in checked_urls and new_url not in url_queue and new_url != base_url:
+                            url_queue.append(new_url)
+                    
+                    if additional_urls:
+                        discovered_count = len([u for u in additional_urls if u not in checked_urls and u != base_url])
+                        if discovered_count > 0:
+                            logger.debug(f"[3x3-BFS] Discovered {discovered_count} additional URLs from base page")
+                except Exception as e:
+                    logger.debug(f"Error discovering additional links from base page: {e}")
+            
+            logger.info(f"[3x3-BFS] Starting BFS with {len(url_queue)} initial URLs")
+            
+            while url_queue and (max_pages == -1 or pages_crawled < max_pages):
+                # Check limits before each batch
+                if thumbnails_saved >= self.config.nc_max_images_per_site:
+                    logger.info(f"[3x3-BFS] Image limit reached, stopping")
+                    break
                 
-                # Check limits after each page
+                # Pop next URL
+                current_url = url_queue.pop(0)
+                if current_url in checked_urls:
+                    continue
+                
+                checked_urls.add(current_url)
+                
+                # Fetch and mine page using learned strategy
+                candidates, html = await self._fetch_and_mine_page_with_html(current_url, site_id)
+                pages_crawled += 1
+                yield current_url, candidates
+                
+                # Discover new links from this page
+                if html and (max_pages == -1 or pages_crawled < max_pages):
+                    soup = BeautifulSoup(html, 'html.parser')
+                    new_urls = await self._discover_all_same_domain_links(soup, current_url)
+                    
+                    # Add undiscovered URLs to queue
+                    for new_url in new_urls:
+                        if new_url not in checked_urls and new_url not in url_queue:
+                            url_queue.append(new_url)
+                    
+                    logger.debug(f"[3x3-BFS] Discovered {len(new_urls)} links, queue size: {len(url_queue)}")
+                
+                # Re-check stats
                 site_stats = await asyncio.to_thread(redis.get_site_stats, site_id)
                 thumbnails_saved = site_stats.get('images_saved_thumbs', 0) if site_stats else 0
-                if thumbnails_saved >= self.config.nc_max_images_per_site:
-                    logger.info(f"[3x3-CRAWL] Site {site_id} has {thumbnails_saved} thumbnails (limit: {self.config.nc_max_images_per_site}), stopping crawl")
-                    return
             
-            logger.info(f"3x3 crawl completed: {pages_crawled} pages crawled, {len(checked_urls)} URLs checked")
+            logger.info(f"[3x3-BFS] Completed: {pages_crawled} pages crawled, {len(checked_urls)} URLs checked")
             
         except Exception as e:
             logger.error(f"Error in 3x3 crawl for {base_url}: {e}")
@@ -523,6 +581,39 @@ class SelectorMiner:
         except Exception as e:
             logger.error(f"Error fetching page {url}: {e}")
             return [], url
+    
+    async def _fetch_and_mine_page_with_html(self, url: str, site_id: str) -> Tuple[List[CandidateImage], Optional[str]]:
+        """Fetch and mine a page, returning both candidates and HTML for link discovery."""
+        try:
+            from urllib.parse import urlparse
+            from .redis_manager import get_redis_manager
+            domain = urlparse(url).netloc
+            redis = get_redis_manager()
+            
+            # Get stored strategy
+            use_js = await redis.get_domain_rendering_strategy_async(domain)
+            
+            html = None
+            async with self._semaphore:
+                if use_js is True:
+                    # FORCE JS rendering directly
+                    html, error = await self.http_utils._fetch_with_js(url)
+                elif use_js is False:
+                    # Use HTTP only
+                    html, error = await self.http_utils._fetch_with_redirects(url)
+                else:
+                    # No strategy yet - shouldn't happen in remaining pages
+                    html, error, _ = await self.http_utils.fetch_html(url)
+            
+            if html:
+                candidates = await self.mine_selectors(html, url, site_id)
+                return candidates, html
+            else:
+                logger.warning(f"Failed to fetch page {url}: {error}")
+                return [], None
+        except Exception as e:
+            logger.error(f"Error fetching page {url}: {e}")
+            return [], None
 
     async def _discover_random_same_domain_links(self, soup: BeautifulSoup, base_url: str, limit: int = 3) -> List[str]:
         """Pick random same-domain links when categories are not detected."""
@@ -637,6 +728,38 @@ class SelectorMiner:
             
         except Exception as e:
             logger.error(f"Error discovering content pages: {e}")
+            return []
+    
+    async def _discover_all_same_domain_links(self, soup: BeautifulSoup, base_url: str) -> List[str]:
+        """Discover all same-domain links from a page (for BFS crawling)."""
+        try:
+            same_host = urlparse(base_url).netloc
+            discovered_urls = []
+            
+            # Find all links
+            for a in soup.find_all('a', href=True):
+                href = a['href']
+                absolute_url = urljoin(base_url, href)
+                parsed_url = urlparse(absolute_url)
+                
+                # Same-domain only
+                if parsed_url.netloc == same_host:
+                    # Filter out auth/admin pages
+                    if not any(skip in parsed_url.path.lower() for skip in 
+                              ['/login', '/register', '/user', '/profile', '/admin', '/settings']):
+                        discovered_urls.append(absolute_url)
+            
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_urls = []
+            for url in discovered_urls:
+                if url not in seen:
+                    seen.add(url)
+                    unique_urls.append(url)
+            
+            return unique_urls
+        except Exception as e:
+            logger.debug(f"Error discovering links: {e}")
             return []
     
     async def mine_site(self, site_url: str, site_id: str) -> List[CandidateImage]:

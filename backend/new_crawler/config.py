@@ -28,47 +28,59 @@ class CrawlerConfig(BaseSettings):
     
     # Redis Configuration
     redis_url: str = "redis://redis:6379/0"
-    redis_max_connections: int = 200
+    redis_max_connections: int = 500  # Increased for diagnostic logging and high concurrency
     redis_retry_on_timeout: bool = True
     
     # Crawling Limits
-    nc_max_pages_per_site: int = 5
+    nc_max_pages_per_site: int = 5  # Set to -1 for unlimited crawling
     nc_max_images_per_site: int = 10
     
     # Debug Logging
     nc_debug_logging: bool = True
     nc_gpu_worker_logging: bool = True
+    nc_diagnostic_logging: bool = True  # Enable diagnostic bottleneck logging
+    nc_diagnostic_log_interval: int = 50  # Interval for periodic throughput logs
     
     # Queue Configuration
-    nc_batch_size: int = 256
-    nc_max_queue_depth: int = 1024
-    nc_extractor_concurrency: int = 256  # Total concurrent downloads across all extractor workers (divided among workers)
+    nc_batch_size: int = 256  # DEPRECATED: Old extractor batch threshold (no longer used - extractors push individually to gpu:inbox)
+    nc_max_queue_depth: int = 4096
+    nc_extractor_concurrency: int = 1024  # Total concurrent downloads across all extractor workers (divided among workers)
+    nc_extractor_batch_pop_size: int = 50  # Number of candidates to pop at once from queue
+    nc_url_dedup_ttl_hours: int = 24  # TTL for URL deduplication set
     nc_cache_ttl_days: int = 90
     
     # HTTP Performance Configuration
     nc_skip_head_check: bool = True  # Skip HEAD requests when HTML metadata is available
     
     # Crawler Performance Configuration
-    nc_max_concurrent_sites_per_worker: int = 16  # Max sites processed concurrently per crawler worker (eliminates site switching delays)
+    nc_max_concurrent_sites_per_worker: int = 32  # Max sites processed concurrently per crawler worker (eliminates site switching delays)
     
     # GPU Performance Configuration
-    nc_max_concurrent_batches_per_worker: int = 1  # Max batches processed concurrently per GPU worker (improves GPU utilization)
-    nc_batch_flush_timeout: float = 5.0  # Max seconds before forcing batch flush (prevents batches from sitting idle)
+    nc_max_concurrent_batches_per_worker: int = 2  # Max batches processed concurrently per GPU worker (improves GPU utilization) - NOTE: Overridden by GPU scheduler (max 2 inflight)
+    nc_batch_flush_timeout: float = 5.0  # DEPRECATED: Max seconds before forcing batch flush (no longer used with GPU scheduler)
     
     # Worker Configuration adds to 7 (8 cores-1 for Orchestrator)
     # Each extractor worker runs nc_extractor_concurrency // num_extractors concurrent download tasks
-    num_crawlers: int = 2
-    num_extractors: int = 4  # 4 workers × 16 concurrent downloads each = 64 total
+    num_crawlers: int = 3
+    num_extractors: int = 8  # 4 workers × 16 concurrent downloads each = 64 total
     num_gpu_processors: int = 1
+    num_storage_workers: int = 1  # Number of storage worker processes
     
     # GPU Worker Configuration
     gpu_worker_enabled: bool = True
     gpu_worker_url: str = "http://host.docker.internal:8765"
     gpu_worker_timeout: float = 60.0
     gpu_worker_max_retries: int = 3
-    gpu_min_batch_size: int = 64
-    # Time-based batch flush to smooth throughput (milliseconds)
-    gpu_batch_flush_ms: int = 3000
+    
+    # DEPRECATED: Old batching configuration (replaced by GPU scheduler)
+    gpu_min_batch_size: int = 64  # DEPRECATED: No longer used with GPU scheduler
+    gpu_batch_flush_ms: int = 3000  # DEPRECATED: No longer used with GPU scheduler
+    
+    # GPU Scheduler Configuration (new centralized batching)
+    gpu_target_batch: int = 512  # Target batch size for GPU processing
+    gpu_max_wait_ms: int = 12  # Max milliseconds to wait before launching early batch
+    gpu_min_launch_ms: int = 100  # Minimum milliseconds between batch launches (Windows/AMD stability)
+    gpu_inbox_key: str = "gpu:inbox"  # Redis queue key for GPU input (single FIFO queue)
     
     # MinIO Connection Pool Configuration
     minio_max_pool_size: int = 50
@@ -79,6 +91,11 @@ class CrawlerConfig(BaseSettings):
     nc_js_render_timeout: float = 20.0
     nc_max_redirects: int = 3
     nc_max_retries: int = 3
+    nc_retry_base_delay: float = 1.0  # Base delay for exponential backoff (seconds)
+    nc_retry_max_delay: float = 30.0  # Maximum delay for exponential backoff (seconds)
+    nc_retry_jitter: float = 0.5  # Random jitter added to retry delay (seconds)
+    nc_circuit_breaker_failure_threshold: int = 5  # Number of failures before opening circuit
+    nc_circuit_breaker_open_timeout_base: float = 30.0  # Base timeout for circuit breaker (seconds)
     
     # JavaScript Rendering Configuration
     nc_js_wait_strategy: str = "both"  # "fixed" | "networkidle" | "both"
@@ -87,7 +104,9 @@ class CrawlerConfig(BaseSettings):
     # First visit strategy: fetch both HTTP and JS, pick best by candidate count
     nc_js_first_visit_compare: bool = True
     # Max concurrent Playwright renders
-    nc_js_concurrency: int = 4
+    nc_js_concurrency: int = 32
+    # Browser pool size for JavaScript rendering
+    nc_js_browser_pool_size: int = 32
     
     # Image Extraction Configuration
     nc_extract_background_images: bool = True
@@ -208,6 +227,14 @@ class CrawlerConfig(BaseSettings):
             raise ValueError('JS wait selectors must be a non-empty string')
         return v.strip()
     
+    @field_validator('nc_max_pages_per_site')
+    @classmethod
+    def validate_max_pages(cls, v):
+        """Validate max pages per site."""
+        if v < -1 or v == 0:
+            raise ValueError('Max pages must be positive or -1 for unlimited')
+        return v
+    
     @property
     def is_docker(self) -> bool:
         """Check if running in Docker container."""
@@ -250,6 +277,7 @@ class CrawlerConfig(BaseSettings):
             'candidates': 'nc:candidates',
             'images': 'nc:images',
             'results': 'nc:results',
+            'storage': 'nc:storage',
             'cpu_fallback': 'nc:cpu_fallback'
         }
     

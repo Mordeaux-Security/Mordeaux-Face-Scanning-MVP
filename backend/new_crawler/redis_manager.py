@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from .config import get_config
 from .data_structures import (
     SiteTask, CandidateImage, ImageTask, FaceResult, 
-    BatchRequest, QueueMetrics, TaskStatus
+    BatchRequest, QueueMetrics, TaskStatus, StorageTask
 )
 
 logger = logging.getLogger(__name__)
@@ -65,9 +65,16 @@ class RedisManager:
         """Serialize Pydantic model to bytes."""
         return obj.model_dump_json().encode('utf-8')
     
-    def _deserialize(self, data: bytes, model_class) -> BaseModel:
-        """Deserialize bytes to Pydantic model."""
-        return model_class.model_validate_json(data.decode('utf-8'))
+    def _deserialize(self, data, model_class) -> BaseModel:
+        """Deserialize bytes or string to Pydantic model."""
+        # Handle both bytes and string (aioredis may return strings)
+        if isinstance(data, bytes):
+            return model_class.model_validate_json(data.decode('utf-8'))
+        elif isinstance(data, str):
+            return model_class.model_validate_json(data)
+        else:
+            # Try to convert to string
+            return model_class.model_validate_json(str(data))
     
     async def _get_async_pool(self) -> aioredis.ConnectionPool:
         """Get or create async Redis connection pool."""
@@ -275,6 +282,150 @@ class RedisManager:
             logger.error(f"Redis pop error: {e}")
             return None
     
+    # Storage Queue Operations
+    
+    def push_storage_task(self, storage_task: StorageTask) -> bool:
+        """Push storage task to storage queue."""
+        try:
+            client = self._get_client()
+            queue_name = self.config.get_queue_name('storage')
+            data = self._serialize(storage_task)
+            result = client.rpush(queue_name, data)
+            logger.debug(f"Pushed storage task to queue: {storage_task.image_task.phash[:8]}...")
+            return bool(result)
+        except redis.RedisError as e:
+            logger.error(f"Redis push storage task error: {e}")
+            return False
+    
+    async def push_storage_task_async(self, storage_task: StorageTask) -> bool:
+        """Push storage task to storage queue (async version)."""
+        try:
+            client = await self._get_async_client()
+            queue_name = self.config.get_queue_name('storage')
+            data = self._serialize(storage_task)
+            result = await client.rpush(queue_name, data)
+            logger.debug(f"Pushed storage task to queue (async): {storage_task.image_task.phash[:8]}...")
+            return bool(result)
+        except redis.RedisError as e:
+            logger.error(f"Redis push storage task error (async): {e}")
+            return False
+    
+    def pop_storage_task(self, timeout: float = 5.0) -> Optional[StorageTask]:
+        """Pop storage task from storage queue."""
+        try:
+            client = self._get_client()
+            queue_name = self.config.get_queue_name('storage')
+            result = client.brpop(queue_name, timeout=timeout)
+            
+            if result:
+                _, data = result
+                return self._deserialize(data, StorageTask)
+            return None
+        except redis.RedisError as e:
+            logger.error(f"Redis pop storage task error: {e}")
+            return None
+    
+    async def pop_storage_task_async(self, timeout: float = 5.0) -> Optional[StorageTask]:
+        """Pop storage task from storage queue (async version)."""
+        try:
+            client = await self._get_async_client()
+            queue_name = self.config.get_queue_name('storage')
+            result = await client.brpop(queue_name, timeout=timeout)
+            
+            if result:
+                _, data = result
+                return self._deserialize(data, StorageTask)
+            return None
+        except redis.RedisError as e:
+            logger.error(f"Redis pop storage task error (async): {e}")
+            return None
+    
+    # GPU Inbox Operations (new centralized batching)
+    
+    def push_many(self, key: str, payloads: list[bytes]) -> int:
+        """
+        Push multiple payloads to a Redis queue atomically.
+        
+        Args:
+            key: Redis queue key
+            payloads: List of bytes payloads to push
+            
+        Returns:
+            Number of items successfully pushed
+        """
+        if not payloads:
+            return 0
+        try:
+            # RPUSH = FIFO with BLPOP on consumer
+            client = self._get_client()
+            with client.pipeline() as p:
+                p.rpush(key, *payloads)
+                p.execute()
+            return len(payloads)
+        except redis.RedisError as e:
+            logger.error(f"Redis push_many error: {e}")
+            return 0
+    
+    def blpop_many(self, key: str, max_n: int, timeout: float = 0.5) -> list[bytes]:
+        """
+        Block for first item, then drain up to max_n-1 without blocking.
+        
+        Args:
+            key: Redis queue key
+            max_n: Maximum number of items to retrieve
+            timeout: Blocking timeout for first item (seconds)
+            
+        Returns:
+            List of bytes payloads (up to max_n items)
+        """
+        items: list[bytes] = []
+        try:
+            client = self._get_client()
+            # 1) Block for first item
+            res = client.blpop(key, timeout=timeout)
+            if not res:
+                return items
+            _, first = res
+            items.append(first)
+            
+            # 2) Drain tail quickly (non-blocking)
+            drain = max_n - 1
+            if drain > 0:
+                with client.pipeline() as p:
+                    for _ in range(drain):
+                        p.lpop(key)  # Continue from the head (RPUSH/BLPOP/LPOP = FIFO)
+                    drained = p.execute()
+                items.extend([x for x in drained if x is not None])
+            
+            return items
+        except redis.RedisError as e:
+            logger.error(f"Redis blpop_many error: {e}")
+            return items
+    
+    def serialize_image_task(self, task: ImageTask) -> bytes:
+        """
+        Serialize ImageTask to bytes.
+        
+        Args:
+            task: ImageTask to serialize
+            
+        Returns:
+            Serialized bytes
+        """
+        return self._serialize(task)
+    
+    def deserialize_image_task(self, data: bytes) -> ImageTask:
+        """
+        Deserialize bytes to ImageTask.
+        
+        Args:
+            data: Serialized bytes
+            
+        Returns:
+            Deserialized ImageTask
+        """
+        return self._deserialize(data, ImageTask)
+    
     # Queue Monitoring
     
     def get_queue_depth(self, queue_type: str) -> int:
@@ -295,6 +446,24 @@ class RedisManager:
             return await client.llen(queue_name)
         except Exception as e:
             logger.error(f"Failed to get queue depth for {queue_type} (async): {e}")
+            return 0
+    
+    def get_queue_length_by_key(self, key: str) -> int:
+        """Get queue length directly by Redis key name (not queue type)."""
+        try:
+            client = self._get_client()
+            return client.llen(key)
+        except Exception as e:
+            logger.debug(f"Failed to get queue length for key {key}: {e}")
+            return 0
+    
+    async def get_queue_length_by_key_async(self, key: str) -> int:
+        """Get queue length directly by Redis key name (async version)."""
+        try:
+            client = await self._get_async_client()
+            return await client.llen(key)
+        except Exception as e:
+            logger.debug(f"Failed to get queue length for key {key} (async): {e}")
             return 0
     
     def get_queue_metrics(self, queue_type: str) -> QueueMetrics:
@@ -445,6 +614,65 @@ class RedisManager:
             logger.error(f"Failed to check cache key {key}: {e}")
             return False
     
+    def url_seen(self, url: str) -> bool:
+        """Check if URL has been seen (for deduplication)."""
+        try:
+            client = self._get_client()
+            key = "candidates:urls_seen"
+            normalized_url = self._normalize_url(url)
+            return bool(client.sismember(key, normalized_url))
+        except redis.RedisError as e:
+            logger.error(f"Redis url_seen error: {e}")
+            return False
+    
+    async def url_seen_async(self, url: str) -> bool:
+        """Check if URL has been seen (async version)."""
+        try:
+            client = await self._get_async_client()
+            key = "candidates:urls_seen"
+            normalized_url = self._normalize_url(url)
+            return bool(await client.sismember(key, normalized_url))
+        except redis.RedisError as e:
+            logger.error(f"Redis url_seen_async error: {e}")
+            return False
+    
+    def mark_url_seen(self, url: str, ttl_seconds: int = None) -> bool:
+        """Mark URL as seen (for deduplication)."""
+        try:
+            client = self._get_client()
+            key = "candidates:urls_seen"
+            normalized_url = self._normalize_url(url)
+            client.sadd(key, normalized_url)
+            if ttl_seconds:
+                client.expire(key, ttl_seconds)
+            return True
+        except redis.RedisError as e:
+            logger.error(f"Redis mark_url_seen error: {e}")
+            return False
+    
+    async def mark_url_seen_async(self, url: str, ttl_seconds: int = None) -> bool:
+        """Mark URL as seen (async version)."""
+        try:
+            client = await self._get_async_client()
+            key = "candidates:urls_seen"
+            normalized_url = self._normalize_url(url)
+            await client.sadd(key, normalized_url)
+            if ttl_seconds:
+                await client.expire(key, ttl_seconds)
+            return True
+        except redis.RedisError as e:
+            logger.error(f"Redis mark_url_seen_async error: {e}")
+            return False
+    
+    def _normalize_url(self, url: str) -> str:
+        """Normalize URL for deduplication (strip query params/fragments that don't affect image)."""
+        from urllib.parse import urlparse, urlunparse
+        parsed = urlparse(url)
+        # Keep scheme, netloc, path - strip params, query, fragment
+        # This handles URLs like "image.jpg?v=123&size=large#fragment" -> "image.jpg"
+        normalized = urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', '', ''))
+        return normalized
+    
     # Queue Management
     
     def clear_queues(self) -> bool:
@@ -579,17 +807,17 @@ class RedisManager:
                 else:
                     processed_stats[field] = value
             
-            # Use HINCRBY for numeric fields, HSET for others
+            # Use HINCRBY for integers and HINCRBYFLOAT for floats (both atomic)
+            # For non-numeric values, use HSET
             async with client.pipeline() as pipeline:
                 for field, value in processed_stats.items():
                     if isinstance(value, (int, float)):
                         if isinstance(value, int):
                             await pipeline.hincrby(key, field, value)
                         else:
-                            # For floats, get current value and add
-                            current = await client.hget(key, field)
-                            new_value = float(current or 0) + value
-                            await pipeline.hset(key, field, str(new_value))
+                            # Use HINCRBYFLOAT for atomic float increment
+                            # This is atomic, unlike read-modify-write
+                            await pipeline.hincrbyfloat(key, field, value)
                     else:
                         await pipeline.hset(key, field, str(value))
                 await pipeline.execute()
@@ -655,9 +883,15 @@ class RedisManager:
             return False
     
     # Shared Batch Management
+    # DEPRECATED: These methods are no longer used with GPU scheduler migration.
+    # Extractors now push directly to gpu:inbox queue, and scheduler handles batching.
+    # Kept for backward compatibility during migration period.
     
     def push_to_shared_batch(self, image_task: ImageTask) -> int:
-        """Push image task to shared batch accumulator and return new size."""
+        """DEPRECATED: Push image task to shared batch accumulator and return new size.
+        
+        Replaced by: push_many() to gpu:inbox queue.
+        """
         try:
             client = self._get_client()
             batch_key = "batch:accumulator"
@@ -674,7 +908,10 @@ class RedisManager:
             return 0
 
     async def push_to_shared_batch_async(self, image_task: ImageTask) -> int:
-        """Push image task to shared batch accumulator (async)."""
+        """DEPRECATED: Push image task to shared batch accumulator (async).
+        
+        Replaced by: push_many() to gpu:inbox queue.
+        """
         try:
             client = await self._get_async_client()
             batch_key = "batch:accumulator"
@@ -694,7 +931,10 @@ class RedisManager:
             return 0
 
     async def flush_shared_batch_if_ready_async(self, batch_size_threshold: int) -> bool:
-        """Atomically flush shared batch if it reaches threshold. Returns True if flushed."""
+        """DEPRECATED: Atomically flush shared batch if it reaches threshold. Returns True if flushed.
+        
+        Replaced by: GPU scheduler handles batching automatically.
+        """
         try:
             client = await self._get_async_client()
             batch_key = "batch:accumulator"
@@ -738,7 +978,10 @@ class RedisManager:
             return False
 
     async def flush_shared_batch_if_stale_async(self, stale_ms: int, min_items: int, max_batch_size: int) -> bool:
-        """Flush shared batch if stale time exceeded and at least min_items present. Returns True if flushed."""
+        """DEPRECATED: Flush shared batch if stale time exceeded and at least min_items present. Returns True if flushed.
+        
+        Replaced by: GPU scheduler handles timing automatically.
+        """
         try:
             client = await self._get_async_client()
             batch_key = "batch:accumulator"
@@ -857,7 +1100,10 @@ class RedisManager:
             return False
 
     def get_shared_batch_size(self) -> int:
-        """Get current size of shared batch accumulator."""
+        """DEPRECATED: Get current size of shared batch accumulator.
+        
+        Replaced by: Direct LLEN check on gpu:inbox queue if needed.
+        """
         try:
             client = self._get_client()
             return client.llen("batch:accumulator")
@@ -866,7 +1112,10 @@ class RedisManager:
             return 0
 
     async def get_shared_batch_size_async(self) -> int:
-        """Get current size of shared batch accumulator (async)."""
+        """DEPRECATED: Get current size of shared batch accumulator (async).
+        
+        Replaced by: Direct LLEN check on gpu:inbox queue if needed.
+        """
         try:
             client = await self._get_async_client()
             return await client.llen("batch:accumulator")
@@ -895,7 +1144,10 @@ class RedisManager:
             return False
 
     async def is_gpu_idle_async(self) -> bool:
-        """Check if GPU is idle (not processing a batch)."""
+        """DEPRECATED: Check if GPU is idle (not processing a batch).
+        
+        No longer needed: GPU scheduler handles pacing automatically.
+        """
         try:
             client = await self._get_async_client()
             return not await client.exists("gpu:processing")

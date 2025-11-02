@@ -5,8 +5,10 @@ Clean Pydantic models for all queue messages and data flow.
 Ensures type safety and consistent data structures throughout the system.
 """
 
+import base64
+import json
 from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, model_serializer, field_validator
 from datetime import datetime
 from enum import Enum
 
@@ -117,6 +119,47 @@ class FaceResult(BaseModel):
     saved_to_thumbs: bool = Field(default=False, description="Whether thumbnails were saved")
     skip_reason: Optional[str] = Field(None, description="Reason for skipping save")
     created_at: datetime = Field(default_factory=datetime.now)
+
+
+class StorageTask(BaseModel):
+    """Task for storage operations - pre-cropped faces ready for I/O."""
+    image_task: ImageTask = Field(..., description="Original image task")
+    face_result: FaceResult = Field(..., description="Face detection result with faces but not yet saved")
+    face_crops: List[bytes] = Field(default_factory=list, description="Pre-cropped face images as bytes")
+    batch_start_time: float = Field(..., description="Batch processing start time for timing")
+    created_at: datetime = Field(default_factory=datetime.now)
+    
+    def model_dump(self, **kwargs):
+        """Override model_dump to base64-encode face_crops for JSON serialization."""
+        data = super().model_dump(**kwargs)
+        # Convert bytes to base64 strings for JSON serialization
+        if 'face_crops' in data and data['face_crops']:
+            data['face_crops'] = [base64.b64encode(crop).decode('utf-8') if isinstance(crop, bytes) else crop 
+                                   for crop in data['face_crops']]
+        return data
+    
+    def model_dump_json(self, **kwargs):
+        """Override model_dump_json to ensure face_crops are base64-encoded."""
+        # First dump to dict with base64 encoding
+        data = self.model_dump(**kwargs)
+        # Then convert to JSON string
+        return json.dumps(data, default=str)
+    
+    @field_validator('face_crops', mode='before')
+    @classmethod
+    def decode_face_crops(cls, v):
+        """Decode base64 strings back to bytes if needed."""
+        if not v:
+            return []
+        if isinstance(v, list) and len(v) > 0:
+            # Check if first element is a string (base64-encoded)
+            if isinstance(v[0], str):
+                # Already base64-encoded strings, decode them
+                return [base64.b64decode(crop.encode('utf-8')) for crop in v]
+            elif isinstance(v[0], bytes):
+                # Already bytes, return as-is
+                return v
+        return v
 
 
 class ProcessingStats(BaseModel):

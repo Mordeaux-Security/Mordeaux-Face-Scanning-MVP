@@ -17,7 +17,7 @@ import json
 from datetime import datetime
 
 from .config import get_config
-from .data_structures import ImageTask, FaceDetection, FaceResult
+from .data_structures import ImageTask, FaceDetection, FaceResult, StorageTask
 
 logger = logging.getLogger(__name__)
 
@@ -228,9 +228,14 @@ class StorageManager:
         """Save face thumbnail to MinIO (async wrapper around sync)."""
         try:
             # Use sync client in thread pool for async behavior
-            return await asyncio.to_thread(
+            minio_upload_start = time.time()
+            result = await asyncio.to_thread(
                 self.save_face_thumbnail, face_crop_data, face_detection, base_hash, face_index
             )
+            minio_upload_duration = (time.time() - minio_upload_start) * 1000
+            if result[0]:
+                logger.debug(f"[STORAGE-DIAG] Thumbnail MinIO upload: {result[0]}, duration={minio_upload_duration:.1f}ms")
+            return result
         except Exception as e:
             logger.error(f"Failed to save face thumbnail: {e}")
             return None, None
@@ -284,45 +289,33 @@ class StorageManager:
         """Save metadata sidecar file (async wrapper around sync)."""
         try:
             # Use sync client in thread pool for async behavior
-            return await asyncio.to_thread(
+            metadata_upload_start = time.time()
+            result = await asyncio.to_thread(
                 self.save_metadata, image_task, face_result, raw_key, thumbnail_keys
             )
+            metadata_upload_duration = (time.time() - metadata_upload_start) * 1000
+            logger.debug(f"[STORAGE-DIAG] Metadata upload duration={metadata_upload_duration:.1f}ms")
+            return result
         except Exception as e:
             logger.error(f"Failed to save metadata: {e}")
             return False
     
-    # TODO: ARCHITECTURE ISSUE - Compute in Storage Layer
-    # Storage manager should NOT do image manipulation (PIL operations).
-    # Cropping is compute-heavy and belongs in GPU processor worker.
-    #
-    # Current (WRONG):
-    #   GPU Processor -> Storage -> PIL crop -> Save thumbnails
-    #
-    # Proposed (CLEAN):
-    #   GPU Processor -> PIL crop -> Storage -> Save pre-cropped bytes
-    #
-    # This method should be moved to gpu_processor_worker.py or a dedicated
-    # image_processing utility module. Storage should receive pre-cropped bytes.
-    #
-    # Impact: ~100-200ms saved per batch by doing crops during GPU wait time
     
+    # DEPRECATED: Cropping methods moved to gpu_processor_worker.py
+    # These are kept for backwards compatibility only
     def crop_face_from_image(self, image_path: str, face_detection: FaceDetection, 
                             margin: float = None) -> Optional[bytes]:
-        """Crop face from image."""
+        """DEPRECATED: Crop face from image. Use GPU processor for cropping instead."""
         try:
             from PIL import Image
-            import os
-            
-            # DEBUG: Log inputs
-            logger.info(f"[CROP DEBUG] Starting crop: path={image_path}, bbox={face_detection.bbox}")
-            
-            # Check file exists
-            if not os.path.exists(image_path):
-                logger.error(f"[CROP DEBUG] File not found: {image_path}")
-                return None
             
             if margin is None:
                 margin = self.config.face_margin
+            
+            # Check file exists
+            if not os.path.exists(image_path):
+                logger.error(f"[STORAGE] File not found for cropping: {image_path}")
+                return None
             
             # Load image
             with Image.open(image_path) as img:
@@ -336,17 +329,13 @@ class StorageManager:
                 bbox = face_detection.bbox
                 x1, y1, x2, y2 = bbox
                 
-                # DEBUG: Check if coordinates are already normalized (0-1 range)
+                # Check if coordinates are already normalized (0-1 range)
                 if x1 > 1.0 or y1 > 1.0 or x2 > 1.0 or y2 > 1.0:
                     # Coordinates are in pixels, normalize them
-                    logger.info(f"[CROP DEBUG] Normalizing pixel coordinates: {bbox} -> image size: {width}x{height}")
                     x1 = x1 / width
                     y1 = y1 / height
                     x2 = x2 / width
                     y2 = y2 / height
-                    logger.info(f"[CROP DEBUG] Normalized coordinates: [{x1:.3f}, {y1:.3f}, {x2:.3f}, {y2:.3f}]")
-                else:
-                    logger.info(f"[CROP DEBUG] Using normalized coordinates: [{x1:.3f}, {y1:.3f}, {x2:.3f}, {y2:.3f}]")
                 
                 # Convert to pixel coordinates
                 x1 = int(x1 * width)
@@ -372,15 +361,11 @@ class StorageManager:
                     return None
                 
                 if x2 - x1 < self.config.min_face_size or y2 - y1 < self.config.min_face_size:
-                    logger.info(f"[CROP DEBUG] Skipping tiny face: ({x2 - x1}x{y2 - y1}) < {self.config.min_face_size}")
+                    logger.debug(f"Skipping tiny face: ({x2 - x1}x{y2 - y1}) < {self.config.min_face_size}")
                     return None
 
-                logger.info(f"[CROP DEBUG] crop_px=({x1},{y1},{x2},{y2})")
                 # Crop the face
                 face_crop = img.crop((x1, y1, x2, y2))
-                
-                # Resize to thumbnail size
-                #face_crop.thumbnail((256, 256), Image.Resampling.LANCZOS)
                 
                 # Convert to bytes
                 output = io.BytesIO()
@@ -393,7 +378,7 @@ class StorageManager:
     
     async def crop_face_from_image_async(self, image_path: str, face_detection: FaceDetection, 
                                         margin: float = None) -> Optional[bytes]:
-        """Crop face from image (async - runs PIL in thread pool)."""
+        """DEPRECATED: Crop face from image (async). Use GPU processor for cropping instead."""
         return await asyncio.to_thread(
             self.crop_face_from_image, image_path, face_detection, margin
         )
@@ -472,53 +457,69 @@ class StorageManager:
     
     async def save_face_result_async(self, image_task: ImageTask, face_result: FaceResult) -> Tuple[FaceResult, Dict[str, int]]:
         """Save complete face result to storage (async with concurrent operations)."""
+        save_start_time = time.time()
         try:
             save_counts = {'saved_raw': 0, 'saved_thumbs': 0}
             
             # Save raw image (async)
-            logger.debug(f"[STORAGE] Saving raw image: {image_task.phash[:8]}..., size={image_task.file_size}bytes")
+            raw_start = time.time()
+            logger.debug(f"[STORAGE-DIAG] Starting raw image save: {image_task.phash[:8]}..., size={image_task.file_size}bytes")
             raw_key, raw_url = await self.save_raw_image_async(image_task)
+            raw_duration = (time.time() - raw_start) * 1000
             if not raw_key:
-                logger.error("Failed to save raw image")
+                logger.error(f"[STORAGE-DIAG] Failed to save raw image after {raw_duration:.1f}ms")
                 return face_result, save_counts
             
             face_result.raw_image_key = raw_key
             save_counts['saved_raw'] = 1
-            logger.debug(f"[STORAGE] Raw image saved: {raw_key}")
+            logger.debug(f"[STORAGE-DIAG] Raw image saved: {raw_key}, duration={raw_duration:.1f}ms")
             
             # Process all face thumbnails concurrently
+            thumbnail_start = time.time()
+            num_faces = len(face_result.faces)
+            logger.debug(f"[STORAGE-DIAG] Starting {num_faces} thumbnail saves concurrently: {image_task.phash[:8]}...")
+            
             thumbnail_tasks = []
             for i, face_detection in enumerate(face_result.faces):
-                logger.debug(f"[STORAGE] Preparing thumbnail {i+1}/{len(face_result.faces)}: {image_task.phash[:8]}...")
                 # Create task for concurrent execution
                 task = self._save_single_thumbnail(image_task, face_detection, raw_key, i)
                 thumbnail_tasks.append(task)
             
             # Execute all thumbnail saves concurrently
             thumbnail_results = await asyncio.gather(*thumbnail_tasks, return_exceptions=True)
+            thumbnail_duration = (time.time() - thumbnail_start) * 1000
             
             # Collect successful saves
             thumbnail_keys = []
             crop_paths = []
+            failed_thumbnails = 0
             for i, result in enumerate(thumbnail_results):
                 if isinstance(result, Exception):
-                    logger.warning(f"[STORAGE] Failed to save thumbnail {i}: {result}")
+                    logger.warning(f"[STORAGE-DIAG] Failed to save thumbnail {i}: {result}")
+                    failed_thumbnails += 1
                 elif result:
                     thumb_key, _ = result
                     if thumb_key:
                         thumbnail_keys.append(thumb_key)
                         crop_paths.append(f"temp_crop_{i}.jpg")
                         save_counts['saved_thumbs'] += 1
-                        logger.debug(f"[STORAGE] Thumbnail saved: {thumb_key}")
             
             face_result.thumbnail_keys = thumbnail_keys
             face_result.crop_paths = crop_paths
             
-            # Save metadata (async)
-            logger.debug(f"[STORAGE] Saving metadata: {image_task.phash[:8]}...")
-            await self.save_metadata_async(image_task, face_result, raw_key, thumbnail_keys)
+            logger.debug(f"[STORAGE-DIAG] Thumbnails completed: {len(thumbnail_keys)}/{num_faces} saved, "
+                        f"failed={failed_thumbnails}, duration={thumbnail_duration:.1f}ms")
             
-            logger.info(f"[STORAGE] Save complete: raw={raw_key}, thumbs={len(thumbnail_keys)}")
+            # Save metadata (async)
+            metadata_start = time.time()
+            logger.debug(f"[STORAGE-DIAG] Saving metadata: {image_task.phash[:8]}...")
+            await self.save_metadata_async(image_task, face_result, raw_key, thumbnail_keys)
+            metadata_duration = (time.time() - metadata_start) * 1000
+            
+            total_duration = (time.time() - save_start_time) * 1000
+            logger.info(f"[STORAGE-DIAG] Save complete: raw={raw_key}, thumbs={len(thumbnail_keys)}, "
+                       f"total={total_duration:.1f}ms (raw={raw_duration:.1f}ms, thumbs={thumbnail_duration:.1f}ms, "
+                       f"metadata={metadata_duration:.1f}ms)")
             return face_result, save_counts
             
         except Exception as e:
@@ -528,30 +529,116 @@ class StorageManager:
     async def _save_single_thumbnail(self, image_task: ImageTask, face_detection: FaceDetection, 
                                     raw_key: str, face_index: int) -> Optional[Tuple[str, str]]:
         """Save a single thumbnail (helper for concurrent execution)."""
+        thumb_start = time.time()
         try:
-            logger.info(f"[THUMB DEBUG] Starting thumbnail {face_index}: task={image_task.phash[:8]}, temp_path={image_task.temp_path}")
-            
             # Crop face (runs PIL in thread pool)
+            crop_start = time.time()
             face_crop_data = await self.crop_face_from_image_async(image_task.temp_path, face_detection)
+            crop_duration = (time.time() - crop_start) * 1000
             if not face_crop_data:
-                logger.warning(f"[STORAGE] Failed to crop face {face_index} from {image_task.phash[:8]}, temp_path={image_task.temp_path}")
+                logger.warning(f"[STORAGE-DIAG] Failed to crop face {face_index} from {image_task.phash[:8]} after {crop_duration:.1f}ms")
                 return None
             
-            logger.info(f"[THUMB DEBUG] Crop succeeded, saving to MinIO: {len(face_crop_data)} bytes")
-            
             # Save thumbnail (async)
+            minio_start = time.time()
             thumb_key, thumb_url = await self.save_face_thumbnail_async(
                 face_crop_data, face_detection, raw_key, face_index
             )
+            minio_duration = (time.time() - minio_start) * 1000
             if not thumb_key:
-                logger.warning(f"[STORAGE] Failed to save thumbnail {face_index} to MinIO")
+                logger.warning(f"[STORAGE-DIAG] Failed to save thumbnail {face_index} to MinIO after {minio_duration:.1f}ms")
                 return None
             
-            logger.info(f"[THUMB DEBUG] Thumbnail saved: {thumb_key}")
+            total_duration = (time.time() - thumb_start) * 1000
+            logger.debug(f"[STORAGE-DIAG] Thumbnail {face_index} saved: {thumb_key}, "
+                        f"total={total_duration:.1f}ms (crop={crop_duration:.1f}ms, minio={minio_duration:.1f}ms)")
             return thumb_key, thumb_url
         except Exception as e:
             logger.error(f"[STORAGE] Error saving thumbnail {face_index}: {e}", exc_info=True)
             return None
+    
+    async def save_storage_task_async(self, storage_task: StorageTask) -> Tuple[FaceResult, Dict[str, int]]:
+        """Save storage task to MinIO - receives pre-cropped face bytes (pure I/O operation)."""
+        save_start_time = time.time()
+        image_task = storage_task.image_task
+        face_result = storage_task.face_result
+        face_crops = storage_task.face_crops
+        
+        try:
+            save_counts = {'saved_raw': 0, 'saved_thumbs': 0}
+            
+            # Save raw image (async)
+            raw_start = time.time()
+            logger.debug(f"[STORAGE-DIAG] Starting raw image save: {image_task.phash[:8]}..., size={image_task.file_size}bytes")
+            raw_key, raw_url = await self.save_raw_image_async(image_task)
+            raw_duration = (time.time() - raw_start) * 1000
+            if not raw_key:
+                logger.error(f"[STORAGE-DIAG] Failed to save raw image after {raw_duration:.1f}ms")
+                return face_result, save_counts
+            
+            face_result.raw_image_key = raw_key
+            save_counts['saved_raw'] = 1
+            logger.debug(f"[STORAGE-DIAG] Raw image saved: {raw_key}, duration={raw_duration:.1f}ms")
+            
+            # Save pre-cropped face thumbnails concurrently (pure I/O - no cropping needed)
+            thumbnail_start = time.time()
+            num_faces = len(face_result.faces)
+            num_crops = len(face_crops)
+            logger.debug(f"[STORAGE-DIAG] Starting {num_crops} thumbnail saves (pre-cropped): {image_task.phash[:8]}...")
+            
+            if num_crops != num_faces:
+                logger.warning(f"[STORAGE-DIAG] Mismatch: {num_faces} faces but {num_crops} crops for {image_task.phash[:8]}...")
+            
+            thumbnail_tasks = []
+            for i, (face_detection, face_crop_bytes) in enumerate(zip(face_result.faces[:num_crops], face_crops)):
+                # Save pre-cropped bytes directly (no PIL operations)
+                task = self.save_face_thumbnail_async(
+                    face_crop_bytes, face_detection, raw_key, i
+                )
+                thumbnail_tasks.append(task)
+            
+            # Execute all thumbnail saves concurrently
+            thumbnail_results = await asyncio.gather(*thumbnail_tasks, return_exceptions=True)
+            thumbnail_duration = (time.time() - thumbnail_start) * 1000
+            
+            # Collect successful saves
+            thumbnail_keys = []
+            crop_paths = []
+            failed_thumbnails = 0
+            for i, result in enumerate(thumbnail_results):
+                if isinstance(result, Exception):
+                    logger.warning(f"[STORAGE-DIAG] Failed to save thumbnail {i}: {result}")
+                    failed_thumbnails += 1
+                elif result:
+                    thumb_key, _ = result
+                    if thumb_key:
+                        thumbnail_keys.append(thumb_key)
+                        crop_paths.append(f"temp_crop_{i}.jpg")
+                        save_counts['saved_thumbs'] += 1
+            
+            face_result.thumbnail_keys = thumbnail_keys
+            face_result.crop_paths = crop_paths
+            face_result.saved_to_raw = True
+            face_result.saved_to_thumbs = len(thumbnail_keys) > 0
+            
+            logger.debug(f"[STORAGE-DIAG] Thumbnails completed: {len(thumbnail_keys)}/{num_crops} saved, "
+                        f"failed={failed_thumbnails}, duration={thumbnail_duration:.1f}ms")
+            
+            # Save metadata (async)
+            metadata_start = time.time()
+            logger.debug(f"[STORAGE-DIAG] Saving metadata: {image_task.phash[:8]}...")
+            await self.save_metadata_async(image_task, face_result, raw_key, thumbnail_keys)
+            metadata_duration = (time.time() - metadata_start) * 1000
+            
+            total_duration = (time.time() - save_start_time) * 1000
+            logger.info(f"[STORAGE-DIAG] Save complete: raw={raw_key}, thumbs={len(thumbnail_keys)}, "
+                       f"total={total_duration:.1f}ms (raw={raw_duration:.1f}ms, thumbs={thumbnail_duration:.1f}ms, "
+                       f"metadata={metadata_duration:.1f}ms)")
+            return face_result, save_counts
+            
+        except Exception as e:
+            logger.error(f"Failed to save storage task: {e}", exc_info=True)
+            return face_result, save_counts
     
     def skip_save(self, image_task: ImageTask, face_result: FaceResult, skip_reason: str) -> FaceResult:
         """Create FaceResult without saving to storage."""

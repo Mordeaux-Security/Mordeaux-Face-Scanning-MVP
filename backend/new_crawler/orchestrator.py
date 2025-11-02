@@ -35,6 +35,7 @@ class Orchestrator:
         self.crawler_processes: List[Process] = []
         self.extractor_processes: List[Process] = []
         self.gpu_processor_processes: List[Process] = []
+        self.storage_processes: List[Process] = []
         
         # Back-pressure monitoring
         self._backpressure_task: Optional[asyncio.Task] = None
@@ -71,17 +72,20 @@ class Orchestrator:
                 candidates_depth = queue_lengths.get('candidates', 0)
                 candidates_util = candidates_depth / self.config.nc_max_queue_depth
                 
-                # Check if image batches queue is backing up
-                images_depth = queue_lengths.get('images', 0)
-                images_util = images_depth / self.config.nc_max_queue_depth
+                # Check if GPU inbox queue is backing up (replaces old images queue monitoring)
+                inbox_key = getattr(self.config, 'gpu_inbox_key', 'gpu:inbox')
+                inbox_depth = await asyncio.to_thread(
+                    self.redis._get_client().llen, inbox_key
+                )
+                inbox_util = inbox_depth / self.config.nc_max_queue_depth
                 
                 # Apply back-pressure if any queue > 75% full
                 self._should_throttle = (
-                    candidates_util > 0.75 or images_util > 0.75
+                    candidates_util > 0.75 or inbox_util > 0.75
                 )
                 
                 if self._should_throttle:
-                    logger.warning(f"Back-pressure active: candidates={candidates_util:.1%}, images={images_util:.1%}")
+                    logger.warning(f"Back-pressure active: candidates={candidates_util:.1%}, gpu_inbox={inbox_util:.1%}")
                 
                 await asyncio.sleep(self.config.backpressure_check_interval)
             except Exception as e:
@@ -154,9 +158,21 @@ class Orchestrator:
             self.gpu_processor_processes.append(process)
             logger.info(f"Started GPU processor worker {i} (PID: {process.pid})")
         
+        # Start storage workers
+        for i in range(self.config.num_storage_workers):
+            process = Process(
+                target=self._run_storage_worker,
+                args=(i,),
+                name=f"Storage-{i}"
+            )
+            process.start()
+            self.storage_processes.append(process)
+            logger.info(f"Started storage worker {i} (PID: {process.pid})")
+        
         logger.info(f"Started {len(self.crawler_processes)} crawlers, "
                    f"{len(self.extractor_processes)} extractors, "
-                   f"{len(self.gpu_processor_processes)} GPU processors")
+                   f"{len(self.gpu_processor_processes)} GPU processors, "
+                   f"{len(self.storage_processes)} storage workers")
     
     def stop_workers(self):
         """Stop all worker processes."""
@@ -189,6 +205,15 @@ class Orchestrator:
                     logger.warning(f"Force killing crawler {process.name}")
                     process.kill()
         
+        # Stop storage workers
+        for process in self.storage_processes:
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=10)
+                if process.is_alive():
+                    logger.warning(f"Force killing storage worker {process.name}")
+                    process.kill()
+        
         logger.info("All worker processes stopped")
     
     def _run_crawler_worker(self, worker_id: int):
@@ -205,6 +230,11 @@ class Orchestrator:
         """Run GPU processor worker process."""
         from .gpu_processor_worker import gpu_processor_worker_process
         gpu_processor_worker_process(worker_id)
+    
+    def _run_storage_worker(self, worker_id: int):
+        """Run storage worker process."""
+        from .storage_worker import storage_worker_process
+        storage_worker_process(worker_id)
     
     def push_sites(self, sites: List[str]):
         """Push sites to crawl queue."""

@@ -115,6 +115,14 @@ class TimingLogger:
         """Log GPU batch ends."""
         self._log("GPU_BATCH_END", batch_id, f"{duration_ms:.0f}ms", f"{images_processed} images")
     
+    def log_storage_start(self, site_id: str, image_id: str):
+        """Log storage operation begins."""
+        self._log("STORAGE_START", site_id, image_id)
+    
+    def log_storage_end(self, site_id: str, image_id: str, duration_ms: float, faces_count: int, raw_saved: bool, thumbs_count: int):
+        """Log storage operation ends."""
+        self._log("STORAGE_END", site_id, image_id, f"{duration_ms:.0f}ms", f"{faces_count} faces", f"raw={raw_saved}", f"{thumbs_count} thumbs")
+    
     def log_crawl_end(self, duration_ms: float, total_sites: int, total_images: int):
         """Log crawl ends."""
         self._log("CRAWL_END", f"{duration_ms:.0f}ms", f"{total_sites} sites", f"{total_images} images")

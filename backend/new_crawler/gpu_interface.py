@@ -167,12 +167,26 @@ class GPUInterface:
                 return None
             
             # Prepare request data with consistent structure
+            # Track which original indices successfully encoded (for result mapping)
             images_data = []
+            encoded_indices = []  # Maps images_data index -> original image_bytes_list index
+            
             for i, (original_idx, image_bytes) in enumerate(valid_images):
-                images_data.append({
-                    "data": self._encode_image(image_bytes),
-                    "image_id": f"img_{original_idx}"
-                })
+                try:
+                    encoded_data = self._encode_image(image_bytes)
+                    images_data.append({
+                        "data": encoded_data,
+                        "image_id": f"img_{original_idx}"
+                    })
+                    encoded_indices.append(original_idx)
+                except Exception as e:
+                    logger.warning(f"Failed to encode image {original_idx} (size: {len(image_bytes)} bytes): {e}. Skipping.")
+                    # Continue processing other images instead of failing entire batch
+                    continue
+            
+            if not images_data:
+                logger.warning("No valid images after encoding validation")
+                return None
             
             request_data = {
                 "images": images_data,
@@ -186,8 +200,8 @@ class GPUInterface:
             client = await self._get_client()
             start_time = time.time()
             
-            self.gpu_logger.log_request_start(len(valid_images), f"{self.config.gpu_worker_host_resolved}/detect_faces_batch")
-            self.gpu_logger.log_batch_encoding_start(len(valid_images))
+            self.gpu_logger.log_request_start(len(images_data), f"{self.config.gpu_worker_host_resolved}/detect_faces_batch")
+            self.gpu_logger.log_batch_encoding_start(len(images_data))
             
             response = await client.post(
                 f"{self.config.gpu_worker_host_resolved}/detect_faces_batch",
@@ -209,14 +223,24 @@ class GPUInterface:
                         face_detections.append(face_detection)
                     results.append(face_detections)
                 
-                # Pad results for failed image loads
+                # Pad results for failed image loads AND skipped encoding failures
+                # Create a map of original_index -> result_index for result mapping
+                # encoded_indices[result_idx] = original_index, so we reverse it
+                original_to_result = {orig_idx: result_idx for result_idx, orig_idx in enumerate(encoded_indices)}
+                
                 full_results = []
-                valid_idx = 0
                 for i, img_bytes in enumerate(image_bytes_list):
                     if img_bytes:
-                        full_results.append(results[valid_idx])
-                        valid_idx += 1
+                        # Check if this image was successfully encoded and sent to GPU
+                        if i in original_to_result:
+                            # This image was sent to GPU, get its result
+                            result_idx = original_to_result[i]
+                            full_results.append(results[result_idx])
+                        else:
+                            # This image failed encoding validation, return empty results
+                            full_results.append([])
                     else:
+                        # This image failed to load from disk
                         full_results.append([])
                 
                 gpu_used = result_data.get('gpu_used', False)
@@ -225,12 +249,20 @@ class GPUInterface:
                 # Count total faces found
                 total_faces = sum(len(faces) for faces in results)
                 
-                logger.info(f"✓ GPU worker processed {len(image_tasks)} images in "
-                           f"{processing_time:.1f}ms (GPU: {gpu_used}, worker: {worker_id})")
+                encoded_count = len(images_data)
+                skipped_count = len(valid_images) - encoded_count
+                
+                if skipped_count > 0:
+                    logger.info(f"✓ GPU worker processed {encoded_count}/{len(image_tasks)} images "
+                               f"({skipped_count} skipped due to encoding errors) in "
+                               f"{processing_time:.1f}ms (GPU: {gpu_used}, worker: {worker_id})")
+                else:
+                    logger.info(f"✓ GPU worker processed {len(image_tasks)} images in "
+                               f"{processing_time:.1f}ms (GPU: {gpu_used}, worker: {worker_id})")
                 
                 # Use GPU worker logger
                 self.gpu_logger.log_result_decoding_complete(total_faces)
-                self.gpu_logger.log_request_complete(len(image_tasks), total_faces, processing_time, gpu_used)
+                self.gpu_logger.log_request_complete(encoded_count, total_faces, processing_time, gpu_used)
                 
                 # Update metrics
                 self._request_count += 1
