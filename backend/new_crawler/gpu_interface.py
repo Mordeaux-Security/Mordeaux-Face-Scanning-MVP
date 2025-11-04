@@ -7,6 +7,7 @@ Handles consistent data structures and proper batching to avoid single-image req
 
 import asyncio
 import base64
+import json
 import logging
 import time
 from typing import List, Optional, Dict, Any, Tuple
@@ -146,66 +147,61 @@ class GPUInterface:
             gender=detection_data.get("gender")
         )
     
-    async def _gpu_worker_request(self, image_tasks: List[ImageTask]) -> Optional[List[List[FaceDetection]]]:
-        """Make request to GPU worker."""
+    async def _gpu_worker_request(self, image_tasks: List[ImageTask]) -> Optional[Dict[str, List[FaceDetection]]]:
+        """Make request to GPU worker using multipart/form-data (no base64 encoding)."""
         try:
             # Load images from temp paths
-            image_bytes_list = []
+            valid_tasks = []
             for task in image_tasks:
                 try:
                     with open(task.temp_path, 'rb') as f:
                         image_bytes = f.read()
-                    image_bytes_list.append(image_bytes)
+                    if image_bytes:
+                        valid_tasks.append((task, image_bytes))
                 except Exception as e:
                     logger.error(f"Failed to load image from {task.temp_path}: {e}")
-                    image_bytes_list.append(b'')  # Empty bytes for failed loads
+                    continue
             
-            # Filter out empty images
-            valid_images = [(i, img_bytes) for i, img_bytes in enumerate(image_bytes_list) if img_bytes]
-            if not valid_images:
+            if not valid_tasks:
                 logger.warning("No valid images in batch")
                 return None
             
-            # Prepare request data with consistent structure
-            # Track which original indices successfully encoded (for result mapping)
-            images_data = []
-            encoded_indices = []  # Maps images_data index -> original image_bytes_list index
+            # Prepare multipart form data
+            # Build image_hashes JSON: [{"phash": "abc123", "index": 0}, ...]
+            image_hashes = []
+            files_data = []
             
-            for i, (original_idx, image_bytes) in enumerate(valid_images):
-                try:
-                    encoded_data = self._encode_image(image_bytes)
-                    images_data.append({
-                        "data": encoded_data,
-                        "image_id": f"img_{original_idx}"
-                    })
-                    encoded_indices.append(original_idx)
-                except Exception as e:
-                    logger.warning(f"Failed to encode image {original_idx} (size: {len(image_bytes)} bytes): {e}. Skipping.")
-                    # Continue processing other images instead of failing entire batch
-                    continue
+            for idx, (task, image_bytes) in enumerate(valid_tasks):
+                # Add phash mapping
+                image_hashes.append({
+                    "phash": task.phash,
+                    "index": idx
+                })
+                # Add file data (binary, no encoding)
+                files_data.append(
+                    ("images", (f"{task.phash}.jpg", image_bytes, "image/jpeg"))
+                )
             
-            if not images_data:
-                logger.warning("No valid images after encoding validation")
-                return None
-            
-            request_data = {
-                "images": images_data,
-                "min_face_quality": self.config.min_face_quality,
-                "require_face": False,
-                "crop_faces": True,
-                "face_margin": self.config.face_margin
+            # Prepare form data
+            form_data = {
+                "image_hashes": json.dumps(image_hashes),
+                "min_face_quality": str(self.config.min_face_quality),
+                "require_face": "false",
+                "crop_faces": "true",
+                "face_margin": str(self.config.face_margin)
             }
             
-            # Make request
+            # Make multipart request
             client = await self._get_client()
             start_time = time.time()
             
-            self.gpu_logger.log_request_start(len(images_data), f"{self.config.gpu_worker_host_resolved}/detect_faces_batch")
-            self.gpu_logger.log_batch_encoding_start(len(images_data))
+            self.gpu_logger.log_request_start(len(valid_tasks), f"{self.config.gpu_worker_host_resolved}/detect_faces_batch_multipart")
+            # No encoding needed for multipart (saves CPU cycles)
             
             response = await client.post(
-                f"{self.config.gpu_worker_host_resolved}/detect_faces_batch",
-                json=request_data
+                f"{self.config.gpu_worker_host_resolved}/detect_faces_batch_multipart",
+                files=files_data,
+                data=form_data
             )
             
             processing_time = (time.time() - start_time) * 1000
@@ -213,63 +209,47 @@ class GPUInterface:
             if response.status_code == 200:
                 result_data = response.json()
                 self.gpu_logger.log_result_decoding_start(len(str(result_data)))
-                results = []
                 
-                # Convert GPU worker results to our format
-                for image_results in result_data["results"]:
+                # Results are already keyed by phash: {"results": {"phash1": [...faces...], ...}}
+                results_dict = result_data.get("results", {})
+                
+                # Convert to our format (results_dict already has FaceDetection objects)
+                # But we need to ensure they're properly converted
+                converted_results = {}
+                for phash, face_list in results_dict.items():
                     face_detections = []
-                    for detection_data in image_results:
-                        face_detection = self._decode_face_detection(detection_data)
-                        face_detections.append(face_detection)
-                    results.append(face_detections)
-                
-                # Pad results for failed image loads AND skipped encoding failures
-                # Create a map of original_index -> result_index for result mapping
-                # encoded_indices[result_idx] = original_index, so we reverse it
-                original_to_result = {orig_idx: result_idx for result_idx, orig_idx in enumerate(encoded_indices)}
-                
-                full_results = []
-                for i, img_bytes in enumerate(image_bytes_list):
-                    if img_bytes:
-                        # Check if this image was successfully encoded and sent to GPU
-                        if i in original_to_result:
-                            # This image was sent to GPU, get its result
-                            result_idx = original_to_result[i]
-                            full_results.append(results[result_idx])
+                    for detection_data in face_list:
+                        # Detection data may be dict or already FaceDetection
+                        if isinstance(detection_data, dict):
+                            face_detection = self._decode_face_detection(detection_data)
                         else:
-                            # This image failed encoding validation, return empty results
-                            full_results.append([])
-                    else:
-                        # This image failed to load from disk
-                        full_results.append([])
+                            # Already FaceDetection object from GPU worker
+                            face_detection = detection_data
+                        face_detections.append(face_detection)
+                    converted_results[phash] = face_detections
                 
                 gpu_used = result_data.get('gpu_used', False)
                 worker_id = result_data.get('worker_id', 'unknown')
                 
                 # Count total faces found
-                total_faces = sum(len(faces) for faces in results)
+                total_faces = sum(len(faces) for faces in converted_results.values())
                 
-                encoded_count = len(images_data)
-                skipped_count = len(valid_images) - encoded_count
+                processed_count = len(converted_results)
                 
-                if skipped_count > 0:
-                    logger.info(f"✓ GPU worker processed {encoded_count}/{len(image_tasks)} images "
-                               f"({skipped_count} skipped due to encoding errors) in "
-                               f"{processing_time:.1f}ms (GPU: {gpu_used}, worker: {worker_id})")
-                else:
-                    logger.info(f"✓ GPU worker processed {len(image_tasks)} images in "
-                               f"{processing_time:.1f}ms (GPU: {gpu_used}, worker: {worker_id})")
+                logger.info(f"✓ GPU worker processed {processed_count}/{len(image_tasks)} images "
+                           f"via multipart (no encoding) in {processing_time:.1f}ms "
+                           f"(GPU: {gpu_used}, worker: {worker_id})")
                 
                 # Use GPU worker logger
                 self.gpu_logger.log_result_decoding_complete(total_faces)
-                self.gpu_logger.log_request_complete(encoded_count, total_faces, processing_time, gpu_used)
+                self.gpu_logger.log_request_complete(processed_count, total_faces, processing_time, gpu_used)
                 
                 # Update metrics
                 self._request_count += 1
                 self._success_count += 1
                 self._total_latency += processing_time
                 
-                return full_results
+                return converted_results
             else:
                 logger.warning(f"GPU worker returned status {response.status_code}")
                 self.gpu_logger.log_http_error(response.status_code, "Bad response")
@@ -284,8 +264,8 @@ class GPUInterface:
             self._failure_count += 1
             return None
     
-    async def _cpu_fallback(self, image_tasks: List[ImageTask]) -> List[List[FaceDetection]]:
-        """CPU fallback for face detection."""
+    async def _cpu_fallback(self, image_tasks: List[ImageTask]) -> Dict[str, List[FaceDetection]]:
+        """CPU fallback for face detection. Returns dict keyed by phash for consistency."""
         logger.info(f"Using CPU fallback for {len(image_tasks)} images")
         
         try:
@@ -310,11 +290,14 @@ class GPUInterface:
             
             # Load images from temp paths
             image_bytes_list = []
+            valid_tasks = []
             for task in image_tasks:
                 try:
                     with open(task.temp_path, 'rb') as f:
                         image_bytes = f.read()
-                    image_bytes_list.append(image_bytes)
+                    if image_bytes:
+                        image_bytes_list.append(image_bytes)
+                        valid_tasks.append(task)
                 except Exception as e:
                     logger.error(f"Failed to load image from {task.temp_path}: {e}")
                     image_bytes_list.append(b'')
@@ -323,7 +306,7 @@ class GPUInterface:
             valid_images = [img_bytes for img_bytes in image_bytes_list if img_bytes]
             if not valid_images:
                 logger.warning("No valid images for CPU fallback")
-                return [[] for _ in image_tasks]
+                return {task.phash: [] for task in image_tasks}
             
             # Run CPU face detection
             start_time = time.time()
@@ -342,11 +325,11 @@ class GPUInterface:
             # Log completion
             self.gpu_logger.log_fallback_complete(len(image_tasks), total_faces, processing_time)
             
-            # Convert to our format
-            converted_results = []
+            # Convert to our format and key by phash
+            converted_results = {}
             valid_idx = 0
-            for img_bytes in image_bytes_list:
-                if img_bytes:
+            for task in image_tasks:
+                if task in valid_tasks:
                     face_detections = []
                     for detection in results[valid_idx]:
                         face_detection = FaceDetection(
@@ -358,22 +341,25 @@ class GPUInterface:
                             gender=detection.get('gender')
                         )
                         face_detections.append(face_detection)
-                    converted_results.append(face_detections)
+                    converted_results[task.phash] = face_detections
                     valid_idx += 1
                 else:
-                    converted_results.append([])
+                    converted_results[task.phash] = []
             
             logger.info(f"✓ CPU fallback processed {len(image_tasks)} images in {processing_time:.1f}ms")
             return converted_results
             
         except Exception as e:
             logger.error(f"CPU fallback failed: {e}")
-            return [[] for _ in image_tasks]
+            return {task.phash: [] for task in image_tasks}
     
-    async def process_batch(self, image_tasks: List[ImageTask]) -> List[List[FaceDetection]]:
-        """Process a batch of images with GPU worker and CPU fallback."""
+    async def process_batch(self, image_tasks: List[ImageTask]) -> Optional[Dict[str, List[FaceDetection]]]:
+        """Process a batch of images with GPU worker and CPU fallback.
+        
+        Returns dict keyed by phash: {phash: [FaceDetection, ...], ...}
+        """
         if not image_tasks:
-            return []
+            return {}
         
         logger.info(f"Processing batch of {len(image_tasks)} images")
         self.gpu_logger.log_batch_start(f"batch_{int(time.time())}", len(image_tasks))

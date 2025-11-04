@@ -176,20 +176,25 @@ class GPUProcessorWorker:
             self.timing_logger.log_gpu_recognition_start(batch_request.batch_id)
             face_results = await self.gpu_interface.process_batch(batch_request.image_tasks)
             recognition_duration = (time.time() - recognition_start) * 1000
-            face_count = sum(len(faces) for faces in face_results) if face_results else 0
+            
+            # face_results is always a dict keyed by phash (both GPU and CPU fallback)
+            face_count = sum(len(faces) for faces in face_results.values()) if face_results else 0
+            
             self.timing_logger.log_gpu_recognition_end(batch_request.batch_id, recognition_duration, face_count)
             
             # Log GPU results summary for debugging
+            # face_results is now a dict keyed by phash: {phash: [FaceDetection, ...], ...}
             if face_results:
-                images_with_faces = sum(1 for faces in face_results if faces)
+                images_with_faces = sum(1 for faces in face_results.values() if faces)
+                total_images = len(face_results)
                 logger.info(f"[GPU Processor {self.worker_id}] GPU batch {batch_request.batch_id} results: "
-                           f"{len(face_results)} images, {images_with_faces} with faces, "
+                           f"{total_images} images, {images_with_faces} with faces, "
                            f"{face_count} total faces detected in {recognition_duration:.1f}ms")
             else:
                 logger.warning(f"[GPU Processor {self.worker_id}] GPU batch {batch_request.batch_id} returned None")
             
             # Check if GPU fallback occurred
-            if not face_results or all(not faces for faces in face_results):
+            if not face_results or all(not faces for faces in face_results.values()):
                 compute_type = "CPU (fallback)"
             
             # CRITICAL: Restore original temp paths so storage can access extractor files
@@ -204,26 +209,44 @@ class GPUProcessorWorker:
                 logger.warning(f"[GPU Processor {self.worker_id}] GPU processing failed for batch: {batch_request.batch_id}")
                 return 0
             
-            # Ensure face_results matches input batch size
-            if len(face_results) != len(batch_request.image_tasks):
-                logger.warning(f"[GPU Processor {self.worker_id}] Result count mismatch: {len(face_results)} != {len(batch_request.image_tasks)} for batch {batch_request.batch_id}")
-                # Continue anyway, process what we got (truncate or pad as needed)
-                min_len = min(len(face_results), len(batch_request.image_tasks))
-                face_results = face_results[:min_len]
-                batch_request.image_tasks = batch_request.image_tasks[:min_len]
-            
-            # Process each image result: crop faces and queue storage tasks
-            # This decouples GPU processing from storage I/O
+            # Process each image result using phash-based lookup (not positional)
+            # This ensures proper linkage even if order changes or some images fail
             storage_tasks_created = 0
             storage_tasks_pushed = 0
             total_faces_in_batch = 0
             cached_in_batch = 0
+            missing_phash_count = 0
             
-            for i, (image_task, face_detections) in enumerate(zip(batch_request.image_tasks, face_results)):
+            for image_task in batch_request.image_tasks:
+                phash = image_task.phash
+                
+                # Validate phash exists (critical for storage linkage)
+                if not phash:
+                    logger.error(f"[GPU Processor {self.worker_id}] Image task missing phash! "
+                               f"temp_path={image_task.temp_path[:50] if image_task.temp_path else 'None'}")
+                    continue
+                
+                # Lookup results by phash (safe, explicit linkage)
+                face_detections = face_results.get(phash, [])
+                
+                if phash not in face_results:
+                    missing_phash_count += 1
+                    logger.warning(f"[GPU Processor {self.worker_id}] No results found for phash {phash[:8]}... "
+                                 f"(image may have failed GPU processing). "
+                                 f"Available phashes: {list(face_results.keys())[:3]}")
+                    # Continue with empty face list (image still processed, just no faces)
+                
+                # Validate phash linkage for storage (ensures image/metadata/thumbnail stay linked)
+                if image_task.phash != phash:
+                    logger.error(f"[GPU Processor {self.worker_id}] PHASH MISMATCH! "
+                               f"image_task.phash={image_task.phash[:8]}, lookup_phash={phash[:8]}")
+                    continue  # Skip to prevent storage corruption
+                
                 # Track faces detected
                 total_faces_in_batch += len(face_detections)
                 
                 # Prepare storage task (crops faces, creates task)
+                # StorageTask preserves phash linkage via image_task.phash
                 storage_task = await self._prepare_storage_task(image_task, face_detections, start_time)
                 
                 if storage_task:
@@ -241,8 +264,12 @@ class GPUProcessorWorker:
             
             # Count based on GPU results - all images that were processed by GPU
             # This allows batch to return immediately while storage runs in background
-            # face_results has one entry per input image (even if empty list for no faces)
+            # face_results is dict keyed by phash
             processed_count = len(face_results)
+            
+            if missing_phash_count > 0:
+                logger.warning(f"[GPU Processor {self.worker_id}] {missing_phash_count} images had no results "
+                             f"(phash mismatch or GPU processing failure)")
             
             # Log batch processing summary
             logger.info(f"[GPU Processor {self.worker_id}] Batch {batch_request.batch_id} summary: "
@@ -405,8 +432,17 @@ class GPUProcessorWorker:
     async def _prepare_storage_task(self, image_task: ImageTask, 
                                    face_detections: List[FaceDetection],
                                    batch_start_time: float) -> Optional[StorageTask]:
-        """Prepare storage task by cropping faces and creating StorageTask."""
+        """Prepare storage task by cropping faces and creating StorageTask.
+        
+        Ensures phash linkage is preserved for storage (image/metadata/thumbnails).
+        """
         try:
+            # Validate phash exists (critical for storage linkage)
+            if not image_task.phash:
+                logger.error(f"[GPU Processor {self.worker_id}] Cannot create storage task: missing phash "
+                           f"for image_task temp_path={image_task.temp_path[:50] if image_task.temp_path else 'None'}")
+                return None
+            
             site_id = image_task.candidate.site_id
             
             # Check cache
@@ -458,12 +494,22 @@ class GPUProcessorWorker:
                 logger.debug(f"[GPU Processor {self.worker_id}] Image {image_task.phash[:8]}... has {len(face_detections)} faces, {len(face_crops)} crops successful")
             
             # Create storage task with pre-cropped faces
+            # StorageTask.image_task.phash ensures linkage: image -> metadata -> thumbnails
             storage_task = StorageTask(
                 image_task=image_task,
                 face_result=face_result,
                 face_crops=face_crops,
                 batch_start_time=batch_start_time
             )
+            
+            # Final validation: ensure phash is preserved in storage task
+            if storage_task.image_task.phash != image_task.phash:
+                logger.error(f"[GPU Processor {self.worker_id}] CRITICAL: Storage task phash mismatch! "
+                           f"Original: {image_task.phash[:8]}, Task: {storage_task.image_task.phash[:8]}")
+                return None
+            
+            logger.debug(f"[GPU Processor {self.worker_id}] Created storage task with phash linkage: "
+                        f"{image_task.phash[:8]}... (faces={len(face_detections)}, crops={len(face_crops)})")
             
             return storage_task
             
