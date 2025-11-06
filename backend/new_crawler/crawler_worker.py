@@ -242,6 +242,7 @@ def crawler_worker_process(worker_id: int):
     logging.basicConfig(
         level=logging.INFO,
         format=f'%(asctime)s - Crawler-{worker_id} - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler(sys.stdout)],
         force=True
     )
     

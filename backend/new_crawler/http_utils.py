@@ -9,6 +9,7 @@ import asyncio
 import logging
 import random
 import time
+import os
 from typing import Optional, Tuple, Dict, Any, List
 from urllib.parse import urljoin, urlparse
 from contextlib import asynccontextmanager
@@ -16,6 +17,18 @@ from collections import deque
 
 import httpx
 from bs4 import BeautifulSoup
+
+# Try to import memory monitoring
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    try:
+        import resource
+        RESOURCE_AVAILABLE = True
+    except ImportError:
+        RESOURCE_AVAILABLE = False
 
 # Optional Playwright import for JavaScript rendering
 try:
@@ -28,6 +41,34 @@ except ImportError:
 from .config import get_config
 
 logger = logging.getLogger(__name__)
+
+
+def _get_memory_info() -> Dict[str, float]:
+    """Get current memory usage information."""
+    mem_info = {}
+    try:
+        if PSUTIL_AVAILABLE:
+            process = psutil.Process(os.getpid())
+            mem_info['rss_mb'] = process.memory_info().rss / 1024 / 1024
+            mem_info['vms_mb'] = process.memory_info().vms / 1024 / 1024
+            mem_info['percent'] = process.memory_percent()
+            # System memory
+            system_mem = psutil.virtual_memory()
+            mem_info['system_total_gb'] = system_mem.total / 1024 / 1024 / 1024
+            mem_info['system_available_gb'] = system_mem.available / 1024 / 1024 / 1024
+            mem_info['system_percent'] = system_mem.percent
+        elif RESOURCE_AVAILABLE:
+            usage = resource.getrusage(resource.RUSAGE_SELF)
+            mem_info['rss_mb'] = usage.ru_maxrss / 1024  # Linux uses KB
+            try:
+                import platform
+                if platform.system() == 'Darwin':  # macOS uses bytes, not KB
+                    mem_info['rss_mb'] = usage.ru_maxrss / 1024 / 1024
+            except Exception:
+                pass  # Fall back to Linux assumption
+    except Exception as e:
+        logger.debug(f"Failed to get memory info: {e}")
+    return mem_info
 
 # Singleton pattern per process
 _http_utils_instance = None
@@ -423,6 +464,9 @@ class HTTPUtils:
     
     async def _fetch_with_redirects(self, url: str) -> Tuple[Optional[str], str]:
         """Fetch URL with manual redirect handling and same-origin policy."""
+        fetch_start = time.time()
+        mem_before = _get_memory_info()
+        
         client = await self._get_client_for_url(url)
         current_url = url
         redirect_count = 0
@@ -434,12 +478,16 @@ class HTTPUtils:
         
         while redirect_count <= max_redirects:
             try:
+                request_start = time.time()
                 response = await client.get(current_url, headers=headers)
+                request_time = (time.time() - request_start) * 1000
                 
                 # Handle redirects
                 if response.status_code in {301, 302, 303, 307, 308}:
                     redirect_url = response.headers.get('location')
                     if not redirect_url:
+                        total_time = (time.time() - fetch_start) * 1000
+                        logger.warning(f"[HTTP-FETCH] Redirect without location: {current_url}, elapsed={total_time:.1f}ms")
                         return None, "REDIRECT_NO_LOCATION"
                     
                     # Resolve relative redirects
@@ -448,71 +496,113 @@ class HTTPUtils:
                     
                     # Check same-origin policy
                     if self.config.nc_same_origin_redirects_only and redirect_domain != original_domain:
-                        logger.warning(f"Cross-domain redirect blocked: {current_url} -> {redirect_url}")
+                        total_time = (time.time() - fetch_start) * 1000
+                        logger.warning(f"[HTTP-FETCH] Cross-domain redirect blocked: {current_url} -> {redirect_url}, elapsed={total_time:.1f}ms")
                         return None, "CROSS_DOMAIN_REDIRECT_BLOCKED"
                     
                     # Check blocklist
                     if redirect_domain in self.config.nc_blocklist_redirect_hosts:
-                        logger.warning(f"Redirect to blocked host: {redirect_url}")
+                        total_time = (time.time() - fetch_start) * 1000
+                        logger.warning(f"[HTTP-FETCH] Redirect to blocked host: {redirect_url}, elapsed={total_time:.1f}ms")
                         return None, "REDIRECT_TO_BLOCKED_HOST"
                     
                     if redirect_count >= max_redirects:
-                        logger.warning(f"Redirect limit reached for {url}")
+                        total_time = (time.time() - fetch_start) * 1000
+                        logger.warning(f"[HTTP-FETCH] Redirect limit reached for {url}, elapsed={total_time:.1f}ms")
                         return None, "REDIRECT_LIMIT"
                     
                     current_url = redirect_url
                     redirect_count += 1
-                    logger.debug(f"Following redirect {redirect_count}/{max_redirects}: {redirect_url}")
+                    logger.debug(f"[HTTP-FETCH] Following redirect {redirect_count}/{max_redirects}: {redirect_url} (request_time={request_time:.1f}ms)")
                     continue
                 
                 # Check for successful response
                 if response.status_code == 200:
                     content_type = response.headers.get('content-type', '').lower()
+                    total_time = (time.time() - fetch_start) * 1000
+                    mem_after = _get_memory_info()
+                    content_length = len(response.text) if response.text else 0
+                    
                     if 'text/html' in content_type:
+                        logger.debug(f"[HTTP-FETCH] Success: {url}, status=200, size={content_length} chars, "
+                                   f"time={total_time:.1f}ms (request={request_time:.1f}ms), "
+                                   f"redirects={redirect_count}, memory={mem_after.get('rss_mb', 0):.1f}MB RSS")
                         return response.text, "SUCCESS"
                     else:
+                        logger.debug(f"[HTTP-FETCH] Not HTML: {url}, content_type={content_type}, elapsed={total_time:.1f}ms")
                         return None, f"NOT_HTML: {content_type}"
                 else:
+                    total_time = (time.time() - fetch_start) * 1000
+                    logger.warning(f"[HTTP-FETCH] HTTP error: {url}, status={response.status_code}, elapsed={total_time:.1f}ms")
                     return None, f"HTTP_{response.status_code}"
                     
-            except httpx.TimeoutException:
+            except httpx.TimeoutException as e:
+                total_time = (time.time() - fetch_start) * 1000
+                mem_after = _get_memory_info()
+                logger.error(f"[HTTP-FETCH] Timeout: {current_url}, elapsed={total_time:.1f}ms (timeout={self.config.nc_http_timeout}s), "
+                           f"redirects={redirect_count}, memory={mem_after.get('rss_mb', 0):.1f}MB RSS, "
+                           f"system_available={mem_after.get('system_available_gb', 0):.1f}GB")
                 return None, "TIMEOUT"
-            except httpx.ConnectError:
+            except httpx.ConnectError as e:
+                total_time = (time.time() - fetch_start) * 1000
+                logger.warning(f"[HTTP-FETCH] Connection error: {current_url}, elapsed={total_time:.1f}ms, error={e}")
                 return None, "CONNECTION_ERROR"
             except Exception as e:
+                total_time = (time.time() - fetch_start) * 1000
+                mem_after = _get_memory_info()
+                logger.error(f"[HTTP-FETCH] Error: {current_url}, elapsed={total_time:.1f}ms, "
+                           f"error={type(e).__name__}: {e}, memory={mem_after.get('rss_mb', 0):.1f}MB RSS")
                 return None, f"ERROR: {str(e)}"
         
+        total_time = (time.time() - fetch_start) * 1000
+        logger.warning(f"[HTTP-FETCH] Redirect limit: {url}, elapsed={total_time:.1f}ms")
         return None, "REDIRECT_LIMIT"
     
     async def _fetch_with_js(self, url: str) -> Tuple[Optional[str], str]:
         """Fetch HTML with JavaScript rendering."""
+        js_fetch_start = time.time()
+        mem_before = _get_memory_info()
+        
         try:
             if not PLAYWRIGHT_AVAILABLE:
+                logger.warning(f"[JS-FETCH] Playwright not available for {url}")
                 return None, "PLAYWRIGHT_NOT_AVAILABLE"
             
             # Check cache first
+            cache_check_start = time.time()
             async with self._js_cache_lock:
                 if url in self._js_cache:
                     cached_time, cached_html, cached_network = self._js_cache[url]
                     if time.time() - cached_time < self._js_cache_ttl:
-                        logger.debug(f"Returning cached JS render for {url}")
+                        cache_check_time = (time.time() - cache_check_start) * 1000
+                        logger.debug(f"[JS-FETCH] Cache hit: {url}, cache_check={cache_check_time:.1f}ms")
                         return cached_html, "CACHED"
+            cache_check_time = (time.time() - cache_check_start) * 1000
             
             # Ensure browser pool is initialized atomically
             # Initialize if pool is missing or browsers aren't ready yet
+            pool_init_start = time.time()
             if self._browser_pool is None or not getattr(self._browser_pool, '_browsers', []):
                 async with self._browser_pool_lock:
                     # Double-check after acquiring lock in case another coroutine initialized it
                     if self._browser_pool is None or not getattr(self._browser_pool, '_browsers', []):
-                        logger.info("Initializing browser pool for JavaScript rendering")
+                        logger.info(f"[JS-FETCH] Initializing browser pool for JavaScript rendering (memory={mem_before.get('rss_mb', 0):.1f}MB RSS)")
                         pool = BrowserPool()
                         await pool.__aenter__()
                         self._browser_pool = pool
-                        logger.info(f"Browser pool initialized with {len(pool._browsers)} browsers")
+                        pool_init_time = (time.time() - pool_init_start) * 1000
+                        logger.info(f"[JS-FETCH] Browser pool initialized: {len(pool._browsers)} browsers in {pool_init_time:.1f}ms")
+                    else:
+                        pool_init_time = (time.time() - pool_init_start) * 1000
+            else:
+                pool_init_time = (time.time() - pool_init_start) * 1000
             
+            render_start = time.time()
             html, network_images = await self._browser_pool.render_page(url, timeout=self.config.nc_js_render_timeout)
+            render_time = (time.time() - render_start) * 1000
             
             # Store in cache
+            cache_store_start = time.time()
             if html:
                 async with self._js_cache_lock:
                     self._js_cache[url] = (time.time(), html, network_images)
@@ -522,15 +612,31 @@ class HTTPUtils:
                         sorted_items = sorted(self._js_cache.items(), key=lambda x: x[1][0])
                         for key, _ in sorted_items[:200]:
                             del self._js_cache[key]
+            cache_store_time = (time.time() - cache_store_start) * 1000
+            
+            total_time = (time.time() - js_fetch_start) * 1000
+            mem_after = _get_memory_info()
             
             # Log network-captured images for debugging
             if network_images:
-                logger.debug(f"Captured {len(network_images)} image URLs from network requests for {url}")
+                logger.debug(f"[JS-FETCH] Captured {len(network_images)} image URLs from network requests for {url}")
+            
+            logger.debug(f"[JS-FETCH] Completed: {url}, total={total_time:.1f}ms "
+                        f"(cache_check={cache_check_time:.1f}ms, pool_init={pool_init_time:.1f}ms, "
+                        f"render={render_time:.1f}ms, cache_store={cache_store_time:.1f}ms), "
+                        f"html_size={len(html) if html else 0} chars, "
+                        f"memory={mem_after.get('rss_mb', 0):.1f}MB RSS "
+                        f"({mem_after.get('rss_mb', 0) - mem_before.get('rss_mb', 0):+.1f}MB)")
             
             return html, "SUCCESS"
             
         except Exception as e:
-            logger.error(f"JavaScript rendering failed for {url}: {e}")
+            total_time = (time.time() - js_fetch_start) * 1000
+            mem_after = _get_memory_info()
+            error_type = type(e).__name__
+            logger.error(f"[JS-FETCH] Failed: {url}, error={error_type}: {e}, elapsed={total_time:.1f}ms, "
+                        f"memory={mem_after.get('rss_mb', 0):.1f}MB RSS, "
+                        f"system_available={mem_after.get('system_available_gb', 0):.1f}GB")
             return None, f"JS_ERROR: {str(e)}"
     
     async def head_check(self, url: str) -> Tuple[bool, Dict[str, Any]]:
@@ -769,6 +875,39 @@ class BrowserPool:
         self._context_lock = asyncio.Lock()  # For thread-safe context access
         self._browser_idx = 0  # Round-robin counter
     
+    @staticmethod
+    def _is_timeout_error(error: Exception) -> bool:
+        """Check if an exception is a timeout error."""
+        error_type = type(error).__name__
+        error_str = str(error).lower()
+        
+        # Check for common timeout indicators
+        timeout_indicators = [
+            'timeout',
+            'timeoutexception',
+            'timeout error',
+            'navigation timeout',
+            'waiting for selector timeout',
+            'page.goto: timeout',
+            'page.wait_for_load_state: timeout',
+            'page.wait_for_selector: timeout'
+        ]
+        
+        # Check type name
+        if 'timeout' in error_type.lower():
+            return True
+        
+        # Check error message
+        for indicator in timeout_indicators:
+            if indicator in error_str:
+                return True
+        
+        # Check for Playwright-specific timeout errors
+        if hasattr(error, 'name') and 'timeout' in str(getattr(error, 'name', '')).lower():
+            return True
+        
+        return False
+    
     async def __aenter__(self):
         """Async context manager entry."""
         if not PLAYWRIGHT_AVAILABLE:
@@ -776,15 +915,28 @@ class BrowserPool:
         
         async with self._lock:
             if not self._playwright:
+                mem_before = _get_memory_info()
+                logger.info(f"[BROWSER-POOL] Initializing browser pool: browsers={self.max_browsers}, "
+                          f"memory_before={mem_before.get('rss_mb', 0):.1f}MB RSS, "
+                          f"system={mem_before.get('system_available_gb', 0):.1f}GB available")
+                
+                start_time = time.time()
                 self._playwright = await async_playwright().start()
+                playwright_init_time = (time.time() - start_time) * 1000
                 
                 # Create browser pool
-                for _ in range(self.max_browsers):
+                browser_launch_times = []
+                for i in range(self.max_browsers):
+                    browser_start = time.time()
                     browser = await self._playwright.chromium.launch(
                         headless=True,
                         args=['--no-sandbox', '--disable-dev-shm-usage']
                     )
+                    launch_time = (time.time() - browser_start) * 1000
+                    browser_launch_times.append(launch_time)
                     self._browsers.append(browser)
+                    logger.debug(f"[BROWSER-POOL] Launched browser {i+1}/{self.max_browsers} in {launch_time:.1f}ms")
+                
                 # Initialize JS concurrency semaphore
                 from .config import get_config
                 cfg = get_config()
@@ -793,6 +945,7 @@ class BrowserPool:
                 # Create reusable context pool (2 contexts per browser)
                 contexts_per_browser = 2
                 default_ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                context_start = time.time()
                 for browser in self._browsers:
                     for _ in range(contexts_per_browser):
                         context = await browser.new_context(
@@ -800,7 +953,17 @@ class BrowserPool:
                             user_agent=default_ua
                         )
                         self._contexts.append(context)
-                logger.info(f"Created {len(self._contexts)} browser contexts ({contexts_per_browser} per browser)")
+                context_init_time = (time.time() - context_start) * 1000
+                
+                mem_after = _get_memory_info()
+                total_time = (time.time() - start_time) * 1000
+                logger.info(f"[BROWSER-POOL] Initialized: {len(self._contexts)} contexts ({contexts_per_browser} per browser), "
+                          f"memory_after={mem_after.get('rss_mb', 0):.1f}MB RSS "
+                          f"(+{mem_after.get('rss_mb', 0) - mem_before.get('rss_mb', 0):.1f}MB), "
+                          f"system={mem_after.get('system_available_gb', 0):.1f}GB available "
+                          f"({mem_after.get('system_percent', 0):.1f}% used), "
+                          f"total_time={total_time:.1f}ms (playwright={playwright_init_time:.1f}ms, "
+                          f"browsers={sum(browser_launch_times):.1f}ms, contexts={context_init_time:.1f}ms)")
         
         return self
     
@@ -842,18 +1005,33 @@ class BrowserPool:
         from .config import get_config
         config = get_config()
         
+        render_start = time.time()
+        mem_before = _get_memory_info()
+        
         # Round-robin browser selection
         async with self._lock:
             self._browser_idx = (self._browser_idx + 1) % len(self._browsers)
             browser = self._browsers[self._browser_idx]
+            browser_num = self._browser_idx + 1
+        
+        # Initialize variables to track resources
+        context = None
+        page = None
+        sem = None
+        context_created_dynamically = False
         
         try:
             # Concurrency gate for JS rendering
             sem = self._js_semaphore or asyncio.Semaphore(4)
+            sem_acquire_start = time.time()
             await sem.acquire()
+            sem_acquire_time = (time.time() - sem_acquire_start) * 1000
+            
             # Get context from pool (thread-safe)
+            context_acquire_start = time.time()
             async with self._context_lock:
                 if not self._contexts:
+                    logger.warning(f"[JS-RENDER] Context pool empty for {url}, creating new context (pool_size={len(self._contexts)})")
                     # Fallback: create new context if pool is empty
                     pw_ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                     try:
@@ -868,32 +1046,45 @@ class BrowserPool:
                         java_script_enabled=True,
                         user_agent=pw_ua
                     )
+                    context_created_dynamically = True
                 else:
                     context = self._contexts.pop(0)
                     # Clear cookies to prevent state pollution between renders
                     try:
                         await context.clear_cookies()
                     except Exception as e:
-                        logger.debug(f"Failed to clear cookies: {e}")
+                        logger.debug(f"[JS-RENDER] Failed to clear cookies: {e}")
+            context_acquire_time = (time.time() - context_acquire_start) * 1000
             
             page = await context.new_page()
             page.set_default_timeout(timeout * 1000)
             
             # Navigate to blank page first to ensure clean state, then to target URL
             # This prevents JavaScript state pollution from previous renders
+            blank_start = time.time()
             try:
-                await page.goto('about:blank', wait_until='domcontentloaded')
+                await page.goto('about:blank', wait_until='domcontentloaded', timeout=5000)
                 await page.wait_for_timeout(100)  # Brief pause for cleanup
-            except Exception:
-                pass  # Continue if blank navigation fails
+                blank_time = (time.time() - blank_start) * 1000
+                logger.debug(f"[JS-RENDER] Blank page navigation: {blank_time:.1f}ms")
+            except Exception as e:
+                blank_time = (time.time() - blank_start) * 1000
+                logger.debug(f"[JS-RENDER] Blank page navigation failed after {blank_time:.1f}ms: {e}")
             
-            logger.info(f"Rendering JavaScript for URL: {url}")
+            logger.info(f"[JS-RENDER] Starting render: url={url}, timeout={timeout}s, browser={browser_num}, "
+                       f"memory_before={mem_before.get('rss_mb', 0):.1f}MB RSS, "
+                       f"system_available={mem_before.get('system_available_gb', 0):.1f}GB, "
+                       f"sem_acquire={sem_acquire_time:.1f}ms, context_acquire={context_acquire_time:.1f}ms, "
+                       f"context_dynamic={context_created_dynamically}")
             
             # Set up network capture for image URLs
             image_requests = set()
+            network_request_count = 0
             if config.nc_capture_network_images:
                 async def handle_response(response):
                     try:
+                        nonlocal network_request_count
+                        network_request_count += 1
                         url_lower = response.url.lower()
                         # Only check direct image URLs (skip JSON parsing for speed)
                         if any(url_lower.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']):
@@ -905,69 +1096,189 @@ class BrowserPool:
             
             # Navigate to the page with configurable wait strategy
             wait_strategy = config.nc_js_wait_strategy
+            navigation_start = time.time()
             
-            if wait_strategy == "networkidle":
-                # Wait for network to be idle (no requests for 500ms)
-                await page.goto(url, wait_until='networkidle')
-                logger.debug(f"Used networkidle wait strategy for {url}")
-            elif wait_strategy == "fixed":
-                # Use fixed wait time
-                await page.goto(url, wait_until='domcontentloaded')
-                await page.wait_for_timeout(config.nc_js_wait_timeout * 1000)
-                logger.debug(f"Used fixed wait strategy ({config.nc_js_wait_timeout}s) for {url}")
-            else:  # "both" strategy
-                # Use both networkidle and fixed wait for maximum compatibility
-                await page.goto(url, wait_until='domcontentloaded')
+            try:
+                if wait_strategy == "networkidle":
+                    # Wait for network to be idle (no requests for 500ms)
+                    goto_start = time.time()
+                    try:
+                        await page.goto(url, wait_until='networkidle', timeout=int(timeout * 1000))
+                        goto_time = (time.time() - goto_start) * 1000
+                        navigation_time = (time.time() - navigation_start) * 1000
+                        logger.debug(f"[JS-RENDER] Navigation (networkidle): {navigation_time:.1f}ms for {url}")
+                    except Exception as goto_err:
+                        goto_time = (time.time() - goto_start) * 1000
+                        navigation_time = (time.time() - navigation_start) * 1000
+                        is_timeout_error = self._is_timeout_error(goto_err)
+                        if is_timeout_error:
+                            logger.error(f"[JS-RENDER] TIMEOUT: page.goto() timed out after {goto_time:.1f}ms (limit={timeout}s) for {url}")
+                        raise
+                elif wait_strategy == "fixed":
+                    # Use fixed wait time
+                    goto_start = time.time()
+                    try:
+                        await page.goto(url, wait_until='domcontentloaded', timeout=int(timeout * 1000))
+                        goto_time = (time.time() - goto_start) * 1000
+                    except Exception as goto_err:
+                        goto_time = (time.time() - goto_start) * 1000
+                        is_timeout_error = self._is_timeout_error(goto_err)
+                        if is_timeout_error:
+                            logger.error(f"[JS-RENDER] TIMEOUT: page.goto() timed out after {goto_time:.1f}ms (limit={timeout}s) for {url}")
+                        raise
+                    
+                    wait_start = time.time()
+                    await page.wait_for_timeout(config.nc_js_wait_timeout * 1000)
+                    wait_time = (time.time() - wait_start) * 1000
+                    navigation_time = (time.time() - navigation_start) * 1000
+                    logger.debug(f"[JS-RENDER] Navigation (fixed): goto={goto_time:.1f}ms, wait={wait_time:.1f}ms, total={navigation_time:.1f}ms for {url}")
+                else:  # "both" strategy
+                    # Use both networkidle and fixed wait for maximum compatibility
+                    goto_start = time.time()
+                    try:
+                        await page.goto(url, wait_until='domcontentloaded', timeout=int(timeout * 1000))
+                        goto_time = (time.time() - goto_start) * 1000
+                    except Exception as goto_err:
+                        goto_time = (time.time() - goto_start) * 1000
+                        is_timeout_error = self._is_timeout_error(goto_err)
+                        if is_timeout_error:
+                            logger.error(f"[JS-RENDER] TIMEOUT: page.goto() timed out after {goto_time:.1f}ms (limit={timeout}s) for {url}")
+                        raise
+                    
+                    # Wait for network idle with timeout
+                    networkidle_start = time.time()
+                    networkidle_timeout = False
+                    try:
+                        await page.wait_for_load_state('networkidle', timeout=config.nc_js_networkidle_timeout * 1000)
+                        networkidle_time = (time.time() - networkidle_start) * 1000
+                        logger.debug(f"[JS-RENDER] Network idle achieved: {networkidle_time:.1f}ms for {url}")
+                    except Exception as e:
+                        networkidle_time = (time.time() - networkidle_start) * 1000
+                        networkidle_timeout = True
+                        is_timeout_error = self._is_timeout_error(e)
+                        if is_timeout_error:
+                            logger.error(f"[JS-RENDER] TIMEOUT: Network idle wait timed out after {networkidle_time:.1f}ms (limit={config.nc_js_networkidle_timeout}s) for {url}")
+                        else:
+                            logger.info(f"[JS-RENDER] Network idle wait failed after {networkidle_time:.1f}ms (limit={config.nc_js_networkidle_timeout}s) for {url}: {e}")
+                    
+                    # Additional fixed wait for slow-loading content
+                    wait_start = time.time()
+                    await page.wait_for_timeout(config.nc_js_wait_timeout * 1000)
+                    wait_time = (time.time() - wait_start) * 1000
+                    navigation_time = (time.time() - navigation_start) * 1000
+                    logger.debug(f"[JS-RENDER] Navigation (both): goto={goto_time:.1f}ms, networkidle={networkidle_time:.1f}ms "
+                               f"({'timeout' if networkidle_timeout else 'success'}), wait={wait_time:.1f}ms, total={navigation_time:.1f}ms for {url}")
                 
-                # Wait for network idle with timeout
-                try:
-                    await page.wait_for_load_state('networkidle', timeout=config.nc_js_networkidle_timeout * 1000)
-                    logger.debug(f"Network idle achieved for {url}")
-                except Exception as e:
-                    logger.debug(f"Network idle timeout for {url}: {e}")
+                # Wait for image selectors if configured
+                if config.nc_js_wait_selectors:
+                    selector_start = time.time()
+                    try:
+                        await page.wait_for_selector(config.nc_js_wait_selectors, timeout=int(config.nc_js_wait_timeout * 1000))
+                        selector_time = (time.time() - selector_start) * 1000
+                        logger.debug(f"[JS-RENDER] Image selectors found: {selector_time:.1f}ms for {url}")
+                    except Exception as e:
+                        selector_time = (time.time() - selector_start) * 1000
+                        is_timeout_error = self._is_timeout_error(e)
+                        if is_timeout_error:
+                            logger.warning(f"[JS-RENDER] TIMEOUT: Image selector wait timed out after {selector_time:.1f}ms (limit={config.nc_js_wait_timeout}s) for {url}")
+                        else:
+                            logger.debug(f"[JS-RENDER] Image selector wait failed after {selector_time:.1f}ms for {url}: {e}")
                 
-                # Additional fixed wait for slow-loading content
-                await page.wait_for_timeout(config.nc_js_wait_timeout * 1000)
-                logger.debug(f"Used both wait strategy for {url}")
-            
-            # Wait for image selectors if configured
-            if config.nc_js_wait_selectors:
-                try:
-                    await page.wait_for_selector(config.nc_js_wait_selectors, timeout=int(config.nc_js_wait_timeout * 1000))
-                    logger.debug(f"Image selectors found for {url}")
-                except Exception as e:
-                    logger.debug(f"Image selector wait timeout for {url}: {e}")
+            except Exception as nav_error:
+                navigation_time = (time.time() - navigation_start) * 1000
+                mem_after_nav = _get_memory_info()
+                is_timeout_error = self._is_timeout_error(nav_error)
+                if is_timeout_error:
+                    logger.error(f"[JS-RENDER] TIMEOUT: Navigation timed out after {navigation_time:.1f}ms (limit={timeout}s) for {url}, "
+                               f"memory_after={mem_after_nav.get('rss_mb', 0):.1f}MB RSS, "
+                               f"system_available={mem_after_nav.get('system_available_gb', 0):.1f}GB")
+                else:
+                    logger.error(f"[JS-RENDER] Navigation failed after {navigation_time:.1f}ms (timeout={timeout}s) for {url}: "
+                               f"{type(nav_error).__name__}: {nav_error}, "
+                               f"memory_after={mem_after_nav.get('rss_mb', 0):.1f}MB RSS, "
+                               f"system_available={mem_after_nav.get('system_available_gb', 0):.1f}GB")
+                raise
             
             # Get the rendered HTML
+            content_start = time.time()
             html_content = await page.content()
+            content_time = (time.time() - content_start) * 1000
             
             # Return context to pool instead of closing
+            cleanup_start = time.time()
             await page.close()  # Only close page
             async with self._context_lock:
                 self._contexts.append(context)  # Return to pool
+            cleanup_time = (time.time() - cleanup_start) * 1000
             
-            logger.info(f"JavaScript rendering completed for {url} ({len(html_content)} chars, {len(image_requests)} network images)")
+            total_time = (time.time() - render_start) * 1000
+            mem_after = _get_memory_info()
+            mem_delta = mem_after.get('rss_mb', 0) - mem_before.get('rss_mb', 0)
+            
+            logger.info(f"[JS-RENDER] Completed: url={url}, total_time={total_time:.1f}ms "
+                       f"(nav={navigation_time:.1f}ms, content={content_time:.1f}ms, cleanup={cleanup_time:.1f}ms), "
+                       f"html_size={len(html_content)} chars, network_images={len(image_requests)}, "
+                       f"network_requests={network_request_count}, "
+                       f"memory_after={mem_after.get('rss_mb', 0):.1f}MB RSS "
+                       f"({mem_delta:+.1f}MB), system_available={mem_after.get('system_available_gb', 0):.1f}GB "
+                       f"({mem_after.get('system_percent', 0):.1f}% used)")
+            
             return html_content, list(image_requests)
             
         except Exception as e:
-            logger.warning(f"JavaScript rendering failed for {url}: {e}")
-            # Ensure context is returned to pool even on error
+            total_time = (time.time() - render_start) * 1000
+            mem_after = _get_memory_info()
+            error_type = type(e).__name__
+            is_timeout_error = self._is_timeout_error(e)
+            
+            if is_timeout_error:
+                logger.error(f"[JS-RENDER] TIMEOUT: Render timed out after {total_time:.1f}ms (limit={timeout}s) for {url}, "
+                           f"error_type={error_type}, browser={browser_num}, "
+                           f"memory_after={mem_after.get('rss_mb', 0):.1f}MB RSS, "
+                           f"system_available={mem_after.get('system_available_gb', 0):.1f}GB "
+                           f"({mem_after.get('system_percent', 0):.1f}% used)")
+            else:
+                logger.error(f"[JS-RENDER] Failed: url={url}, error={error_type}: {e}, "
+                           f"elapsed={total_time:.1f}ms (timeout={timeout}s), "
+                           f"memory_after={mem_after.get('rss_mb', 0):.1f}MB RSS, "
+                           f"system_available={mem_after.get('system_available_gb', 0):.1f}GB "
+                           f"({mem_after.get('system_percent', 0):.1f}% used), "
+                           f"browser={browser_num}")
+            raise  # Re-raise after logging
+        
+        finally:
+            # ALWAYS clean up resources, regardless of success or failure
             try:
-                if 'context' in locals() and 'page' in locals():
+                # Close page if it exists
+                if page is not None:
                     try:
                         await page.close()
-                    except Exception:
-                        pass
-                    async with self._context_lock:
-                        self._contexts.append(context)
-            except Exception:
-                pass
-            raise
-        finally:
-            try:
-                sem.release()
-            except Exception:
-                pass
+                    except Exception as page_close_error:
+                        logger.debug(f"[JS-RENDER] Error closing page: {page_close_error}")
+                
+                # ALWAYS return context to pool if it exists
+                if context is not None:
+                    try:
+                        async with self._context_lock:
+                            self._contexts.append(context)
+                            if context_created_dynamically:
+                                logger.debug(f"[JS-RENDER] Returned dynamically-created context to pool for {url}")
+                    except Exception as context_return_error:
+                        logger.warning(f"[JS-RENDER] Error returning context to pool: {context_return_error}")
+                        # If we can't return it, try to close it to prevent leak
+                        try:
+                            await context.close()
+                        except Exception:
+                            pass
+            except Exception as cleanup_error:
+                logger.error(f"[JS-RENDER] Error in cleanup: {cleanup_error}")
+            
+            # ALWAYS release semaphore
+            if sem is not None:
+                try:
+                    sem.release()
+                except Exception as sem_release_error:
+                    logger.warning(f"[JS-RENDER] Error releasing semaphore: {sem_release_error}")
 
 
 

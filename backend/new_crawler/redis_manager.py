@@ -261,8 +261,15 @@ class RedisManager:
             queue_name = self.config.get_queue_name('results')
             data = self._serialize(face_result)
             result = await client.rpush(queue_name, data)
+            pushed = bool(result)
+            queue_depth = await self.get_queue_length_by_key_async(queue_name)
+            image_phash = face_result.image_task.phash[:8] if (face_result.image_task and face_result.image_task.phash) else 'NO_PHASH'
+            faces_count = len(face_result.faces) if face_result.faces else 0
+            logger.info(f"[REDIS] DIAG: Pushed face result: {image_phash}..., "
+                       f"success={pushed}, faces={faces_count}, "
+                       f"queue_depth={queue_depth}")
             logger.debug(f"Pushed face result to queue (async): {face_result.image_task.candidate.img_url}")
-            return bool(result)
+            return pushed
         except redis.RedisError as e:
             logger.error(f"Redis push error (async): {e}")
             return False
@@ -304,8 +311,13 @@ class RedisManager:
             queue_name = self.config.get_queue_name('storage')
             data = self._serialize(storage_task)
             result = await client.rpush(queue_name, data)
+            pushed = bool(result)
+            queue_depth = await self.get_queue_length_by_key_async(queue_name)
+            image_phash = storage_task.image_task.phash[:8] if storage_task.image_task.phash else 'NO_PHASH'
+            logger.info(f"[REDIS] DIAG: Pushed storage task: {image_phash}..., "
+                       f"success={pushed}, queue_depth={queue_depth}")
             logger.debug(f"Pushed storage task to queue (async): {storage_task.image_task.phash[:8]}...")
-            return bool(result)
+            return pushed
         except redis.RedisError as e:
             logger.error(f"Redis push storage task error (async): {e}")
             return False
@@ -381,9 +393,14 @@ class RedisManager:
         items: list[bytes] = []
         try:
             client = self._get_client()
+            # Log before blocking call
+            logger.debug(f"[REDIS] DIAG: blpop_many({key}, max_n={max_n}, timeout={timeout})")
+            
             # 1) Block for first item
             res = client.blpop(key, timeout=timeout)
             if not res:
+                # Log when blpop times out (returns empty)
+                logger.debug(f"[REDIS] DIAG: blpop_many({key}) timed out after {timeout}s, returning 0 items")
                 return items
             _, first = res
             items.append(first)
@@ -397,6 +414,8 @@ class RedisManager:
                     drained = p.execute()
                 items.extend([x for x in drained if x is not None])
             
+            # Log when items are retrieved (count of items)
+            logger.debug(f"[REDIS] DIAG: blpop_many({key}) retrieved {len(items)} items")
             return items
         except redis.RedisError as e:
             logger.error(f"Redis blpop_many error: {e}")

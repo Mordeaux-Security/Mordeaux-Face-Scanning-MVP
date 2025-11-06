@@ -108,9 +108,21 @@ class Orchestrator:
                     self.total_images_processed += 1
                     self.total_faces_detected += len(result.faces)
                     
-                    # Log periodically
+                    # Diagnostic logging for result tracking
+                    image_id = result.image_task.phash[:8] if (result.image_task and result.image_task.phash) else 'NO_PHASH'
+                    faces_count = len(result.faces)
+                    thumbs_count = len(result.thumbnail_keys) if result.thumbnail_keys else 0
+                    saved_raw = result.saved_to_raw
+                    
+                    # Log periodically or when there are issues
                     if len(self._consumed_results) % 100 == 0:
                         logger.info(f"Consumed {len(self._consumed_results)} results from queue")
+                    elif faces_count > 0 and thumbs_count == 0:
+                        logger.debug(f"DIAG: Consumed result {image_id}... with {faces_count} faces but 0 thumbs saved, "
+                                   f"raw={saved_raw}, saved_to_thumbs={result.saved_to_thumbs}")
+                    elif faces_count != thumbs_count:
+                        logger.debug(f"DIAG: Consumed result {image_id}... with {faces_count} faces but {thumbs_count} thumbs, "
+                                   f"raw={saved_raw}")
                 
             except Exception as e:
                 logger.error(f"Error consuming results: {e}")
@@ -383,13 +395,57 @@ class Orchestrator:
             sites_empty = queue_lengths.get('sites', 0) == 0
             candidates_empty = queue_lengths.get('candidates', 0) == 0
             images_empty = queue_lengths.get('images', 0) == 0
+            storage_empty = queue_lengths.get('storage', 0) == 0
             results_depth = queue_lengths.get('results', 0)
             results_manageable = results_depth < 50
             
-            return sites_empty and candidates_empty and images_empty and results_manageable
+            # Also check gpu:inbox queue
+            gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
+            gpu_inbox_empty = gpu_inbox_depth == 0
+            
+            # Check for in-flight images in GPU processor workers
+            # Look for any staging or inflight batches across all workers
+            gpu_inflight_images = await self._check_gpu_inflight_images()
+            
+            return (sites_empty and candidates_empty and images_empty and 
+                    storage_empty and gpu_inbox_empty and results_manageable and 
+                    gpu_inflight_images == 0)
         except Exception as e:
             logger.error(f"Error checking crawl completion (async): {e}")
             return False
+    
+    async def _check_gpu_inflight_images(self) -> int:
+        """Check total number of images in-flight across all GPU processor workers."""
+        try:
+            client = await self.redis._get_async_client()
+            total_inflight = 0
+            
+            # Check all possible worker IDs (0 to num_gpu_processors - 1)
+            for worker_id in range(self.config.num_gpu_processors):
+                staging_key = f"gpu:staging:{worker_id}"
+                inflight_key = f"gpu:inflight:{worker_id}"
+                
+                # Get staging count (images waiting to be batched)
+                staging_count = await client.get(staging_key)
+                if staging_count:
+                    total_inflight += int(staging_count)
+                
+                # Get inflight batch count (multiply by average batch size for image count)
+                # If there are inflight batches, estimate images in flight
+                inflight_batches = await client.get(inflight_key)
+                if inflight_batches and int(inflight_batches) > 0:
+                    # Estimate: multiply inflight batches by target batch size
+                    # This gives us a conservative estimate of images in flight
+                    total_inflight += int(inflight_batches) * self.config.gpu_target_batch
+            
+            if total_inflight > 0:
+                logger.debug(f"GPU inflight images detected: {total_inflight} (staging + processing batches)")
+            
+            return total_inflight
+        except Exception as e:
+            logger.debug(f"Error checking GPU inflight images: {e}")
+            # If we can't check, assume there might be images in flight (conservative)
+            return 1
     
     def get_system_metrics(self) -> SystemMetrics:
         """Get overall system metrics."""
@@ -471,10 +527,13 @@ class Orchestrator:
                 # Check worker health
                 worker_health = self.check_worker_health()
                 
-                # Log status
+                # Log status - include gpu:inbox queue depth
+                gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
                 logger.info(f"Queues: sites={queue_info.get('queue_lengths', {}).get('sites', 0)}, "
                            f"candidates={queue_info.get('queue_lengths', {}).get('candidates', 0)}, "
                            f"images={queue_info.get('queue_lengths', {}).get('images', 0)}, "
+                           f"gpu_inbox={gpu_inbox_depth}, "
+                           f"storage={queue_info.get('queue_lengths', {}).get('storage', 0)}, "
                            f"results={queue_info.get('queue_lengths', {}).get('results', 0)}")
                 
                 await asyncio.sleep(5.0)  # Reduced from 10.0 for faster completion detection
@@ -567,12 +626,20 @@ class Orchestrator:
             # Get final system metrics
             system_metrics = self.get_system_metrics()
             
-            # Add validation logging
+            # Add validation logging with diagnostic details
             logger.info(f"Consumed {len(self._consumed_results)} results from queue")
             consumed_faces = sum(len(r.faces) for r in self._consumed_results)
             consumed_saved_raw = sum(1 for r in self._consumed_results if r.saved_to_raw)
             consumed_saved_thumbs = sum(1 for r in self._consumed_results if r.saved_to_thumbs)
-            logger.info(f"From consumed results: faces={consumed_faces}, raw={consumed_saved_raw}, thumbs={consumed_saved_thumbs}")
+            consumed_thumb_count = sum(len(r.thumbnail_keys) if r.thumbnail_keys else 0 for r in self._consumed_results)
+            
+            # Diagnostic: Find results with mismatches
+            mismatch_count = sum(1 for r in self._consumed_results 
+                                if len(r.faces) > 0 and (not r.thumbnail_keys or len(r.thumbnail_keys) < len(r.faces)))
+            
+            logger.info(f"From consumed results: faces={consumed_faces}, raw={consumed_saved_raw}, "
+                       f"thumbs={consumed_saved_thumbs} (thumb_count={consumed_thumb_count}), "
+                       f"mismatches={mismatch_count}")
             
             # Use site stats as source of truth (already pulled from Redis)
             total_images_found = sum(site.images_found for site in site_stats_list)

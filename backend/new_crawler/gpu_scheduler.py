@@ -78,26 +78,17 @@ class GPUScheduler:
         if need == 0:
             return 0
         
-        # Diagnostic: Measure wait time and get queue depth
+        # Measure wait time and get queue depth (always check, not just every 10th call)
         feed_start = time.time()
-        queue_depth = None
-        diagnostic_enabled = self.config and getattr(self.config, 'nc_diagnostic_logging', False)
-        # Note: This is sync context, so use sync method (but limit frequency to avoid connection exhaustion)
-        # Only check every 10th call to reduce connection pressure
-        if diagnostic_enabled:
-            if not hasattr(self, '_feed_call_count'):
-                self._feed_call_count = 0
-            self._feed_call_count += 1
-            if self._feed_call_count % 10 == 0:  # Sample every 10th call
-                queue_depth = self.redis.get_queue_length_by_key(self.inbox_key)
+        queue_depth = self.redis.get_queue_length_by_key(self.inbox_key)
         
         raw = self.redis.blpop_many(self.inbox_key, max_n=need, timeout=0.5)
         wait_time_ms = (time.time() - feed_start) * 1000.0
         
         if not raw:
-            if diagnostic_enabled:
-                logger.debug(f"[GPU-SCHEDULER-DIAG] feed() added=0 items, need={need}, "
-                           f"queue_depth={queue_depth}, staging={len(self._staging)}, wait_time_ms={wait_time_ms:.1f}")
+            # Log at INFO level when feed() returns 0 items (timeout case)
+            logger.info(f"[GPU Scheduler] DIAG: feed() added=0 items, need={need}, "
+                       f"queue_depth={queue_depth}, staging={len(self._staging)}, wait_time_ms={wait_time_ms:.1f}")
             return 0
         
         added = 0
@@ -111,12 +102,11 @@ class GPUScheduler:
                 logger.debug(f"[GPU Scheduler] Failed to deserialize payload: {e}")
                 continue
         
-        # Diagnostic logging (only log when we sampled queue_depth)
-        if diagnostic_enabled and queue_depth is not None:
-            queue_depth_after = self.redis.get_queue_length_by_key(self.inbox_key)
-            logger.debug(f"[GPU-SCHEDULER-DIAG] feed() added={added} items, need={need}, "
-                       f"queue_depth={queue_depth}, queue_depth_after={queue_depth_after}, "
-                       f"staging={len(self._staging)}, wait_time_ms={wait_time_ms:.1f}")
+        # Log at INFO level when items are added (not just DEBUG)
+        queue_depth_after = self.redis.get_queue_length_by_key(self.inbox_key)
+        logger.info(f"[GPU Scheduler] DIAG: feed() added={added} items, need={need}, "
+                   f"queue_depth={queue_depth}, queue_depth_after={queue_depth_after}, "
+                   f"staging={len(self._staging)}, wait_time_ms={wait_time_ms:.1f}")
         
         return added
     

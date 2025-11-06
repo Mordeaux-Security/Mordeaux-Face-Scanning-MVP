@@ -10,6 +10,7 @@ import logging
 import multiprocessing
 import os
 import signal
+import sys
 import tempfile
 import time
 from datetime import datetime
@@ -107,12 +108,28 @@ class ExtractorWorker:
                 file_size = download_info.get('content_length', 0)
                 logger.debug(f"[EXTRACTOR-{self.worker_id}] Download: {candidate.img_url} - {file_size}bytes")
                 
+                # Log temp file creation
+                if os.path.exists(temp_path):
+                    actual_size = os.path.getsize(temp_path)
+                    file_mtime = os.path.getmtime(temp_path)
+                    file_age = time.time() - file_mtime
+                    logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Created temp file: {temp_path}, "
+                              f"size={actual_size}bytes, expected={file_size}bytes, "
+                              f"age={file_age:.1f}s, mtime={file_mtime:.1f}")
+                
                 # Compute phash in thread pool (CPU-bound)
                 phash = await asyncio.to_thread(
                     self.cache.compute_phash, temp_path
                 )
                 if not phash:
                     logger.debug(f"[EXTRACTOR-{self.worker_id}] Phash: {temp_path} - FAILED")
+                    # Log intentional deletion before removing
+                    if os.path.exists(temp_path):
+                        file_size = os.path.getsize(temp_path)
+                        file_mtime = os.path.getmtime(temp_path)
+                        file_age = time.time() - file_mtime
+                        logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Deleting temp file (phash failed): "
+                                  f"{temp_path}, size={file_size}bytes, age={file_age:.1f}s")
                     os.remove(temp_path)
                     # Log extraction end
                     extraction_duration = (time.time() - extraction_start_time) * 1000
@@ -126,6 +143,13 @@ class ExtractorWorker:
                 logger.debug(f"[EXTRACTOR-{self.worker_id}] Phash: {phash[:8]}... - cached={is_cached}")
                 
                 if is_cached:
+                    # Log intentional deletion before removing
+                    if os.path.exists(temp_path):
+                        file_size = os.path.getsize(temp_path)
+                        file_mtime = os.path.getmtime(temp_path)
+                        file_age = time.time() - file_mtime
+                        logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Deleting temp file (cached): "
+                                  f"{temp_path}, size={file_size}bytes, age={file_age:.1f}s")
                     os.remove(temp_path)
                     self.cached_images += 1
                     # Log extraction end
@@ -146,6 +170,14 @@ class ExtractorWorker:
                     file_size=download_info.get('content_length', 0),
                     mime_type=download_info.get('content_type', 'image/jpeg')
                 )
+                
+                # Log temp file path being passed to GPU queue
+                if os.path.exists(temp_path):
+                    file_size = os.path.getsize(temp_path)
+                    file_mtime = os.path.getmtime(temp_path)
+                    file_age = time.time() - file_mtime
+                    logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Passing temp file to GPU queue: "
+                              f"{temp_path}, size={file_size}bytes, age={file_age:.1f}s, phash={phash[:8]}...")
                 
                 # Push immediately to GPU inbox (no batching - scheduler handles it)
                 payload = self.redis.serialize_image_task(image_task)
@@ -377,6 +409,7 @@ def extractor_worker_process(worker_id: int):
     logging.basicConfig(
         level=logging.INFO,
         format=f'%(asctime)s - Extractor-{worker_id} - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler(sys.stdout)],
         force=True
     )
     

@@ -32,7 +32,7 @@ class CrawlerConfig(BaseSettings):
     redis_retry_on_timeout: bool = True
     
     # Crawling Limits
-    nc_max_pages_per_site: int = 5  # Set to -1 for unlimited crawling
+    nc_max_pages_per_site: int = 3  # Set to -1 for unlimited crawling
     nc_max_images_per_site: int = 10
     
     # Debug Logging
@@ -43,8 +43,8 @@ class CrawlerConfig(BaseSettings):
     
     # Queue Configuration
     nc_batch_size: int = 256  # DEPRECATED: Old extractor batch threshold (no longer used - extractors push individually to gpu:inbox)
-    nc_max_queue_depth: int = 4096
-    nc_extractor_concurrency: int = 1024  # Total concurrent downloads across all extractor workers (divided among workers)
+    nc_max_queue_depth: int = 512 #4096
+    nc_extractor_concurrency: int = 64 #1024  # Total concurrent downloads across all extractor workers (divided among workers)
     nc_extractor_batch_pop_size: int = 50  # Number of candidates to pop at once from queue
     nc_url_dedup_ttl_hours: int = 24  # TTL for URL deduplication set
     nc_cache_ttl_days: int = 90
@@ -53,7 +53,7 @@ class CrawlerConfig(BaseSettings):
     nc_skip_head_check: bool = True  # Skip HEAD requests when HTML metadata is available
     
     # Crawler Performance Configuration
-    nc_max_concurrent_sites_per_worker: int = 32  # Max sites processed concurrently per crawler worker (eliminates site switching delays)
+    nc_max_concurrent_sites_per_worker: int = 4 # 32  # Max sites processed concurrently per crawler worker (eliminates site switching delays)
     
     # GPU Performance Configuration
     nc_max_concurrent_batches_per_worker: int = 2  # Max batches processed concurrently per GPU worker (improves GPU utilization) - NOTE: Overridden by GPU scheduler (max 2 inflight)
@@ -61,8 +61,9 @@ class CrawlerConfig(BaseSettings):
     
     # Worker Configuration adds to 7 (8 cores-1 for Orchestrator)
     # Each extractor worker runs nc_extractor_concurrency // num_extractors concurrent download tasks
-    num_crawlers: int = 3
-    num_extractors: int = 8  # 4 workers × 16 concurrent downloads each = 64 total
+    # ideal for davis computer (3, 8, 1, 1)
+    num_crawlers: int = 1
+    num_extractors: int = 2  # 4 workers × 16 concurrent downloads each = 64 total
     num_gpu_processors: int = 1
     num_storage_workers: int = 1  # Number of storage worker processes
     
@@ -77,7 +78,7 @@ class CrawlerConfig(BaseSettings):
     gpu_batch_flush_ms: int = 3000  # DEPRECATED: No longer used with GPU scheduler
     
     # GPU Scheduler Configuration (new centralized batching)
-    gpu_target_batch: int = 512  # Target batch size for GPU processing
+    gpu_target_batch: int = 32 # 512  # Target batch size for GPU processing
     gpu_max_wait_ms: int = 12  # Max milliseconds to wait before launching early batch
     gpu_min_launch_ms: int = 100  # Minimum milliseconds between batch launches (Windows/AMD stability)
     gpu_inbox_key: str = "gpu:inbox"  # Redis queue key for GPU input (single FIFO queue)
@@ -88,7 +89,7 @@ class CrawlerConfig(BaseSettings):
     
     # HTTP Configuration
     nc_http_timeout: float = 30.0
-    nc_js_render_timeout: float = 20.0
+    nc_js_render_timeout: float = 120.0 #20.0
     nc_max_redirects: int = 3
     nc_max_retries: int = 3
     nc_retry_base_delay: float = 1.0  # Base delay for exponential backoff (seconds)
@@ -99,14 +100,14 @@ class CrawlerConfig(BaseSettings):
     
     # JavaScript Rendering Configuration
     nc_js_wait_strategy: str = "both"  # "fixed" | "networkidle" | "both"
-    nc_js_wait_timeout: float = 5.0  # seconds to wait for fixed strategy
-    nc_js_networkidle_timeout: float = 3.0  # timeout for network idle strategy
+    nc_js_wait_timeout: float = 30.0 #5.0  # seconds to wait for fixed strategy
+    nc_js_networkidle_timeout: float = 30.0 #3.0  # timeout for network idle strategy
     # First visit strategy: fetch both HTTP and JS, pick best by candidate count
     nc_js_first_visit_compare: bool = True
     # Max concurrent Playwright renders
-    nc_js_concurrency: int = 32
+    nc_js_concurrency: int = 8 #32
     # Browser pool size for JavaScript rendering
-    nc_js_browser_pool_size: int = 32
+    nc_js_browser_pool_size: int = 4 #32
     
     # Image Extraction Configuration
     nc_extract_background_images: bool = True

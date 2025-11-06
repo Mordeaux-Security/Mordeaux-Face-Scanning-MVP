@@ -9,10 +9,12 @@ import asyncio
 import base64
 import json
 import logging
+import os
 import time
 from typing import List, Optional, Dict, Any, Tuple
 import httpx
 import numpy as np
+import cv2
 from PIL import Image
 import io
 
@@ -45,6 +47,10 @@ class GPUInterface:
         self._success_count = 0
         self._failure_count = 0
         self._total_latency = 0.0
+        
+        # CPU fallback model cache (lazy-loaded and reused)
+        self._cpu_app = None
+        self._cpu_app_lock = asyncio.Lock()
         
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client."""
@@ -264,94 +270,205 @@ class GPUInterface:
             self._failure_count += 1
             return None
     
+    async def _get_cpu_app(self):
+        """Get or load CPU face detection model (thread-safe, cached)."""
+        if self._cpu_app is None:
+            async with self._cpu_app_lock:
+                # Double-check after acquiring lock
+                if self._cpu_app is None:
+                    from insightface.app import FaceAnalysis
+                    home = os.path.expanduser("~/.insightface")
+                    os.makedirs(home, exist_ok=True)
+                    logger.info("CPU fallback: Loading face detection model (first time)")
+                    app = FaceAnalysis(name="buffalo_l", root=home)
+                    app.prepare(ctx_id=-1, det_size=(640, 640))  # CPU: ctx_id=-1
+                    self._cpu_app = app
+                    logger.info("CPU fallback: Face detection model loaded successfully")
+        return self._cpu_app
+    
+    def _process_single_image_cpu(self, task: ImageTask, app) -> Tuple[str, List[FaceDetection], int, int]:
+        """Process a single image using CPU fallback (sync function for thread execution).
+        
+        Returns: (phash, face_detections, faces_found, faces_skipped)
+        """
+        try:
+            # Validate phash exists
+            if not task.phash:
+                logger.error(f"CPU fallback: Image task missing phash, skipping")
+                return (None, [], 0, 0)
+            
+            # Load image from temp path
+            if not os.path.exists(task.temp_path):
+                logger.warning(f"CPU fallback: Image file not found for {task.phash[:8]}...: {task.temp_path}")
+                return (task.phash, [], 0, 0)
+            
+            with open(task.temp_path, 'rb') as f:
+                image_bytes = f.read()
+            
+            if not image_bytes or len(image_bytes) < 10:
+                logger.warning(f"CPU fallback: Invalid image data for {task.phash[:8]}... (size: {len(image_bytes) if image_bytes else 0})")
+                return (task.phash, [], 0, 0)
+            
+            # Read image using OpenCV (same as GPU worker preprocessing)
+            arr = np.frombuffer(image_bytes, dtype=np.uint8)
+            img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            
+            if img is None:
+                # Fallback to PIL if OpenCV fails
+                pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+            
+            if img is None:
+                logger.warning(f"CPU fallback: Failed to decode image for {task.phash[:8]}...")
+                return (task.phash, [], 0, 0)
+            
+            # Detect faces using InsightFace
+            faces = app.get(img)
+            
+            # Convert to FaceDetection objects with quality filtering (same as GPU)
+            face_detections = []
+            faces_found = 0
+            faces_skipped = 0
+            
+            for face in faces:
+                # Check if face has required attributes
+                if not hasattr(face, "embedding") or face.embedding is None:
+                    faces_skipped += 1
+                    continue
+                
+                # Get detection score (quality) - same threshold as GPU
+                det_score = float(getattr(face, "det_score", 0.0))
+                
+                # Apply quality threshold (EXACT same as GPU: min_face_quality)
+                if det_score < self.config.min_face_quality:
+                    logger.debug(f"CPU fallback: Face quality {det_score:.3f} below threshold {self.config.min_face_quality} for {task.phash[:8]}...")
+                    faces_skipped += 1
+                    continue
+                
+                # Get bounding box (convert to list format matching GPU)
+                bbox = face.bbox.tolist() if hasattr(face.bbox, 'tolist') else list(face.bbox)
+                
+                # Get landmarks (keypoints) - same format as GPU
+                landmarks = []
+                if hasattr(face, 'kps') and face.kps is not None:
+                    landmarks = face.kps.tolist() if hasattr(face.kps, 'tolist') else list(face.kps)
+                
+                # Get embedding (same format as GPU)
+                embedding = face.embedding.tolist() if hasattr(face.embedding, 'tolist') else face.embedding
+                
+                # Get age and gender if available (same as GPU)
+                age = None
+                if hasattr(face, 'age') and face.age is not None:
+                    try:
+                        age = int(face.age)
+                    except (ValueError, TypeError):
+                        pass
+                
+                gender = None
+                if hasattr(face, 'gender') and face.gender is not None:
+                    try:
+                        gender = str(face.gender)
+                    except (ValueError, TypeError):
+                        pass
+                
+                # Create FaceDetection object (EXACT same structure as GPU)
+                face_detection = FaceDetection(
+                    bbox=bbox,
+                    landmarks=landmarks,
+                    embedding=embedding,
+                    quality=det_score,  # Same quality field as GPU
+                    age=age,
+                    gender=gender
+                )
+                face_detections.append(face_detection)
+                faces_found += 1
+            
+            return (task.phash, face_detections, faces_found, faces_skipped)
+            
+        except Exception as e:
+            logger.error(f"CPU fallback: Error processing image {task.phash[:8] if task.phash else 'unknown'}...: {e}", exc_info=True)
+            return (task.phash if task.phash else None, [], 0, 0)
+    
     async def _cpu_fallback(self, image_tasks: List[ImageTask]) -> Dict[str, List[FaceDetection]]:
-        """CPU fallback for face detection. Returns dict keyed by phash for consistency."""
-        logger.info(f"Using CPU fallback for {len(image_tasks)} images")
+        """CPU fallback for face detection with parallel processing.
+        
+        Returns dict keyed by phash: {phash: [FaceDetection, ...], ...}
+        This matches the exact format returned by GPU worker for consistent data flow.
+        """
+        import os as os_module
+        cpu_count = os_module.cpu_count() or 4
+        max_workers = min(len(image_tasks), cpu_count)
+        
+        logger.info(f"CPU fallback: Processing {len(image_tasks)} images in parallel (max {max_workers} workers)")
         
         try:
-            # Import CPU face detection (reuse existing face.py)
-            import sys
-            import os
-            sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+            # Load model once (cached for subsequent calls)
+            app = await self._get_cpu_app()
             
-            # TODO: ARCHITECTURE ISSUE - Legacy Code Import
-            # This line imports from legacy app/services/face.py which is NOT used by new_crawler.
-            # The new_crawler has its own separate path:
-            #   new_crawler/gpu_interface.py -> gpu_worker/worker.py (Windows service)
-            #
-            # The old path (not used here):
-            #   app/services/face.py -> gpu_client.py -> gpu_worker/worker.py
-            #
-            # This import on line 265 should be removed or clarified. The CPU fallback
-            # (_cpu_fallback method line 269-327) uses local InsightFace, not face.py.
-            #
-            # Action: Remove unused import or document why it exists
-            from app.services.face import detect_faces_batch
-            
-            # Load images from temp paths
-            image_bytes_list = []
-            valid_tasks = []
-            for task in image_tasks:
-                try:
-                    with open(task.temp_path, 'rb') as f:
-                        image_bytes = f.read()
-                    if image_bytes:
-                        image_bytes_list.append(image_bytes)
-                        valid_tasks.append(task)
-                except Exception as e:
-                    logger.error(f"Failed to load image from {task.temp_path}: {e}")
-                    image_bytes_list.append(b'')
-            
-            # Filter out empty images
-            valid_images = [img_bytes for img_bytes in image_bytes_list if img_bytes]
-            if not valid_images:
-                logger.warning("No valid images for CPU fallback")
-                return {task.phash: [] for task in image_tasks}
-            
-            # Run CPU face detection
-            start_time = time.time()
-            results = detect_faces_batch(
-                valid_images,
-                min_face_quality=self.config.min_face_quality,
-                require_face=False,
-                crop_faces=True,
-                face_margin=self.config.face_margin
-            )
-            processing_time = (time.time() - start_time) * 1000
-            
-            # Count total faces found
-            total_faces = sum(len(faces) for faces in results)
-            
-            # Log completion
-            self.gpu_logger.log_fallback_complete(len(image_tasks), total_faces, processing_time)
-            
-            # Convert to our format and key by phash
+            # Initialize result dict with all tasks (ensures all have entries)
             converted_results = {}
-            valid_idx = 0
             for task in image_tasks:
-                if task in valid_tasks:
-                    face_detections = []
-                    for detection in results[valid_idx]:
-                        face_detection = FaceDetection(
-                            bbox=detection['bbox'],
-                            landmarks=detection.get('landmarks', []),
-                            embedding=detection.get('embedding'),
-                            quality=detection.get('quality', 0.0),
-                            age=detection.get('age'),
-                            gender=detection.get('gender')
-                        )
-                        face_detections.append(face_detection)
-                    converted_results[task.phash] = face_detections
-                    valid_idx += 1
-                else:
+                if task.phash:
                     converted_results[task.phash] = []
             
-            logger.info(f"✓ CPU fallback processed {len(image_tasks)} images in {processing_time:.1f}ms")
+            start_time = time.time()
+            total_faces = 0
+            processed_count = 0
+            failed_count = 0
+            skipped_count = 0
+            
+            # Process images in parallel using asyncio.gather with semaphore to limit concurrency
+            semaphore = asyncio.Semaphore(max_workers)
+            
+            async def process_with_semaphore(task):
+                async with semaphore:
+                    return await asyncio.to_thread(self._process_single_image_cpu, task, app)
+            
+            # Process all images in parallel (limited by semaphore)
+            results = await asyncio.gather(*[process_with_semaphore(task) for task in image_tasks], return_exceptions=True)
+            
+            # Collect results
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.error(f"CPU fallback: Exception processing image {image_tasks[i].phash[:8] if image_tasks[i].phash else 'unknown'}...: {result}")
+                    if image_tasks[i].phash:
+                        converted_results[image_tasks[i].phash] = []
+                    failed_count += 1
+                elif result is None or result[0] is None:
+                    failed_count += 1
+                else:
+                    phash, face_detections, faces_found, faces_skipped = result
+                    if phash:
+                        converted_results[phash] = face_detections
+                        total_faces += faces_found
+                        skipped_count += faces_skipped
+                        processed_count += 1
+                    
+                    # Log progress (every 10 images or when faces found)
+                    if (i + 1) % 10 == 0 or len(face_detections) > 0:
+                        logger.debug(f"CPU fallback: [{i+1}/{len(image_tasks)}] {phash[:8] if phash else 'NO_PHASH'}...: "
+                                   f"{len(face_detections)} faces detected")
+            
+            processing_time = (time.time() - start_time) * 1000
+            
+            # Log completion (same format as GPU logging)
+            self.gpu_logger.log_fallback_complete(len(image_tasks), total_faces, processing_time)
+            
+            logger.info(f"✓ CPU fallback: Processed {processed_count}/{len(image_tasks)} images in parallel "
+                       f"({max_workers} workers) in {processing_time:.1f}ms "
+                       f"({total_faces} faces found, {failed_count} failed, {skipped_count} faces skipped by quality)")
+            
+            # Ensure all image_tasks have entries (even if empty) - matches GPU behavior
+            for task in image_tasks:
+                if task.phash and task.phash not in converted_results:
+                    converted_results[task.phash] = []
+            
             return converted_results
             
         except Exception as e:
-            logger.error(f"CPU fallback failed: {e}")
-            return {task.phash: [] for task in image_tasks}
+            logger.error(f"CPU fallback failed: {e}", exc_info=True)
+            # Return empty results for all images (same behavior as GPU failure)
+            return {task.phash: [] for task in image_tasks if task.phash}
     
     async def process_batch(self, image_tasks: List[ImageTask]) -> Optional[Dict[str, List[FaceDetection]]]:
         """Process a batch of images with GPU worker and CPU fallback.

@@ -122,9 +122,39 @@ class StorageManager:
         try:
             client = self._get_client()
             
+            # Validate temp_path before attempting to open
+            if not image_task.temp_path:
+                logger.error(f"[STORAGE] [TEMP-FILE] Cannot save raw image: temp_path is None for "
+                           f"{image_task.phash[:8] if image_task.phash else 'NO_PHASH'}...")
+                return None, None
+            
+            # Check if file exists and log stats
+            if os.path.exists(image_task.temp_path):
+                file_size = os.path.getsize(image_task.temp_path)
+                file_mtime = os.path.getmtime(image_task.temp_path)
+                file_age = time.time() - file_mtime
+                logger.info(f"[STORAGE] [TEMP-FILE] File exists before open: {image_task.temp_path}, "
+                          f"size={file_size}bytes, age={file_age:.1f}s, mtime={file_mtime:.1f}")
+            else:
+                # File missing - check parent directory
+                parent_dir = os.path.dirname(image_task.temp_path)
+                parent_exists = os.path.exists(parent_dir) if parent_dir else False
+                logger.error(f"[STORAGE] [TEMP-FILE] Cannot save raw image: temp file not found: "
+                           f"{image_task.temp_path} for {image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
+                           f"parent_dir_exists={parent_exists}, parent_dir={parent_dir}")
+                return None, None
+            
             # Read image bytes from temp file
-            with open(image_task.temp_path, 'rb') as f:
-                image_data = f.read()
+            try:
+                with open(image_task.temp_path, 'rb') as f:
+                    image_data = f.read()
+            except FileNotFoundError as e:
+                # File disappeared between existence check and open
+                file_size = os.path.getsize(image_task.temp_path) if os.path.exists(image_task.temp_path) else 0
+                logger.error(f"[STORAGE] [TEMP-FILE] Failed to save raw image: temp file not found (race condition): "
+                           f"{image_task.temp_path} for {image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
+                           f"error={e}")
+                return None, None
             
             # Generate key
             key = f"{image_task.phash}.jpg"
@@ -145,8 +175,15 @@ class StorageManager:
                     if attempt == 2:
                         raise
                     time.sleep(1.0)
+        except FileNotFoundError as e:
+            logger.error(f"[STORAGE] [TEMP-FILE] Failed to save raw image: temp file not found: "
+                       f"{image_task.temp_path} for {image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
+                       f"error={e}")
+            return None, None
         except Exception as e:
-            logger.error(f"Failed to save raw image: {e}")
+            logger.error(f"[STORAGE] Failed to save raw image: {type(e).__name__}: {e} for "
+                       f"{image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
+                       f"temp_path={image_task.temp_path}")
             return None, None
     
     # TODO: ARCHITECTURE ISSUE - Mixed Storage Locations
@@ -652,12 +689,20 @@ class StorageManager:
         """Clean up temporary file."""
         try:
             if os.path.exists(temp_path):
+                # Log file stats before deletion
+                file_size = os.path.getsize(temp_path)
+                file_mtime = os.path.getmtime(temp_path)
+                file_age = time.time() - file_mtime
+                logger.info(f"[STORAGE] [TEMP-FILE] Deleting temp file: {temp_path}, "
+                          f"size={file_size}bytes, age={file_age:.1f}s, mtime={file_mtime:.1f}")
                 os.remove(temp_path)
-                logger.debug(f"Cleaned up temp file: {temp_path}")
+                logger.info(f"[STORAGE] [TEMP-FILE] Successfully deleted temp file: {temp_path}")
                 return True
-            return True
+            else:
+                logger.info(f"[STORAGE] [TEMP-FILE] Temp file already deleted (missing): {temp_path}")
+                return True
         except Exception as e:
-            logger.error(f"Failed to cleanup temp file {temp_path}: {e}")
+            logger.error(f"[STORAGE] [TEMP-FILE] Failed to cleanup temp file {temp_path}: {type(e).__name__}: {e}")
             return False
     
     def health_check(self) -> Dict[str, Any]:

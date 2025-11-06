@@ -8,6 +8,7 @@ Handles I/O operations only - all compute (cropping) happens in GPU processor.
 import asyncio
 import logging
 import multiprocessing
+import os
 import signal
 import sys
 import time
@@ -56,7 +57,15 @@ class StorageWorker:
                 if storage_task:
                     # Log queue depth for monitoring
                     queue_depth = await self.redis.get_queue_length_by_key_async(self.config.get_queue_name('storage'))
-                    logger.debug(f"[STORAGE-{self.worker_id}] Popped task, queue_depth={queue_depth}, image={storage_task.image_task.phash[:8]}...")
+                    image_task = storage_task.image_task
+                    faces_count = len(storage_task.face_result.faces) if storage_task.face_result else 0
+                    crops_count = len(storage_task.face_crops) if storage_task.face_crops else 0
+                    temp_path_exists = image_task.temp_path and os.path.exists(image_task.temp_path) if image_task.temp_path else False
+                    logger.info(f"[STORAGE-{self.worker_id}] DIAG: Popped task from queue: "
+                               f"image={image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
+                               f"faces={faces_count}, crops={crops_count}, "
+                               f"queue_depth={queue_depth}, "
+                               f"temp_path={'EXISTS' if temp_path_exists else 'MISSING'}")
                     
                     await self._process_storage_task(storage_task)
                     self.processed_tasks += 1
@@ -71,6 +80,13 @@ class StorageWorker:
                         last_log_time = now
                 else:
                     # No tasks available, brief sleep to avoid tight loop
+                    queue_depth = await self.redis.get_queue_length_by_key_async(self.config.get_queue_name('storage'))
+                    # Log every 10 seconds to avoid spam
+                    current_time = int(time.time())
+                    if not hasattr(self, '_last_no_task_log') or current_time - self._last_no_task_log >= 10:
+                        logger.info(f"[STORAGE-{self.worker_id}] DIAG: No tasks in queue, depth={queue_depth}, "
+                                   f"processed={self.processed_tasks}, waiting...")
+                        self._last_no_task_log = current_time
                     await asyncio.sleep(0.1)
                     
             except Exception as e:
@@ -84,9 +100,16 @@ class StorageWorker:
         storage_start_time = time.time()
         image_task = storage_task.image_task
         site_id = image_task.candidate.site_id
-        image_id = image_task.phash[:8]
+        image_id = image_task.phash[:8] if image_task.phash else 'NO_PHASH'
         
         try:
+            # Validate storage task structure
+            faces_count = len(storage_task.face_result.faces) if storage_task.face_result else 0
+            crops_count = len(storage_task.face_crops) if storage_task.face_crops else 0
+            if faces_count != crops_count:
+                logger.warning(f"[STORAGE-{self.worker_id}] DIAG: Storage task mismatch: {faces_count} faces but {crops_count} crops "
+                             f"for {image_id}...")
+            
             # Log storage start
             self.timing_logger.log_storage_start(site_id, image_id)
             
@@ -112,6 +135,19 @@ class StorageWorker:
             
             # Push final result to results queue
             await self.redis.push_face_result_async(face_result)
+            
+            # Clean up temp file after successful save
+            if image_task.temp_path:
+                try:
+                    if os.path.exists(image_task.temp_path):
+                        await asyncio.to_thread(self.storage.cleanup_temp_file, image_task.temp_path)
+                        logger.debug(f"[STORAGE-{self.worker_id}] Cleaned up temp file: {image_task.temp_path}")
+                    else:
+                        logger.info(f"[STORAGE-{self.worker_id}] [TEMP-FILE] Temp file already deleted before cleanup: "
+                                  f"{image_task.temp_path}")
+                except Exception as cleanup_err:
+                    logger.warning(f"[STORAGE-{self.worker_id}] Failed to cleanup temp file {image_task.temp_path}: "
+                                 f"{cleanup_err}")
             
             # Calculate duration
             storage_duration = (time.time() - storage_start_time) * 1000
@@ -159,7 +195,9 @@ def storage_worker_process(worker_id: int):
         # Setup logging
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format=f'%(asctime)s - Storage-{worker_id} - %(levelname)s - %(message)s',
+            handlers=[logging.StreamHandler(sys.stdout)],
+            force=True
         )
         
         # Create worker
