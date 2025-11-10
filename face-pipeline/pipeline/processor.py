@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 from PIL import Image
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 """
 Face Pipeline Processor
@@ -54,8 +54,8 @@ class PipelineInput(BaseModel):
     site: str
     """Site identifier (e.g., domain or source) where the image originated."""
 
-    url: HttpUrl
-    """Original HTTP(S) URL where the image was sourced from."""
+    url: str
+    """Original URL where the image was sourced from (http/https/file://)."""
 
     image_phash: str
     """Perceptual hash (pHash) of the image for near-duplicate detection."""
@@ -293,6 +293,9 @@ def process_image(message: dict) -> dict:
             "bbox": fd.get("bbox"),
             "quality": q,
             "image_sha256": msg.image_sha256,
+            "face_id": meta["face_id"],  # Store original face_id for URL derivation
+            "crop_key": crop_key,  # Store keys for presigned URL generation
+            "thumb_key": thumb_key,
         }
         points.append(make_point(face_id=meta["face_id"], vector=vec_list, payload=payload))
 

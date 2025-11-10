@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 from io import BytesIO
+from datetime import timedelta
 import threading
 
 from minio import Minio
@@ -70,8 +71,9 @@ def put_bytes(bucket: str, key: str, data: bytes, content_type: str) -> None:
 
 def presign(bucket: str, key: str, ttl_sec: int | None = None) -> str:
     c = get_client()
+    expires_sec = ttl_sec if ttl_sec is not None else settings.PRESIGN_TTL_SEC
     return c.presigned_get_object(
         bucket,
         key,
-        expires=ttl_sec or settings.PRESIGN_TTL_SEC
+        expires=timedelta(seconds=expires_sec)
     )

@@ -1,89 +1,13 @@
-# Face Pipeline Requirements
-# Version-pinned for production stability
-# Synced with backend/requirements.txt where applicable to avoid conflicts
-
-# ============================================================================
-# Core Web Framework
-# ============================================================================
 fastapi==0.115.0
-uvicorn[standard]==0.30.6
-pydantic==2.9.2
-pydantic-settings==2.5.2
-python-multipart==0.0.9
-
-# ============================================================================
-# Image Processing
-# ============================================================================
-Pillow==10.4.0
+uvicorn[standard]==0.30.0
+qdrant-client==1.8.2
+redis==5.0.4
+minio==7.2.7
 numpy==1.26.4
-opencv-python-headless==4.10.0.84
+opencv-python-headless==4.9.0.80
+pydantic==2.8.2
+
+# --- Step 2: add these ---
+insightface==0.7.3
+onnxruntime==1.17.0   # CPU; if you run GPU with CUDA, replace with onnxruntime-gpu
 imagehash==4.3.1
-
-# ============================================================================
-# Storage
-# ============================================================================
-minio==7.2.9
-minio>=7.2.7
-
-# ============================================================================
-# Vector Database
-# ============================================================================
-qdrant-client==1.10.1
-qdrant-client>=1.9.2
-
-# ============================================================================
-# Progress & Utilities
-# ============================================================================
-tqdm>=4.66.4
-
-# ============================================================================
-# Redis & Caching
-# ============================================================================
-redis>=5
-
-# ============================================================================
-# Logging
-# ============================================================================
-loguru==0.7.2
-
-# ============================================================================
-# Testing & Development
-# ============================================================================
-pytest==8.3.3
-pytest-asyncio==0.24.0
-pytest-cov==5.0.0
-black==24.8.0
-ruff==0.6.8
-
-# ============================================================================
-# Optional: Face Processing (if face-pipeline needs to run independently)
-# ============================================================================
-# Uncomment if you want face-pipeline to be standalone
-# Otherwise, it will use the backend's InsightFace installation
-# insightface==0.7.3
-# onnxruntime==1.19.2
-
-# ============================================================================
-# Notes on Shared Dependencies
-# ============================================================================
-# This face-pipeline is designed to be run alongside the main backend.
-# Many dependencies (especially heavy ones like InsightFace) are already
-# installed in the backend container.
-#
-# If you want to run face-pipeline completely standalone:
-# 1. Uncomment the InsightFace dependencies above
-# 2. Consider copying backend/requirements.txt face processing section
-# 3. Update the Dockerfile to install all dependencies
-
-# Core
-numpy>=1.26
-Pillow>=10.0.0
-opencv-python-headless>=4.10.0.84
-
-# Models
-insightface>=0.7.3
-onnxruntime>=1.18.0           # CPU fallback
-# onnxruntime-gpu>=1.18.0     # (optional) if you have CUDA in your container/host
-
-# Utils (used later; safe to add now)
-imagehash>=4.3
