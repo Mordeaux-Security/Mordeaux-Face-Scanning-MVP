@@ -57,10 +57,10 @@ class Settings(BaseModel):
     enable_queue_worker: bool = os.getenv("ENABLE_QUEUE_WORKER", "false").lower() == "true"
 
     # ----- Redis Configuration -----
-    redis_url: str = Field(default="redis://redis:6379/0", env="REDIS_URL")
-    redis_stream_name: str = Field(default="face-processing-queue", env="REDIS_STREAM_NAME")
-    redis_group_name: str = Field(default="pipeline", env="REDIS_GROUP_NAME")
-    redis_consumer_name: str = Field(default="", env="REDIS_CONSUMER_NAME")  # Auto-generated if empty
+    redis_url: str = os.getenv("REDIS_URL", "redis://redis:6379/0")
+    redis_stream_name: str = os.getenv("REDIS_STREAM_NAME", "face-processing-queue")
+    redis_group_name: str = os.getenv("REDIS_GROUP_NAME", "pipeline")
+    redis_consumer_name: str = os.getenv("REDIS_CONSUMER_NAME", "")  # Auto-generated if empty
 
     # ----- Worker Configuration -----
     max_worker_concurrency: int = Field(default=5, env="MAX_WORKER_CONCURRENCY")
