@@ -24,7 +24,7 @@ build-frontend:
 	 cd frontend && npm ci && npm run build
 
 seed-qdrant:
-	python -c "from qdrant_client import QdrantClient; from qdrant_client.http.models import PointStruct; import os,random; qc=QdrantClient(url=os.getenv('QDRANT_URL','http://localhost:6333')); pts=[PointStruct(id=i, vector=[random.random() for _ in range(512)], payload={'tenant_id':'demo','p_hash_prefix':'0000'}) for i in range(1000)]; qc.upsert(os.getenv('QDRANT_COLLECTION','faces_v1'), points=pts, wait=True); print('seeded 1k points')"
+	docker compose exec -T face-pipeline python -c 'from qdrant_client import QdrantClient; from qdrant_client.http.models import PointStruct; import os,random; qc=QdrantClient(url=os.getenv("QDRANT_URL","http://qdrant:6333")); coll=os.getenv("QDRANT_COLLECTION","faces_v1"); pts=[PointStruct(id=i, vector=[random.random() for _ in range(512)], payload={"tenant_id":"demo","p_hash_prefix":"0000"}) for i in range(1000)]; qc.upsert(coll, points=pts, wait=True); print(f"seeded {len(pts)} points")'
 
 worker:
 	docker compose exec -e ENABLE_QUEUE_WORKER=true face-pipeline python worker.py
