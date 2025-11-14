@@ -27,6 +27,7 @@ class Settings(BaseModel):
     qdrant_collection: str = os.getenv("QDRANT_COLLECTION", "faces_v1")
     QDRANT_API_KEY: str | None = os.getenv("QDRANT_API_KEY") or None
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "faces_v1")
+    IDENTITY_COLLECTION: str = os.getenv("IDENTITY_COLLECTION", "identities_v1")
     VECTOR_DIM: int = int(os.getenv("VECTOR_DIM", "512"))
     SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.6"))
 
