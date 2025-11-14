@@ -67,6 +67,13 @@ class PipelineInput(BaseModel):
     Examples: [{"bbox": [x, y, w, h], "confidence": 0.95}]
     """
 
+    identity_id: Optional[str] = None
+    """
+    Optional identity identifier for user-uploaded content.
+    When provided, faces are tagged with this identity_id for verification-first flow.
+    If None (e.g., open-world crawl), faces can still be verified later using centroid matching.
+    """
+
 
 def process_image(message: dict) -> dict:
     """
@@ -297,6 +304,9 @@ def process_image(message: dict) -> dict:
             "crop_key": crop_key,  # Store keys for presigned URL generation
             "thumb_key": thumb_key,
         }
+        # Add identity_id if provided (for verification-first flow)
+        if msg.identity_id:
+            payload["identity_id"] = msg.identity_id
         points.append(make_point(face_id=meta["face_id"], vector=vec_list, payload=payload))
 
         crops_keys.append(crop_key)

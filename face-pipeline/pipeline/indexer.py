@@ -49,7 +49,7 @@ def ensure_collection() -> None:
         # Payload index helpers: you can add later if desired
     
     # Create payload indexes for faster filtering (idempotent)
-    fields_to_index = ['tenant_id', 'p_hash_prefix', 'site']
+    fields_to_index = ['tenant_id', 'p_hash_prefix', 'site', 'identity_id']
     
     try:
         collection_info = qc.get_collection(collection_name=coll)
