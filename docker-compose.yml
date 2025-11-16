@@ -65,6 +65,7 @@ services:
       VERIFY_HI_THRESHOLD: "0.78"
       VERIFY_TOP_K: "50"
       VERIFY_HNSW_EF: "128"
+      LOG_LEVEL: INFO
     expose: ["8001"]
     networks: [mordeaux]
     depends_on:

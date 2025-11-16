@@ -8,6 +8,7 @@ import cv2
 from PIL import Image
 
 from pydantic import BaseModel
+from logging_utils import log_event
 
 """
 Face Pipeline Processor
@@ -193,6 +194,33 @@ def process_image(message: dict) -> dict:
         return _build_error_response(msg.image_sha256, timings)
 
     # ========================================================================
+    # TODO: INTEGRATE CRAWLER_INGEST_QUALITY
+    # ========================================================================
+    # For crawler ingestion, use CRAWLER_INGEST_QUALITY to filter faces early:
+    #
+    # Option 1: Filter before processing (recommended for crawler)
+    #   from pipeline.detector import detect_faces_raw
+    #   from face_quality import CRAWLER_INGEST_QUALITY, evaluate_face_quality
+    #   
+    #   raw_faces = detect_faces_raw(img_bgr)
+    #   usable_faces = []
+    #   for face in raw_faces:
+    #       q = evaluate_face_quality(img_bgr, face, cfg=CRAWLER_INGEST_QUALITY)
+    #       if q.is_usable:
+    #           usable_faces.append(face)
+    #   # Then convert usable_faces to face_detections format and continue
+    #
+    # Option 2: Tag low-quality faces but still index them
+    #   for face in raw_faces:
+    #       q = evaluate_face_quality(img_bgr, face, cfg=CRAWLER_INGEST_QUALITY)
+    #       # Store q.is_usable, q.score, q.reasons in metadata
+    #       # Index all faces but mark quality in payload
+    #
+    # Current implementation uses detect_faces() which returns dicts.
+    # To use CRAWLER_INGEST_QUALITY, switch to detect_faces_raw() to get
+    # raw Face objects for quality evaluation before conversion.
+
+    # ========================================================================
     # PHASE 2 IMPLEMENTATION: REAL PIPELINE PROCESSING
     # ========================================================================
     
@@ -227,6 +255,43 @@ def process_image(message: dict) -> dict:
         if not q["pass"]:
             rejected += 1
             continue
+
+        # Log face processing with quality metrics
+        # Handle both dict-based quality (current) and FaceQualityResult object (future)
+        det_score = fd.get("confidence")  # Detection confidence from face detection
+        
+        # Extract quality metrics - works with both dict and FaceQualityResult
+        if hasattr(q, "is_usable"):
+            # FaceQualityResult object (when using evaluate_face_quality)
+            quality_is_usable = q.is_usable
+            quality_score = q.score
+            blur_var = q.blur_var
+            yaw = q.yaw_deg
+            pitch = q.pitch_deg
+            roll = q.roll_deg
+        else:
+            # Dict-based quality (current implementation)
+            quality_is_usable = q.get("pass", False)
+            quality_score = q.get("pass", False)  # No score in current dict, use pass as proxy
+            blur_var = q.get("blur")
+            yaw = None
+            pitch = None
+            roll = None
+        
+        # Log face processing event
+        log_event(
+            "ingest_face_processed",
+            tenant_id=msg.tenant_id,
+            image_key=msg.key or msg.url or "unknown",
+            face_index=i,
+            quality_is_usable=quality_is_usable,
+            quality_score=quality_score,
+            det_score=det_score,
+            blur_var=blur_var,
+            yaw=yaw,
+            pitch=pitch,
+            roll=roll,
+        )
 
         # Embedding (512-d float32)
         with timer("embed_ms"):
