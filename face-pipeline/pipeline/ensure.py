@@ -26,6 +26,18 @@ def ensure_qdrant():
         qc.create_payload_index(coll, field_name="tenant_id", field_schema=PT.KEYWORD, wait=True)
         qc.create_payload_index(coll, field_name="p_hash_prefix", field_schema=PT.KEYWORD, wait=True)
 
+def ensure_identities():
+    qc = QdrantClient(url=os.getenv("QDRANT_URL","http://qdrant:6333"), api_key=os.getenv("QDRANT_API_KEY",""))
+    coll = os.getenv("IDENTITY_COLLECTION","identities_v1")
+    existing = {c.name for c in qc.get_collections().collections}
+    if coll not in existing:
+        qc.recreate_collection(
+            collection_name=coll,
+            vectors_config=VectorParams(size=int(os.getenv("VECTOR_DIM","512")), distance=Distance.COSINE)
+        )
+        qc.create_payload_index(coll, field_name="tenant_id", field_schema=PT.KEYWORD, wait=True)
+        qc.create_payload_index(coll, field_name="identity_id", field_schema=PT.KEYWORD, wait=True)
+
 def ensure_all():
     try:
         ensure_minio()
@@ -35,5 +47,9 @@ def ensure_all():
         ensure_qdrant()
     except Exception as e:
         print("qdrant ensure failed:", e)
+    try:
+        ensure_identities()
+    except Exception as e:
+        print("identities ensure failed:", e)
  
 

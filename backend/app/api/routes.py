@@ -34,6 +34,66 @@ async def search_passthrough(payload: dict):
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"pipeline_unreachable: {e}")
 
+# ---------- Identity-safe search proxy ----------
+class IdentitySafeSearchReq(BaseModel):
+    """Request model for identity-safe search endpoint."""
+    tenant_id: str
+    identity_id: str
+    image_b64: str
+    top_k: int = Field(default=50, ge=1, le=200)
+    min_score: float = Field(default=0.0, ge=0.0, le=1.0)
+
+class IdentitySafeSearchResult(BaseModel):
+    """Result item for identity-safe search."""
+    id: str
+    score: float
+    image_id: Optional[str] = None
+    tenant_id: Optional[str] = None
+    identity_id: Optional[str] = None
+    payload: Optional[dict] = None
+
+class IdentitySafeSearchResp(BaseModel):
+    """Response model for identity-safe search endpoint."""
+    verified: bool
+    similarity: float
+    threshold: float
+    reason: Optional[dict] = None
+    results: List[IdentitySafeSearchResult] = []
+    count: int = Field(default=0)
+
+@router.post("/api/v1/identity_safe_search", response_model=IdentitySafeSearchResp)
+async def identity_safe_search_passthrough(req: IdentitySafeSearchReq) -> IdentitySafeSearchResp:
+    """
+    Proxy identity-safe search to face-pipeline.
+    
+    Verifies a probe image against an enrolled identity and only returns that identity's faces
+    if verification succeeds (strict no-leak rule).
+    """
+    url = f"{PIPELINE_URL}/api/v1/identity_safe_search"
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            r = await client.post(url, json=req.model_dump())
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "pipeline_unreachable", "message": str(e)}
+        )
+    
+    if r.status_code != 200:
+        # Bubble up pipeline errors transparently
+        try:
+            detail = r.json()
+        except Exception:
+            detail = {"error": "pipeline_error", "status_code": r.status_code}
+        raise HTTPException(status_code=r.status_code, detail=detail)
+    
+    data = r.json()
+    # Ensure count is present (compute from results if missing)
+    if "count" not in data:
+        data["count"] = len(data.get("results", []))
+    # Validate and normalize response with Pydantic
+    return IdentitySafeSearchResp(**data)
+
 # ---------- Redis stream ingest (single + batch) ----------
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 REDIS_STREAM_NAME = os.getenv("REDIS_STREAM_NAME", "face:ingest")

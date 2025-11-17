@@ -61,6 +61,11 @@ services:
       QDRANT_API_KEY: ""
       VECTOR_DIM: "512"
       QDRANT_COLLECTION: faces_v1
+      IDENTITY_COLLECTION: identities_v1
+      VERIFY_HI_THRESHOLD: "0.78"
+      VERIFY_TOP_K: "50"
+      VERIFY_HNSW_EF: "128"
+      LOG_LEVEL: INFO
     expose: ["8001"]
     networks: [mordeaux]
     depends_on:
