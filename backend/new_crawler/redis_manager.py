@@ -42,9 +42,6 @@ class RedisManager:
         self._active_tasks_key = "nc:active_tasks"
         # Site limit flag prefix
         self._site_limit_flag_prefix = "nc:site:limit:"  # nc:site:limit:{site_id}
-        # Track consecutive zero-depth reads for desync detection
-        self._consecutive_zero_depth_count: int = 0
-        self._last_non_zero_depth_time: float = time.time()  # Initialize to current time to avoid false positives
         
         # Log throttling for repetitive diagnostic logs (max every 500ms)
         self._last_diag_log_time: float = 0.0
@@ -138,9 +135,6 @@ class RedisManager:
                 except Exception:
                     pass
                 self._pool = None
-            # Reset desync tracking
-            self._consecutive_zero_depth_count = 0
-            self._last_non_zero_depth_time = time.time()
             logger.info("[REDIS] Sync connection pool reset complete")
         except Exception as e:
             logger.error(f"[REDIS] Error resetting sync connection pool: {e}")
@@ -459,34 +453,6 @@ class RedisManager:
             
             # Check actual queue depth before blpop for diagnostics
             actual_depth = client.llen(key)
-            
-            # Track desync: if we see zero depth multiple times, it might indicate a stale connection
-            current_time = time.time()
-            if actual_depth == 0:
-                self._consecutive_zero_depth_count += 1
-            else:
-                self._consecutive_zero_depth_count = 0
-                self._last_non_zero_depth_time = current_time
-            
-            # Detect desync: if we've seen zero depth 10+ times in a row and it's been >5 seconds since last non-zero,
-            # or if we've seen zero for >30 seconds continuously, reset the connection pool
-            should_reset = False
-            if key == 'gpu:inbox' and actual_depth == 0:
-                if (self._consecutive_zero_depth_count >= 10 and 
-                    (current_time - self._last_non_zero_depth_time) > 5.0):
-                    should_reset = True
-                    logger.warning(f"[REDIS] DESYNC DETECTED: {self._consecutive_zero_depth_count} consecutive zero-depth reads, "
-                                 f"last non-zero was {current_time - self._last_non_zero_depth_time:.1f}s ago")
-                elif self._consecutive_zero_depth_count > 0 and (current_time - self._last_non_zero_depth_time) > 30.0:
-                    should_reset = True
-                    logger.warning(f"[REDIS] DESYNC DETECTED: Zero depth for {current_time - self._last_non_zero_depth_time:.1f}s")
-            
-            if should_reset:
-                self.reset_sync_connection_pool()
-                # Get fresh client and retry depth check
-                client = self._get_client()
-                actual_depth = client.llen(key)
-                logger.info(f"[REDIS] After pool reset: sync_depth={actual_depth}")
             
             # Log comprehensive diagnostics with throttling (max every 500ms)
             current_time = time.time()
