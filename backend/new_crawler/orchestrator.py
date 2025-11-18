@@ -440,6 +440,9 @@ class Orchestrator:
             
             if total_inflight > 0:
                 logger.debug(f"GPU inflight images detected: {total_inflight} (staging + processing batches)")
+            else:
+                # Log idle state explicitly so it's visible
+                logger.info(f"GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)")
             
             return total_inflight
         except Exception as e:
@@ -527,14 +530,17 @@ class Orchestrator:
                 # Check worker health
                 worker_health = self.check_worker_health()
                 
-                # Log status - include gpu:inbox queue depth
+                # Log status - include gpu:inbox queue depth and GPU processor state
                 gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
+                gpu_inflight_images = await self._check_gpu_inflight_images()
+                gpu_processor_state = "IDLE" if gpu_inflight_images == 0 else f"BUSY ({gpu_inflight_images} in-flight)"
                 logger.info(f"Queues: sites={queue_info.get('queue_lengths', {}).get('sites', 0)}, "
                            f"candidates={queue_info.get('queue_lengths', {}).get('candidates', 0)}, "
                            f"images={queue_info.get('queue_lengths', {}).get('images', 0)}, "
                            f"gpu_inbox={gpu_inbox_depth}, "
                            f"storage={queue_info.get('queue_lengths', {}).get('storage', 0)}, "
-                           f"results={queue_info.get('queue_lengths', {}).get('results', 0)}")
+                           f"results={queue_info.get('queue_lengths', {}).get('results', 0)}, "
+                           f"gpu_processor={gpu_processor_state}")
                 
                 await asyncio.sleep(5.0)  # Reduced from 10.0 for faster completion detection
         finally:

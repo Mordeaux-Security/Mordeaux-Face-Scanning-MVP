@@ -444,12 +444,21 @@ class SelectorMiner:
             logger.info(f"[3x3-AGGREGATE] Total HTTP candidates: {total_http_candidates}")
             logger.info(f"[3x3-AGGREGATE] Total JS candidates: {total_js_candidates}")
             
-            # Determine winning strategy
-            use_js = total_js_candidates >= max(5, 2 * total_http_candidates)
+            # Determine winning strategy (aggressive HTTP-first if enabled)
+            use_aggressive = getattr(self.config, 'nc_js_aggressive_http', True)
+            if use_aggressive:
+                # Aggressive: Require 3x more images or at least 10 for JS to win
+                js_threshold = max(10, 3 * total_http_candidates)
+                # Prefer HTTP if it found images (unless JS is significantly better)
+                use_js = total_js_candidates >= js_threshold and (total_http_candidates == 0 or total_js_candidates >= js_threshold)
+            else:
+                # Original strategy: 2x more images or at least 5
+                use_js = total_js_candidates >= max(5, 2 * total_http_candidates)
+            
             await redis.set_domain_rendering_strategy_async(
                 domain, use_js, total_http_candidates, total_js_candidates
             )
-            logger.info(f"[3x3-STRATEGY] Stored strategy for {domain}: use_js={use_js}")
+            logger.info(f"[3x3-STRATEGY] Stored strategy for {domain}: use_js={use_js} (HTTP={total_http_candidates}, JS={total_js_candidates})")
             
             # PHASE 3: BFS crawl using learned strategy
             if pages_crawled >= max_pages and max_pages != -1:

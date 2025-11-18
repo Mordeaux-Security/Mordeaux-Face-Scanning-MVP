@@ -49,6 +49,14 @@ class GPUProcessorWorker:
         self.thumbnails_saved = 0
         self.cached_results = 0
         
+        # Queue depth caching for logging (reduces Redis calls)
+        self._cached_queue_depth: Optional[int] = None
+        self._cached_queue_depth_time: float = 0.0
+        self._queue_depth_cache_ttl_ms: float = 75.0  # 75ms TTL - same as scheduler
+        
+        # Log throttling for repetitive logs (max every 500ms)
+        self._last_feed_log_time: float = 0.0
+        self._feed_log_interval: float = 0.5  # 500ms
         
         # GPU scheduler for centralized batching
         self.scheduler = GPUScheduler(
@@ -62,6 +70,29 @@ class GPUProcessorWorker:
         )
         
         # No per-site tracking needed - limits handled by extractor
+    
+    async def _get_queue_depth_cached(self, queue_key: str) -> int:
+        """
+        Get queue depth with caching for logging (non-critical).
+        
+        Args:
+            queue_key: Redis queue key
+        
+        Returns:
+            Queue depth
+        """
+        now_ms = time.perf_counter() * 1000.0
+        
+        # Use cached value if still valid
+        if (self._cached_queue_depth is not None and 
+            (now_ms - self._cached_queue_depth_time) < self._queue_depth_cache_ttl_ms):
+            return self._cached_queue_depth
+        
+        # Cache expired, fetch new value
+        depth = await self.redis.get_queue_length_by_key_async(queue_key)
+        self._cached_queue_depth = depth
+        self._cached_queue_depth_time = now_ms
+        return depth
     
     async def _update_inflight_state(self, staging_count: int, inflight_count: int):
         """Update Redis with current staging and inflight counts for orchestrator monitoring."""
@@ -89,7 +120,7 @@ class GPUProcessorWorker:
                        f"{len(batch_request.image_tasks)} images")
             # Diagnostic logging for batch start
             valid_count = sum(1 for t in batch_request.image_tasks if self._validate_image_task(t))
-            logger.info(f"[GPU Processor {self.worker_id}] DIAG: Batch {batch_request.batch_id} START: "
+            logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Batch {batch_request.batch_id} START: "
                        f"{len(batch_request.image_tasks)} images, "
                        f"valid_after_validation={valid_count}")
             
@@ -105,36 +136,45 @@ class GPUProcessorWorker:
             # Track GPU temp paths separately (don't mutate image_task)
             gpu_temp_paths = {}  # Map: original_path -> gpu_path
             
-            # Copy all temp files to GPU's ownership
-            for image_task in batch_request.image_tasks:
+            # Copy all temp files to GPU's ownership in parallel (non-blocking)
+            async def copy_single_file(image_task):
+                """Copy a single file asynchronously."""
                 original_path = image_task.temp_path
                 gpu_path = os.path.join(gpu_temp_dir, os.path.basename(original_path))
                 
                 try:
-                    if os.path.exists(original_path):
-                        # Log file existence check with stats
-                        file_size = os.path.getsize(original_path)
-                        file_mtime = os.path.getmtime(original_path)
+                    # Check existence and get stats in thread pool
+                    exists = await asyncio.to_thread(os.path.exists, original_path)
+                    if exists:
+                        # Get file stats in parallel
+                        file_size, file_mtime = await asyncio.to_thread(
+                            lambda: (os.path.getsize(original_path), os.path.getmtime(original_path))
+                        )
                         file_age = time.time() - file_mtime
-                        logger.info(f"[GPU Processor {self.worker_id}] [TEMP-FILE] File exists before copy: "
+                        logger.debug(f"[GPU Processor {self.worker_id}] [TEMP-FILE] File exists before copy: "
                                   f"{original_path}, size={file_size}bytes, age={file_age:.1f}s, mtime={file_mtime:.1f}")
-                        shutil.copy2(original_path, gpu_path)
+                        # Copy file in thread pool (non-blocking)
+                        await asyncio.to_thread(shutil.copy2, original_path, gpu_path)
                         gpu_temp_paths[original_path] = gpu_path
                         logger.debug(f"[GPU Processor {self.worker_id}] Copied temp file: {original_path} -> {gpu_path}")
+                        return True
                     else:
-                        # File missing - check parent directory and log file age if parent exists
+                        # File missing - check parent directory
                         parent_dir = os.path.dirname(original_path)
-                        parent_exists = os.path.exists(parent_dir) if parent_dir else False
+                        parent_exists = await asyncio.to_thread(os.path.exists, parent_dir) if parent_dir else False
                         if parent_exists:
-                            # Parent exists but file is missing - may have been deleted
                             logger.warning(f"[GPU Processor {self.worker_id}] [TEMP-FILE] Temp file missing (parent dir exists): "
                                          f"{original_path}, parent_dir={parent_dir}")
                         else:
-                            # Parent directory also missing - may have been cleaned up
                             logger.warning(f"[GPU Processor {self.worker_id}] [TEMP-FILE] Temp file missing (parent dir also missing): "
                                          f"{original_path}, parent_dir={parent_dir}")
+                        return False
                 except Exception as e:
                     logger.error(f"[GPU Processor {self.worker_id}] Failed to copy temp file {original_path}: {e}")
+                    return False
+            
+            # Copy all files in parallel
+            copy_results = await asyncio.gather(*[copy_single_file(task) for task in batch_request.image_tasks], return_exceptions=True)
             
             # Pre-validate images and fill batch to target size
             target_batch_size = int(getattr(self.config, 'gpu_target_batch', 512))
@@ -150,17 +190,34 @@ class GPUProcessorWorker:
             
             # If we're short of target, pull more images from scheduler until we have enough valid ones
             # Pull from scheduler staging first, then from queue if needed
+            # Add timeout/guard to prevent infinite loops
+            fill_start_time = time.time()
+            max_fill_time = 5.0  # Maximum 5 seconds to fill batch
+            max_iterations = 100  # Maximum iterations to prevent infinite loops
+            iteration_count = 0
+            
             while len(valid_tasks) < target_batch_size:
+                # Guard against infinite loops
+                iteration_count += 1
+                if iteration_count > max_iterations:
+                    logger.warning(f"[GPU Processor {self.worker_id}] Batch fill loop exceeded max iterations ({max_iterations}), breaking")
+                    break
+                
+                # Guard against excessive time spent filling
+                if time.time() - fill_start_time > max_fill_time:
+                    logger.warning(f"[GPU Processor {self.worker_id}] Batch fill exceeded max time ({max_fill_time}s), breaking")
+                    break
+                
                 # Try to get from scheduler staging first
                 additional_task = None
                 if self.scheduler._staging:
                     # Pop from staging
                     additional_task = self.scheduler._staging.pop(0)
                 else:
-                    # Pull directly from queue if staging is empty
+                    # Pull directly from queue if staging is empty (shorter timeout to avoid blocking)
                     inbox_key = getattr(self.config, 'gpu_inbox_key', 'gpu:inbox')
                     raw = await asyncio.to_thread(
-                        self.redis.blpop_many, inbox_key, max_n=1, timeout=0.1
+                        self.redis.blpop_many, inbox_key, max_n=1, timeout=0.05  # Reduced from 0.1s
                     )
                     if raw:
                         try:
@@ -173,12 +230,13 @@ class GPUProcessorWorker:
                     # No more images available, break
                     break
                 
-                # Copy temp file for additional image
+                # Copy temp file for additional image (async)
                 original_path = additional_task.temp_path
                 gpu_path = os.path.join(gpu_temp_dir, os.path.basename(original_path))
                 try:
-                    if os.path.exists(original_path):
-                        shutil.copy2(original_path, gpu_path)
+                    exists = await asyncio.to_thread(os.path.exists, original_path)
+                    if exists:
+                        await asyncio.to_thread(shutil.copy2, original_path, gpu_path)
                         gpu_temp_paths[original_path] = gpu_path
                     else:
                         # Temp file missing, skip
@@ -232,7 +290,7 @@ class GPUProcessorWorker:
                            f"{face_count} total faces detected in {recognition_duration:.1f}ms")
             else:
                 logger.warning(f"[GPU Processor {self.worker_id}] GPU batch {batch_request.batch_id} returned None")
-                logger.error(f"[GPU Processor {self.worker_id}] DIAG: GPU returned None for batch {batch_request.batch_id}, "
+                logger.debug(f"[GPU Processor {self.worker_id}] DIAG: GPU returned None for batch {batch_request.batch_id}, "
                            f"checking GPU worker status...")
             
             # Check if GPU fallback occurred
@@ -240,23 +298,30 @@ class GPUProcessorWorker:
                 compute_type = "CPU (fallback)"
             
             # CRITICAL: Restore original temp paths so storage can access extractor files
-            for i, image_task in enumerate(batch_request.image_tasks):
+            # Do this in parallel to avoid blocking
+            async def restore_single_path(i, image_task):
+                """Restore temp path for a single image (async)."""
                 if i in original_temp_paths:
                     restored_path = original_temp_paths[i]
                     image_task.temp_path = restored_path
-                    # Log restoration with file existence check
-                    if os.path.exists(restored_path):
-                        file_size = os.path.getsize(restored_path)
-                        file_mtime = os.path.getmtime(restored_path)
+                    # Log restoration with file existence check (async)
+                    exists = await asyncio.to_thread(os.path.exists, restored_path)
+                    if exists:
+                        file_size, file_mtime = await asyncio.to_thread(
+                            lambda: (os.path.getsize(restored_path), os.path.getmtime(restored_path))
+                        )
                         file_age = time.time() - file_mtime
-                        logger.info(f"[GPU Processor {self.worker_id}] [TEMP-FILE] Restored temp path (exists): "
+                        logger.debug(f"[GPU Processor {self.worker_id}] [TEMP-FILE] Restored temp path (exists): "
                                   f"{restored_path}, size={file_size}bytes, age={file_age:.1f}s")
                     else:
                         parent_dir = os.path.dirname(restored_path)
-                        parent_exists = os.path.exists(parent_dir) if parent_dir else False
+                        parent_exists = await asyncio.to_thread(os.path.exists, parent_dir) if parent_dir else False
                         logger.warning(f"[GPU Processor {self.worker_id}] [TEMP-FILE] Restored temp path (missing): "
                                      f"{restored_path}, parent_dir_exists={parent_exists}, parent_dir={parent_dir}")
                     logger.debug(f"[GPU Processor {self.worker_id}] Restored original temp path: {image_task.temp_path}")
+            
+            # Restore all paths in parallel
+            await asyncio.gather(*[restore_single_path(i, task) for i, task in enumerate(batch_request.image_tasks)], return_exceptions=True)
             
             # Only drop batch if GPU completely failed (returned None)
             # Empty face lists per image are valid (images with no faces detected)
@@ -266,26 +331,21 @@ class GPUProcessorWorker:
             
             # Process each image result using phash-based lookup (not positional)
             # This ensures proper linkage even if order changes or some images fail
-            storage_tasks_created = 0
-            storage_tasks_pushed = 0
-            total_faces_in_batch = 0
-            cached_in_batch = 0
-            missing_phash_count = 0
-            
-            for image_task in batch_request.image_tasks:
+            # Prepare all storage tasks in parallel (face cropping happens here)
+            async def prepare_storage_task_for_image(image_task):
+                """Prepare storage task for a single image (async wrapper)."""
                 phash = image_task.phash
                 
                 # Validate phash exists (critical for storage linkage)
                 if not phash:
                     logger.error(f"[GPU Processor {self.worker_id}] Image task missing phash! "
                                f"temp_path={image_task.temp_path[:50] if image_task.temp_path else 'None'}")
-                    continue
+                    return (None, 0, False, False)
                 
                 # Lookup results by phash (safe, explicit linkage)
                 face_detections = face_results.get(phash, [])
                 
                 if phash not in face_results:
-                    missing_phash_count += 1
                     logger.warning(f"[GPU Processor {self.worker_id}] No results found for phash {phash[:8]}... "
                                  f"(image may have failed GPU processing). "
                                  f"Available phashes: {list(face_results.keys())[:3]}")
@@ -295,14 +355,41 @@ class GPUProcessorWorker:
                 if image_task.phash != phash:
                     logger.error(f"[GPU Processor {self.worker_id}] PHASH MISMATCH! "
                                f"image_task.phash={image_task.phash[:8]}, lookup_phash={phash[:8]}")
-                    continue  # Skip to prevent storage corruption
+                    return (None, 0, False, False)  # Skip to prevent storage corruption
                 
-                # Track faces detected
-                total_faces_in_batch += len(face_detections)
-                
-                # Prepare storage task (crops faces, creates task)
+                # Prepare storage task (crops faces, creates task) - this is the slow part
                 # StorageTask preserves phash linkage via image_task.phash
                 storage_task = await self._prepare_storage_task(image_task, face_detections, start_time)
+                
+                faces_count = len(face_detections)
+                is_cached = self.cache.is_image_cached(image_task.phash) if image_task.phash else False
+                temp_path_exists = image_task.temp_path and await asyncio.to_thread(os.path.exists, image_task.temp_path) if image_task.temp_path else False
+                
+                return (storage_task, faces_count, is_cached, temp_path_exists)
+            
+            # Prepare all storage tasks in parallel (face cropping happens in parallel)
+            storage_prep_results = await asyncio.gather(
+                *[prepare_storage_task_for_image(task) for task in batch_request.image_tasks],
+                return_exceptions=True
+            )
+            
+            # Process results and push to storage queue
+            storage_tasks_created = 0
+            storage_tasks_pushed = 0
+            total_faces_in_batch = 0
+            cached_in_batch = 0
+            missing_phash_count = 0
+            
+            for i, result in enumerate(storage_prep_results):
+                image_task = batch_request.image_tasks[i]
+                
+                if isinstance(result, Exception):
+                    logger.error(f"[GPU Processor {self.worker_id}] Exception preparing storage task for {image_task.phash[:8] if image_task.phash else 'unknown'}...: {result}")
+                    missing_phash_count += 1
+                    continue
+                
+                storage_task, faces_count, is_cached, temp_path_exists = result
+                total_faces_in_batch += faces_count
                 
                 if storage_task:
                     storage_tasks_created += 1
@@ -312,26 +399,24 @@ class GPUProcessorWorker:
                         storage_tasks_pushed += 1
                         crops_count = len(storage_task.face_crops) if storage_task.face_crops else 0
                         logger.debug(f"[GPU Processor {self.worker_id}] Pushed storage task: {image_task.phash[:8]}..., "
-                                  f"faces={len(face_detections)}, crops={crops_count}")
+                                  f"faces={faces_count}, crops={crops_count}")
                         queue_depth = await self.redis.get_queue_length_by_key_async(self.config.get_queue_name('storage'))
-                        logger.info(f"[GPU Processor {self.worker_id}] DIAG: Pushed storage task SUCCESS: "
-                                   f"{image_task.phash[:8]}..., faces={len(face_detections)}, "
+                        logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Pushed storage task SUCCESS: "
+                                   f"{image_task.phash[:8]}..., faces={faces_count}, "
                                    f"crops={crops_count}, queue_depth={queue_depth}")
                     else:
                         logger.warning(f"[GPU Processor {self.worker_id}] DIAG: Failed to push storage task to queue: "
-                                     f"{image_task.phash[:8]}..., faces={len(face_detections)}")
+                                     f"{image_task.phash[:8]}..., faces={faces_count}")
                         queue_depth = await self.redis.get_queue_length_by_key_async(self.config.get_queue_name('storage'))
                         logger.error(f"[GPU Processor {self.worker_id}] DIAG: Pushed storage task FAILED: "
-                                   f"{image_task.phash[:8]}..., faces={len(face_detections)}, "
+                                   f"{image_task.phash[:8]}..., faces={faces_count}, "
                                    f"queue_depth={queue_depth}")
                 else:
                     # Storage task was None - log why
                     cached_in_batch += 1
-                    is_cached = self.cache.is_image_cached(image_task.phash) if image_task.phash else False
-                    temp_path_exists = image_task.temp_path and os.path.exists(image_task.temp_path) if image_task.temp_path else False
-                    logger.info(f"[GPU Processor {self.worker_id}] DIAG: No storage task created for "
+                    logger.debug(f"[GPU Processor {self.worker_id}] DIAG: No storage task created for "
                                f"{image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
-                               f"faces={len(face_detections)}, "
+                               f"faces={faces_count}, "
                                f"cached={is_cached}, "
                                f"phash_exists={bool(image_task.phash)}, "
                                f"temp_path={'EXISTS' if temp_path_exists else 'MISSING'}")
@@ -573,7 +658,7 @@ class GPUProcessorWorker:
             
             # Check cache
             if self.cache.is_image_cached(image_task.phash):
-                logger.info(f"[GPU Processor {self.worker_id}] DIAG: Image CACHED: {image_task.phash[:8]}..., "
+                logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Image CACHED: {image_task.phash[:8]}..., "
                            f"faces={len(face_detections)}, site={site_id}")
                 self.cached_results += 1
                 
@@ -588,7 +673,7 @@ class GPUProcessorWorker:
                     skip_reason="cached"
                 )
                 result_pushed = await self.redis.push_face_result_async(face_result)
-                logger.info(f"[GPU Processor {self.worker_id}] DIAG: Pushed face result for cached image: "
+                logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Pushed face result for cached image: "
                            f"{image_task.phash[:8]}..., faces={len(face_detections)}, "
                            f"pushed={result_pushed}, site={site_id}")
                 
@@ -645,7 +730,7 @@ class GPUProcessorWorker:
             
             logger.debug(f"[GPU Processor {self.worker_id}] Created storage task with phash linkage: "
                         f"{image_task.phash[:8]}... (faces={len(face_detections)}, crops={len(face_crops)})")
-            logger.info(f"[GPU Processor {self.worker_id}] DIAG: Storage task CREATED: "
+            logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Storage task CREATED: "
                        f"{image_task.phash[:8]}..., faces={len(face_detections)}, crops={len(face_crops)}")
             
             return storage_task
@@ -657,8 +742,8 @@ class GPUProcessorWorker:
     async def run(self):
         """Main worker loop with GPU scheduler."""
         logger.info(f"[GPU Processor {self.worker_id}] Starting GPU processor worker with scheduler")
-        logger.info(f"[GPU Processor {self.worker_id}] DIAG: Worker entry point - run() method started")
-        logger.info(f"[GPU Processor {self.worker_id}] DIAG: Scheduler initialized, ready to process batches")
+        logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Worker entry point - run() method started")
+        logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Scheduler initialized, ready to process batches")
         self.running = True
         
         # Diagnostic tracking
@@ -668,42 +753,73 @@ class GPUProcessorWorker:
             self._staging_waits = []
             self._queue_depths = []
         
+        # Idle state tracking for periodic logging
+        self._last_idle_log_time: float = 0.0
+        self._idle_log_interval: float = 2.0  # Log every 2 seconds during idle time
+        self._last_batch_start_time: Optional[float] = None
+        
         while self.running:
             try:
                 # Keep staging warm by feeding items from Redis
-                added = self.scheduler.feed()
+                added = await self.scheduler.feed()
                 
-                # Always log feed() results at INFO level (unconditional)
-                queue_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
-                staging_count = len(self.scheduler._staging) if hasattr(self.scheduler, '_staging') else 0
-                inflight_count = len(self.scheduler._inflight) if hasattr(self.scheduler, '_inflight') else 0
-                logger.info(f"[GPU Processor {self.worker_id}] DIAG: feed() called, added={added}, "
-                           f"queue_depth={queue_depth}, staging={staging_count}, inflight={inflight_count}")
+                # Log feed() results with throttling (max every 500ms)
+                current_time = time.time()
+                if (current_time - self._last_feed_log_time) >= self._feed_log_interval or added > 0:
+                    queue_depth = await self._get_queue_depth_cached('gpu:inbox')
+                    staging_count = len(self.scheduler._staging) if hasattr(self.scheduler, '_staging') else 0
+                    inflight_count = len(self.scheduler._inflight) if hasattr(self.scheduler, '_inflight') else 0
+                    logger.debug(f"[GPU Processor {self.worker_id}] DIAG: feed() called, added={added}, "
+                               f"queue_depth={queue_depth}, staging={staging_count}, inflight={inflight_count}")
+                    if added > 0:
+                        self._last_feed_log_time = current_time
+                    elif (current_time - self._last_feed_log_time) >= self._feed_log_interval:
+                        self._last_feed_log_time = current_time
                 
                 # Update Redis with current in-flight state for orchestrator to check
                 await self._update_inflight_state(staging_count, inflight_count)
                 
                 # Build a batch if it's time
-                batch_tasks = self.scheduler.next_batch()
+                batch_tasks = await self.scheduler.next_batch()
                 if not batch_tasks:
-                    # Log periodically when no batch is ready
-                    queue_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
-                    staging_count = len(self.scheduler._staging) if hasattr(self.scheduler, '_staging') else 0
-                    # Log every 5 seconds to avoid spam
-                    current_time = int(time.time())
-                    if not hasattr(self, '_last_no_batch_log') or current_time - self._last_no_batch_log >= 5:
-                        logger.info(f"[GPU Processor {self.worker_id}] DIAG: No batch ready, "
-                                   f"queue_depth={queue_depth}, staging={staging_count}, "
-                                   f"processed_batches={self.processed_batches}, processed_images={self.processed_images}")
-                        self._last_no_batch_log = current_time
+                    # Worker is idle - log periodic state updates
+                    current_time = time.time()
+                    time_since_last_idle_log = current_time - self._last_idle_log_time
+                    
+                    if time_since_last_idle_log >= self._idle_log_interval:
+                        # Get comprehensive state for idle logging
+                        queue_depth = await self._get_queue_depth_cached('gpu:inbox')
+                        staging_count = len(self.scheduler._staging) if hasattr(self.scheduler, '_staging') else 0
+                        inflight_count = len(self.scheduler._inflight) if hasattr(self.scheduler, '_inflight') else 0
+                        
+                        # Calculate time since last batch
+                        time_since_last_batch = None
+                        if self._last_batch_start_time is not None:
+                            time_since_last_batch = current_time - self._last_batch_start_time
+                        elif hasattr(self, '_last_batch_completion_time') and self._last_batch_completion_time is not None:
+                            time_since_last_batch = current_time - self._last_batch_completion_time
+                        
+                        # Log comprehensive idle state
+                        time_since_str = f"{time_since_last_batch:.1f}s" if time_since_last_batch is not None else "N/A"
+                        logger.info(f"[GPU Processor {self.worker_id}] IDLE STATE: "
+                                   f"queue_depth={queue_depth}, staging={staging_count}, inflight={inflight_count}, "
+                                   f"time_since_last_batch={time_since_str}, "
+                                   f"processed={self.processed_batches} batches, {self.processed_images} images")
+                        
+                        # Update Redis state during idle time so orchestrator sees current state
+                        await self._update_inflight_state(staging_count, inflight_count)
+                        
+                        self._last_idle_log_time = current_time
                 
                 if batch_tasks:
                     batch_id = f"{int(time.time()*1000)}-{len(batch_tasks)}"
                     batch_start_time = time.time()
+                    self._last_batch_start_time = batch_start_time  # Track when batch processing starts
                     
-                    # Always log batch start (unconditional)
-                    queue_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
-                    logger.info(f"[GPU Processor {self.worker_id}] DIAG: Batch ready, creating batch {batch_id} with {len(batch_tasks)} images, queue_depth={queue_depth}")
+                    # Log batch start
+                    # Use cached queue depth for logging to reduce Redis calls
+                    queue_depth = await self._get_queue_depth_cached('gpu:inbox')
+                    logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Batch ready, creating batch {batch_id} with {len(batch_tasks)} images, queue_depth={queue_depth}")
                     
                     # Calculate time since last batch completion
                     gap_seconds = 0.0
@@ -712,7 +828,7 @@ class GPUProcessorWorker:
                             gap_seconds = batch_start_time - self._last_batch_completion_time
                             self._batch_gaps.append(gap_seconds)
                         
-                        logger.info(f"[GPU-PROC-DIAG-{self.worker_id}] Starting batch {batch_id}: "
+                        logger.debug(f"[GPU-PROC-DIAG-{self.worker_id}] Starting batch {batch_id}: "
                                f"size={len(batch_tasks)}, staging={len(self.scheduler._staging)}, "
                                f"queue_depth={queue_depth}, time_since_last_batch={gap_seconds:.2f}s")
                     
@@ -734,14 +850,17 @@ class GPUProcessorWorker:
                     )
                     
                     # Process synchronously (scheduler enforces max 2 inflight)
-                    processed_count = await self.process_batch(batch_request)
-                    
-                    # Update statistics
-                    self.processed_batches += 1
-                    self.processed_images += processed_count
-                    
-                    # Mark batch as completed
-                    self.scheduler.mark_completed(batch_id)
+                    # Use try/finally to ensure mark_completed() is always called
+                    try:
+                        processed_count = await self.process_batch(batch_request)
+                        
+                        # Update statistics
+                        self.processed_batches += 1
+                        self.processed_images += processed_count
+                    finally:
+                        # CRITICAL: Always mark batch as completed, even on exception
+                        # This prevents inflight count from getting stuck at 2
+                        self.scheduler.mark_completed(batch_id)
                     
                     # Update inflight state after marking batch as completed
                     staging_count = len(self.scheduler._staging) if hasattr(self.scheduler, '_staging') else 0
@@ -750,13 +869,19 @@ class GPUProcessorWorker:
                     
                     # Diagnostic: Log batch completion
                     batch_duration = time.time() - batch_start_time
+                    self._last_batch_completion_time = time.time()
+                    self._last_batch_start_time = None  # Reset since batch is done
+                    
                     if self.config.nc_diagnostic_logging:
-                        queue_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
-                        self._last_batch_completion_time = time.time()
-                        logger.info(f"[GPU-PROC-DIAG-{self.worker_id}] Batch {batch_id} completed: "
+                        # Use cached queue depth for logging to reduce Redis calls
+                        queue_depth = await self._get_queue_depth_cached('gpu:inbox')
+                        logger.debug(f"[GPU-PROC-DIAG-{self.worker_id}] Batch {batch_id} completed: "
                                   f"processed={processed_count}, time_since_start={batch_duration:.1f}s, "
                                   f"staging={len(self.scheduler._staging)}, queue_depth={queue_depth}")
                         self._queue_depths.append(queue_depth)
+                    
+                    # Reset idle log timer so we get immediate feedback if worker goes idle
+                    self._last_idle_log_time = 0.0
                     
                     # Log progress periodically
                     if self.processed_batches % 10 == 0:
@@ -775,7 +900,7 @@ class GPUProcessorWorker:
                         
                         avg_queue_depth = sum(self._queue_depths) / len(self._queue_depths) if self._queue_depths else 0.0
                         
-                        logger.info(f"[GPU-PROC-DIAG-{self.worker_id}] Summary: batches={self.processed_batches}, "
+                        logger.debug(f"[GPU-PROC-DIAG-{self.worker_id}] Summary: batches={self.processed_batches}, "
                                   f"avg_batch_gap={avg_gap:.2f}s (min={min_gap:.2f}s, max={max_gap:.2f}s), "
                                   f"avg_queue_depth={avg_queue_depth:.1f}")
                         
@@ -784,15 +909,24 @@ class GPUProcessorWorker:
                         self._queue_depths = []
                 
                 
-                # Avoid busy-spin (2ms = 500 iterations/sec max)
-                await asyncio.sleep(0.002)
+                # Adaptive sleep: shorter when processing, longer when idle
+                # 0.002 (2ms) for AMD machine, 0.05 (50ms) for Mac machine
+                # When idle, use configurable wait to reduce CPU usage
+                # When processing, use minimal wait for responsiveness
+                if batch_tasks:
+                    # Fast sleep when processing (2ms = 500 iterations/sec max)
+                    await asyncio.sleep(0.002)
+                else:
+                    # Longer sleep when idle (configurable, default 50ms = 20 iterations/sec)
+                    idle_wait = self.config.image_processing_idle_wait
+                    await asyncio.sleep(idle_wait)
                 
             except KeyboardInterrupt:
                 logger.info(f"[GPU Processor {self.worker_id}] Interrupted, shutting down")
                 break
             except Exception as e:
                 logger.error(f"[GPU Processor {self.worker_id}] Error in main loop: {e}", exc_info=True)
-                logger.error(f"[GPU Processor {self.worker_id}] DIAG: Exception caught in main loop, continuing after 0.1s sleep")
+                logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Exception caught in main loop, continuing after 0.1s sleep")
                 await asyncio.sleep(0.1)
         
         logger.info(f"[GPU Processor {self.worker_id}] GPU processor worker stopped")
@@ -849,7 +983,7 @@ def gpu_processor_worker_process(worker_id: int):
             
     except Exception as e:
         logger.error(f"[GPU Processor {worker_id}] Fatal error: {e}", exc_info=True)
-        logger.error(f"[GPU Processor {worker_id}] DIAG: Fatal exception in worker process entry point")
+        logger.debug(f"[GPU Processor {worker_id}] DIAG: Fatal exception in worker process entry point")
     finally:
         logger.info(f"[GPU Processor {worker_id}] GPU processor worker process ended")
 

@@ -42,6 +42,13 @@ class RedisManager:
         self._active_tasks_key = "nc:active_tasks"
         # Site limit flag prefix
         self._site_limit_flag_prefix = "nc:site:limit:"  # nc:site:limit:{site_id}
+        # Track consecutive zero-depth reads for desync detection
+        self._consecutive_zero_depth_count: int = 0
+        self._last_non_zero_depth_time: float = time.time()  # Initialize to current time to avoid false positives
+        
+        # Log throttling for repetitive diagnostic logs (max every 500ms)
+        self._last_diag_log_time: float = 0.0
+        self._diag_log_interval: float = 0.5  # 500ms
         
     def _get_pool(self) -> ConnectionPool:
         """Get or create Redis connection pool."""
@@ -114,6 +121,49 @@ class RedisManager:
         except Exception as e:
             logger.error(f"Async Redis connection failed: {e}")
             return False
+    
+    def reset_sync_connection_pool(self):
+        """Reset sync connection pool to force fresh connections."""
+        try:
+            logger.warning("[REDIS] Resetting sync connection pool due to desync detection")
+            if self._client:
+                try:
+                    self._client.close()
+                except Exception:
+                    pass
+                self._client = None
+            if self._pool:
+                try:
+                    self._pool.disconnect()
+                except Exception:
+                    pass
+                self._pool = None
+            # Reset desync tracking
+            self._consecutive_zero_depth_count = 0
+            self._last_non_zero_depth_time = time.time()
+            logger.info("[REDIS] Sync connection pool reset complete")
+        except Exception as e:
+            logger.error(f"[REDIS] Error resetting sync connection pool: {e}")
+    
+    async def reset_async_connection_pool(self):
+        """Reset async connection pool to force fresh connections."""
+        try:
+            logger.warning("[REDIS] Resetting async connection pool due to desync detection")
+            if self._async_client:
+                try:
+                    await self._async_client.close()
+                except Exception:
+                    pass
+                self._async_client = None
+            if self._async_pool:
+                try:
+                    await self._async_pool.disconnect()
+                except Exception:
+                    pass
+                self._async_pool = None
+            logger.info("[REDIS] Async connection pool reset complete")
+        except Exception as e:
+            logger.error(f"[REDIS] Error resetting async connection pool: {e}")
     
     # Queue Operations
     
@@ -265,7 +315,7 @@ class RedisManager:
             queue_depth = await self.get_queue_length_by_key_async(queue_name)
             image_phash = face_result.image_task.phash[:8] if (face_result.image_task and face_result.image_task.phash) else 'NO_PHASH'
             faces_count = len(face_result.faces) if face_result.faces else 0
-            logger.info(f"[REDIS] DIAG: Pushed face result: {image_phash}..., "
+            logger.debug(f"[REDIS] DIAG: Pushed face result: {image_phash}..., "
                        f"success={pushed}, faces={faces_count}, "
                        f"queue_depth={queue_depth}")
             logger.debug(f"Pushed face result to queue (async): {face_result.image_task.candidate.img_url}")
@@ -314,7 +364,7 @@ class RedisManager:
             pushed = bool(result)
             queue_depth = await self.get_queue_length_by_key_async(queue_name)
             image_phash = storage_task.image_task.phash[:8] if storage_task.image_task.phash else 'NO_PHASH'
-            logger.info(f"[REDIS] DIAG: Pushed storage task: {image_phash}..., "
+            logger.debug(f"[REDIS] DIAG: Pushed storage task: {image_phash}..., "
                        f"success={pushed}, queue_depth={queue_depth}")
             logger.debug(f"Pushed storage task to queue (async): {storage_task.image_task.phash[:8]}...")
             return pushed
@@ -393,14 +443,68 @@ class RedisManager:
         items: list[bytes] = []
         try:
             client = self._get_client()
-            # Log before blocking call
-            logger.debug(f"[REDIS] DIAG: blpop_many({key}, max_n={max_n}, timeout={timeout})")
+            
+            # DIAGNOSTIC: Test connection and get connection info
+            try:
+                ping_result = client.ping()
+                connection_info = {
+                    'host': client.connection_pool.connection_kwargs.get('host', 'unknown'),
+                    'port': client.connection_pool.connection_kwargs.get('port', 'unknown'),
+                    'db': client.connection_pool.connection_kwargs.get('db', 'unknown'),
+                    'decode_responses': client.connection_pool.connection_kwargs.get('decode_responses', 'unknown'),
+                }
+            except Exception as conn_e:
+                ping_result = False
+                connection_info = {'error': str(conn_e)}
+            
+            # Check actual queue depth before blpop for diagnostics
+            actual_depth = client.llen(key)
+            
+            # Track desync: if we see zero depth multiple times, it might indicate a stale connection
+            current_time = time.time()
+            if actual_depth == 0:
+                self._consecutive_zero_depth_count += 1
+            else:
+                self._consecutive_zero_depth_count = 0
+                self._last_non_zero_depth_time = current_time
+            
+            # Detect desync: if we've seen zero depth 10+ times in a row and it's been >5 seconds since last non-zero,
+            # or if we've seen zero for >30 seconds continuously, reset the connection pool
+            should_reset = False
+            if key == 'gpu:inbox' and actual_depth == 0:
+                if (self._consecutive_zero_depth_count >= 10 and 
+                    (current_time - self._last_non_zero_depth_time) > 5.0):
+                    should_reset = True
+                    logger.warning(f"[REDIS] DESYNC DETECTED: {self._consecutive_zero_depth_count} consecutive zero-depth reads, "
+                                 f"last non-zero was {current_time - self._last_non_zero_depth_time:.1f}s ago")
+                elif self._consecutive_zero_depth_count > 0 and (current_time - self._last_non_zero_depth_time) > 30.0:
+                    should_reset = True
+                    logger.warning(f"[REDIS] DESYNC DETECTED: Zero depth for {current_time - self._last_non_zero_depth_time:.1f}s")
+            
+            if should_reset:
+                self.reset_sync_connection_pool()
+                # Get fresh client and retry depth check
+                client = self._get_client()
+                actual_depth = client.llen(key)
+                logger.info(f"[REDIS] After pool reset: sync_depth={actual_depth}")
+            
+            # Log comprehensive diagnostics with throttling (max every 500ms)
+            current_time = time.time()
+            should_log_diag = (current_time - self._last_diag_log_time) >= self._diag_log_interval
+            if should_log_diag:
+                redis_url_redacted = self.config.redis_url.replace('://', '://***@') if '@' in self.config.redis_url else self.config.redis_url
+                logger.debug(f"[REDIS] DIAG: blpop_many(key='{key}', max_n={max_n}, timeout={timeout}, "
+                           f"sync_depth={actual_depth}, ping={ping_result}, conn={connection_info}, "
+                           f"redis_url={redis_url_redacted})")
+                self._last_diag_log_time = current_time
             
             # 1) Block for first item
             res = client.blpop(key, timeout=timeout)
             if not res:
-                # Log when blpop times out (returns empty)
-                logger.debug(f"[REDIS] DIAG: blpop_many({key}) timed out after {timeout}s, returning 0 items")
+                # Log when blpop times out - include actual queue depth to diagnose (throttled)
+                if should_log_diag:
+                    logger.debug(f"[REDIS] DIAG: blpop_many(key='{key}') TIMEOUT after {timeout}s, "
+                              f"sync_depth={actual_depth}, ping={ping_result}, conn={connection_info}, returning 0 items")
                 return items
             _, first = res
             items.append(first)
@@ -418,7 +522,7 @@ class RedisManager:
             logger.debug(f"[REDIS] DIAG: blpop_many({key}) retrieved {len(items)} items")
             return items
         except redis.RedisError as e:
-            logger.error(f"Redis blpop_many error: {e}")
+            logger.error(f"Redis blpop_many error: {e}", exc_info=True)
             return items
     
     def serialize_image_task(self, task: ImageTask) -> bytes:
@@ -480,7 +584,68 @@ class RedisManager:
         """Get queue length directly by Redis key name (async version)."""
         try:
             client = await self._get_async_client()
-            return await client.llen(key)
+            
+            # DIAGNOSTIC: Test connection and get connection info
+            try:
+                ping_result = await client.ping()
+                connection_info = {
+                    'host': client.connection_pool.connection_kwargs.get('host', 'unknown'),
+                    'port': client.connection_pool.connection_kwargs.get('port', 'unknown'),
+                    'db': client.connection_pool.connection_kwargs.get('db', 'unknown'),
+                    'decode_responses': client.connection_pool.connection_kwargs.get('decode_responses', 'unknown'),
+                }
+            except Exception as conn_e:
+                ping_result = False
+                connection_info = {'error': str(conn_e)}
+            
+            async_depth = await client.llen(key)
+            
+            # DIAGNOSTIC: Also check with sync client for comparison
+            sync_depth = None
+            try:
+                sync_client = self._get_client()
+                sync_depth = sync_client.llen(key)
+            except Exception as sync_e:
+                sync_depth = f"Error: {sync_e}"
+            
+            # DESYNC DETECTION: If async and sync see significantly different depths, reset sync pool
+            if key == 'gpu:inbox' and isinstance(sync_depth, int):
+                depth_diff = abs(async_depth - sync_depth)
+                # If async sees items but sync sees zero (or vice versa with large difference), it's a desync
+                if (async_depth > 10 and sync_depth == 0) or (sync_depth > 10 and async_depth == 0):
+                    logger.warning(f"[REDIS] DESYNC DETECTED: async_depth={async_depth}, sync_depth={sync_depth}, "
+                                 f"difference={depth_diff}. Resetting sync connection pool.")
+                    self.reset_sync_connection_pool()
+                    # Retry sync depth check after reset
+                    try:
+                        sync_client = self._get_client()
+                        sync_depth = sync_client.llen(key)
+                        logger.info(f"[REDIS] After pool reset: sync_depth={sync_depth}, async_depth={async_depth}")
+                    except Exception as retry_e:
+                        sync_depth = f"Error after reset: {retry_e}"
+                elif depth_diff > 50:  # Large difference even if both non-zero
+                    logger.warning(f"[REDIS] DESYNC DETECTED: Large depth difference (async={async_depth}, sync={sync_depth}, "
+                                 f"diff={depth_diff}). Resetting sync connection pool.")
+                    self.reset_sync_connection_pool()
+                    try:
+                        sync_client = self._get_client()
+                        sync_depth = sync_client.llen(key)
+                        logger.info(f"[REDIS] After pool reset: sync_depth={sync_depth}, async_depth={async_depth}")
+                    except Exception as retry_e:
+                        sync_depth = f"Error after reset: {retry_e}"
+            
+            # Log comprehensive diagnostics with throttling (only for gpu:inbox to avoid spam)
+            if key == 'gpu:inbox':
+                current_time = time.time()
+                should_log_diag = (current_time - self._last_diag_log_time) >= self._diag_log_interval
+                if should_log_diag:
+                    redis_url_redacted = self.config.redis_url.replace('://', '://***@') if '@' in self.config.redis_url else self.config.redis_url
+                    logger.debug(f"[REDIS] DIAG: get_queue_length_by_key_async(key='{key}', "
+                               f"async_depth={async_depth}, sync_depth={sync_depth}, "
+                               f"ping={ping_result}, conn={connection_info}, redis_url={redis_url_redacted})")
+                    self._last_diag_log_time = current_time
+            
+            return async_depth
         except Exception as e:
             logger.debug(f"Failed to get queue length for key {key} (async): {e}")
             return 0

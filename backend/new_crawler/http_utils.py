@@ -366,9 +366,25 @@ class HTTPUtils:
         return headers
     
     def _needs_js_rendering(self, html: str) -> bool:
-        """Check if HTML needs JavaScript rendering."""
-        if not html or len(html) < 500:
+        """Check if HTML needs JavaScript rendering (strict detection)."""
+        if not html:
             return True
+        
+        # Don't trigger for small HTML - might be valid minimal pages
+        # Only trigger if it's suspiciously small AND has blocking indicators
+        if len(html) < 500:
+            html_lower = html.lower()
+            blocking_indicators = [
+                'cloudflare',
+                'captcha',
+                'access denied',
+                'please enable javascript',
+                'javascript is disabled',
+                'checking your browser',
+                'ddos protection'
+            ]
+            # Only trigger if small AND has clear blocking indicators
+            return any(indicator in html_lower for indicator in blocking_indicators)
         
         html_lower = html.lower()
         blocking_indicators = [
@@ -381,7 +397,29 @@ class HTTPUtils:
             'ddos protection'
         ]
         
-        return any(indicator in html_lower for indicator in blocking_indicators)
+        # Check for clear blocking indicators
+        has_blocker = any(indicator in html_lower for indicator in blocking_indicators)
+        if has_blocker:
+            return True
+        
+        # Check if HTML has actual image content (img tags, image URLs, etc.)
+        # If it has images, HTTP is probably sufficient
+        image_indicators = [
+            '<img',
+            'src=',
+            '.jpg',
+            '.jpeg',
+            '.png',
+            '.webp',
+            '.gif',
+            'image/',
+            'data:image'
+        ]
+        has_images = any(indicator in html_lower for indicator in image_indicators)
+        
+        # If HTML has images, don't assume JS is needed (HTTP probably works)
+        # Only trigger JS if there are blocking indicators
+        return False
     
     async def fetch_html(self, url: str, use_js_fallback: bool = True, force_compare_first_visit: bool = False) -> Tuple[Optional[str], str, Optional[Dict[str, int]]]:
         """Fetch HTML content with optional JavaScript rendering fallback.
@@ -422,10 +460,26 @@ class HTTPUtils:
                 # Return comparison stats WITHOUT storing strategy yet
                 comparison_stats = {'http_count': http_count, 'js_count': js_count}
                 
-                # Return the better HTML
-                if js_count >= max(5, 2 * http_count):
-                    return js_html, "SUCCESS", comparison_stats
-                return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED")), comparison_stats
+                # Return the better HTML (aggressive HTTP-first strategy)
+                # Only use JS if it's significantly better (3x more images or at least 10)
+                # Also prefer HTTP if it found any images at all (unless JS is much better)
+                use_aggressive = getattr(self.config, 'nc_js_aggressive_http', True)
+                if use_aggressive:
+                    # Aggressive: Require 3x more images or at least 10 for JS to win
+                    js_threshold = max(10, 3 * http_count)
+                    # Also prefer HTTP if it found images (unless JS is significantly better)
+                    if http_count > 0 and js_count < js_threshold:
+                        return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED")), comparison_stats
+                    # JS wins if it meets the threshold
+                    if js_count >= js_threshold:
+                        return js_html, "SUCCESS", comparison_stats
+                    # Default to HTTP if available
+                    return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED")), comparison_stats
+                else:
+                    # Original strategy: 2x more images or at least 5
+                    if js_count >= max(5, 2 * http_count):
+                        return js_html, "SUCCESS", comparison_stats
+                    return (http_html or js_html), ("SUCCESS" if (http_html or js_html) else (http_err or js_err or "FAILED")), comparison_stats
 
             # Try standard HTTP first
             html, error = await self._fetch_with_redirects(url)
@@ -785,17 +839,22 @@ class HTTPUtils:
                 if content_length > 10 * 1024 * 1024:  # 10MB limit
                     return None, {'error': f'File too large: {content_length / (1024*1024):.1f}MB'}
                 
-                # Create temporary file
-                if temp_dir:
-                    os.makedirs(temp_dir, exist_ok=True)
+                # Create temporary file (async, non-blocking)
+                def write_temp_file(content, directory):
+                    """Write content to temporary file (runs in thread pool)."""
+                    if directory:
+                        os.makedirs(directory, exist_ok=True)
+                    
+                    with tempfile.NamedTemporaryFile(
+                        dir=directory,
+                        suffix='.jpg',
+                        delete=False
+                    ) as temp_file:
+                        temp_file.write(content)
+                        return temp_file.name
                 
-                with tempfile.NamedTemporaryFile(
-                    dir=temp_dir,
-                    suffix='.jpg',
-                    delete=False
-                ) as temp_file:
-                    temp_file.write(response.content)
-                    temp_path = temp_file.name
+                # Write file in thread pool to avoid blocking event loop
+                temp_path = await asyncio.to_thread(write_temp_file, response.content, temp_dir)
                 
                 info = {
                     'content_type': content_type,
@@ -874,6 +933,44 @@ class BrowserPool:
         self._contexts: List[BrowserContext] = []  # Add context pool
         self._context_lock = asyncio.Lock()  # For thread-safe context access
         self._browser_idx = 0  # Round-robin counter
+        self._config = cfg
+    
+    async def _setup_resource_blocking(self, context: BrowserContext):
+        """Set up resource blocking to block CSS, fonts, media, etc. Only allow HTML, JS, and images."""
+        if not getattr(self._config, 'nc_js_block_resources', True):
+            return  # Resource blocking disabled
+        
+        async def handle_route(route):
+            """Block unnecessary resources, only allow essential ones."""
+            resource_type = route.request.resource_type
+            url = route.request.url.lower()
+            
+            # Always allow: document (HTML), script (JavaScript)
+            if resource_type in ['document', 'script']:
+                await route.continue_()
+                return
+            
+            # Allow images (including data URLs and common formats)
+            if resource_type == 'image':
+                await route.continue_()
+                return
+            
+            # Allow XHR/fetch for dynamic image loading (check if URL looks like an image)
+            if resource_type in ['xhr', 'fetch']:
+                # Check if URL contains image-related keywords or extensions
+                image_indicators = ['image', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', 'photo', 'picture', 'img']
+                if any(indicator in url for indicator in image_indicators):
+                    await route.continue_()
+                    return
+                # Block other XHR/fetch requests
+                await route.abort()
+                return
+            
+            # Block everything else: stylesheet, font, media, websocket, etc.
+            await route.abort()
+        
+        # Set up route blocking for this context
+        await context.route("**/*", handle_route)
     
     @staticmethod
     def _is_timeout_error(error: Exception) -> bool:
@@ -942,22 +1039,37 @@ class BrowserPool:
                 cfg = get_config()
                 self._js_semaphore = asyncio.Semaphore(max(1, int(getattr(cfg, 'nc_js_concurrency', 4))))
                 
-                # Create reusable context pool (2 contexts per browser)
-                contexts_per_browser = 2
+                # Auto-adjust contexts_per_browser based on system RAM
+                # < 8GB = 1 context (laptop mode), >= 8GB = 2 contexts (desktop/server mode)
+                try:
+                    system_ram_gb = mem_before.get('system_total_gb', 0)
+                    if system_ram_gb < 8.0:
+                        contexts_per_browser = 1  # Laptop mode
+                    else:
+                        contexts_per_browser = 2  # Desktop/server mode
+                except Exception:
+                    # Fallback to 1 context if memory detection fails
+                    contexts_per_browser = 1
+                
                 default_ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 context_start = time.time()
                 for browser in self._browsers:
                     for _ in range(contexts_per_browser):
                         context = await browser.new_context(
                             java_script_enabled=True,
-                            user_agent=default_ua
+                            user_agent=default_ua,
+                            viewport={'width': 1280, 'height': 720}  # Small viewport to reduce memory
                         )
+                        # Set up resource blocking if enabled
+                        await self._setup_resource_blocking(context)
                         self._contexts.append(context)
                 context_init_time = (time.time() - context_start) * 1000
                 
                 mem_after = _get_memory_info()
                 total_time = (time.time() - start_time) * 1000
-                logger.info(f"[BROWSER-POOL] Initialized: {len(self._contexts)} contexts ({contexts_per_browser} per browser), "
+                system_ram_gb = mem_before.get('system_total_gb', 0)
+                logger.info(f"[BROWSER-POOL] Initialized: {len(self._contexts)} contexts ({contexts_per_browser} per browser, "
+                          f"RAM={system_ram_gb:.1f}GB), "
                           f"memory_after={mem_after.get('rss_mb', 0):.1f}MB RSS "
                           f"(+{mem_after.get('rss_mb', 0) - mem_before.get('rss_mb', 0):.1f}MB), "
                           f"system={mem_after.get('system_available_gb', 0):.1f}GB available "
@@ -1044,8 +1156,11 @@ class BrowserPool:
                         pass
                     context = await browser.new_context(
                         java_script_enabled=True,
-                        user_agent=pw_ua
+                        user_agent=pw_ua,
+                        viewport={'width': 1280, 'height': 720}  # Small viewport to reduce memory
                     )
+                    # Set up resource blocking if enabled
+                    await self._setup_resource_blocking(context)
                     context_created_dynamically = True
                 else:
                     context = self._contexts.pop(0)

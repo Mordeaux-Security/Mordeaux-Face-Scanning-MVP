@@ -108,10 +108,12 @@ class ExtractorWorker:
                 file_size = download_info.get('content_length', 0)
                 logger.debug(f"[EXTRACTOR-{self.worker_id}] Download: {candidate.img_url} - {file_size}bytes")
                 
-                # Log temp file creation
-                if os.path.exists(temp_path):
-                    actual_size = os.path.getsize(temp_path)
-                    file_mtime = os.path.getmtime(temp_path)
+                # Log temp file creation (async file stats)
+                exists = await asyncio.to_thread(os.path.exists, temp_path)
+                if exists:
+                    actual_size, file_mtime = await asyncio.to_thread(
+                        lambda: (os.path.getsize(temp_path), os.path.getmtime(temp_path))
+                    )
                     file_age = time.time() - file_mtime
                     logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Created temp file: {temp_path}, "
                               f"size={actual_size}bytes, expected={file_size}bytes, "
@@ -123,14 +125,16 @@ class ExtractorWorker:
                 )
                 if not phash:
                     logger.debug(f"[EXTRACTOR-{self.worker_id}] Phash: {temp_path} - FAILED")
-                    # Log intentional deletion before removing
-                    if os.path.exists(temp_path):
-                        file_size = os.path.getsize(temp_path)
-                        file_mtime = os.path.getmtime(temp_path)
+                    # Log intentional deletion before removing (async)
+                    exists = await asyncio.to_thread(os.path.exists, temp_path)
+                    if exists:
+                        file_size, file_mtime = await asyncio.to_thread(
+                            lambda: (os.path.getsize(temp_path), os.path.getmtime(temp_path))
+                        )
                         file_age = time.time() - file_mtime
                         logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Deleting temp file (phash failed): "
                                   f"{temp_path}, size={file_size}bytes, age={file_age:.1f}s")
-                    os.remove(temp_path)
+                    await asyncio.to_thread(os.remove, temp_path)
                     # Log extraction end
                     extraction_duration = (time.time() - extraction_start_time) * 1000
                     self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
@@ -143,14 +147,16 @@ class ExtractorWorker:
                 logger.debug(f"[EXTRACTOR-{self.worker_id}] Phash: {phash[:8]}... - cached={is_cached}")
                 
                 if is_cached:
-                    # Log intentional deletion before removing
-                    if os.path.exists(temp_path):
-                        file_size = os.path.getsize(temp_path)
-                        file_mtime = os.path.getmtime(temp_path)
+                    # Log intentional deletion before removing (async)
+                    exists = await asyncio.to_thread(os.path.exists, temp_path)
+                    if exists:
+                        file_size, file_mtime = await asyncio.to_thread(
+                            lambda: (os.path.getsize(temp_path), os.path.getmtime(temp_path))
+                        )
                         file_age = time.time() - file_mtime
                         logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Deleting temp file (cached): "
                                   f"{temp_path}, size={file_size}bytes, age={file_age:.1f}s")
-                    os.remove(temp_path)
+                    await asyncio.to_thread(os.remove, temp_path)
                     self.cached_images += 1
                     # Log extraction end
                     extraction_duration = (time.time() - extraction_start_time) * 1000
@@ -171,10 +177,12 @@ class ExtractorWorker:
                     mime_type=download_info.get('content_type', 'image/jpeg')
                 )
                 
-                # Log temp file path being passed to GPU queue
-                if os.path.exists(temp_path):
-                    file_size = os.path.getsize(temp_path)
-                    file_mtime = os.path.getmtime(temp_path)
+                # Log temp file path being passed to GPU queue (async)
+                exists = await asyncio.to_thread(os.path.exists, temp_path)
+                if exists:
+                    file_size, file_mtime = await asyncio.to_thread(
+                        lambda: (os.path.getsize(temp_path), os.path.getmtime(temp_path))
+                    )
                     file_age = time.time() - file_mtime
                     logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Passing temp file to GPU queue: "
                               f"{temp_path}, size={file_size}bytes, age={file_age:.1f}s, phash={phash[:8]}...")
