@@ -1,0 +1,6 @@
+Upper Limit Test: high_bs2048_ccs20_mci150
+Timestamp: 2025-10-25T20:54:37.874307
+Parameters: {'max_pages_per_site': 20, 'max_images_per_site': 50, 'concurrent_sites': 20, 'max_concurrent_images': 150, 'batch_size': 2048}
+================================================================================
+
+service "backend-cpu" is not running

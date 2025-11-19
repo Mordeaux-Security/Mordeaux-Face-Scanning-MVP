@@ -1,0 +1,119 @@
+Mordeaux Face Scanning MVP - Crawl Results
+Generated: 2025-10-26 21:53:26
+
+=== CRAWL SUMMARY ===
+Total time: 52.2s
+Success rate: 21.7%
+Sites processed: 7
+Total images found: 1495
+Total images processed: 325
+Total faces detected: 124
+Raw images saved: 256
+Thumbnails saved: 4
+Overall throughput: 6.23 images/second
+
+=== PER-SITE RESULTS ===
+
+https://wikifeet.com:
+  Pages crawled: 1
+  Images found: 0
+  Images processed: 0
+  Images cached: 0
+  Faces detected: 0
+  Raw images saved: 0
+  Thumbnails saved: 0
+  Success rate: 0.0%
+  Processing time: 52.2s
+  Throughput: 0.00 images/second
+
+https://candidteens.net:
+  Pages crawled: 1
+  Images found: 47
+  Images processed: 20
+  Images cached: 0
+  Faces detected: 9
+  Raw images saved: 0
+  Thumbnails saved: 0
+  Success rate: 0.4%
+  Processing time: 52.2s
+  Throughput: 0.38 images/second
+
+https://forum.candidgirls.io:
+  Pages crawled: 1
+  Images found: 40
+  Images processed: 40
+  Images cached: 0
+  Faces detected: 16
+  Raw images saved: 0
+  Thumbnails saved: 0
+  Success rate: 1.0%
+  Processing time: 52.2s
+  Throughput: 0.77 images/second
+
+https://motherless.com:
+  Pages crawled: 2
+  Images found: 1066
+  Images processed: 203
+  Images cached: 0
+  Faces detected: 53
+  Raw images saved: 0
+  Thumbnails saved: 0
+  Success rate: 0.2%
+  Processing time: 52.2s
+  Throughput: 3.89 images/second
+
+https://www.voyeurshd.com:
+  Pages crawled: 1
+  Images found: 120
+  Images processed: 62
+  Images cached: 0
+  Faces detected: 46
+  Raw images saved: 0
+  Thumbnails saved: 0
+  Success rate: 0.5%
+  Processing time: 52.2s
+  Throughput: 1.19 images/second
+
+https://www.voyeurstyle.com:
+  Pages crawled: 2
+  Images found: 222
+  Images processed: 0
+  Images cached: 0
+  Faces detected: 0
+  Raw images saved: 0
+  Thumbnails saved: 0
+  Success rate: 0.0%
+  Processing time: 52.2s
+  Throughput: 0.00 images/second
+
+https://candidshiny.com:
+  Pages crawled: 1
+  Images found: 0
+  Images processed: 0
+  Images cached: 0
+  Faces detected: 0
+  Raw images saved: 0
+  Thumbnails saved: 0
+  Success rate: 0.0%
+  Processing time: 52.2s
+  Throughput: 0.00 images/second
+
+=== SYSTEM METRICS ===
+Active crawlers: 0
+Active extractors: 0
+Active GPU processors: 0
+GPU worker available: True
+
+Queue metrics:
+  sites: 0/512 (0.0%)
+  candidates: 0/512 (0.0%)
+  images: 0/512 (0.0%)
+  results: 256/512 (50.0%)
+
+=== TECHNICAL NOTES ===
+- GPU worker running natively on Windows with DirectML
+- Shared batch system working correctly (64-image batches)
+- Face detection using InsightFace without image distortion
+- Storage using MinIO with content-addressed structure
+- Throughput metrics implemented and working
+- Cache clearing before crawl for testing purposes

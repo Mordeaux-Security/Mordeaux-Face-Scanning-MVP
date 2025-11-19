@@ -1,0 +1,102 @@
+{
+  "best_config": {
+    "cs": 10,
+    "mci": 50,
+    "bs": 128
+  },
+  "best_rate": 4.86,
+  "test_count": 6,
+  "timestamp": "2025-10-25T22:09:27.645836",
+  "all_results": [
+    {
+      "total_time": 48.94,
+      "img_per_sec": 4.86,
+      "pages_per_sec": 0.59,
+      "total_images": 238,
+      "total_pages": 29,
+      "success_rate": 0,
+      "config": {
+        "cs": 10,
+        "mci": 50,
+        "bs": 128
+      },
+      "filename": "mpps5_mips10_cs10_mci50_bs128.txt",
+      "exit_code": 0
+    },
+    {
+      "total_time": 2.163172721862793,
+      "img_per_sec": 0,
+      "pages_per_sec": 0,
+      "total_images": 0,
+      "total_pages": 0,
+      "success_rate": 0,
+      "config": {
+        "cs": 15,
+        "mci": 100,
+        "bs": 256
+      },
+      "filename": "mpps5_mips10_cs15_mci100_bs256.txt",
+      "exit_code": 1
+    },
+    {
+      "total_time": 2.116727113723755,
+      "img_per_sec": 0,
+      "pages_per_sec": 0,
+      "total_images": 0,
+      "total_pages": 0,
+      "success_rate": 0,
+      "config": {
+        "cs": 20,
+        "mci": 150,
+        "bs": 512
+      },
+      "filename": "mpps5_mips10_cs20_mci150_bs512.txt",
+      "exit_code": 1
+    },
+    {
+      "total_time": 2.1622884273529053,
+      "img_per_sec": 0,
+      "pages_per_sec": 0,
+      "total_images": 0,
+      "total_pages": 0,
+      "success_rate": 0,
+      "config": {
+        "cs": 15,
+        "mci": 50,
+        "bs": 128
+      },
+      "filename": "mpps5_mips10_cs15_mci50_bs128.txt",
+      "exit_code": 1
+    },
+    {
+      "total_time": 2.2828948497772217,
+      "img_per_sec": 0,
+      "pages_per_sec": 0,
+      "total_images": 0,
+      "total_pages": 0,
+      "success_rate": 0,
+      "config": {
+        "cs": 10,
+        "mci": 75,
+        "bs": 128
+      },
+      "filename": "mpps5_mips10_cs10_mci75_bs128.txt",
+      "exit_code": 1
+    },
+    {
+      "total_time": 2.258220911026001,
+      "img_per_sec": 0,
+      "pages_per_sec": 0,
+      "total_images": 0,
+      "total_pages": 0,
+      "success_rate": 0,
+      "config": {
+        "cs": 10,
+        "mci": 50,
+        "bs": 192
+      },
+      "filename": "mpps5_mips10_cs10_mci50_bs192.txt",
+      "exit_code": 1
+    }
+  ]
+}

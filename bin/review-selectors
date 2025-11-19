@@ -23,7 +23,7 @@ from typing import List, Dict, Optional
 sys.path.append(str(Path(__file__).parent.parent))
 
 from tools.selector_miner import SelectorMiner
-from tools.redirect_utils import create_safe_client, fetch_with_redirects
+from backend.app.services.http_service import create_safe_client, fetch_with_redirects
 import httpx
 import yaml
 import hashlib

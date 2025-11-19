@@ -3,6 +3,8 @@ Selector Miner Core - Phase 2
 
 A deterministic selector-miner that analyzes HTML content to generate
 candidate CSS selectors for image extraction with evidence-based scoring.
+
+Now uses the shared selector_core library for common functionality.
 """
 
 from __future__ import annotations
@@ -20,7 +22,15 @@ from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup, Tag
-from .redirect_utils import create_safe_client
+from backend.app.services.http_service import create_safe_client
+
+# Import shared core functionality
+from backend.app.services.crawler_modules.selector_core import (
+    MinerNetworkError, MinerSchemaError, emit_recipe_yaml_block,
+    Limits, MinedResult, CandidateSelector,
+    resolve_image_url, validate_image_request, extract_extra_sources,
+    stable_selector, gather_evidence, score_candidate, discover_listing_links
+)
 
 # Optional Playwright import for JavaScript rendering
 try:

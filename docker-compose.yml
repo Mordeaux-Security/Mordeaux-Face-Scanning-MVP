@@ -22,6 +22,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        ENABLE_GPU: 0
     environment:
       PIPELINE_URL: http://face-pipeline:8001
       REDIS_URL: redis://redis:6379/0
@@ -31,6 +33,13 @@ services:
       MINIO_SECURE: "false"
       QDRANT_URL: http://qdrant:6333
       QDRANT_API_KEY: ""
+      # GPU Worker Configuration
+      GPU_WORKER_ENABLED: ${GPU_WORKER_ENABLED:-true}
+      GPU_WORKER_URL: ${GPU_WORKER_URL:-http://host.docker.internal:8765}
+      GPU_WORKER_TIMEOUT: ${GPU_WORKER_TIMEOUT:-60}
+      GPU_WORKER_MAX_RETRIES: ${GPU_WORKER_MAX_RETRIES:-5}
+      GPU_WORKER_BATCH_SIZE: ${GPU_WORKER_BATCH_SIZE:-32}
+      GPU_WORKER_HEALTH_CHECK_INTERVAL: ${GPU_WORKER_HEALTH_CHECK_INTERVAL:-10}
     expose: ["8000"]
     networks: [mordeaux]
     depends_on:
@@ -42,6 +51,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 10
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   face-pipeline:
     build:
@@ -113,6 +124,43 @@ services:
       interval: 10s
       timeout: 3s
       retries: 20
+
+  new-crawler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        ENABLE_GPU: 0
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_SECURE: "false"
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ""
+      # GPU Worker Configuration
+      GPU_WORKER_ENABLED: ${GPU_WORKER_ENABLED:-true}
+      GPU_WORKER_URL: ${GPU_WORKER_URL:-http://host.docker.internal:8765}
+      GPU_WORKER_TIMEOUT: ${GPU_WORKER_TIMEOUT:-60}
+      GPU_WORKER_MAX_RETRIES: ${GPU_WORKER_MAX_RETRIES:-5}
+      GPU_WORKER_BATCH_SIZE: ${GPU_WORKER_BATCH_SIZE:-32}
+      GPU_WORKER_HEALTH_CHECK_INTERVAL: ${GPU_WORKER_HEALTH_CHECK_INTERVAL:-10}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+      - minio
+      - qdrant
+    volumes:
+      - ./backend:/app
+      - ./backend/sites.txt:/app/sites.txt:ro
+      - ./crawl_output:/app/crawl_output
+    networks: [mordeaux]
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    command: ["/bin/sh", "-c", "cd /app && PYTHONPATH=/app python -m new_crawler.main --sites-file sites.txt"]
 
 networks:
   mordeaux: {}
