@@ -24,7 +24,7 @@ class CrawlerConfig(BaseSettings):
     
     # Environment
     environment: str = "development"
-    log_level: str = "fatal"
+    log_level: str = "error"
     
     # Redis Configuration
     redis_url: str = "redis://redis:6379/0"
@@ -43,9 +43,9 @@ class CrawlerConfig(BaseSettings):
     
     # Queue Configuration
     nc_batch_size: int = 256  # DEPRECATED: Old extractor batch threshold (no longer used - extractors push individually to gpu:inbox)
-    nc_max_queue_depth: int = 128 #4096
-    nc_extractor_concurrency: int = 16 #1024  # Total concurrent downloads across all extractor workers (divided among workers)
-    nc_extractor_batch_pop_size: int = 16 # 50  # Number of candidates to pop at once from queue
+    nc_max_queue_depth: int = 128  # Mac: 128, AMD: 4096
+    nc_extractor_concurrency: int = 16  # Mac: 16, AMD: 1024 - Total concurrent downloads across all extractor workers (divided among workers)
+    nc_extractor_batch_pop_size: int = 16  # Mac: 16, AMD: 50 - Number of candidates to pop at once from queue
     nc_url_dedup_ttl_hours: int = 24  # TTL for URL deduplication set
     nc_cache_ttl_days: int = 90
     
@@ -53,7 +53,7 @@ class CrawlerConfig(BaseSettings):
     nc_skip_head_check: bool = True  # Skip HEAD requests when HTML metadata is available
     
     # Crawler Performance Configuration
-    nc_max_concurrent_sites_per_worker: int = 2 # 32  # Max sites processed concurrently per crawler worker (eliminates site switching delays)
+    nc_max_concurrent_sites_per_worker: int = 2  # Mac: 2, AMD: 32 - Max sites processed concurrently per crawler worker (eliminates site switching delays)
     
     # GPU Performance Configuration
     nc_max_concurrent_batches_per_worker: int = 2  # Max batches processed concurrently per GPU worker (improves GPU utilization) - NOTE: Overridden by GPU scheduler (max 2 inflight)
@@ -78,13 +78,13 @@ class CrawlerConfig(BaseSettings):
     gpu_batch_flush_ms: int = 3000  # DEPRECATED: No longer used with GPU scheduler
     
     # GPU Scheduler Configuration (new centralized batching)
-    gpu_target_batch: int = 8 # 512  # Target batch size for GPU processing
+    gpu_target_batch: int = 8  # Mac: 8, AMD: 512 - Target batch size for GPU processing
     gpu_max_wait_ms: int = 12  # Max milliseconds to wait before launching early batch
     gpu_min_launch_ms: int = 100  # Minimum milliseconds between batch launches (Windows/AMD stability)
     gpu_inbox_key: str = "gpu:inbox"  # Redis queue key for GPU input (single FIFO queue)
     
     # GPU Processor Worker Configuration
-    image_processing_idle_wait: float = 0.05  # Sleep duration (seconds) when idle in main loop. 0.002 for AMD machine, 0.05 for Mac machine
+    image_processing_idle_wait: float = 0.002  # Mac: 0.05, AMD: 0.002 - Sleep duration (seconds) when idle in main loop
     
     # MinIO Connection Pool Configuration
     minio_max_pool_size: int = 50
@@ -92,7 +92,7 @@ class CrawlerConfig(BaseSettings):
     
     # HTTP Configuration
     nc_http_timeout: float = 30.0
-    nc_js_render_timeout: float = 120.0 #20.0
+    nc_js_render_timeout: float = 120.0  # Mac: 120.0, AMD: 20.0
     nc_max_redirects: int = 3
     nc_max_retries: int = 3
     nc_retry_base_delay: float = 1.0  # Base delay for exponential backoff (seconds)
@@ -103,14 +103,14 @@ class CrawlerConfig(BaseSettings):
     
     # JavaScript Rendering Configuration
     nc_js_wait_strategy: str = "fixed"  # "fixed" | "networkidle" | "both"
-    nc_js_wait_timeout: float = 5.0 #5.0  # seconds to wait for fixed strategy
-    nc_js_networkidle_timeout: float = 30.0 #3.0  # timeout for network idle strategy
+    nc_js_wait_timeout: float = 5.0  # seconds to wait for fixed strategy
+    nc_js_networkidle_timeout: float = 30.0  # Mac: 30.0, AMD: 3.0 - timeout for network idle strategy
     # First visit strategy: fetch both HTTP and JS, pick best by candidate count
     nc_js_first_visit_compare: bool = True
     # Max concurrent Playwright renders
-    nc_js_concurrency: int = 2 #32
+    nc_js_concurrency: int = 2  # Mac: 2, AMD: 32
     # Browser pool size for JavaScript rendering
-    nc_js_browser_pool_size: int = 1 #32
+    nc_js_browser_pool_size: int = 1  # Mac: 1, AMD: 32
     # Block unnecessary resources (CSS, fonts, media) to speed up rendering
     nc_js_block_resources: bool = True
     # Aggressive HTTP-first strategy (require 3x more images for JS to win)

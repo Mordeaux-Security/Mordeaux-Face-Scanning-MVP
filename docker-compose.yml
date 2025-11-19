@@ -1,4 +1,17 @@
 services:
+  frontend-dev:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "cd /app && npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    networks: [mordeaux]
+    environment:
+      - VITE_API_BASE=/api
+
   nginx:
     image: nginx:1.25-alpine
     depends_on:
@@ -38,7 +51,8 @@ services:
       GPU_WORKER_MAX_RETRIES: ${GPU_WORKER_MAX_RETRIES:-5}
       GPU_WORKER_BATCH_SIZE: ${GPU_WORKER_BATCH_SIZE:-32}
       GPU_WORKER_HEALTH_CHECK_INTERVAL: ${GPU_WORKER_HEALTH_CHECK_INTERVAL:-10}
-    expose: ["8000"]
+    ports:
+      - "8000:8000"
     networks: [mordeaux]
     depends_on:
       - redis
@@ -101,8 +115,8 @@ services:
     volumes:
       - minio-data:/data
     ports:
+      - "9000:9000"
       - "9001:9001"
-    expose: ["9000"]
     networks: [mordeaux]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
