@@ -2049,3 +2049,112 @@
 2025-11-19 00:45:30,414 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
 2025-11-19 00:45:30,418 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
 2025-11-19 00:45:30,418 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, gpu_inbox=0, storage=29, results=0, gpu_processor=IDLE
+2025-11-19 00:46:05,233 - new_crawler.config - INFO - Validating crawler configuration...
+2025-11-19 00:46:05,238 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-11-19 00:46:05,239 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-11-19 00:46:05,239 - new_crawler.config - INFO - Configuration validated: crawlers=1, extractors=2, gpu_processors=1
+2025-11-19 00:46:05,239 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-11-19 00:46:05,240 - new_crawler.config - INFO - Environment: development
+2025-11-19 00:46:05,240 - new_crawler.config - INFO - Log Level: error
+2025-11-19 00:46:05,240 - new_crawler.config - INFO - Docker: True
+2025-11-19 00:46:05,241 - new_crawler.config - INFO - Windows: False
+2025-11-19 00:46:05,241 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-11-19 00:46:05,241 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-11-19 00:46:05,241 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-11-19 00:46:05,242 - new_crawler.config - INFO - Batch Size: 256
+2025-11-19 00:46:05,242 - new_crawler.config - INFO - GPU Min Batch Size: 64
+2025-11-19 00:46:05,242 - new_crawler.config - INFO - Max Queue Depth: 128
+2025-11-19 00:46:05,242 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-11-19 00:46:05,243 - new_crawler.config - INFO - Max Concurrent Sites per Worker: 2
+2025-11-19 00:46:05,243 - new_crawler.config - INFO - Max Concurrent Batches per Worker: 2
+2025-11-19 00:46:05,243 - new_crawler.config - INFO - Batch Flush Timeout: 5.0s
+2025-11-19 00:46:05,243 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-11-19 00:46:05,244 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-11-19 00:46:05,244 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-11-19 00:46:05,244 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-11-19 00:46:05,244 - new_crawler.config - INFO - JS Wait Strategy: fixed
+2025-11-19 00:46:05,245 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-11-19 00:46:05,245 - new_crawler.config - INFO - JS Network Idle Timeout: 30.0s
+2025-11-19 00:46:05,245 - new_crawler.config - INFO - Extract Background Images: True
+2025-11-19 00:46:05,245 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-11-19 00:46:05,246 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-11-19 00:46:05,246 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-11-19 00:46:05,246 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-11-19 00:46:05,246 - new_crawler.config - INFO - Realistic Headers: True
+2025-11-19 00:46:05,247 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-11-19 00:46:05,247 - new_crawler.config - INFO - Capture Network Images: True
+2025-11-19 00:46:05,247 - new_crawler.config - INFO - Extract Script Images: True
+2025-11-19 00:46:05,247 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-11-19 00:46:05,248 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-11-19 00:46:05,248 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-11-19 00:46:05,248 - new_crawler.config - INFO - ================================
+2025-11-19 00:46:05,250 - __main__ - INFO - Loaded 13 sites from sites.txt
+2025-11-19 00:46:05,250 - __main__ - INFO - Starting crawl of 13 sites
+2025-11-19 00:46:05,250 - new_crawler.config - WARNING - S3_ENDPOINT not set for development environment
+2025-11-19 00:46:05,251 - __main__ - WARNING - Configuration validation failed, but continuing...
+2025-11-19 00:46:05,251 - __main__ - INFO - Performing system health check...
+2025-11-19 00:46:05,252 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-11-19 00:46:05,252 - __main__ - INFO - Redis: ✓
+2025-11-19 00:46:05,254 - __main__ - INFO - Cache: ✓
+2025-11-19 00:46:05,557 - new_crawler.storage_manager - ERROR - Storage health check failed: Unable to locate credentials
+2025-11-19 00:46:05,558 - __main__ - INFO - Storage: ✗
+2025-11-19 00:46:05,571 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-11-19 00:46:05,577 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-11-19 00:46:05,577 - __main__ - INFO - GPU Worker: ✓
+2025-11-19 00:46:05,577 - __main__ - WARNING - ✗ Some systems unhealthy
+2025-11-19 00:46:05,578 - __main__ - WARNING - Health check failed, but continuing...
+2025-11-19 00:46:05,581 - new_crawler.orchestrator - INFO - Starting crawl of 13 sites
+2025-11-19 00:46:05,589 - new_crawler.redis_manager - INFO - Cleared 2 crawler queues
+2025-11-19 00:46:05,590 - new_crawler.redis_manager - INFO - Cleared 10 site stats
+2025-11-19 00:46:05,590 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-11-19 00:46:05,590 - new_crawler.orchestrator - INFO - Pushing 13 sites to crawl queue
+2025-11-19 00:46:05,594 - new_crawler.orchestrator - INFO - Successfully pushed 13 sites to queue
+2025-11-19 00:46:05,594 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-11-19 00:46:05,594 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-11-19 00:46:05,595 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-11-19 00:46:05,600 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 23)
+2025-11-19 00:46:05,603 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 24)
+2025-11-19 00:46:05,608 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 25)
+2025-11-19 00:46:05,611 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 26)
+2025-11-19 00:46:05,616 - new_crawler.orchestrator - INFO - Started storage worker 0 (PID: 27)
+2025-11-19 00:46:05,617 - new_crawler.orchestrator - INFO - Started 1 crawlers, 2 extractors, 1 GPU processors, 1 storage workers
+2025-11-19 00:46:07,620 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-11-19 00:46:07,628 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:07,632 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:07,633 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:12,637 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:12,641 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:12,641 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:17,645 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:17,649 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:17,649 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:22,652 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:22,656 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:22,657 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:27,661 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:27,665 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:27,665 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:32,669 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:32,673 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:32,673 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:37,677 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:37,681 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:37,681 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:42,685 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:42,689 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:42,690 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:47,695 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:47,698 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:47,699 - new_crawler.orchestrator - INFO - Queues: sites=11, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:52,701 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:52,706 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:52,706 - new_crawler.orchestrator - INFO - Queues: sites=10, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:46:57,712 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:57,718 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:46:57,720 - new_crawler.orchestrator - INFO - Queues: sites=10, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:47:02,725 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:47:02,729 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:47:02,729 - new_crawler.orchestrator - INFO - Queues: sites=10, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-11-19 00:47:07,732 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:47:07,737 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-11-19 00:47:07,737 - new_crawler.orchestrator - INFO - Queues: sites=10, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
