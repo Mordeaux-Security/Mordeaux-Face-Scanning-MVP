@@ -27,4 +27,4 @@ RUN playwright install chromium
 COPY app ./app
 
 EXPOSE 8000
-CMD ["bash", "-lc", "gunicorn -k uvicorn.workers.UvicornWorker -c uvicorn_gunicorn_config.py app.main:app"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

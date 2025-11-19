@@ -1,30 +1,49 @@
 #!/usr/bin/env python3
 """
 Download all thumbnails from MinIO to local 'thumbs' folder.
+
+Usage:
+    python backend/download_thumbs.py [--preserve-structure]
+    
+Options:
+    --preserve-structure    Preserve tenant folder structure (default: flatten to filename only)
 """
 
 import os
 import sys
+import argparse
 from pathlib import Path
 
 # Add backend to path for imports
-backend_path = os.path.join(os.path.dirname(__file__), '..', 'backend')
-if os.path.exists(backend_path):
-    sys.path.insert(0, backend_path)
+script_dir = Path(__file__).parent
+backend_app_path = script_dir / "app"
+if backend_app_path.exists():
+    sys.path.insert(0, str(script_dir))
 
 # Try importing settings, if that fails, load from environment
 try:
-    from backend.app.core.config import Settings
+    from app.core.config import Settings
     use_settings = True
 except ImportError:
-    # Fall back to environment variables
-    use_settings = False
+    try:
+        # Try alternative path
+        backend_path = script_dir.parent
+        sys.path.insert(0, str(backend_path))
+        from backend.app.core.config import Settings
+        use_settings = True
+    except ImportError:
+        # Fall back to environment variables
+        use_settings = False
 
 from minio import Minio
 from minio.error import S3Error
 
-def download_thumbnails():
-    """Download all thumbnails from MinIO to local thumbs folder."""
+def download_thumbnails(preserve_structure: bool = False):
+    """Download all thumbnails from MinIO to local thumbs folder.
+    
+    Args:
+        preserve_structure: If True, preserve tenant folder structure. If False, flatten to filename only.
+    """
     
     # Load settings
     if use_settings:
@@ -57,6 +76,7 @@ def download_thumbnails():
     
     print(f"Endpoint: {s3_endpoint}")
     print(f"Bucket: {bucket_name}")
+    print(f"Preserve structure: {preserve_structure}")
     
     # Create thumbs directory if it doesn't exist
     thumbs_dir = Path("thumbs")
@@ -75,6 +95,11 @@ def download_thumbnails():
             secure=s3_use_ssl
         )
         
+        # Check if bucket exists
+        if not client.bucket_exists(bucket_name):
+            print(f"Error: Bucket '{bucket_name}' does not exist")
+            sys.exit(1)
+        
         print(f"Connected to MinIO at {endpoint}")
         
     except Exception as e:
@@ -86,48 +111,71 @@ def download_thumbnails():
         objects = client.list_objects(bucket_name, recursive=True)
         
         count = 0
+        skipped = 0
+        errors = 0
+        
         for obj in objects:
             try:
-                # Get object data
-                response = client.get_object(bucket_name, obj.object_name)
+                object_name = obj.object_name
+                
+                # Skip non-image files
+                if not any(object_name.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+                    continue
                 
                 # Create local file path
-                # Preserve folder structure but use last part as filename
-                local_path = thumbs_dir / os.path.basename(obj.object_name)
+                if preserve_structure:
+                    # Preserve folder structure
+                    local_path = thumbs_dir / object_name
+                    local_path.parent.mkdir(parents=True, exist_ok=True)
+                else:
+                    # Flatten to filename only
+                    local_path = thumbs_dir / os.path.basename(object_name)
                 
                 # Skip if the file already exists
                 if local_path.exists():
-                    print(f"  Skipping existing: {local_path.name}")
-                    response.close()
-                    response.release_conn()
+                    skipped += 1
+                    if skipped % 100 == 0:
+                        print(f"  Skipped {skipped} existing files...")
                     continue
                 
-                # Write to file
-                with open(local_path, 'wb') as f:
-                    for chunk in response.stream(32*1024):  # 32KB chunks
-                        f.write(chunk)
-                
-                response.close()
-                response.release_conn()
+                # Download using fget_object (simpler and more efficient)
+                client.fget_object(bucket_name, object_name, str(local_path))
                 
                 count += 1
                 if count % 10 == 0:
                     print(f"  Downloaded {count} images...")
                     
             except Exception as e:
+                errors += 1
                 print(f"  Error downloading {obj.object_name}: {e}")
                 continue
         
-        print(f"\n✓ Downloaded {count} images to {thumbs_dir.absolute()}")
+        print(f"\n{'='*60}")
+        print(f"Download complete!")
+        print(f"  Downloaded: {count} images")
+        print(f"  Skipped (existing): {skipped} files")
+        print(f"  Errors: {errors} files")
+        print(f"  Output directory: {thumbs_dir.absolute()}")
+        print(f"{'='*60}")
         
     except S3Error as e:
         print(f"Error accessing bucket: {e}")
         sys.exit(1)
     except Exception as e:
         print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Download thumbnails from MinIO bucket")
+    parser.add_argument(
+        "--preserve-structure",
+        action="store_true",
+        help="Preserve tenant folder structure (default: flatten to filename only)"
+    )
+    args = parser.parse_args()
+    
     print("=== Downloading Thumbnails from MinIO ===")
     print()
-    download_thumbnails()
+    download_thumbnails(preserve_structure=args.preserve_structure)

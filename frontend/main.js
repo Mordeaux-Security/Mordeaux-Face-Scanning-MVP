@@ -5,105 +5,148 @@ console.log("🚀 Mordeaux Frontend Starting...");
 console.log("📡 API Base URL:", api);
 
 app.innerHTML = `
-  <h1>Mordeaux — Face Search</h1>
+  <h1>Mordeaux — Identity Enrollment</h1>
   <form id="f">
     <div style="margin: 20px 0; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; text-align: center; cursor: pointer; background: #f9f9f9;" onclick="document.getElementById('file').click()">
-      <input type="file" id="file" accept="image/*" style="display: none;" />
+      <input type="file" id="file" accept="image/*" multiple style="display: none;" />
       <div style="font-size: 18px; color: #666; margin-bottom: 10px;">
-        📁 Click here to select a face image
+        📁 Click here to select 3-5 face images
       </div>
       <div style="font-size: 14px; color: #999;">
-        Supports JPG, PNG files up to 10MB
+        Minimum 3 images required, recommended 3-5. Supports JPG, PNG files up to 10MB each
       </div>
     </div>
     <div id="file-info" style="margin: 10px 0; padding: 10px; background: #e8f4fd; border-radius: 4px; display: none;">
-      <strong>Selected:</strong> <span id="file-name"></span> (<span id="file-size"></span>)
+      <strong>Selected:</strong> <span id="file-count"></span> images (<span id="file-size"></span>)
     </div>
-    <div id="controls" style="display: none; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
-      <h4 style="margin-bottom: 15px; color: #333;">🔧 Search Controls</h4>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
-        <div>
-          <label for="topK" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Top K Results:</label>
-          <input type="number" id="topK" min="1" max="100" value="10" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
-        </div>
-        <div>
-          <label for="threshold" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Similarity Threshold:</label>
-          <input type="number" id="threshold" min="0" max="1" step="0.01" value="0.25" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
-        </div>
-      </div>
-      <div style="font-size: 12px; color: #666; text-align: center;">
-        💡 Higher threshold = more similar matches only
+    <div id="identity-input" style="display: none; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+      <label for="identityId" style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Identity ID:</label>
+      <input type="text" id="identityId" placeholder="Enter identity identifier (e.g., person-123)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+      <div style="font-size: 12px; color: #666; margin-top: 5px;">
+        💡 Unique identifier for this person's identity
       </div>
     </div>
     <button type="submit" style="padding: 12px 24px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">
-      🔍 Search for Similar Faces
+      ✅ Enroll Identity
     </button>
   </form>
   <pre id="out" style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; margin-top: 20px;"></pre>
-  <img id="thumb" style="max-width:256px;display:none;margin-top: 20px;border-radius: 8px;box-shadow: 0 2px 8px rgba(0,0,0,0.1);"/>
 `;
 
 console.log("📝 Form elements created");
 
 // Add file selection handler
 document.getElementById("file").addEventListener("change", (e) => {
-  const file = e.target.files[0];
+  const files = Array.from(e.target.files);
   const fileInfo = document.getElementById("file-info");
-  const fileName = document.getElementById("file-name");
+  const fileCount = document.getElementById("file-count");
   const fileSize = document.getElementById("file-size");
+  const identityInput = document.getElementById("identity-input");
   
-  if (file) {
-    console.log("📁 File selected:", file.name, file.size, "bytes");
-    fileName.textContent = file.name;
-    fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + " MB";
+  if (files.length > 0) {
+    // Filter to only image files
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) {
+      console.log("❌ No valid image files selected");
+      fileInfo.style.display = "none";
+      identityInput.style.display = "none";
+      return;
+    }
+    
+    // Validate count
+    if (imageFiles.length < 3) {
+      console.log(`⚠️ Need at least 3 images, got ${imageFiles.length}`);
+      fileCount.textContent = `${imageFiles.length} (need at least 3)`;
+    } else if (imageFiles.length > 5) {
+      console.log(`⚠️ Too many images, using first 5 of ${imageFiles.length}`);
+      fileCount.textContent = `5 of ${imageFiles.length} (max 5 recommended)`;
+    } else {
+      fileCount.textContent = `${imageFiles.length}`;
+    }
+    
+    const totalSize = imageFiles.reduce((sum, file) => sum + file.size, 0);
+    fileSize.textContent = (totalSize / 1024 / 1024).toFixed(2) + " MB";
     fileInfo.style.display = "block";
-    document.getElementById("controls").style.display = "block";
+    
+    if (imageFiles.length >= 3) {
+      identityInput.style.display = "block";
+    } else {
+      identityInput.style.display = "none";
+    }
   } else {
     fileInfo.style.display = "none";
-    document.getElementById("controls").style.display = "none";
+    identityInput.style.display = "none";
   }
 });
 
 document.getElementById("f").addEventListener("submit", async (e) => {
-  console.log("🔍 Form submitted!");
+  console.log("✅ Enrollment form submitted!");
   e.preventDefault();
   
-  const file = document.getElementById("file").files[0];
-  console.log("📁 Selected file:", file);
+  const files = Array.from(document.getElementById("file").files);
+  const imageFiles = files.filter(file => file.type.startsWith('image/'));
   
-  if (!file) {
-    console.log("❌ No file selected");
+  if (imageFiles.length < 3) {
+    console.log("❌ Need at least 3 images");
+    document.getElementById("out").textContent = `Error: Please select at least 3 images (currently: ${imageFiles.length})`;
     return;
   }
   
-  console.log("📊 File details:", {
-    name: file.name,
-    size: file.size,
-    type: file.type
-  });
+  const identityId = document.getElementById("identityId").value.trim();
+  if (!identityId) {
+    console.log("❌ Identity ID required");
+    document.getElementById("out").textContent = "Error: Please enter an Identity ID";
+    return;
+  }
   
-  const fd = new FormData();
-  fd.append("file", file);
+  // Limit to 5 images if more selected
+  const filesToUse = imageFiles.slice(0, 5);
   
-  // Get the control values
-  const topK = parseInt(document.getElementById("topK").value) || 10;
-  const threshold = parseFloat(document.getElementById("threshold").value) || 0.25;
+  console.log("📁 Selected files:", filesToUse.length, "images");
+  console.log("👤 Identity ID:", identityId);
   
   // Get tenant ID from environment or use default
   const tenantId = window.TENANT_ID || "demo-tenant";
   
-  // Build URL with query parameters
-  const url = new URL(api + "/v1/search/file");
-  url.searchParams.append('tenant_id', tenantId);
-  url.searchParams.append('top_k', topK);
-  url.searchParams.append('threshold', threshold);
+  // Convert images to base64
+  const imagesB64 = await Promise.all(
+    filesToUse.map(file => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // Remove data:image/...;base64, prefix
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    })
+  );
   
-  console.log("📤 Sending request to:", url.toString());
+  // Build request body
+  const requestBody = {
+    tenant_id: tenantId,
+    identity_id: identityId,
+    images_b64: imagesB64,
+    overwrite: true
+  };
+  
+  // Build URL - use pipeline API for enrollment
+  const pipelineApi = (import.meta.env.VITE_API_BASE || "http://localhost:8001");
+  const url = new URL(pipelineApi + "/api/v1/enroll_identity");
+  
+  console.log("📤 Sending enrollment request to:", url.toString());
   
   try {
     const res = await fetch(url.toString(), { 
-      method: "POST", 
-      body: fd
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': tenantId
+      },
+      body: JSON.stringify(requestBody)
     });
     console.log("📡 Response status:", res.status, res.statusText);
     
@@ -116,32 +159,9 @@ document.getElementById("f").addEventListener("submit", async (e) => {
     }
     
     const json = await res.json();
-    console.log("✅ Response received:", json);
+    console.log("✅ Enrollment response received:", json);
     
     document.getElementById("out").textContent = JSON.stringify(json, null, 2);
-    
-    const img = document.getElementById("thumb");
-    let displayUrl = null;
-    if (json.thumb_url) {
-      displayUrl = json.thumb_url;
-    } else if (Array.isArray(json.hits) && json.hits.length > 0) {
-      const h = json.hits[0];
-      displayUrl = h.image_url || h.thumb_url || null;
-    } else if (Array.isArray(json.results) && json.results.length > 0) {
-      // Backend /search_face shape: results[].metadata.thumb_url
-      const r0 = json.results[0];
-      if (r0 && r0.metadata) {
-        displayUrl = r0.metadata.image_url || r0.metadata.thumb_url || null;
-      }
-    }
-    if (displayUrl) {
-      console.log("🖼️ Setting display image:", displayUrl);
-      img.src = displayUrl;
-      img.style.display = "block";
-    } else {
-      console.log("⚠️ No displayable image URL in response");
-      img.style.display = "none";
-    }
     
   } catch (error) {
     console.error("💥 Request failed:", error);
