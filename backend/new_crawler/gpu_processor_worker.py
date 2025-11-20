@@ -58,6 +58,10 @@ class GPUProcessorWorker:
         self._last_feed_log_time: float = 0.0
         self._feed_log_interval: float = 0.5  # 500ms
         
+        # Staging flush tracking - only flush when queues have been empty for 10 continuous seconds
+        self._queues_empty_since: Optional[float] = None  # Timestamp when queues first became 0, or None if not empty
+        self._staging_flush_empty_duration: float = 10.0  # Seconds queues must be empty before flushing
+        
         # GPU scheduler for centralized batching
         self.scheduler = GPUScheduler(
             redis_mgr=self.redis,
@@ -143,25 +147,23 @@ class GPUProcessorWorker:
                 gpu_path = os.path.join(gpu_temp_dir, os.path.basename(original_path))
                 
                 try:
-                    # Check existence and get stats in thread pool
-                    exists = await asyncio.to_thread(os.path.exists, original_path)
-                    if exists:
-                        # Get file stats in parallel
-                        file_size, file_mtime = await asyncio.to_thread(
-                            lambda: (os.path.getsize(original_path), os.path.getmtime(original_path))
-                        )
+                    # Check existence and get stats
+                    if os.path.exists(original_path):
+                        # Get file stats
+                        file_size = os.path.getsize(original_path)
+                        file_mtime = os.path.getmtime(original_path)
                         file_age = time.time() - file_mtime
                         logger.debug(f"[GPU Processor {self.worker_id}] [TEMP-FILE] File exists before copy: "
                                   f"{original_path}, size={file_size}bytes, age={file_age:.1f}s, mtime={file_mtime:.1f}")
-                        # Copy file in thread pool (non-blocking)
-                        await asyncio.to_thread(shutil.copy2, original_path, gpu_path)
+                        # Copy file
+                        shutil.copy2(original_path, gpu_path)
                         gpu_temp_paths[original_path] = gpu_path
                         logger.debug(f"[GPU Processor {self.worker_id}] Copied temp file: {original_path} -> {gpu_path}")
                         return True
                     else:
                         # File missing - check parent directory
                         parent_dir = os.path.dirname(original_path)
-                        parent_exists = await asyncio.to_thread(os.path.exists, parent_dir) if parent_dir else False
+                        parent_exists = os.path.exists(parent_dir) if parent_dir else False
                         if parent_exists:
                             logger.warning(f"[GPU Processor {self.worker_id}] [TEMP-FILE] Temp file missing (parent dir exists): "
                                          f"{original_path}, parent_dir={parent_dir}")
@@ -192,8 +194,8 @@ class GPUProcessorWorker:
             # Pull from scheduler staging first, then from queue if needed
             # Add timeout/guard to prevent infinite loops
             fill_start_time = time.time()
-            max_fill_time = 5.0  # Maximum 5 seconds to fill batch
-            max_iterations = 100  # Maximum iterations to prevent infinite loops
+            max_fill_time = 10.0  # Maximum 10 seconds to fill batch (increased for optimal batching)
+            max_iterations = 200  # Maximum iterations to prevent infinite loops (increased for optimal batching)
             iteration_count = 0
             
             while len(valid_tasks) < target_batch_size:
@@ -214,10 +216,10 @@ class GPUProcessorWorker:
                     # Pop from staging
                     additional_task = self.scheduler._staging.pop(0)
                 else:
-                    # Pull directly from queue if staging is empty (shorter timeout to avoid blocking)
+                    # Pull directly from queue if staging is empty
                     inbox_key = getattr(self.config, 'gpu_inbox_key', 'gpu:inbox')
                     raw = await asyncio.to_thread(
-                        self.redis.blpop_many, inbox_key, max_n=1, timeout=0.05  # Reduced from 0.1s
+                        self.redis.blpop_many, inbox_key, max_n=1, timeout=0.1
                     )
                     if raw:
                         try:
@@ -230,13 +232,12 @@ class GPUProcessorWorker:
                     # No more images available, break
                     break
                 
-                # Copy temp file for additional image (async)
+                # Copy temp file for additional image
                 original_path = additional_task.temp_path
                 gpu_path = os.path.join(gpu_temp_dir, os.path.basename(original_path))
                 try:
-                    exists = await asyncio.to_thread(os.path.exists, original_path)
-                    if exists:
-                        await asyncio.to_thread(shutil.copy2, original_path, gpu_path)
+                    if os.path.exists(original_path):
+                        shutil.copy2(original_path, gpu_path)
                         gpu_temp_paths[original_path] = gpu_path
                     else:
                         # Temp file missing, skip
@@ -304,18 +305,16 @@ class GPUProcessorWorker:
                 if i in original_temp_paths:
                     restored_path = original_temp_paths[i]
                     image_task.temp_path = restored_path
-                    # Log restoration with file existence check (async)
-                    exists = await asyncio.to_thread(os.path.exists, restored_path)
-                    if exists:
-                        file_size, file_mtime = await asyncio.to_thread(
-                            lambda: (os.path.getsize(restored_path), os.path.getmtime(restored_path))
-                        )
+                    # Log restoration with file existence check
+                    if os.path.exists(restored_path):
+                        file_size = os.path.getsize(restored_path)
+                        file_mtime = os.path.getmtime(restored_path)
                         file_age = time.time() - file_mtime
                         logger.debug(f"[GPU Processor {self.worker_id}] [TEMP-FILE] Restored temp path (exists): "
                                   f"{restored_path}, size={file_size}bytes, age={file_age:.1f}s")
                     else:
                         parent_dir = os.path.dirname(restored_path)
-                        parent_exists = await asyncio.to_thread(os.path.exists, parent_dir) if parent_dir else False
+                        parent_exists = os.path.exists(parent_dir) if parent_dir else False
                         logger.warning(f"[GPU Processor {self.worker_id}] [TEMP-FILE] Restored temp path (missing): "
                                      f"{restored_path}, parent_dir_exists={parent_exists}, parent_dir={parent_dir}")
                     logger.debug(f"[GPU Processor {self.worker_id}] Restored original temp path: {image_task.temp_path}")
@@ -363,7 +362,7 @@ class GPUProcessorWorker:
                 
                 faces_count = len(face_detections)
                 is_cached = self.cache.is_image_cached(image_task.phash) if image_task.phash else False
-                temp_path_exists = image_task.temp_path and await asyncio.to_thread(os.path.exists, image_task.temp_path) if image_task.temp_path else False
+                temp_path_exists = image_task.temp_path and os.path.exists(image_task.temp_path) if image_task.temp_path else False
                 
                 return (storage_task, faces_count, is_cached, temp_path_exists)
             
@@ -761,7 +760,7 @@ class GPUProcessorWorker:
         while self.running:
             try:
                 # Keep staging warm by feeding items from Redis
-                added = await self.scheduler.feed()
+                added = self.scheduler.feed()
                 
                 # Log feed() results with throttling (max every 500ms)
                 current_time = time.time()
@@ -779,8 +778,40 @@ class GPUProcessorWorker:
                 # Update Redis with current in-flight state for orchestrator to check
                 await self._update_inflight_state(staging_count, inflight_count)
                 
+                # Check if sites and candidates queues are empty - flush staging only after 10 continuous seconds
+                # This prevents premature flushing during active crawling when queues temporarily empty
+                sites_queue_depth = await self.redis.get_queue_length_by_key_async(
+                    self.config.get_queue_name('sites')
+                )
+                candidates_queue_depth = await self.redis.get_queue_length_by_key_async(
+                    self.config.get_queue_name('candidates')
+                )
+                
+                current_time = time.time()
+                queues_empty = (sites_queue_depth == 0 and candidates_queue_depth == 0)
+                
+                if queues_empty:
+                    # Queues are empty - track when they first became empty
+                    if self._queues_empty_since is None:
+                        self._queues_empty_since = current_time
+                        logger.debug(f"[GPU Processor {self.worker_id}] Queues became empty, tracking for staging flush (need {self._staging_flush_empty_duration}s)")
+                    
+                    # Check if queues have been empty for required duration
+                    empty_duration = current_time - self._queues_empty_since
+                    if empty_duration >= self._staging_flush_empty_duration and len(self.scheduler._staging) > 0:
+                        force_flush = True
+                        logger.info(f"[GPU Processor {self.worker_id}] Queues empty for {empty_duration:.1f}s, force flushing {len(self.scheduler._staging)} items from staging")
+                    else:
+                        force_flush = False
+                else:
+                    # Queues are not empty - reset tracking
+                    if self._queues_empty_since is not None:
+                        logger.debug(f"[GPU Processor {self.worker_id}] Queues no longer empty, resetting staging flush timer")
+                        self._queues_empty_since = None
+                    force_flush = False
+                
                 # Build a batch if it's time
-                batch_tasks = await self.scheduler.next_batch()
+                batch_tasks = self.scheduler.next_batch(force_flush=force_flush)
                 if not batch_tasks:
                     # Worker is idle - log periodic state updates
                     current_time = time.time()
@@ -909,17 +940,8 @@ class GPUProcessorWorker:
                         self._queue_depths = []
                 
                 
-                # Adaptive sleep: shorter when processing, longer when idle
-                # 0.002 (2ms) for AMD machine, 0.05 (50ms) for Mac machine
-                # When idle, use configurable wait to reduce CPU usage
-                # When processing, use minimal wait for responsiveness
-                if batch_tasks:
-                    # Fast sleep when processing (2ms = 500 iterations/sec max)
-                    await asyncio.sleep(0.002)
-                else:
-                    # Longer sleep when idle (configurable, default 50ms = 20 iterations/sec)
-                    idle_wait = self.config.image_processing_idle_wait
-                    await asyncio.sleep(idle_wait)
+                # Avoid busy-spin (2ms = 500 iterations/sec max)
+                await asyncio.sleep(0.002)
                 
             except KeyboardInterrupt:
                 logger.info(f"[GPU Processor {self.worker_id}] Interrupted, shutting down")

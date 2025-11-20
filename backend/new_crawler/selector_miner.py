@@ -371,7 +371,7 @@ class SelectorMiner:
             logger.info(f"[3x3-SAMPLE] Fetching base page: {base_url}")
             async with self._semaphore:
                 html, error, comparison_stats = await self.http_utils.fetch_html(
-                    base_url, use_js_fallback=True, force_compare_first_visit=True
+                    base_url, use_js_fallback=True, force_compare_first_visit=False
                 )
             
             if not html:
@@ -543,7 +543,7 @@ class SelectorMiner:
         try:
             async with self._semaphore:
                 html, error, comparison_stats = await self.http_utils.fetch_html(
-                    url, use_js_fallback=True, force_compare_first_visit=True
+                    url, use_js_fallback=True, force_compare_first_visit=False
                 )
             
             if html:

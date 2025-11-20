@@ -654,22 +654,15 @@ class GPUInterface:
             self.gpu_logger.log_fallback_start(len(image_tasks))
             return await self._cpu_fallback(image_tasks)
         
-        # Try GPU worker first (with shorter timeout for fast failure)
+        # Try GPU worker first (httpx client timeout handles hung requests)
         try:
-            # Use shorter timeout for initial attempt to fail fast
-            fast_timeout = min(10.0, self.config.gpu_worker_timeout)  # Max 10s for initial attempt
-            
-            # Create a timeout wrapper
-            results = await asyncio.wait_for(
-                self._gpu_worker_request(image_tasks),
-                timeout=fast_timeout
-            )
+            # Let httpx client timeout handle it (configured to gpu_worker_timeout, typically 60s)
+            # This allows legitimate batch processing (11-30s) to complete while still
+            # timing out on truly hung requests
+            results = await self._gpu_worker_request(image_tasks)
             
             if results is not None:
                 return results
-        except asyncio.TimeoutError:
-            logger.warning(f"GPU worker request timed out after {fast_timeout}s, falling back to CPU")
-            self.gpu_logger.log_request_failed("timeout")
         except Exception as e:
             logger.warning(f"GPU worker request failed: {e}")
             self.gpu_logger.log_request_failed(str(e))

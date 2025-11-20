@@ -366,25 +366,9 @@ class HTTPUtils:
         return headers
     
     def _needs_js_rendering(self, html: str) -> bool:
-        """Check if HTML needs JavaScript rendering (strict detection)."""
-        if not html:
-            return True
-        
-        # Don't trigger for small HTML - might be valid minimal pages
-        # Only trigger if it's suspiciously small AND has blocking indicators
-        if len(html) < 500:
-            html_lower = html.lower()
-            blocking_indicators = [
-                'cloudflare',
-                'captcha',
-                'access denied',
-                'please enable javascript',
-                'javascript is disabled',
-                'checking your browser',
-                'ddos protection'
-            ]
-            # Only trigger if small AND has clear blocking indicators
-            return any(indicator in html_lower for indicator in blocking_indicators)
+        """Check if HTML needs JavaScript rendering."""
+        if not html or len(html) < 500:
+            return True  # Small HTML = likely needs JS
         
         html_lower = html.lower()
         blocking_indicators = [
@@ -397,29 +381,7 @@ class HTTPUtils:
             'ddos protection'
         ]
         
-        # Check for clear blocking indicators
-        has_blocker = any(indicator in html_lower for indicator in blocking_indicators)
-        if has_blocker:
-            return True
-        
-        # Check if HTML has actual image content (img tags, image URLs, etc.)
-        # If it has images, HTTP is probably sufficient
-        image_indicators = [
-            '<img',
-            'src=',
-            '.jpg',
-            '.jpeg',
-            '.png',
-            '.webp',
-            '.gif',
-            'image/',
-            'data:image'
-        ]
-        has_images = any(indicator in html_lower for indicator in image_indicators)
-        
-        # If HTML has images, don't assume JS is needed (HTTP probably works)
-        # Only trigger JS if there are blocking indicators
-        return False
+        return any(indicator in html_lower for indicator in blocking_indicators)
     
     async def fetch_html(self, url: str, use_js_fallback: bool = True, force_compare_first_visit: bool = False) -> Tuple[Optional[str], str, Optional[Dict[str, int]]]:
         """Fetch HTML content with optional JavaScript rendering fallback.
@@ -484,11 +446,28 @@ class HTTPUtils:
             # Try standard HTTP first
             html, error = await self._fetch_with_redirects(url)
             
-            if html and not self._needs_js_rendering(html):
-                logger.debug(f"Standard HTTP successful for {url}")
-                return html, "SUCCESS", None
+            # Check if HTTP found images - if < 10, try JS rendering
+            if html:
+                image_count = await self._estimate_img_candidates(html, url)
+                if image_count < 10:
+                    # HTTP found few/no images - try JS rendering
+                    logger.info(f"HTTP found only {image_count} images for {url}, trying JS rendering")
+                    if use_js_fallback and PLAYWRIGHT_AVAILABLE:
+                        js_html, js_error = await self._fetch_with_js(url)
+                        if js_html:
+                            js_image_count = await self._estimate_img_candidates(js_html, url)
+                            logger.info(f"JS rendering found {js_image_count} images for {url} (HTTP had {image_count})")
+                            # Use JS if it found more images, otherwise use HTTP
+                            if js_image_count > image_count:
+                                return js_html, "SUCCESS", None
+                            # If JS didn't help, fall through to return HTTP
+                
+                # If HTTP found enough images OR _needs_js_rendering says no, return HTTP
+                if not self._needs_js_rendering(html):
+                    logger.debug(f"Standard HTTP successful for {url} ({image_count} images)")
+                    return html, "SUCCESS", None
             
-            # Try JavaScript rendering if needed and enabled
+            # Try JavaScript rendering if needed and enabled (for blocking indicators, etc.)
             if use_js_fallback and PLAYWRIGHT_AVAILABLE:
                 logger.info(f"Standard HTTP failed or needs JS rendering for {url}")
                 js_html, js_error = await self._fetch_with_js(url)
@@ -955,15 +934,10 @@ class BrowserPool:
                 await route.continue_()
                 return
             
-            # Allow XHR/fetch for dynamic image loading (check if URL looks like an image)
+            # Allow all XHR/fetch requests - JS needs them to fetch data
+            # Can't reliably detect image APIs by URL pattern, so allow all
             if resource_type in ['xhr', 'fetch']:
-                # Check if URL contains image-related keywords or extensions
-                image_indicators = ['image', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', 'photo', 'picture', 'img']
-                if any(indicator in url for indicator in image_indicators):
-                    await route.continue_()
-                    return
-                # Block other XHR/fetch requests
-                await route.abort()
+                await route.continue_()
                 return
             
             # Block everything else: stylesheet, font, media, websocket, etc.
@@ -1057,11 +1031,10 @@ class BrowserPool:
                     for _ in range(contexts_per_browser):
                         context = await browser.new_context(
                             java_script_enabled=True,
-                            user_agent=default_ua,
-                            viewport={'width': 1280, 'height': 720}  # Small viewport to reduce memory
+                            user_agent=default_ua
+                            # Removed viewport and resource blocking to match old working code
                         )
-                        # Set up resource blocking if enabled
-                        await self._setup_resource_blocking(context)
+                        # Resource blocking removed - old code didn't have it
                         self._contexts.append(context)
                 context_init_time = (time.time() - context_start) * 1000
                 
@@ -1156,11 +1129,10 @@ class BrowserPool:
                         pass
                     context = await browser.new_context(
                         java_script_enabled=True,
-                        user_agent=pw_ua,
-                        viewport={'width': 1280, 'height': 720}  # Small viewport to reduce memory
+                        user_agent=pw_ua
+                        # Removed viewport and resource blocking to match old working code
                     )
-                    # Set up resource blocking if enabled
-                    await self._setup_resource_blocking(context)
+                    # Resource blocking removed - old code didn't have it
                     context_created_dynamically = True
                 else:
                     context = self._contexts.pop(0)
