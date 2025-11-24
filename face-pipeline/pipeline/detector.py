@@ -9,21 +9,45 @@ from insightface.utils import face_align
 from config.settings import settings
 from pipeline.models import load_insightface_app
 
+def detect_faces_raw(img_np_bgr: np.ndarray) -> List:
+    """
+    Run detector -> return list of raw InsightFace Face objects.
+    
+    These objects contain attributes like:
+      - bbox: ndarray [x1,y1,x2,y2]
+      - kps: ndarray (5,2) - 5 facial landmarks
+      - det_score: float - detection confidence
+      - embedding: ndarray - 512-dim face embedding (if recognition model loaded)
+      - normed_embedding: ndarray - L2-normalized embedding
+      - pose: ndarray [pitch, yaw, roll] in radians
+    
+    Used by face_helpers for quality evaluation which needs the raw Face objects.
+    """
+    app = load_insightface_app()
+    # InsightFace expects BGR; we keep that convention throughout.
+    faces = app.get(img_np_bgr)
+    thresh = settings.DET_SCORE_THRESH
+    
+    # Filter by detection threshold
+    filtered_faces = []
+    for f in faces:
+        score = float(getattr(f, "det_score", 1.0))
+        if score >= thresh:
+            filtered_faces.append(f)
+    
+    return filtered_faces
+
+
 def detect_faces(img_np_bgr: np.ndarray) -> List[Dict]:
     """
     Run detector -> return list of dicts:
       { "bbox": [x1,y1,x2,y2], "landmarks": [[x,y],...5], "confidence": float }
     """
-    app = load_insightface_app()
-    # InsightFace expects BGR; we keep that convention throughout.
-    faces = app.get(img_np_bgr)
+    faces = detect_faces_raw(img_np_bgr)
     out: List[Dict] = []
-    thresh = settings.DET_SCORE_THRESH
     for f in faces:
         # f.bbox: ndarray [x1,y1,x2,y2], f.kps: (5,2), f.det_score
         score = float(getattr(f, "det_score", 1.0))
-        if score < thresh:
-            continue
         bbox = [float(v) for v in f.bbox.tolist()]
         kps = f.kps.tolist() if hasattr(f, "kps") else []
         out.append({

@@ -1,0 +1,30 @@
+.safe-link {
+  color: var(--color-link, #2563eb);
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.safe-link::after {
+  content: '↗';
+  font-size: 0.85em;
+}
+
+.safe-link:hover,
+.safe-link:focus-visible {
+  text-decoration: underline;
+}
+
+.safe-link--disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.safe-link--disabled::after {
+  content: '⛔';
+}
+
+
