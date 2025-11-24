@@ -11,6 +11,7 @@ Loads configuration from environment variables using simple BaseModel approach.
 class Settings(BaseModel):
     # ----- MinIO -----
     minio_endpoint: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    MINIO_EXTERNAL_ENDPOINT: str = os.getenv("MINIO_EXTERNAL_ENDPOINT", "")  # External URL for browser access
     MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
     MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
     MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"

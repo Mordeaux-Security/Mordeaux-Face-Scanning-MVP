@@ -302,7 +302,48 @@ def search(req: SearchReq):
         with_vectors=False,
         search_params=SearchParams(hnsw_ef=128, exact=False),
     )
-    out = [{"id": str(h.id), "score": float(h.score), "payload": h.payload or {}} for h in hits]
+    
+    # Generate URLs for thumbnails/crops/original images
+    from pipeline.storage import presign
+    out = []
+    for h in hits:
+        payload = h.payload or {}
+        result = {
+            "id": str(h.id),
+            "score": float(h.score),
+            "similarity_pct": round(float(h.score) * 100, 1),
+            "payload": payload,
+        }
+        
+        # Try to get thumbnail URL
+        if payload.get("thumb_key"):
+            try:
+                result["thumb_url"] = presign("face-crops", payload["thumb_key"])
+            except Exception:
+                result["thumb_url"] = None
+        
+        # Try to get crop URL
+        if payload.get("crop_key"):
+            try:
+                result["crop_url"] = presign("face-crops", payload["crop_key"])
+            except Exception:
+                result["crop_url"] = None
+        
+        # Always provide original image URL as fallback
+        # Original URL is stored as s3://bucket/key format
+        original_url = payload.get("url", "")
+        if original_url.startswith("s3://"):
+            # Parse s3://bucket/key format
+            parts = original_url[5:].split("/", 1)
+            if len(parts) == 2:
+                bucket, key = parts
+                try:
+                    result["image_url"] = presign(bucket, key)
+                except Exception:
+                    result["image_url"] = None
+        
+        out.append(result)
+    
     return {
         "query": {"tenant_id": req.tenant_id, "search_mode": "image" if req.image_b64 else "vector",
                   "mode": req.mode, "top_k": req.top_k, "threshold": req.threshold},

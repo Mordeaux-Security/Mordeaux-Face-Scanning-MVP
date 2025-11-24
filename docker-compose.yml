@@ -11,6 +11,8 @@ services:
     networks: [mordeaux]
     environment:
       - VITE_API_BASE=/api
+      - VITE_DEV_API_PROXY=http://api:8000
+      - VITE_DEV_PIPELINE_PROXY=http://face-pipeline:8001
 
   nginx:
     image: nginx:1.25-alpine
@@ -82,6 +84,7 @@ services:
       REDIS_CONSUMER_NAME: pipe-1
       ENABLE_QUEUE_WORKER: "true"
       MINIO_ENDPOINT: minio:9000
+      MINIO_EXTERNAL_ENDPOINT: localhost:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_SECURE: "false"
@@ -94,7 +97,8 @@ services:
       VERIFY_TOP_K: "50"
       VERIFY_HNSW_EF: "128"
       LOG_LEVEL: INFO
-    expose: ["8001"]
+    ports:
+      - "8001:8001"
     networks: [mordeaux]
     depends_on:
       - redis
@@ -124,10 +128,11 @@ services:
       - "9001:9001"
     networks: [mordeaux]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "mc alias set myminio http://localhost:9000 minioadmin minioadmin >/dev/null 2>&1 && mc ready myminio"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 5s
 
   qdrant:
     image: qdrant/qdrant:v1.12.4

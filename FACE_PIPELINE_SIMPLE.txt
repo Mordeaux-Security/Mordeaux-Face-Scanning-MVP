@@ -1,0 +1,67 @@
+╔═══════════════════════════════════════════════════════════════╗
+║              FACE PIPELINE - SIMPLE FLOW                       ║
+╚═══════════════════════════════════════════════════════════════╝
+
+1. CRAWLER
+   backend/app/services/crawler.py
+   └─► Downloads images → Saves to MinIO
+   
+2. AUTO-VECTORIZATION
+   backend/app/services/crawler.py::_trigger_vectorization()
+   └─► POST /api/v1/ingest/batch
+   
+3. REDIS STREAMS
+   Stream: "face:ingest"
+   └─► Queues message
+   
+4. WORKER
+   face-pipeline/worker.py
+   └─► Consumes → Calls process_image()
+   
+5. PIPELINE
+   face-pipeline/pipeline/processor.py
+   ├─► Detect faces (detector.py)
+   ├─► Crop faces (detector.py)
+   ├─► Check quality (quality.py)
+   ├─► Check duplicates (dedup.py)
+   ├─► Generate vector (embedder.py)
+   ├─► Save to MinIO (storage.py)
+   └─► Save to Qdrant (indexer.py)
+
+
+╔═══════════════════════════════════════════════════════════════╗
+║                    KEY FILES                                   ║
+╚═══════════════════════════════════════════════════════════════╝
+
+CRAWLER:
+  backend/app/services/crawler.py
+    ├─► crawl_page()
+    └─► _trigger_vectorization()
+
+INGEST:
+  backend/app/api/routes.py
+    └─► /api/v1/ingest/batch
+
+PIPELINE:
+  face-pipeline/worker.py              ← Worker
+  face-pipeline/pipeline/processor.py  ← Main processor
+  face-pipeline/pipeline/detector.py  ← Face detection
+  face-pipeline/pipeline/embedder.py   ← Vector generation
+  face-pipeline/pipeline/quality.py   ← Quality check
+  face-pipeline/pipeline/dedup.py      ← Duplicate check
+  face-pipeline/pipeline/indexer.py   ← Qdrant operations
+  face-pipeline/pipeline/storage.py   ← MinIO operations
+
+
+╔═══════════════════════════════════════════════════════════════╗
+║                    STORAGE                                     ║
+╚═══════════════════════════════════════════════════════════════╝
+
+MINIO:
+  raw-images/     → Original images
+  face-crops/     → Cropped faces
+  face-thumbs/    → Face thumbnails
+
+QDRANT:
+  faces_v1        → 512-dim vectors + metadata
+

@@ -10,7 +10,8 @@ import numpy as np
 from fastapi import HTTPException, status
 
 from pipeline.image_utils import decode_image_b64
-from pipeline.detector import detect_faces_raw
+from pipeline.detector import detect_faces_raw, align_and_crop
+from pipeline.embedder import embed
 import sys
 from pathlib import Path
 
@@ -138,25 +139,22 @@ def embed_one_b64_strict(
 
     face = fwq.face
 
-    # Embed
-    emb = getattr(face, "normed_embedding", None)
-    if emb is None:
-        raw_emb = getattr(face, "embedding", None)
-        if raw_emb is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail={"error": "recognition_model_not_loaded"},
-            )
-        raw_emb = np.array(raw_emb, dtype=np.float32)
-        norm = np.linalg.norm(raw_emb)
-        if norm == 0:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={"error": "zero_norm_embedding"},
-            )
-        emb = raw_emb / norm
-    else:
-        emb = np.array(emb, dtype=np.float32)
+    # Embed using the SAME method as ingest pipeline (processor.py)
+    # This ensures search queries produce embeddings compatible with stored vectors
+    try:
+        # Get landmarks from face for alignment
+        landmarks = [[float(x), float(y)] for x, y in face.kps]
+        
+        # Align and crop to 112x112 (same as ingest pipeline)
+        crop_bgr = align_and_crop(img, landmarks)
+        
+        # Generate embedding using embedder.embed (same as ingest pipeline)
+        emb = embed(crop_bgr)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "embedding_failed", "message": str(e)},
+        )
 
     return emb.astype(np.float32), fwq
 
