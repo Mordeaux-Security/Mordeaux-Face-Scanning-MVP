@@ -9,21 +9,35 @@ from insightface.utils import face_align
 from config.settings import settings
 from pipeline.models import load_insightface_app
 
+def detect_faces_raw(img_np_bgr: np.ndarray) -> List:
+    """
+    Run detector -> return raw InsightFace Face objects.
+    
+    These objects have attributes like:
+      - bbox: ndarray [x1,y1,x2,y2]
+      - kps: (5,2) landmarks
+      - det_score: detection confidence
+      - embedding / normed_embedding: face embedding
+      - yaw, pitch, roll: pose angles (may be None)
+    """
+    app = load_insightface_app()
+    # InsightFace expects BGR; we keep that convention throughout.
+    faces = app.get(img_np_bgr)
+    thresh = settings.DET_SCORE_THRESH
+    # Filter by detection score threshold
+    return [f for f in faces if float(getattr(f, "det_score", 1.0)) >= thresh]
+
+
 def detect_faces(img_np_bgr: np.ndarray) -> List[Dict]:
     """
     Run detector -> return list of dicts:
       { "bbox": [x1,y1,x2,y2], "landmarks": [[x,y],...5], "confidence": float }
     """
-    app = load_insightface_app()
-    # InsightFace expects BGR; we keep that convention throughout.
-    faces = app.get(img_np_bgr)
+    faces = detect_faces_raw(img_np_bgr)
     out: List[Dict] = []
-    thresh = settings.DET_SCORE_THRESH
     for f in faces:
         # f.bbox: ndarray [x1,y1,x2,y2], f.kps: (5,2), f.det_score
         score = float(getattr(f, "det_score", 1.0))
-        if score < thresh:
-            continue
         bbox = [float(v) for v in f.bbox.tolist()]
         kps = f.kps.tolist() if hasattr(f, "kps") else []
         out.append({

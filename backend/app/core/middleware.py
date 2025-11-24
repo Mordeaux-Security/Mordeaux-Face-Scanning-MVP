@@ -47,7 +47,8 @@ async def tenant_middleware(request: Request, call_next):
         "/admin/tenants/usage/summary",
         "/admin/export/audit-logs",
         "/admin/export/search-logs",
-        "/admin/export/system-metrics"
+        "/admin/export/system-metrics",
+        "/api/v1/signup"
     ]
 
     # Check if the current path is exempt

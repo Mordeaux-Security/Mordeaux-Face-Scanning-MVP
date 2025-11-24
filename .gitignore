@@ -17,6 +17,11 @@ node_modules/
 /data/*
 !data/.gitkeep
 
+# Thumbnails (downloaded images)
+thumbs/
+backend/thumbs/
+**/thumbs/
+
 # OS
 .DS_Store
 Thumbs.db

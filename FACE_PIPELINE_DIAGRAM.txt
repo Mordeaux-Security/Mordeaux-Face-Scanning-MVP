@@ -1,0 +1,240 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                    FACE PIPELINE & VECTORIZATION FLOW                            ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          CRAWLER PHASE                                       │
+│  backend/app/services/crawler.py                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ crawl_page() / crawl_site()
+                              │
+                              ├─► Downloads images from web
+                              ├─► Detects faces (optional)
+                              └─► Saves to MinIO (raw-images bucket)
+                              │
+                              │ saved_raw_keys = ["tenant_id/path/image.jpg"]
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    AUTO-VECTORIZATION TRIGGER                                 │
+│  backend/app/services/crawler.py::_trigger_vectorization()                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ POST /api/v1/ingest/batch
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         INGEST API                                            │
+│  backend/app/api/routes.py::ingest_batch()                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Publishes message to Redis Streams
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        REDIS STREAMS                                          │
+│  Stream: "face:ingest"                                                       │
+│  Message: {tenant_id, bucket, key, site, image_sha256, ...}                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Worker consumes messages
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         WORKER                                                │
+│  face-pipeline/worker.py                                                     │
+│  └─► Consumes from Redis Streams                                             │
+│      └─► Calls process_image() for each message                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    FACE PIPELINE PROCESSOR                                    │
+│  face-pipeline/pipeline/processor.py::process_image()                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                       │
+        ▼                     ▼                       ▼
+┌──────────────┐    ┌──────────────┐        ┌──────────────┐
+│   STEP 1     │    │   STEP 2     │        │   STEP 3     │
+│ Download     │───►│ Decode       │───────►│ Detect       │
+│ from MinIO   │    │ Image        │        │ Faces        │
+│              │    │              │        │              │
+│ storage.py   │    │ image_utils  │        │ detector.py  │
+└──────────────┘    └──────────────┘        └──────────────┘
+                                                      │
+                                                      │ For each face:
+                                                      │
+        ┌──────────────────────────────────────────┼──────────┐
+        │                                              │          │
+        ▼                                              ▼          ▼
+┌──────────────┐                            ┌──────────────┐  ┌──────────────┐
+│   STEP 4     │                            │   STEP 5     │  │   STEP 6     │
+│ Align &      │                            │ Quality      │  │ pHash &      │
+│ Crop         │                            │ Assessment   │  │ Dedup        │
+│              │                            │              │  │              │
+│ detector.py  │                            │ quality.py   │  │ dedup.py      │
+└──────────────┘                            └──────────────┘  └──────────────┘
+        │                                              │          │
+        │                                              │          │
+        └──────────────────────────────────────────────┼──────────┘
+                                                       │
+                                                       │ If quality OK & not duplicate:
+                                                       │
+        ┌──────────────────────────────────────────────┼──────────┐
+        │                                              │          │
+        ▼                                              ▼          ▼
+┌──────────────┐                            ┌──────────────┐  ┌──────────────┐
+│   STEP 7     │                            │   STEP 8     │  │   STEP 9     │
+│ Generate     │                            │ Save to      │  │ Create       │
+│ Embedding    │                            │ MinIO        │  │ Qdrant       │
+│              │                            │              │  │ Point        │
+│ embedder.py  │                            │ storage.py   │  │ indexer.py    │
+│ (512-dim)    │                            │              │  │              │
+└──────────────┘                            └──────────────┘  └──────────────┘
+        │                                              │          │
+        │                                              │          │
+        └──────────────────────────────────────────────┼──────────┘
+                                                       │
+                                                       │ Batch all faces
+                                                       │
+                                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         STEP 10: UPSERT TO QDRANT                           │
+│  face-pipeline/pipeline/indexer.py::upsert()                                │
+│  Collection: "faces_v1"                                                      │
+│  Vector: 512-dim float32 (L2 normalized)                                    │
+│  Payload: {tenant_id, image_sha256, crop_key, thumb_key, p_hash, ...}      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                                       │
+                                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            QDRANT DATABASE                                   │
+│  Collection: faces_v1                                                        │
+│  └─► Stores face embeddings with metadata                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                              KEY FILE LOCATIONS                                 ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+CRAWLER & AUTO-VECTORIZATION:
+  backend/app/services/crawler.py
+    ├─► crawl_page() / crawl_site()
+    └─► _trigger_vectorization()  ← Auto-vectorization trigger
+
+INGEST API:
+  backend/app/api/routes.py
+    ├─► /api/v1/ingest (single)
+    └─► /api/v1/ingest/batch (batch)
+
+FACE PIPELINE CORE:
+  face-pipeline/pipeline/processor.py
+    └─► process_image()  ← Main orchestrator
+
+FACE DETECTION:
+  face-pipeline/pipeline/detector.py
+    ├─► detect_faces()
+    ├─► detect_faces_raw()
+    └─► align_and_crop()
+
+EMBEDDING:
+  face-pipeline/pipeline/embedder.py
+    └─► embed()  ← 512-dim vector generation
+
+QUALITY:
+  face-pipeline/pipeline/quality.py
+    └─► evaluate()
+  face-pipeline/face_quality.py
+    ├─► ENROLL_QUALITY
+    ├─► VERIFY_QUALITY
+    └─► SEARCH_QUALITY
+
+DEDUPLICATION:
+  face-pipeline/pipeline/dedup.py
+    ├─► is_duplicate()  ← Exact match
+    └─► should_skip()   ← Near-duplicate
+
+QDRANT OPERATIONS:
+  face-pipeline/pipeline/indexer.py
+    ├─► ensure_collection()
+    ├─► upsert()
+    ├─► search()
+    └─► make_point()
+
+STORAGE:
+  face-pipeline/pipeline/storage.py
+    ├─► put_bytes()
+    └─► presign()
+
+WORKER:
+  face-pipeline/worker.py
+    └─► Consumes Redis Streams → calls process_image()
+
+SEARCH API:
+  face-pipeline/main.py
+    └─► search_faces()  ← Search endpoint
+
+CONFIGURATION:
+  face-pipeline/config/settings.py
+    └─► All settings (Qdrant, Redis, MinIO)
+
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                            STORAGE STRUCTURE                                     ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+MINIO BUCKETS:
+  raw-images/
+    └─► {tenant_id}/{image_sha256}.jpg  ← Original images
+
+  thumbnails/
+    └─► {tenant_id}/{image_sha256}_thumb.jpg  ← Crawler thumbnails
+
+  face-crops/
+    └─► {tenant_id}/{image_sha256}_face_{i}.jpg  ← Cropped faces
+
+  face-thumbs/
+    └─► {tenant_id}/{image_sha256}_face_{i}_thumb.jpg  ← Face thumbnails
+
+QDRANT COLLECTIONS:
+  faces_v1/
+    ├─► Vector: 512-dim float32 (L2 normalized)
+    └─► Payload:
+        ├─► tenant_id
+        ├─► image_sha256
+        ├─► face_index
+        ├─► crop_key
+        ├─► thumb_key
+        ├─► p_hash
+        ├─► p_hash_prefix
+        ├─► site
+        ├─► quality_score
+        └─► det_score
+
+  identities_v1/
+    └─► Identity centroids (for verification)
+
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                         SEARCH FLOW                                             ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+User → POST /api/v1/search
+        │
+        ├─► backend/app/api/routes.py::search_passthrough()
+        │   └─► Forwards to face-pipeline
+        │
+        ├─► face-pipeline/main.py::search_faces()
+        │   ├─► If image provided:
+        │   │   ├─► Detect face
+        │   │   └─► Generate embedding
+        │   │
+        │   └─► Search Qdrant
+        │       └─► pipeline/indexer.py::search()
+        │
+        └─► Return similar faces with scores
+

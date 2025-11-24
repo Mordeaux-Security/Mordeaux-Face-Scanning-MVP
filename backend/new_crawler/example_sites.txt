@@ -1,0 +1,20 @@
+# Example sites for testing the new crawler system
+# One URL per line, comments start with #
+
+# Test sites (safe for testing)
+https://wikifeet.com
+https://candidteens.net
+https://forum.candidgirls.io
+https://motherless.com
+https://www.voyeurshd.com
+https://www.voyeurstyle.com
+#https://candidshiny.com (thumbnail style not worth processing time)
+https://creepshots.online
+https://www.candid-zone.com/
+https://candidcreeps.com/
+https://whatboyswant.com/#
+https://adultdeepfakes.com/
+https://xcandid.vip/
+https://xcreepshot.com/
+
+
