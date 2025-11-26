@@ -3,6 +3,7 @@ Storage Worker for New Crawler System
 
 Consumes storage tasks from Redis queue and saves them to MinIO.
 Handles I/O operations only - all compute (cropping) happens in GPU processor.
+After saving to MinIO, upserts face embeddings to Qdrant vector database.
 """
 
 import asyncio
@@ -12,16 +13,48 @@ import os
 import signal
 import sys
 import time
-from typing import Optional
+import uuid
+from typing import Optional, List, Dict, Any
 
 from .config import get_config
 from .redis_manager import get_redis_manager
 from .storage_manager import get_storage_manager
 from .cache_manager import get_cache_manager
 from .timing_logger import get_timing_logger
-from .data_structures import StorageTask, FaceResult
+from .data_structures import StorageTask, FaceResult, ImageTask, FaceDetection
 
 logger = logging.getLogger(__name__)
+
+# Lazy-loaded vector client
+_vector_client = None
+
+def _get_vector_client():
+    """Get or create Qdrant client for vector operations."""
+    global _vector_client
+    if _vector_client is None:
+        try:
+            from qdrant_client import QdrantClient
+            from qdrant_client.http import models as qm
+            
+            config = get_config()
+            _vector_client = QdrantClient(url=config.qdrant_url)
+            
+            # Ensure collection exists
+            try:
+                _vector_client.create_collection(
+                    collection_name=config.vector_index,
+                    vectors_config=qm.VectorParams(size=512, distance=qm.Distance.COSINE),
+                )
+                logger.info(f"Created vector collection: {config.vector_index}")
+            except Exception:
+                # Collection already exists
+                pass
+                
+            logger.info(f"Connected to Qdrant at {config.qdrant_url}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Qdrant client: {e}")
+            raise
+    return _vector_client
 
 
 class StorageWorker:
@@ -39,6 +72,10 @@ class StorageWorker:
         self.running = False
         self.processed_tasks = 0
         self.failed_tasks = 0
+        
+        # Vectorization stats
+        self.vectorized_faces = 0
+        self.vectorization_errors = 0
         
     async def run(self):
         """Main worker loop - consumes storage queue."""
@@ -76,7 +113,8 @@ class StorageWorker:
                         elapsed = now - start_time
                         tasks_per_sec = self.processed_tasks / elapsed if elapsed > 0 else 0
                         logger.info(f"[STORAGE-{self.worker_id}] Throughput: {tasks_per_sec:.2f} tasks/sec, "
-                                   f"processed={self.processed_tasks}, failed={self.failed_tasks}")
+                                   f"processed={self.processed_tasks}, failed={self.failed_tasks}, "
+                                   f"vectorized={self.vectorized_faces}, vec_errors={self.vectorization_errors}")
                         last_log_time = now
                 else:
                     # No tasks available, brief sleep to avoid tight loop
@@ -93,7 +131,9 @@ class StorageWorker:
                 logger.error(f"[STORAGE-{self.worker_id}] Error in storage worker loop: {e}", exc_info=True)
                 await asyncio.sleep(1.0)
         
-        logger.info(f"[STORAGE-{self.worker_id}] Storage worker stopped. Processed: {self.processed_tasks}, Failed: {self.failed_tasks}")
+        logger.info(f"[STORAGE-{self.worker_id}] Storage worker stopped. Processed: {self.processed_tasks}, "
+                   f"Failed: {self.failed_tasks}, Vectorized: {self.vectorized_faces}, "
+                   f"Vectorization Errors: {self.vectorization_errors}")
     
     async def _process_storage_task(self, storage_task: StorageTask):
         """Process a single storage task."""
@@ -115,6 +155,11 @@ class StorageWorker:
             
             # Save to storage (pure I/O - pre-cropped faces already provided)
             face_result, save_counts = await self.storage.save_storage_task_async(storage_task)
+            
+            # Vectorize embeddings to Qdrant (after successful storage)
+            vectorized_count = 0
+            if face_result.faces:
+                vectorized_count = await self._upsert_embeddings_to_vector_db(face_result, image_task)
             
             # Cache result
             await asyncio.to_thread(
@@ -164,7 +209,8 @@ class StorageWorker:
             
             logger.info(f"[STORAGE-{self.worker_id}] Saved: {image_id}..., "
                        f"raw={face_result.saved_to_raw}, thumbs={saved_thumbs_count}, "
-                       f"faces={len(face_result.faces)}, duration={storage_duration:.1f}ms")
+                       f"faces={len(face_result.faces)}, vectorized={vectorized_count}, "
+                       f"duration={storage_duration:.1f}ms")
             
         except Exception as e:
             self.failed_tasks += 1
@@ -175,6 +221,92 @@ class StorageWorker:
     def stop(self):
         """Stop the worker."""
         self.running = False
+    
+    async def _upsert_embeddings_to_vector_db(self, face_result: FaceResult, image_task: ImageTask) -> int:
+        """
+        Upsert face embeddings to Qdrant vector database.
+        
+        Returns:
+            Number of faces successfully upserted
+        """
+        if not self.config.vectorization_enabled:
+            logger.debug(f"[STORAGE-{self.worker_id}] Vectorization disabled, skipping")
+            return 0
+        
+        if not face_result.faces:
+            return 0
+        
+        # Filter faces that have embeddings
+        faces_with_embeddings = [
+            (i, face) for i, face in enumerate(face_result.faces) 
+            if face.embedding is not None and len(face.embedding) > 0
+        ]
+        
+        if not faces_with_embeddings:
+            logger.debug(f"[STORAGE-{self.worker_id}] No faces with embeddings to vectorize")
+            return 0
+        
+        try:
+            from qdrant_client.http import models as qm
+            
+            client = _get_vector_client()
+            tenant_id = self.config.default_tenant_id
+            
+            # Build points for Qdrant
+            points = []
+            for face_idx, face in faces_with_embeddings:
+                # Generate unique face ID
+                face_id = str(uuid.uuid4())
+                
+                # Get thumbnail key if available
+                thumb_key = None
+                if face_result.thumbnail_keys and face_idx < len(face_result.thumbnail_keys):
+                    thumb_key = face_result.thumbnail_keys[face_idx]
+                
+                # Build metadata payload
+                payload = {
+                    "tenant_id": tenant_id,
+                    "raw_key": face_result.raw_image_key,
+                    "thumb_key": thumb_key,
+                    "source_url": image_task.candidate.img_url if image_task.candidate else None,
+                    "page_url": image_task.candidate.page_url if image_task.candidate else None,
+                    "site_id": image_task.candidate.site_id if image_task.candidate else None,
+                    "phash": image_task.phash,
+                    "bbox": face.bbox,
+                    "quality": face.quality,
+                    "age": face.age,
+                    "gender": face.gender,
+                    "indexed_at": time.time(),
+                }
+                
+                points.append(
+                    qm.PointStruct(
+                        id=face_id,
+                        vector=face.embedding,
+                        payload=payload
+                    )
+                )
+            
+            # Upsert to Qdrant
+            if points:
+                await asyncio.to_thread(
+                    client.upsert,
+                    collection_name=self.config.vector_index,
+                    points=points
+                )
+                
+                self.vectorized_faces += len(points)
+                logger.info(f"[STORAGE-{self.worker_id}] Vectorized {len(points)} faces to Qdrant "
+                           f"(total: {self.vectorized_faces})")
+                return len(points)
+            
+            return 0
+            
+        except Exception as e:
+            self.vectorization_errors += 1
+            logger.error(f"[STORAGE-{self.worker_id}] Failed to upsert embeddings to Qdrant: {e}", 
+                        exc_info=True)
+            return 0
 
 
 def storage_worker_process(worker_id: int):

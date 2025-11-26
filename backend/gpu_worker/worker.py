@@ -299,8 +299,11 @@ def _load_batched_detector():
             if providers:
                 provider = providers[0]
         
-        input_size = int(os.getenv('DETECT_INPUT_SIZE', '640'))
-        score_thr = float(os.getenv('DETECT_SCORE_THR', '0.5'))
+        # Detection parameters tuned for accuracy:
+        # - Input size increased to 1024 for better small face detection
+        # - Score threshold increased to 0.65 to reduce false positives
+        input_size = int(os.getenv('DETECT_INPUT_SIZE', '1024'))
+        score_thr = float(os.getenv('DETECT_SCORE_THR', '0.65'))
         nms_iou = float(os.getenv('DETECT_NMS_IOU', '0.4'))
         
         _batched_detector = SCRFDOnnx(

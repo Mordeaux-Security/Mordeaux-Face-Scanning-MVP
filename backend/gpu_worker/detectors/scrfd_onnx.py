@@ -25,8 +25,8 @@ class SCRFDOnnx:
                  onnx_path: Optional[str] = None,
                  provider: str = "DmlExecutionProvider",
                  device_id: int = 0,
-                 input_size: int = 640,
-                 score_thr: float = 0.5,
+                 input_size: int = 1024,
+                 score_thr: float = 0.65,
                  nms_iou: float = 0.4):
         """
         Initialize SCRFD detector.
@@ -36,8 +36,8 @@ class SCRFDOnnx:
             onnx_path: Optional path to ONNX model file (overrides face_app model)
             provider: Execution provider (DmlExecutionProvider or CPUExecutionProvider)
             device_id: Device ID for execution provider
-            input_size: Input size for detection (typically 640)
-            score_thr: Score threshold for filtering detections
+            input_size: Input size for detection (default 1024 for better small face detection)
+            score_thr: Score threshold for filtering detections (default 0.65 for higher precision)
             nms_iou: IoU threshold for NMS
         """
         self.input_size = input_size

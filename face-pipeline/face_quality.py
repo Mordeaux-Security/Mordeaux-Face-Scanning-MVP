@@ -15,12 +15,16 @@ from pipeline.quality import laplacian_variance
 
 @dataclass
 class FaceQualityConfig:
-    """Configuration for face quality evaluation."""
-    min_size: int = 80
-    min_blur_var: float = 120.0
-    max_yaw_deg: float = 20.0
-    max_pitch_deg: float = 20.0
-    min_score: float = 0.7
+    """Configuration for face quality evaluation.
+    
+    Tuned for production face search with millions of faces.
+    Higher thresholds = better embedding quality = more accurate matches.
+    """
+    min_size: int = 80           # Minimum face size in pixels
+    min_blur_var: float = 80.0   # Laplacian variance threshold (higher = sharper)
+    max_yaw_deg: float = 25.0    # Max horizontal head rotation (tighter than before)
+    max_pitch_deg: float = 25.0  # Max vertical head rotation (tighter than before)
+    min_score: float = 0.65      # Minimum overall quality score
 
 
 @dataclass
@@ -144,30 +148,48 @@ def evaluate_face_quality(
     )
 
 
-# Predefined quality configurations for different use cases
-# Note: blur_var thresholds lowered for real-world phone camera photos
+# =============================================================================
+# Predefined Quality Configurations for Different Use Cases
+# =============================================================================
+# These are tuned for production accuracy. Higher thresholds = better embeddings
+# = more accurate search results across millions of faces.
+
+# CRAWLER_INGEST_QUALITY: Used when indexing faces from web crawls
+# Stricter quality ensures only high-quality faces enter the database
+CRAWLER_INGEST_QUALITY = FaceQualityConfig(
+    min_size=80,           # Minimum 80px face for good embedding quality
+    min_blur_var=80.0,     # Reasonably sharp faces only
+    max_yaw_deg=25.0,      # Near-frontal faces for better recognition
+    max_pitch_deg=25.0,    # Not looking too far up/down
+    min_score=0.60         # Good overall quality
+)
+
+# ENROLL_QUALITY: Used when a user enrolls their identity (high quality needed)
 ENROLL_QUALITY = FaceQualityConfig(
-    min_size=80,  # Reasonable minimum face size
-    min_blur_var=30.0,  # Lowered for typical phone photos (was 150)
-    max_yaw_deg=25.0,  # Allow some head turn
-    max_pitch_deg=25.0,
-    min_score=0.5
+    min_size=100,          # Larger face for enrollment
+    min_blur_var=100.0,    # Sharp image required
+    max_yaw_deg=20.0,      # Frontal face preferred
+    max_pitch_deg=20.0,
+    min_score=0.70         # High quality bar for enrollment
 )
 
+# VERIFY_QUALITY: Used for 1:1 verification against enrolled identity
 VERIFY_QUALITY = FaceQualityConfig(
-    min_size=64,
-    min_blur_var=25.0,  # Lowered for typical phone photos (was 120)
-    max_yaw_deg=30.0,
-    max_pitch_deg=30.0,
-    min_score=0.45
+    min_size=80,           # Slightly smaller than enrollment OK
+    min_blur_var=60.0,     # Some blur tolerance for real-world selfies
+    max_yaw_deg=25.0,      # Some pose variation OK
+    max_pitch_deg=25.0,
+    min_score=0.55         # Moderate quality bar
 )
 
+# SEARCH_QUALITY: Used for 1:N search queries (user searching database)
+# Slightly more lenient since user may not have ideal photo
 SEARCH_QUALITY = FaceQualityConfig(
-    min_size=48,  # More lenient for search
-    min_blur_var=20.0,  # Lowered for typical phone photos (was 100)
-    max_yaw_deg=40.0,  # More lenient pose
-    max_pitch_deg=40.0,
-    min_score=0.4
+    min_size=64,           # Allow smaller faces in search
+    min_blur_var=50.0,     # Some blur tolerance
+    max_yaw_deg=30.0,      # More pose flexibility for search
+    max_pitch_deg=30.0,
+    min_score=0.50         # Lower bar for search queries
 )
 
 

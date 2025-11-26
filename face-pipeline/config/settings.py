@@ -30,11 +30,16 @@ class Settings(BaseModel):
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "faces_v1")
     IDENTITY_COLLECTION: str = os.getenv("IDENTITY_COLLECTION", "identities_v1")
     VECTOR_DIM: int = int(os.getenv("VECTOR_DIM", "512"))
-    SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.6"))
+    # Increased from 0.6 to 0.75 for better precision in face matching
+    SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.75"))
+    # HNSW search parameter: higher = more accurate but slower (default was 128)
+    HNSW_EF: int = int(os.getenv("HNSW_EF", "256"))
 
     # ----- Face Detection -----
-    DET_SIZE: str = os.getenv("DET_SIZE", "640,640")
-    DET_SCORE_THRESH: float = float(os.getenv("DET_SCORE_THRESH", "0.45"))
+    # Increased from 640,640 to 1024,1024 for better small face detection
+    DET_SIZE: str = os.getenv("DET_SIZE", "1024,1024")
+    # Increased from 0.45 to 0.65 to reduce false positive detections
+    DET_SCORE_THRESH: float = float(os.getenv("DET_SCORE_THRESH", "0.65"))
     ONNX_PROVIDERS_CSV: str = os.getenv("ONNX_PROVIDERS_CSV", "CPUExecutionProvider")
     IMAGE_SIZE: int = int(os.getenv("IMAGE_SIZE", "112"))
     
