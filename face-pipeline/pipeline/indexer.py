@@ -8,7 +8,7 @@ import hashlib
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import (
     Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue, ScoredPoint,
-    PayloadSchemaType
+    PayloadSchemaType, SearchParams
 )
 
 from config.settings import settings
@@ -102,12 +102,34 @@ def search(
     threshold: float | None = None,
     site: Optional[str] = None,
     flt: Optional[Filter] = None,
+    hnsw_ef: int | None = None,
 ) -> List[ScoredPoint]:
+    """
+    Search for similar face embeddings in Qdrant.
+    
+    Args:
+        vector: Query embedding vector (512-dim, L2-normalized)
+        top_k: Maximum number of results to return
+        tenant_id: Filter by tenant
+        threshold: Minimum similarity score (default from settings.SIMILARITY_THRESHOLD)
+        site: Filter by source site
+        flt: Custom Qdrant filter
+        hnsw_ef: HNSW search parameter (higher = more accurate, slower). 
+                 Default from settings.HNSW_EF (256)
+    
+    Returns:
+        List of ScoredPoint results
+    """
     qc = get_client()
     ensure_collection()
     # Build a filter if not provided
     if flt is None and tenant_id:
         flt = build_filter(tenant_id=tenant_id, site=site)
+    
+    # Use configurable HNSW_EF for search accuracy
+    # Higher ef = more accurate but slower. Default 256 (was implicit 128)
+    effective_hnsw_ef = hnsw_ef if hnsw_ef is not None else settings.HNSW_EF
+    
     res = qc.search(
         collection_name=settings.QDRANT_COLLECTION,
         query_vector=vector,
@@ -116,6 +138,11 @@ def search(
         query_filter=flt,
         with_payload=True,
         with_vectors=False,
+        # HNSW search params for better accuracy
+        search_params=SearchParams(
+            hnsw_ef=effective_hnsw_ef,
+            exact=False,  # Use ANN, not brute force
+        ),
     )
     return res
 

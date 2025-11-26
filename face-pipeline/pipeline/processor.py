@@ -108,7 +108,7 @@ def process_image(message: dict) -> dict:
         12. Return summary
     """
     from config.settings import settings
-    from pipeline.detector import detect_faces, align_and_crop
+    from pipeline.detector import detect_faces, detect_faces_raw, align_and_crop
     from pipeline.embedder import embed
     from pipeline.quality import evaluate
     from pipeline.storage import put_bytes, presign, ensure_buckets
@@ -116,6 +116,7 @@ def process_image(message: dict) -> dict:
     from pipeline.utils import compute_phash, phash_prefix, now_iso
     from pipeline.dedup import is_duplicate, mark_processed
     from pipeline.stats import increment_processed, increment_rejected, increment_dup_skipped, inc, timer, add_time_ms
+    from face_quality import CRAWLER_INGEST_QUALITY, evaluate_face_quality
     
     # Start total timing for end-to-end processing
     start_time = time.perf_counter()
@@ -171,8 +172,11 @@ def process_image(message: dict) -> dict:
             return _build_error_response(msg.image_sha256, timings, f"Decode failed: {e}")
 
     # ========================================================================
-    # STEP 4: DETECT FACES
+    # STEP 4: DETECT FACES WITH QUALITY FILTERING
     # ========================================================================
+    # Uses CRAWLER_INGEST_QUALITY to filter faces early for better accuracy
+    faces_quality_rejected = 0
+    
     with timer("detect_ms"):
         face_detections = []
         
@@ -180,45 +184,40 @@ def process_image(message: dict) -> dict:
             logger.debug(f"Using {len(msg.face_hints)} face hints from upstream")
             face_detections = msg.face_hints
         else:
-            logger.debug("Running face detector")
-            face_detections = detect_faces(img_bgr)
+            logger.debug("Running face detector with quality filtering")
+            # Use raw detection to get Face objects for quality evaluation
+            raw_faces = detect_faces_raw(img_bgr)
+            faces_total_raw = len(raw_faces)
+            
+            # Filter faces by quality BEFORE processing (saves compute)
+            for face in raw_faces:
+                quality_result = evaluate_face_quality(img_bgr, face, cfg=CRAWLER_INGEST_QUALITY)
+                if quality_result.is_usable:
+                    # Convert to dict format for downstream processing
+                    face_detections.append({
+                        "bbox": [float(v) for v in face.bbox.tolist()],
+                        "landmarks": face.kps.tolist() if hasattr(face, "kps") else [],
+                        "confidence": float(getattr(face, "det_score", 1.0)),
+                        "quality_score": quality_result.score,
+                        "quality_reasons": quality_result.reasons,
+                    })
+                else:
+                    faces_quality_rejected += 1
+                    logger.debug(f"Face rejected by quality filter: {quality_result.reasons}")
+            
+            if faces_quality_rejected > 0:
+                logger.info(f"Quality filter rejected {faces_quality_rejected}/{faces_total_raw} faces")
         
         faces_total = len(face_detections)
         timings["detection_ms"] = 0  # Will be set by timer context manager
-        logger.info(f"Detected {faces_total} faces")
+        logger.info(f"Detected {faces_total} usable faces (quality-filtered)")
     
     # Increment faces detected counter
     inc("faces_detected", faces_total)
+    inc("faces_quality_rejected", faces_quality_rejected)
     
     if faces_total == 0:
         return _build_error_response(msg.image_sha256, timings)
-
-    # ========================================================================
-    # TODO: INTEGRATE CRAWLER_INGEST_QUALITY
-    # ========================================================================
-    # For crawler ingestion, use CRAWLER_INGEST_QUALITY to filter faces early:
-    #
-    # Option 1: Filter before processing (recommended for crawler)
-    #   from pipeline.detector import detect_faces_raw
-    #   from face_quality import CRAWLER_INGEST_QUALITY, evaluate_face_quality
-    #   
-    #   raw_faces = detect_faces_raw(img_bgr)
-    #   usable_faces = []
-    #   for face in raw_faces:
-    #       q = evaluate_face_quality(img_bgr, face, cfg=CRAWLER_INGEST_QUALITY)
-    #       if q.is_usable:
-    #           usable_faces.append(face)
-    #   # Then convert usable_faces to face_detections format and continue
-    #
-    # Option 2: Tag low-quality faces but still index them
-    #   for face in raw_faces:
-    #       q = evaluate_face_quality(img_bgr, face, cfg=CRAWLER_INGEST_QUALITY)
-    #       # Store q.is_usable, q.score, q.reasons in metadata
-    #       # Index all faces but mark quality in payload
-    #
-    # Current implementation uses detect_faces() which returns dicts.
-    # To use CRAWLER_INGEST_QUALITY, switch to detect_faces_raw() to get
-    # raw Face objects for quality evaluation before conversion.
 
     # ========================================================================
     # PHASE 2 IMPLEMENTATION: REAL PIPELINE PROCESSING
@@ -293,9 +292,17 @@ def process_image(message: dict) -> dict:
             roll=roll,
         )
 
-        # Embedding (512-d float32)
+        # Embedding (512-d float32) with normalization verification
         with timer("embed_ms"):
             vec = embed(crop_bgr)
+            
+            # Verify embedding is properly L2-normalized (should be ~1.0)
+            # This is critical for cosine similarity accuracy
+            vec_norm = np.linalg.norm(vec)
+            if abs(vec_norm - 1.0) > 0.01:
+                logger.warning(f"Embedding not normalized (norm={vec_norm:.4f}), re-normalizing")
+                vec = vec / (vec_norm + 1e-10)
+            
             vec_list = vec.astype(np.float32).tolist()
 
         # Compute pHash on RGB PIL (more stable)

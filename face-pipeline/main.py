@@ -21,6 +21,7 @@ from face_quality import (
     SEARCH_QUALITY,
 )
 from pipeline.face_helpers import embed_one_b64_strict
+from config.settings import settings
 
 setup_logging()
 
@@ -256,7 +257,7 @@ def _search_faces_for_identity(
         query_filter=_tenant_identity_quality_filter(tenant_id, identity_id),  # Filters by tenant_id, identity_id, and quality_is_usable == True
         with_payload=True,  # Same as /search
         with_vectors=False,  # Same as /search
-        search_params=SearchParams(hnsw_ef=128, exact=False),  # Exact same params as /search
+        search_params=SearchParams(hnsw_ef=settings.HNSW_EF, exact=False),  # Use configurable HNSW_EF for accuracy
     )
     return hits
 
@@ -291,7 +292,7 @@ def search(req: SearchReq):
             detail={"error": "missing_vector_or_image"},
         )
 
-    # ... existing Qdrant search logic here (unchanged)
+    # Search with configurable HNSW_EF for better accuracy
     hits = qc.search(
         collection_name=FACES_COLLECTION,
         query_vector=query_vec.tolist(),
@@ -300,7 +301,7 @@ def search(req: SearchReq):
         query_filter=_tenant_filter(req.tenant_id),
         with_payload=True,
         with_vectors=False,
-        search_params=SearchParams(hnsw_ef=128, exact=False),
+        search_params=SearchParams(hnsw_ef=settings.HNSW_EF, exact=False),
     )
     
     # Generate URLs for thumbnails/crops/original images
@@ -489,7 +490,7 @@ def verify(req: VerifyReq):
         query_filter=_tenant_identity_filter(req.tenant_id, req.identity_id),
         with_payload=True,
         with_vectors=False,
-        search_params=SearchParams(hnsw_ef=128, exact=False),
+        search_params=SearchParams(hnsw_ef=settings.HNSW_EF, exact=False),
     )
     faces = [{"id": str(h.id), "score": float(h.score), "payload": h.payload or {}} for h in hits]
 
