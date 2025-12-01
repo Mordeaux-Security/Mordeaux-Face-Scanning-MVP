@@ -53,6 +53,16 @@ class CrawlerWorker:
             if await self.redis.is_site_limit_reached_async(candidate.site_id):
                 logger.debug(f"[Crawler {self.worker_id}] Not enqueueing candidate (limit reached): {candidate.img_url}")
                 continue
+            
+            # If strict_limits enabled, also check if site has reached pages limit
+            if self.config.nc_strict_limits:
+                stats = await asyncio.to_thread(self.redis.get_site_stats, candidate.site_id)
+                if stats:
+                    pages_crawled = stats.get('pages_crawled', 0)
+                    if self.config.nc_max_pages_per_site > 0 and pages_crawled >= self.config.nc_max_pages_per_site:
+                        logger.debug(f"[Crawler {self.worker_id}] Not enqueueing candidate (pages limit reached): {candidate.img_url}")
+                        continue
+            
             valid_candidates.append(candidate)
         
         if not valid_candidates:
@@ -131,6 +141,15 @@ class CrawlerWorker:
                         'images_found': total_enqueued
                     }
                 )
+                
+                # Check if pages limit reached - only stop feeding, don't clear queues
+                # NOTE: We do NOT set site limit flag here because that would block extractor
+                # from processing existing candidates. The site limit flag should only be set
+                # when IMAGES limit is reached (handled in orchestrator/storage worker).
+                # For pages limit, we only stop feeding new candidates (handled in _enqueue_candidates).
+                if self.config.nc_strict_limits:
+                    if self.config.nc_max_pages_per_site > 0 and total_pages >= self.config.nc_max_pages_per_site:
+                        logger.info(f"[Crawler {self.worker_id}] Pages limit reached for site {site_task.site_id}, stopping new candidates (existing items will continue processing)")
                 
             finally:
                 self._active_tasks_decr(1)

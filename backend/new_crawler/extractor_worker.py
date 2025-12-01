@@ -179,6 +179,26 @@ class ExtractorWorker:
                     logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Passing temp file to GPU queue: "
                               f"{temp_path}, size={file_size}bytes, age={file_age:.1f}s, phash={phash[:8]}...")
                 
+                # Check strict_limits before pushing to gpu:inbox
+                if self.config.nc_strict_limits:
+                    # Check if site has reached image limit (check directly, not just flag)
+                    stats = await asyncio.to_thread(self.redis.get_site_stats, candidate.site_id)
+                    if stats:
+                        thumbs = stats.get('images_saved_thumbs', 0)
+                        if self.config.nc_max_images_per_site > 0 and thumbs >= self.config.nc_max_images_per_site:
+                            logger.debug(f"[EXTRACTOR-{self.worker_id}] Not pushing to gpu:inbox (image limit reached: {thumbs} >= {self.config.nc_max_images_per_site}): {candidate.img_url}")
+                            # Clean up temp file
+                            if os.path.exists(temp_path):
+                                os.remove(temp_path)
+                            return None
+                    # Also check site limit flag (set when images limit reached elsewhere)
+                    if await self.redis.is_site_limit_reached_async(candidate.site_id):
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] Not pushing to gpu:inbox (site limit flag set): {candidate.img_url}")
+                        # Clean up temp file
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+                        return None
+                
                 # Push immediately to GPU inbox (no batching - scheduler handles it)
                 payload = self.redis.serialize_image_task(image_task)
                 inbox_key = getattr(self.config, 'gpu_inbox_key', 'gpu:inbox')
@@ -234,6 +254,11 @@ class ExtractorWorker:
             thumbs = stats.get('images_saved_thumbs', 0) if stats else 0
             if thumbs >= self.config.nc_max_images_per_site:
                 await self.redis.set_site_limit_reached_async(site_id)
+                # If strict_limits enabled, cleanup gpu:inbox queue for this site
+                if self.config.nc_strict_limits:
+                    removed = await self.redis.remove_site_items_from_queue_async('gpu:inbox', site_id)
+                    if removed > 0:
+                        logger.info(f"[Extractor {self.worker_id}] Removed {removed} items from gpu:inbox for site {site_id} (image limit reached)")
         
         self.processed_candidates += 1
         

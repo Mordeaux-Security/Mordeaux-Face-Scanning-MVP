@@ -5,6 +5,7 @@ Handles Redis queue operations, connection pooling, and back-pressure monitoring
 Provides clean interface for all queue operations with proper error handling.
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -351,11 +352,11 @@ class RedisManager:
     async def push_storage_task_async(self, storage_task: StorageTask) -> bool:
         """Push storage task to storage queue (async version)."""
         try:
-            client = await self._get_async_client()
             queue_name = self.config.get_queue_name('storage')
             data = self._serialize(storage_task)
-            result = await client.rpush(queue_name, data)
-            pushed = bool(result)
+            # Use push_many to ensure counter tracking when strict_limits enabled
+            pushed_count = await asyncio.to_thread(self.push_many, queue_name, [data])
+            pushed = pushed_count > 0
             queue_depth = await self.get_queue_length_by_key_async(queue_name)
             image_phash = storage_task.image_task.phash[:8] if storage_task.image_task.phash else 'NO_PHASH'
             logger.debug(f"[REDIS] DIAG: Pushed storage task: {image_phash}..., "
@@ -384,13 +385,12 @@ class RedisManager:
     async def pop_storage_task_async(self, timeout: float = 5.0) -> Optional[StorageTask]:
         """Pop storage task from storage queue (async version)."""
         try:
-            client = await self._get_async_client()
             queue_name = self.config.get_queue_name('storage')
-            result = await client.brpop(queue_name, timeout=timeout)
+            # Use blpop_many to ensure counter tracking when strict_limits enabled
+            items = await asyncio.to_thread(self.blpop_many, queue_name, max_n=1, timeout=timeout)
             
-            if result:
-                _, data = result
-                return self._deserialize(data, StorageTask)
+            if items and len(items) > 0:
+                return self._deserialize(items[0], StorageTask)
             return None
         except redis.RedisError as e:
             logger.error(f"Redis pop storage task error (async): {e}")
@@ -417,10 +417,39 @@ class RedisManager:
             with client.pipeline() as p:
                 p.rpush(key, *payloads)
                 p.execute()
+            
+            # Track counters if strict_limits enabled
+            if self.config.nc_strict_limits:
+                # Determine queue_type from key
+                queue_type = self._get_queue_type_from_key(key)
+                if queue_type:
+                    # Count items per site_id
+                    site_counts = {}
+                    for payload in payloads:
+                        site_id = self._extract_site_id_from_item(payload, queue_type)
+                        if site_id:
+                            site_counts[site_id] = site_counts.get(site_id, 0) + 1
+                    
+                    # Increment counters for each site
+                    for site_id, count in site_counts.items():
+                        self.increment_site_queue_counter(site_id, queue_type, count)
+            
             return len(payloads)
         except redis.RedisError as e:
             logger.error(f"Redis push_many error: {e}")
             return 0
+    
+    def _get_queue_type_from_key(self, key: str) -> Optional[str]:
+        """Determine queue_type from Redis key."""
+        # Check if it's gpu:inbox
+        if key == 'gpu:inbox':
+            return 'gpu:inbox'
+        # Check against known queue names
+        queue_names = self.config.queue_names
+        for queue_type, queue_name in queue_names.items():
+            if key == queue_name:
+                return queue_type
+        return None
     
     def blpop_many(self, key: str, max_n: int, timeout: float = 0.5) -> list[bytes]:
         """
@@ -483,6 +512,22 @@ class RedisManager:
                         p.lpop(key)  # Continue from the head (RPUSH/BLPOP/LPOP = FIFO)
                     drained = p.execute()
                 items.extend([x for x in drained if x is not None])
+            
+            # Track counters if strict_limits enabled
+            if self.config.nc_strict_limits and items:
+                # Determine queue_type from key
+                queue_type = self._get_queue_type_from_key(key)
+                if queue_type:
+                    # Count items per site_id
+                    site_counts = {}
+                    for item in items:
+                        site_id = self._extract_site_id_from_item(item, queue_type)
+                        if site_id:
+                            site_counts[site_id] = site_counts.get(site_id, 0) + 1
+                    
+                    # Decrement counters for each site
+                    for site_id, count in site_counts.items():
+                        self.decrement_site_queue_counter(site_id, queue_type, count)
             
             # Log when items are retrieved (count of items)
             logger.debug(f"[REDIS] DIAG: blpop_many({key}) retrieved {len(items)} items")
@@ -1248,6 +1293,276 @@ class RedisManager:
         except Exception as e:
             logger.error(f"Failed to clear queue {queue_type} (async): {e}")
             return False
+
+    # Site queue counter operations for strict_limits
+    def _get_site_queue_counter_key(self, site_id: str, queue_type: str) -> str:
+        """Get Redis key for site queue counter."""
+        return f"nc:site:queue:{site_id}:{queue_type}"
+    
+    def increment_site_queue_counter(self, site_id: str, queue_type: str, count: int = 1) -> bool:
+        """Increment counter for items from a site in a queue."""
+        try:
+            client = self._get_client()
+            key = self._get_site_queue_counter_key(site_id, queue_type)
+            client.incrby(key, count)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to increment site queue counter for {site_id}:{queue_type}: {e}")
+            return False
+    
+    async def increment_site_queue_counter_async(self, site_id: str, queue_type: str, count: int = 1) -> bool:
+        """Increment counter for items from a site in a queue (async)."""
+        try:
+            client = await self._get_async_client()
+            key = self._get_site_queue_counter_key(site_id, queue_type)
+            await client.incrby(key, count)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to increment site queue counter for {site_id}:{queue_type} (async): {e}")
+            return False
+    
+    def decrement_site_queue_counter(self, site_id: str, queue_type: str, count: int = 1) -> bool:
+        """Decrement counter for items from a site in a queue."""
+        try:
+            client = self._get_client()
+            key = self._get_site_queue_counter_key(site_id, queue_type)
+            # Use DECRBY, but don't let it go below 0
+            current = client.get(key)
+            if current:
+                current_val = int(current)
+                new_val = max(0, current_val - count)
+                if new_val == 0:
+                    client.delete(key)
+                else:
+                    client.set(key, new_val)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to decrement site queue counter for {site_id}:{queue_type}: {e}")
+            return False
+    
+    async def decrement_site_queue_counter_async(self, site_id: str, queue_type: str, count: int = 1) -> bool:
+        """Decrement counter for items from a site in a queue (async)."""
+        try:
+            client = await self._get_async_client()
+            key = self._get_site_queue_counter_key(site_id, queue_type)
+            # Use DECRBY, but don't let it go below 0
+            current = await client.get(key)
+            if current:
+                current_val = int(current)
+                new_val = max(0, current_val - count)
+                if new_val == 0:
+                    await client.delete(key)
+                else:
+                    await client.set(key, new_val)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to decrement site queue counter for {site_id}:{queue_type} (async): {e}")
+            return False
+    
+    def get_site_queue_counter(self, site_id: str, queue_type: str) -> int:
+        """Get current counter value for items from a site in a queue."""
+        try:
+            client = self._get_client()
+            key = self._get_site_queue_counter_key(site_id, queue_type)
+            value = client.get(key)
+            return int(value) if value else 0
+        except Exception as e:
+            logger.error(f"Failed to get site queue counter for {site_id}:{queue_type}: {e}")
+            return 0
+    
+    async def get_site_queue_counter_async(self, site_id: str, queue_type: str) -> int:
+        """Get current counter value for items from a site in a queue (async)."""
+        try:
+            client = await self._get_async_client()
+            key = self._get_site_queue_counter_key(site_id, queue_type)
+            value = await client.get(key)
+            return int(value) if value else 0
+        except Exception as e:
+            logger.error(f"Failed to get site queue counter for {site_id}:{queue_type} (async): {e}")
+            return 0
+    
+    def clear_site_queue_counters(self, site_id: str) -> bool:
+        """Clear all queue counters for a site."""
+        try:
+            client = self._get_client()
+            # Clear counters for all known queue types
+            queue_types = ['candidates', 'images', 'storage']
+            for queue_type in queue_types:
+                key = self._get_site_queue_counter_key(site_id, queue_type)
+                client.delete(key)
+            # Also clear gpu:inbox counter
+            gpu_key = self._get_site_queue_counter_key(site_id, 'gpu:inbox')
+            client.delete(gpu_key)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear site queue counters for {site_id}: {e}")
+            return False
+    
+    async def clear_site_queue_counters_async(self, site_id: str) -> bool:
+        """Clear all queue counters for a site (async)."""
+        try:
+            client = await self._get_async_client()
+            # Clear counters for all known queue types
+            queue_types = ['candidates', 'images', 'storage']
+            for queue_type in queue_types:
+                key = self._get_site_queue_counter_key(site_id, queue_type)
+                await client.delete(key)
+            # Also clear gpu:inbox counter
+            gpu_key = self._get_site_queue_counter_key(site_id, 'gpu:inbox')
+            await client.delete(gpu_key)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear site queue counters for {site_id} (async): {e}")
+            return False
+    
+    def _extract_site_id_from_item(self, data: bytes, queue_type: str) -> Optional[str]:
+        """Extract site_id from a serialized queue item."""
+        try:
+            if queue_type == 'candidates':
+                candidate = self._deserialize(data, CandidateImage)
+                return candidate.site_id
+            elif queue_type == 'gpu:inbox' or queue_type == 'images':
+                image_task = self.deserialize_image_task(data)
+                return image_task.candidate.site_id
+            elif queue_type == 'storage':
+                storage_task = self._deserialize(data, StorageTask)
+                return storage_task.image_task.candidate.site_id
+            return None
+        except Exception as e:
+            logger.debug(f"Failed to extract site_id from item: {e}")
+            return None
+    
+    def remove_site_items_from_queue(self, queue_type: str, site_id: str) -> int:
+        """Remove all items for a specific site from a queue. Returns number of items removed."""
+        if not self.config.nc_strict_limits:
+            return 0
+        
+        try:
+            client = self._get_client()
+            # Get queue name (handle special case for gpu:inbox)
+            if queue_type == 'gpu:inbox':
+                queue_name = 'gpu:inbox'
+            else:
+                queue_name = self.config.get_queue_name(queue_type)
+            
+            # Get current queue length
+            queue_length = client.llen(queue_name)
+            if queue_length == 0:
+                return 0
+            
+            # Pop all items, filter, and push back non-matching items
+            items_to_keep = []
+            items_removed = 0
+            
+            # Process in batches to avoid memory issues
+            batch_size = 100
+            processed = 0
+            
+            while processed < queue_length:
+                # Pop a batch of items
+                batch = []
+                for _ in range(min(batch_size, queue_length - processed)):
+                    item = client.rpop(queue_name)
+                    if item is None:
+                        break
+                    batch.append(item)
+                
+                if not batch:
+                    break
+                
+                # Filter batch
+                for item in batch:
+                    item_site_id = self._extract_site_id_from_item(item, queue_type)
+                    if item_site_id == site_id:
+                        items_removed += 1
+                    else:
+                        items_to_keep.append(item)
+                
+                processed += len(batch)
+            
+            # Push back items to keep (in reverse order to maintain FIFO)
+            if items_to_keep:
+                # Reverse to maintain order (rpush in reverse order)
+                items_to_keep.reverse()
+                for item in items_to_keep:
+                    client.lpush(queue_name, item)
+            
+            # Update counter
+            if items_removed > 0:
+                self.decrement_site_queue_counter(site_id, queue_type, items_removed)
+            
+            logger.info(f"Removed {items_removed} items for site {site_id} from {queue_type} queue")
+            return items_removed
+            
+        except Exception as e:
+            logger.error(f"Failed to remove site items from queue {queue_type} for {site_id}: {e}")
+            return 0
+    
+    async def remove_site_items_from_queue_async(self, queue_type: str, site_id: str) -> int:
+        """Remove all items for a specific site from a queue (async). Returns number of items removed."""
+        if not self.config.nc_strict_limits:
+            return 0
+        
+        try:
+            client = await self._get_async_client()
+            # Get queue name (handle special case for gpu:inbox)
+            if queue_type == 'gpu:inbox':
+                queue_name = 'gpu:inbox'
+            else:
+                queue_name = self.config.get_queue_name(queue_type)
+            
+            # Get current queue length
+            queue_length = await client.llen(queue_name)
+            if queue_length == 0:
+                return 0
+            
+            # Pop all items, filter, and push back non-matching items
+            items_to_keep = []
+            items_removed = 0
+            
+            # Process in batches to avoid memory issues
+            batch_size = 100
+            processed = 0
+            
+            while processed < queue_length:
+                # Pop a batch of items
+                batch = []
+                for _ in range(min(batch_size, queue_length - processed)):
+                    item = await client.rpop(queue_name)
+                    if item is None:
+                        break
+                    batch.append(item)
+                
+                if not batch:
+                    break
+                
+                # Filter batch
+                for item in batch:
+                    item_site_id = self._extract_site_id_from_item(item, queue_type)
+                    if item_site_id == site_id:
+                        items_removed += 1
+                    else:
+                        items_to_keep.append(item)
+                
+                processed += len(batch)
+            
+            # Push back items to keep (in reverse order to maintain FIFO)
+            if items_to_keep:
+                # Reverse to maintain order (rpush in reverse order)
+                items_to_keep.reverse()
+                for item in items_to_keep:
+                    await client.lpush(queue_name, item)
+            
+            # Update counter
+            if items_removed > 0:
+                await self.decrement_site_queue_counter_async(site_id, queue_type, items_removed)
+            
+            logger.info(f"Removed {items_removed} items for site {site_id} from {queue_type} queue (async)")
+            return items_removed
+            
+        except Exception as e:
+            logger.error(f"Failed to remove site items from queue {queue_type} for {site_id} (async): {e}")
+            return 0
 
     def get_shared_batch_size(self) -> int:
         """DEPRECATED: Get current size of shared batch accumulator.

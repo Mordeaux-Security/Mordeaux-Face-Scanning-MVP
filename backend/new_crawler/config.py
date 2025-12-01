@@ -32,8 +32,9 @@ class CrawlerConfig(BaseSettings):
     redis_retry_on_timeout: bool = True
     
     # Crawling Limits
-    nc_max_pages_per_site: int = 3  # Set to -1 for unlimited crawling
+    nc_max_pages_per_site: int = -1  # Set to -1 for unlimited crawling
     nc_max_images_per_site: int = 10
+    nc_strict_limits: bool = True  # When enabled, stops feeding queues and removes existing items when site limits are reached
     
     # Debug Logging
     nc_debug_logging: bool = True
@@ -153,7 +154,7 @@ class CrawlerConfig(BaseSettings):
     vector_index: str = "faces_v1"  # Collection name for face vectors
     
     # Face Detection Configuration
-    min_face_quality: float = 0.5
+    min_face_quality: float = 0.9
     min_face_size: int = 30
     face_margin: float = 0.2
     

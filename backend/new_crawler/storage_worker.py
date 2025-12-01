@@ -178,6 +178,20 @@ class StorageWorker:
             
             await self.redis.update_site_stats_async(site_id, stats_update)
             
+            # Check if site image limit reached and cleanup if strict_limits enabled
+            if self.config.nc_strict_limits:
+                stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
+                if stats:
+                    thumbs = stats.get('images_saved_thumbs', 0)
+                    if thumbs >= self.config.nc_max_images_per_site:
+                        await self.redis.set_site_limit_reached_async(site_id)
+                        # Remove remaining storage tasks for this site
+                        removed_storage = await self.redis.remove_site_items_from_queue_async('storage', site_id)
+                        # Also remove remaining items from gpu:inbox queue
+                        removed_gpu = await self.redis.remove_site_items_from_queue_async('gpu:inbox', site_id)
+                        if removed_storage > 0 or removed_gpu > 0:
+                            logger.info(f"[Storage {self.worker_id}] Removed {removed_storage} storage tasks and {removed_gpu} gpu:inbox items for site {site_id} (image limit reached)")
+            
             # Push final result to results queue
             await self.redis.push_face_result_async(face_result)
             

@@ -185,6 +185,14 @@ class GPUProcessorWorker:
             
             # Validate initial batch
             for image_task in batch_request.image_tasks:
+                # Check strict_limits - skip items from completed sites
+                if self.config.nc_strict_limits:
+                    site_id = image_task.candidate.site_id
+                    if await self.redis.is_site_limit_reached_async(site_id):
+                        logger.debug(f"[GPU Processor {self.worker_id}] Skipping image task (site limit reached): {site_id}")
+                        invalid_tasks.append(image_task)
+                        continue
+                
                 if self._validate_image_task(image_task):
                     valid_tasks.append(image_task)
                 else:
@@ -247,6 +255,14 @@ class GPUProcessorWorker:
                     logger.error(f"[GPU Processor {self.worker_id}] Failed to copy temp file {original_path}: {e}")
                     invalid_tasks.append(additional_task)
                     continue
+                
+                # Check strict_limits - skip items from completed sites
+                if self.config.nc_strict_limits:
+                    site_id = additional_task.candidate.site_id
+                    if await self.redis.is_site_limit_reached_async(site_id):
+                        logger.debug(f"[GPU Processor {self.worker_id}] Skipping additional task (site limit reached): {site_id}")
+                        invalid_tasks.append(additional_task)
+                        continue
                 
                 if self._validate_image_task(additional_task):
                     valid_tasks.append(additional_task)
@@ -392,6 +408,14 @@ class GPUProcessorWorker:
                 
                 if storage_task:
                     storage_tasks_created += 1
+                    
+                    # Check strict_limits before pushing to storage
+                    if self.config.nc_strict_limits:
+                        site_id = image_task.candidate.site_id
+                        if await self.redis.is_site_limit_reached_async(site_id):
+                            logger.debug(f"[GPU Processor {self.worker_id}] Not pushing storage task (site limit reached): {site_id}")
+                            continue
+                    
                     # Push to storage queue (non-blocking)
                     pushed = await self.redis.push_storage_task_async(storage_task)
                     if pushed:
@@ -515,18 +539,33 @@ class GPUProcessorWorker:
                 
                 # Extract bounding box coordinates
                 bbox = face_detection.bbox
+                if len(bbox) != 4:
+                    logger.warning(f"[GPU Processor {self.worker_id}] Invalid bbox format for face {face_index}: {bbox} (expected 4 values)")
+                    return None
+                
                 x1, y1, x2, y2 = bbox
                 original_bbox = (x1, y1, x2, y2)
                 
-                # Check if coordinates are already normalized (0-1 range)
-                if x1 > 1.0 or y1 > 1.0 or x2 > 1.0 or y2 > 1.0:
-                    # Coordinates are in pixels, normalize them
+                # Validate bbox format (should be [x1, y1, x2, y2] with x2 > x1, y2 > y1)
+                if x2 <= x1 or y2 <= y1:
+                    logger.warning(f"[GPU Processor {self.worker_id}] Invalid bbox (x2 <= x1 or y2 <= y1) for face {face_index}: {bbox}")
+                    return None
+                
+                # Determine if coordinates are normalized (0-1) or in pixels
+                # Check if ALL coordinates are in 0-1 range AND the bbox size is < 1.0 (normalized)
+                # OR if coordinates seem reasonable for pixels (e.g., > 10 suggests pixels)
+                is_normalized = (0.0 <= x1 <= 1.0 and 0.0 <= y1 <= 1.0 and 
+                                 0.0 <= x2 <= 1.0 and 0.0 <= y2 <= 1.0 and
+                                 (x2 - x1) < 1.0 and (y2 - y1) < 1.0)
+                
+                if not is_normalized:
+                    # Coordinates are in pixels, convert to normalized first
                     x1 = x1 / width
                     y1 = y1 / height
                     x2 = x2 / width
                     y2 = y2 / height
                 
-                # Convert to pixel coordinates
+                # Convert normalized coordinates to pixel coordinates
                 x1 = int(x1 * width)
                 y1 = int(y1 * height)
                 x2 = int(x2 * width)
@@ -543,13 +582,28 @@ class GPUProcessorWorker:
                     x2 = max(0, min(x2, width))
                     y2 = max(0, min(y2, height))
                 
-                # Add margin
+                # Ensure valid bounds after clamping
+                if x2 <= x1 or y2 <= y1:
+                    logger.warning(f"[GPU Processor {self.worker_id}] DIAG: Invalid bbox after clamping for face {face_index}: "
+                                 f"original={original_bbox}, clamped=({x1},{y1},{x2},{y2}), "
+                                 f"image_size=({width},{height})")
+                    return None
+                
+                # Calculate face dimensions BEFORE applying margin
                 face_width = x2 - x1
                 face_height = y2 - y1
+                
+                # Ensure minimum face size before applying margin
+                if face_width < 1 or face_height < 1:
+                    logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Face too small after clamping for face {face_index}: "
+                               f"size=({face_width},{face_height}), original={original_bbox}")
+                    return None
+                
+                # Margin should be 0.2 (20%) of face dimensions for tight crop
                 margin_x = int(face_width * margin)
                 margin_y = int(face_height * margin)
                 
-                # Expand bounding box with margin
+                # Expand bounding box with margin (tight crop with small margin)
                 x1 = max(0, x1 - margin_x)
                 y1 = max(0, y1 - margin_y)
                 x2 = min(width, x2 + margin_x)
@@ -572,9 +626,9 @@ class GPUProcessorWorker:
                 # Crop the face
                 face_crop = img.crop((x1, y1, x2, y2))
                 
-                # Convert to bytes
+                # Convert to bytes with higher quality
                 output = io.BytesIO()
-                face_crop.save(output, format='JPEG', quality=85)
+                face_crop.save(output, format='JPEG', quality=95)
                 crop_size = len(output.getvalue())
                 logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Successfully cropped face {face_index}: "
                            f"size={final_size}, crop_bytes={crop_size}, bbox={original_bbox}")

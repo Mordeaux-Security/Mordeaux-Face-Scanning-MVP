@@ -51,7 +51,7 @@ class StorageManager:
                     )
                     
                     self._minio_client = Minio(
-                        self.config.s3_endpoint.replace('http://', '').replace('https://', ''),
+                        endpoint=self.config.s3_endpoint.replace('http://', '').replace('https://', ''),
                         access_key=self.config.s3_access_key,
                         secret_key=self.config.s3_secret_key,
                         secure=self.config.s3_use_ssl,
@@ -364,29 +364,66 @@ class StorageManager:
                 
                 # Extract bounding box coordinates
                 bbox = face_detection.bbox
+                if len(bbox) != 4:
+                    logger.error(f"[STORAGE] Invalid bbox format: {bbox} (expected 4 values)")
+                    return None
+                
                 x1, y1, x2, y2 = bbox
                 
-                # Check if coordinates are already normalized (0-1 range)
-                if x1 > 1.0 or y1 > 1.0 or x2 > 1.0 or y2 > 1.0:
-                    # Coordinates are in pixels, normalize them
+                # Validate bbox format (should be [x1, y1, x2, y2] with x2 > x1, y2 > y1)
+                if x2 <= x1 or y2 <= y1:
+                    logger.warning(f"[STORAGE] Invalid bbox (x2 <= x1 or y2 <= y1): {bbox}")
+                    return None
+                
+                # Determine if coordinates are normalized (0-1) or in pixels
+                # Check if ALL coordinates are in 0-1 range AND the bbox size is < 1.0 (normalized)
+                is_normalized = (0.0 <= x1 <= 1.0 and 0.0 <= y1 <= 1.0 and 
+                                 0.0 <= x2 <= 1.0 and 0.0 <= y2 <= 1.0 and
+                                 (x2 - x1) < 1.0 and (y2 - y1) < 1.0)
+                
+                if not is_normalized:
+                    # Coordinates are in pixels, convert to normalized first
                     x1 = x1 / width
                     y1 = y1 / height
                     x2 = x2 / width
                     y2 = y2 / height
                 
-                # Convert to pixel coordinates
+                # Convert normalized coordinates to pixel coordinates
                 x1 = int(x1 * width)
                 y1 = int(y1 * height)
                 x2 = int(x2 * width)
                 y2 = int(y2 * height)
                 
-                # Add margin
+                # Validate bbox is within image bounds and clamp if needed
+                if x1 < 0 or y1 < 0 or x2 > width or y2 > height:
+                    logger.warning(f"[STORAGE] Bbox out of bounds: original={bbox}, converted=({x1},{y1},{x2},{y2}), "
+                                 f"image_size=({width},{height})")
+                    # Clamp to image bounds
+                    x1 = max(0, min(x1, width))
+                    y1 = max(0, min(y1, height))
+                    x2 = max(0, min(x2, width))
+                    y2 = max(0, min(y2, height))
+                
+                # Ensure valid bounds after clamping
+                if x2 <= x1 or y2 <= y1:
+                    logger.warning(f"[STORAGE] Invalid bbox after clamping: original={bbox}, clamped=({x1},{y1},{x2},{y2}), "
+                                 f"image_size=({width},{height})")
+                    return None
+                
+                # Calculate face dimensions BEFORE applying margin
                 face_width = x2 - x1
                 face_height = y2 - y1
+                
+                # Ensure minimum face size before applying margin
+                if face_width < 1 or face_height < 1:
+                    logger.debug(f"[STORAGE] Face too small after clamping: size=({face_width},{face_height}), original={bbox}")
+                    return None
+                
+                # Margin should be 0.2 (20%) of face dimensions for tight crop
                 margin_x = int(face_width * margin)
                 margin_y = int(face_height * margin)
                 
-                # Expand bounding box with margin
+                # Expand bounding box with margin (tight crop with small margin)
                 x1 = max(0, x1 - margin_x)
                 y1 = max(0, y1 - margin_y)
                 x2 = min(width, x2 + margin_x)
@@ -404,9 +441,9 @@ class StorageManager:
                 # Crop the face
                 face_crop = img.crop((x1, y1, x2, y2))
                 
-                # Convert to bytes
+                # Convert to bytes with higher quality
                 output = io.BytesIO()
-                face_crop.save(output, format='JPEG', quality=85)
+                face_crop.save(output, format='JPEG', quality=95)
                 return output.getvalue()
                 
         except Exception as e:

@@ -52,7 +52,7 @@ def _minio():
                 timeout=urllib3.util.Timeout(connect=5.0, read=30.0),
             )
         _minio_client = Minio(
-            endpoint,
+            endpoint=endpoint,
             access_key=settings.s3_access_key,
             secret_key=settings.s3_secret_key,
             secure=settings.s3_use_ssl,

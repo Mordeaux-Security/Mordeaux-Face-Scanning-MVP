@@ -503,7 +503,7 @@ class Orchestrator:
                     active_tasks = await asyncio.to_thread(self.redis.get_active_task_count)
                 except Exception:
                     pass
-                # Fast-drain: if all sites hit image limit, purge candidate/image queues
+                # Fast-drain: if all sites hit image limit, purge candidate/image/gpu_inbox queues
                 try:
                     if self.site_stats:
                         site_ids = list(self.site_stats.keys())
@@ -511,9 +511,56 @@ class Orchestrator:
                         if all_limits:
                             await self.redis.clear_queue_async('candidates')
                             await self.redis.clear_queue_async('images')
-                            logger.info("All sites reached image limits; purged candidates/images queues for fast shutdown")
+                            await self.redis.clear_queue_async('gpu:inbox')
+                            logger.info("All sites reached image limits; purged candidates/images/gpu_inbox queues for fast shutdown")
                 except Exception:
                     pass
+                
+                # Strict limits: check each site and cleanup queues when images limit reached
+                # Pages limit only stops feeding, images limit stops feeding AND clears queues
+                if self.config.nc_strict_limits:
+                    try:
+                        if self.site_stats:
+                            for site_id in list(self.site_stats.keys()):
+                                # Check if site has reached limits
+                                stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
+                                if stats:
+                                    pages_crawled = stats.get('pages_crawled', 0)
+                                    images_saved_thumbs = stats.get('images_saved_thumbs', 0)
+                                    
+                                    # Check if pages limit reached (only stop feeding, don't clear)
+                                    pages_limit_reached = (self.config.nc_max_pages_per_site > 0 and 
+                                                          pages_crawled >= self.config.nc_max_pages_per_site)
+                                    # Check if images limit reached (stop feeding AND clear queues)
+                                    images_limit_reached = (images_saved_thumbs >= self.config.nc_max_images_per_site)
+                                    
+                                    # Pages limit: only set flag to stop feeding, don't clear queues
+                                    if pages_limit_reached:
+                                        if not await self.redis.is_site_limit_reached_async(site_id):
+                                            await self.redis.set_site_limit_reached_async(site_id)
+                                            logger.debug(f"Strict limits: Pages limit reached for site {site_id}, stopping new items (existing items continue processing)")
+                                    
+                                    # Images limit: set flag AND clear queues
+                                    if images_limit_reached:
+                                        # Set limit flag if not already set
+                                        if not await self.redis.is_site_limit_reached_async(site_id):
+                                            await self.redis.set_site_limit_reached_async(site_id)
+                                        
+                                        # Cleanup queues for this site (images limit reached)
+                                        removed_candidates = await self.redis.remove_site_items_from_queue_async('candidates', site_id)
+                                        removed_gpu = await self.redis.remove_site_items_from_queue_async('gpu:inbox', site_id)
+                                        removed_storage = await self.redis.remove_site_items_from_queue_async('storage', site_id)
+                                        
+                                        if removed_candidates > 0 or removed_gpu > 0 or removed_storage > 0:
+                                            logger.info(f"Strict limits: Images limit reached for site {site_id}, cleaned up queues - "
+                                                       f"candidates={removed_candidates}, gpu:inbox={removed_gpu}, "
+                                                       f"storage={removed_storage} "
+                                                       f"(images={images_saved_thumbs}/{self.config.nc_max_images_per_site})")
+                                        
+                                        # Clear counters for this site
+                                        await self.redis.clear_site_queue_counters_async(site_id)
+                    except Exception as e:
+                        logger.error(f"Error checking strict limits in monitor loop: {e}")
                 if queues_empty and active_tasks == 0:
                     # Grace period to avoid racing with late JS callbacks
                     if idle_grace_start is None:
