@@ -185,12 +185,13 @@ class StorageWorker:
                     thumbs = stats.get('images_saved_thumbs', 0)
                     if thumbs >= self.config.nc_max_images_per_site:
                         await self.redis.set_site_limit_reached_async(site_id)
-                        # Remove remaining storage tasks for this site
-                        removed_storage = await self.redis.remove_site_items_from_queue_async('storage', site_id)
-                        # Also remove remaining items from gpu:inbox queue
+                        # NOTE: Do NOT remove storage queue items - they have already been processed
+                        # by the GPU worker and should be allowed to complete their journey to storage.
+                        # Storage queues should be immune to purging.
+                        # Only remove items from gpu:inbox queue (not yet processed)
                         removed_gpu = await self.redis.remove_site_items_from_queue_async('gpu:inbox', site_id)
-                        if removed_storage > 0 or removed_gpu > 0:
-                            logger.info(f"[Storage {self.worker_id}] Removed {removed_storage} storage tasks and {removed_gpu} gpu:inbox items for site {site_id} (image limit reached)")
+                        if removed_gpu > 0:
+                            logger.info(f"[Storage {self.worker_id}] Removed {removed_gpu} gpu:inbox items for site {site_id} (image limit reached)")
             
             # Push final result to results queue
             await self.redis.push_face_result_async(face_result)

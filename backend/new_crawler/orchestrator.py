@@ -503,16 +503,40 @@ class Orchestrator:
                     active_tasks = await asyncio.to_thread(self.redis.get_active_task_count)
                 except Exception:
                     pass
-                # Fast-drain: if all sites hit image limit, purge candidate/image/gpu_inbox queues
+                # Fast-drain: if all sites hit IMAGE limit (not just pages limit), purge candidate/image/gpu_inbox queues
                 try:
                     if self.site_stats:
                         site_ids = list(self.site_stats.keys())
-                        all_limits = await self.redis.all_sites_limit_reached_async(site_ids)
-                        if all_limits:
+                        # Check if ALL sites have reached their IMAGE limit (not just pages limit)
+                        all_image_limits_reached = True
+                        for site_id in site_ids:
+                            stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
+                            if stats:
+                                images_saved = stats.get('images_saved_thumbs', 0)
+                                if images_saved < self.config.nc_max_images_per_site:
+                                    all_image_limits_reached = False
+                                    break
+                            else:
+                                # If we can't get stats for a site, assume it hasn't reached limits
+                                all_image_limits_reached = False
+                                break
+
+                        if all_image_limits_reached:
+                            # Purge all queues except storage (storage queue must never be purged)
+                            # Storage queue contains items that have already been processed by GPU
+                            # and must be allowed to complete their journey to storage
                             await self.redis.clear_queue_async('candidates')
                             await self.redis.clear_queue_async('images')
-                            await self.redis.clear_queue_async('gpu:inbox')
-                            logger.info("All sites reached image limits; purged candidates/images/gpu_inbox queues for fast shutdown")
+                            await self.redis.clear_queue_async('results')
+                            await self.redis.clear_queue_async('cpu_fallback')
+                            await self.redis.clear_queue_async('sites')
+                            # gpu:inbox is a special queue not in queue_names, handle explicitly
+                            try:
+                                client = await self.redis._get_async_client()
+                                await client.delete('gpu:inbox')
+                            except Exception as e:
+                                logger.warning(f"Failed to clear gpu:inbox queue: {e}")
+                            logger.info("All sites reached IMAGE limits; purged all queues except storage for fast shutdown")
                 except Exception:
                     pass
                 
@@ -547,14 +571,16 @@ class Orchestrator:
                                             await self.redis.set_site_limit_reached_async(site_id)
                                         
                                         # Cleanup queues for this site (images limit reached)
+                                        # NOTE: Do NOT purge storage queue - items there have already been processed
+                                        # by the GPU worker and should be allowed to complete their journey to storage.
+                                        # Storage queues should be immune to purging.
                                         removed_candidates = await self.redis.remove_site_items_from_queue_async('candidates', site_id)
                                         removed_gpu = await self.redis.remove_site_items_from_queue_async('gpu:inbox', site_id)
-                                        removed_storage = await self.redis.remove_site_items_from_queue_async('storage', site_id)
+                                        # Storage queue is NOT purged - items are already processed and should be saved
                                         
-                                        if removed_candidates > 0 or removed_gpu > 0 or removed_storage > 0:
+                                        if removed_candidates > 0 or removed_gpu > 0:
                                             logger.info(f"Strict limits: Images limit reached for site {site_id}, cleaned up queues - "
-                                                       f"candidates={removed_candidates}, gpu:inbox={removed_gpu}, "
-                                                       f"storage={removed_storage} "
+                                                       f"candidates={removed_candidates}, gpu:inbox={removed_gpu} "
                                                        f"(images={images_saved_thumbs}/{self.config.nc_max_images_per_site})")
                                         
                                         # Clear counters for this site

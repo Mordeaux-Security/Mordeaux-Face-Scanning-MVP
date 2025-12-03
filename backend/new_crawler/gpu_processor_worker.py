@@ -8,6 +8,7 @@ Handles face detection, embedding, and saves results to storage.
 import asyncio
 import io
 import logging
+import math
 import multiprocessing
 import os
 import signal
@@ -16,7 +17,7 @@ import tempfile
 import time
 import shutil
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
 from .config import get_config
 from .redis_manager import get_redis_manager
@@ -37,7 +38,9 @@ class GPUProcessorWorker:
         self.config = get_config()
         self.redis = get_redis_manager()
         self.cache = get_cache_manager()
-        self.gpu_interface = get_gpu_interface()
+        # Don't create gpu_interface here - it needs the event loop which is created later
+        # Create it lazily via property when first accessed (after event loop is set)
+        self._gpu_interface = None
         self.timing_logger = get_timing_logger()
         
         # Worker state
@@ -74,6 +77,30 @@ class GPUProcessorWorker:
         )
         
         # No per-site tracking needed - limits handled by extractor
+    
+    @property
+    def gpu_interface(self):
+        """
+        Get GPU interface, creating it lazily after event loop is set.
+        
+        This ensures any asyncio primitives (like httpx.AsyncClient's internal Events)
+        are bound to the correct event loop, which is created after __init__ in
+        gpu_processor_worker_process().
+        """
+        if self._gpu_interface is None:
+            try:
+                loop = asyncio.get_running_loop()
+                loop_id = id(loop)
+                logger.info(f"[GPU Processor {self.worker_id}] [TRACE] Creating GPUInterface - event loop exists: id={loop_id}")
+            except RuntimeError:
+                logger.warning(f"[GPU Processor {self.worker_id}] [TRACE] Creating GPUInterface - NO event loop running!")
+            
+            logger.info(f"[GPU Processor {self.worker_id}] [TRACE] Calling get_gpu_interface() to create singleton")
+            self._gpu_interface = get_gpu_interface()
+            logger.info(f"[GPU Processor {self.worker_id}] [TRACE] GPUInterface created successfully")
+        else:
+            logger.debug(f"[GPU Processor {self.worker_id}] [TRACE] Returning existing GPUInterface")
+        return self._gpu_interface
     
     async def _get_queue_depth_cached(self, queue_key: str) -> int:
         """
@@ -119,6 +146,8 @@ class GPUProcessorWorker:
     async def process_batch(self, batch_request: BatchRequest) -> int:
         """Process a batch of image tasks."""
         batch_start_time = time.time()
+        self._processing_batch_id = batch_request.batch_id
+        self._last_batch_start_time = batch_start_time
         try:
             logger.info(f"[GPU Processor {self.worker_id}] Processing batch: {batch_request.batch_id}, "
                        f"{len(batch_request.image_tasks)} images")
@@ -177,14 +206,46 @@ class GPUProcessorWorker:
             
             # Copy all files in parallel
             copy_results = await asyncio.gather(*[copy_single_file(task) for task in batch_request.image_tasks], return_exceptions=True)
-            
+
+            # Validate copy results and update task paths
+            # This prevents race conditions where storage worker cleans up temp files before GPU can copy them
+            copied_tasks = []
+            invalid_tasks = []  # Define early for copy validation
+            for i, (task, copy_result) in enumerate(zip(batch_request.image_tasks, copy_results)):
+                if isinstance(copy_result, Exception):
+                    # Copy failed with exception
+                    logger.warning(f"[GPU Processor {self.worker_id}] Temp file copy failed with exception for task {i}: {task.phash[:8]}... - {copy_result}")
+                    invalid_tasks.append(task)
+                    continue
+                elif copy_result is False:
+                    # Copy returned False (file missing)
+                    logger.warning(f"[GPU Processor {self.worker_id}] Temp file copy failed (file missing) for task {i}: {task.phash[:8]}... - {task.temp_path}")
+                    invalid_tasks.append(task)
+                    continue
+                else:
+                    # Copy succeeded - update task to use GPU temp path
+                    gpu_path = gpu_temp_paths.get(task.temp_path)
+                    if gpu_path and os.path.exists(gpu_path):
+                        # Create new task with updated temp path
+                        updated_task = ImageTask(
+                            temp_path=gpu_path,  # Use copied GPU temp file
+                            phash=task.phash,
+                            candidate=task.candidate,
+                            file_size=task.file_size,
+                            mime_type=task.mime_type
+                        )
+                        copied_tasks.append(updated_task)
+                        logger.debug(f"[GPU Processor {self.worker_id}] Task {i} copy succeeded, updated path: {task.phash[:8]}... -> {gpu_path}")
+                    else:
+                        logger.warning(f"[GPU Processor {self.worker_id}] Copy succeeded but GPU path missing for task {i}: {task.phash[:8]}...")
+                        invalid_tasks.append(task)
+
             # Pre-validate images and fill batch to target size
             target_batch_size = int(getattr(self.config, 'gpu_target_batch', 512))
             valid_tasks = []
-            invalid_tasks = []
-            
-            # Validate initial batch
-            for image_task in batch_request.image_tasks:
+
+            # Validate copied tasks (now using GPU temp paths)
+            for image_task in copied_tasks:
                 # Check strict_limits - skip items from completed sites
                 if self.config.nc_strict_limits:
                     site_id = image_task.candidate.site_id
@@ -192,7 +253,7 @@ class GPUProcessorWorker:
                         logger.debug(f"[GPU Processor {self.worker_id}] Skipping image task (site limit reached): {site_id}")
                         invalid_tasks.append(image_task)
                         continue
-                
+
                 if self._validate_image_task(image_task):
                     valid_tasks.append(image_task)
                 else:
@@ -243,31 +304,46 @@ class GPUProcessorWorker:
                 # Copy temp file for additional image
                 original_path = additional_task.temp_path
                 gpu_path = os.path.join(gpu_temp_dir, os.path.basename(original_path))
+                copy_success = False
                 try:
                     if os.path.exists(original_path):
                         shutil.copy2(original_path, gpu_path)
                         gpu_temp_paths[original_path] = gpu_path
+                        copy_success = True
                     else:
                         # Temp file missing, skip
+                        logger.warning(f"[GPU Processor {self.worker_id}] Additional task temp file missing: {original_path}")
                         invalid_tasks.append(additional_task)
                         continue
                 except Exception as e:
                     logger.error(f"[GPU Processor {self.worker_id}] Failed to copy temp file {original_path}: {e}")
                     invalid_tasks.append(additional_task)
                     continue
-                
-                # Check strict_limits - skip items from completed sites
-                if self.config.nc_strict_limits:
-                    site_id = additional_task.candidate.site_id
-                    if await self.redis.is_site_limit_reached_async(site_id):
-                        logger.debug(f"[GPU Processor {self.worker_id}] Skipping additional task (site limit reached): {site_id}")
-                        invalid_tasks.append(additional_task)
-                        continue
-                
-                if self._validate_image_task(additional_task):
-                    valid_tasks.append(additional_task)
-                else:
-                    invalid_tasks.append(additional_task)
+
+                if copy_success:
+                    # Update task to use GPU temp path
+                    updated_task = ImageTask(
+                        temp_path=gpu_path,  # Use copied GPU temp file
+                        phash=additional_task.phash,
+                        candidate=additional_task.candidate,
+                        file_size=additional_task.file_size,
+                        mime_type=additional_task.mime_type
+                    )
+
+                    # Check strict_limits - skip items from completed sites
+                    if self.config.nc_strict_limits:
+                        site_id = updated_task.candidate.site_id
+                        if await self.redis.is_site_limit_reached_async(site_id):
+                            logger.debug(f"[GPU Processor {self.worker_id}] Skipping additional task (site limit reached): {site_id}")
+                            invalid_tasks.append(updated_task)
+                            continue
+
+                    # Validate additional image
+                    if self._validate_image_task(updated_task):
+                        valid_tasks.append(updated_task)
+                        logger.debug(f"[GPU Processor {self.worker_id}] Additional task validated: {additional_task.phash[:8]}...")
+                    else:
+                        invalid_tasks.append(updated_task)
             
             # Log validation results
             if invalid_tasks:
@@ -276,12 +352,18 @@ class GPUProcessorWorker:
             # Use only valid tasks for processing
             batch_request.image_tasks = valid_tasks[:target_batch_size]  # Cap at target
             
-            # Temporarily replace temp paths for GPU processing
-            original_temp_paths = {}  # Map: task_index -> original_path
+            # Tasks already use GPU temp paths from copy validation above
+            # Store original extractor paths for restoration after GPU processing
+            original_temp_paths = {}  # Map: task_index -> extractor_path
             for i, image_task in enumerate(batch_request.image_tasks):
-                original_temp_paths[i] = image_task.temp_path
-                if image_task.temp_path in gpu_temp_paths:
-                    image_task.temp_path = gpu_temp_paths[image_task.temp_path]
+                # Find the original path that maps to this GPU path
+                gpu_path = image_task.temp_path
+                original_path = None
+                for orig, gpu in gpu_temp_paths.items():
+                    if gpu == gpu_path:
+                        original_path = orig
+                        break
+                original_temp_paths[i] = original_path or gpu_path  # Fallback to GPU path if mapping not found
             
             start_time = time.time()
             compute_type = "GPU"  # Track compute type
@@ -289,30 +371,50 @@ class GPUProcessorWorker:
             # Process batch with GPU interface (now guaranteed to have target valid images)
             recognition_start = time.time()
             self.timing_logger.log_gpu_recognition_start(batch_request.batch_id)
-            face_results = await self.gpu_interface.process_batch(batch_request.image_tasks)
-            recognition_duration = (time.time() - recognition_start) * 1000
             
-            # face_results is always a dict keyed by phash (both GPU and CPU fallback)
-            face_count = sum(len(faces) for faces in face_results.values()) if face_results else 0
+            try:
+                loop = asyncio.get_running_loop()
+                loop_id = id(loop)
+                logger.info(f"[GPU Processor {self.worker_id}] [TRACE] About to call gpu_interface.process_batch() - event loop: id={loop_id}")
+            except RuntimeError:
+                logger.error(f"[GPU Processor {self.worker_id}] [TRACE] About to call gpu_interface.process_batch() - NO event loop!")
             
-            self.timing_logger.log_gpu_recognition_end(batch_request.batch_id, recognition_duration, face_count)
+            logger.info(f"[GPU Processor {self.worker_id}] [TRACE] Accessing gpu_interface property (will create if needed)")
+            gpu_iface = self.gpu_interface
+            logger.info(f"[GPU Processor {self.worker_id}] [TRACE] Got gpu_interface, calling process_batch() with {len(batch_request.image_tasks)} images, batch_id={batch_request.batch_id}")
             
-            # Log GPU results summary for debugging
-            # face_results is now a dict keyed by phash: {phash: [FaceDetection, ...], ...}
-            if face_results:
-                images_with_faces = sum(1 for faces in face_results.values() if faces)
-                total_images = len(face_results)
-                logger.info(f"[GPU Processor {self.worker_id}] GPU batch {batch_request.batch_id} results: "
-                           f"{total_images} images, {images_with_faces} with faces, "
-                           f"{face_count} total faces detected in {recognition_duration:.1f}ms")
-            else:
-                logger.warning(f"[GPU Processor {self.worker_id}] GPU batch {batch_request.batch_id} returned None")
-                logger.debug(f"[GPU Processor {self.worker_id}] DIAG: GPU returned None for batch {batch_request.batch_id}, "
-                           f"checking GPU worker status...")
-            
-            # Check if GPU fallback occurred
-            if not face_results or all(not faces for faces in face_results.values()):
-                compute_type = "CPU (fallback)"
+            try:
+                face_results = await gpu_iface.process_batch(batch_request.image_tasks, batch_id=batch_request.batch_id)
+                recognition_duration = (time.time() - recognition_start) * 1000
+                
+                logger.info(f"[GPU Processor {self.worker_id}] [TRACE] process_batch() completed in {recognition_duration:.1f}ms, results: {len(face_results) if face_results else 0} images")
+                
+                # face_results is always a dict keyed by phash (both GPU and CPU fallback)
+                face_count = sum(len(faces) for faces in face_results.values()) if face_results else 0
+                
+                self.timing_logger.log_gpu_recognition_end(batch_request.batch_id, recognition_duration, face_count)
+                
+                # Log GPU results summary for debugging
+                # face_results is now a dict keyed by phash: {phash: [FaceDetection, ...], ...}
+                if face_results:
+                    images_with_faces = sum(1 for faces in face_results.values() if faces)
+                    total_images = len(face_results)
+                    logger.info(f"[GPU Processor {self.worker_id}] GPU batch {batch_request.batch_id} results: "
+                               f"{total_images} images, {images_with_faces} with faces, "
+                               f"{face_count} total faces detected in {recognition_duration:.1f}ms")
+                else:
+                    logger.warning(f"[GPU Processor {self.worker_id}] GPU batch {batch_request.batch_id} returned None")
+                    logger.debug(f"[GPU Processor {self.worker_id}] DIAG: GPU returned None for batch {batch_request.batch_id}, "
+                               f"checking GPU worker status...")
+                
+                # Check if GPU fallback occurred
+                if not face_results or all(not faces for faces in face_results.values()):
+                    compute_type = "CPU (fallback)"
+            except Exception as e:
+                recognition_duration = (time.time() - recognition_start) * 1000
+                logger.error(f"[GPU Processor {self.worker_id}] Error in process_batch for batch {batch_request.batch_id}: {e}", exc_info=True)
+                # Log error result (gpu_interface should have already logged, but log here too for visibility)
+                face_results = None
             
             # CRITICAL: Restore original temp paths so storage can access extractor files
             # Do this in parallel to avoid blocking
@@ -405,18 +507,28 @@ class GPUProcessorWorker:
                 
                 storage_task, faces_count, is_cached, temp_path_exists = result
                 total_faces_in_batch += faces_count
-                
+
                 if storage_task:
+                    # CRITICAL VALIDATION: Ensure temp file still exists before pushing storage task
+                    # This prevents storage worker from receiving tasks with missing temp files
+                    if not temp_path_exists:
+                        # TEMP FILE MISSING - Potential OS interference or race condition
+                        logger.warning(f"[GPU Processor {self.worker_id}] [OS-INTERFERENCE] Skipping storage task creation: "
+                                     f"temp file missing/disappeared: {image_task.temp_path} for "
+                                     f"{image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
+                                     f"faces={faces_count}, cached={is_cached}")
+                        logger.warning(f"[GPU Processor {self.worker_id}] [OS-INTERFERENCE] DIAG: Temp file race condition detected - "
+                                     f"file existed during GPU processing but missing before storage task push. "
+                                     f"Possible OS temp cleanup or timing issue. "
+                                     f"path={image_task.temp_path}")
+                        # Don't create/push storage task for missing temp files
+                        continue
+
                     storage_tasks_created += 1
-                    
-                    # Check strict_limits before pushing to storage
-                    if self.config.nc_strict_limits:
-                        site_id = image_task.candidate.site_id
-                        if await self.redis.is_site_limit_reached_async(site_id):
-                            logger.debug(f"[GPU Processor {self.worker_id}] Not pushing storage task (site limit reached): {site_id}")
-                            continue
-                    
+
                     # Push to storage queue (non-blocking)
+                    # NOTE: Never block storage tasks - anything that completes GPU processing must be saved
+                    # regardless of site limits (pages or images). This ensures data integrity.
                     pushed = await self.redis.push_storage_task_async(storage_task)
                     if pushed:
                         storage_tasks_pushed += 1
@@ -470,12 +582,19 @@ class GPUProcessorWorker:
             # Log GPU batch end
             batch_duration = (time.time() - batch_start_time) * 1000
             self.timing_logger.log_gpu_batch_end(batch_request.batch_id, batch_duration, processed_count)
+            self._last_batch_completion_time = time.time()
+            self._processing_batch_id = None
+            
+            logger.info(f"[GPU Processor {self.worker_id}] [TRACE] Batch {batch_request.batch_id} fully completed, clearing GPU processing flag")
             await self.redis.clear_gpu_processing_async()
+            logger.info(f"[GPU Processor {self.worker_id}] [TRACE] Batch {batch_request.batch_id} cleanup complete, returning processed_count={processed_count}")
             
             return processed_count
             
         except Exception as e:
             logger.error(f"[GPU Processor {self.worker_id}] Error processing batch {batch_request.batch_id}: {e}")
+            self._last_batch_completion_time = time.time()
+            self._processing_batch_id = None
             await self.redis.clear_gpu_processing_async()
             return 0
         finally:
@@ -515,7 +634,7 @@ class GPUProcessorWorker:
             return False
     
     def _crop_face_from_image(self, image_path: str, face_detection: FaceDetection, 
-                               margin: float = None, face_index: int = -1) -> Optional[bytes]:
+                               margin: float = None, face_index: int = -1) -> Tuple[Optional[bytes], Optional[str]]:
         """Crop face from image using PIL (compute operation - moved from storage_manager)."""
         try:
             from PIL import Image
@@ -527,7 +646,7 @@ class GPUProcessorWorker:
             if not os.path.exists(image_path):
                 logger.warning(f"[GPU Processor {self.worker_id}] DIAG: File not found for cropping face {face_index}: "
                             f"path={image_path}, bbox={face_detection.bbox}")
-                return None
+                return None, "missing_file"
             
             # Load image
             with Image.open(image_path) as img:
@@ -541,7 +660,11 @@ class GPUProcessorWorker:
                 bbox = face_detection.bbox
                 if len(bbox) != 4:
                     logger.warning(f"[GPU Processor {self.worker_id}] Invalid bbox format for face {face_index}: {bbox} (expected 4 values)")
-                    return None
+                    return None, "invalid_bbox"
+                
+                if any((not isinstance(coord, (int, float))) or not math.isfinite(coord) for coord in bbox):
+                    logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Non-finite bbox detected for face {face_index}: {bbox}")
+                    return None, "invalid_bbox"
                 
                 x1, y1, x2, y2 = bbox
                 original_bbox = (x1, y1, x2, y2)
@@ -549,7 +672,7 @@ class GPUProcessorWorker:
                 # Validate bbox format (should be [x1, y1, x2, y2] with x2 > x1, y2 > y1)
                 if x2 <= x1 or y2 <= y1:
                     logger.warning(f"[GPU Processor {self.worker_id}] Invalid bbox (x2 <= x1 or y2 <= y1) for face {face_index}: {bbox}")
-                    return None
+                    return None, "invalid_bbox"
                 
                 # Determine if coordinates are normalized (0-1) or in pixels
                 # Check if ALL coordinates are in 0-1 range AND the bbox size is < 1.0 (normalized)
@@ -587,7 +710,7 @@ class GPUProcessorWorker:
                     logger.warning(f"[GPU Processor {self.worker_id}] DIAG: Invalid bbox after clamping for face {face_index}: "
                                  f"original={original_bbox}, clamped=({x1},{y1},{x2},{y2}), "
                                  f"image_size=({width},{height})")
-                    return None
+                    return None, "invalid_bbox"
                 
                 # Calculate face dimensions BEFORE applying margin
                 face_width = x2 - x1
@@ -597,7 +720,14 @@ class GPUProcessorWorker:
                 if face_width < 1 or face_height < 1:
                     logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Face too small after clamping for face {face_index}: "
                                f"size=({face_width},{face_height}), original={original_bbox}")
-                    return None
+                    return None, "invalid_bbox"
+                
+                min_area = self.config.min_face_size ** 2
+                face_area = face_width * face_height
+                if face_area < min_area:
+                    logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Face area below threshold for face {face_index}: "
+                               f"area={face_area}, min_area={min_area}, bbox={original_bbox}")
+                    return None, "invalid_bbox"
                 
                 # Margin should be 0.2 (20%) of face dimensions for tight crop
                 margin_x = int(face_width * margin)
@@ -614,14 +744,14 @@ class GPUProcessorWorker:
                     logger.warning(f"[GPU Processor {self.worker_id}] DIAG: Invalid face bounds after margin for face {face_index}: "
                                  f"original_bbox={original_bbox}, final=({x1}, {y1}, {x2}, {y2}), "
                                  f"image_size=({width},{height}), margin={margin}")
-                    return None
+                    return None, "invalid_bbox"
                 
                 final_size = (x2 - x1, y2 - y1)
                 if x2 - x1 < self.config.min_face_size or y2 - y1 < self.config.min_face_size:
                     logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Skipping tiny face {face_index}: "
                                f"size={final_size} < min={self.config.min_face_size}, "
                                f"bbox={original_bbox}")
-                    return None
+                    return None, "invalid_bbox"
 
                 # Crop the face
                 face_crop = img.crop((x1, y1, x2, y2))
@@ -632,12 +762,12 @@ class GPUProcessorWorker:
                 crop_size = len(output.getvalue())
                 logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Successfully cropped face {face_index}: "
                            f"size={final_size}, crop_bytes={crop_size}, bbox={original_bbox}")
-                return output.getvalue()
+                return output.getvalue(), None
                 
         except Exception as e:
             logger.warning(f"[GPU Processor {self.worker_id}] DIAG: Exception cropping face {face_index} from "
                          f"{image_path}: {e}, bbox={face_detection.bbox}", exc_info=True)
-            return None
+            return None, "exception"
     
     async def _crop_faces(self, image_task: ImageTask, 
                          face_detections: List[FaceDetection]) -> List[bytes]:
@@ -659,7 +789,7 @@ class GPUProcessorWorker:
                 self._crop_face_from_image, 
                 image_task.temp_path, 
                 face_detection,
-                face_idx  # Pass face index for better logging
+                face_index=face_idx  # Pass face index for better logging
             )
             crop_tasks.append(task)
         
@@ -670,26 +800,38 @@ class GPUProcessorWorker:
         failed_count = 0
         exception_count = 0
         none_count = 0
+        invalid_bbox_count = 0
         
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 exception_count += 1
                 logger.warning(f"[GPU Processor {self.worker_id}] Exception cropping face {i} from "
                             f"{image_task.phash[:8] if image_task.phash else 'NO_PHASH'}...: {result}")
-            elif result is None:
-                none_count += 1
-                logger.debug(f"[GPU Processor {self.worker_id}] Crop returned None for face {i} from "
-                           f"{image_task.phash[:8] if image_task.phash else 'NO_PHASH'}... "
-                           f"(bbox={face_detections[i].bbox if i < len(face_detections) else 'N/A'})")
             else:
-                face_crops.append(result)
+                crop_bytes, failure_reason = result
+                if crop_bytes is None:
+                    none_count += 1
+                    if failure_reason == "invalid_bbox":
+                        invalid_bbox_count += 1
+                    logger.debug(
+                        f"[GPU Processor {self.worker_id}] Crop returned None for face {i} "
+                        f"from {image_task.phash[:8] if image_task.phash else 'NO_PHASH'}... "
+                        f"(reason={failure_reason}, bbox={face_detections[i].bbox if i < len(face_detections) else 'N/A'})"
+                    )
+                else:
+                    face_crops.append(crop_bytes)
         
         failed_count = exception_count + none_count
         
         if failed_count > 0:
             logger.warning(f"[GPU Processor {self.worker_id}] Crop results for {image_task.phash[:8] if image_task.phash else 'NO_PHASH'}...: "
                          f"{len(face_crops)}/{len(face_detections)} succeeded, "
-                         f"{failed_count} failed ({exception_count} exceptions, {none_count} None)")
+                         f"{failed_count} failed ({exception_count} exceptions, {none_count} None, "
+                         f"{invalid_bbox_count} invalid_bbox)")
+        
+        if invalid_bbox_count > 0:
+            logger.info(f"[GPU Processor {self.worker_id}] Skipped {invalid_bbox_count}/{len(face_detections)} faces "
+                       f"due to invalid or undersized bounding boxes for {image_task.phash[:8] if image_task.phash else 'NO_PHASH'}")
         
         return face_crops
     
@@ -810,9 +952,47 @@ class GPUProcessorWorker:
         self._last_idle_log_time: float = 0.0
         self._idle_log_interval: float = 2.0  # Log every 2 seconds during idle time
         self._last_batch_start_time: Optional[float] = None
+        self._last_batch_completion_time: Optional[float] = None
+        
+        # Heartbeat tracking
+        self._last_heartbeat_time: float = 0.0
+        self._heartbeat_interval: float = 8.0  # Log heartbeat every 8 seconds
+        self._processing_batch_id: Optional[str] = None  # Track current batch being processed
         
         while self.running:
             try:
+                # Periodic heartbeat logging (every 8 seconds)
+                current_time = time.time()
+                time_since_heartbeat = current_time - self._last_heartbeat_time
+                if time_since_heartbeat >= self._heartbeat_interval:
+                    queue_depth = await self._get_queue_depth_cached('gpu:inbox')
+                    staging_count = len(self.scheduler._staging) if hasattr(self.scheduler, '_staging') else 0
+                    inflight_count = len(self.scheduler._inflight) if hasattr(self.scheduler, '_inflight') else 0
+                    
+                    # Determine state
+                    if self._processing_batch_id is not None:
+                        state = "PROCESSING_BATCH"
+                    elif staging_count > 0 or inflight_count > 0:
+                        state = "WAITING_FOR_BATCH"
+                    else:
+                        state = "IDLE"
+                    
+                    # Calculate time since last batch
+                    time_since_last_batch = None
+                    if self._last_batch_completion_time is not None:
+                        time_since_last_batch = current_time - self._last_batch_completion_time
+                    elif self._last_batch_start_time is not None:
+                        time_since_last_batch = current_time - self._last_batch_start_time
+                    
+                    last_batch_str = f"{time_since_last_batch:.1f}s ago" if time_since_last_batch is not None else "N/A"
+                    batch_id_str = f", batch_id={self._processing_batch_id}" if self._processing_batch_id else ""
+                    
+                    logger.info(f"[GPU-Processor-{self.worker_id}] HEARTBEAT: state={state}{batch_id_str}, "
+                               f"inbox_depth={queue_depth}, staging={staging_count}, inflight={inflight_count}, "
+                               f"last_batch_finished={last_batch_str}")
+                    
+                    self._last_heartbeat_time = current_time
+                
                 # Keep staging warm by feeding items from Redis
                 added = self.scheduler.feed()
                 
@@ -867,6 +1047,11 @@ class GPUProcessorWorker:
                 # Build a batch if it's time
                 batch_tasks = self.scheduler.next_batch(force_flush=force_flush)
                 if not batch_tasks:
+                    # Log why no batch was returned (for debugging)
+                    staging_count = len(self.scheduler._staging) if hasattr(self.scheduler, '_staging') else 0
+                    inflight_count = len(self.scheduler._inflight) if hasattr(self.scheduler, '_inflight') else 0
+                    logger.debug(f"[GPU Processor {self.worker_id}] [TRACE] next_batch() returned None: "
+                               f"staging={staging_count}, inflight={inflight_count}, force_flush={force_flush}")
                     # Worker is idle - log periodic state updates
                     current_time = time.time()
                     time_since_last_idle_log = current_time - self._last_idle_log_time
@@ -957,16 +1142,25 @@ class GPUProcessorWorker:
                     self._last_batch_completion_time = time.time()
                     self._last_batch_start_time = None  # Reset since batch is done
                     
+                    # Use cached queue depth for logging to reduce Redis calls
+                    queue_depth = await self._get_queue_depth_cached('gpu:inbox')
+                    staging_count = len(self.scheduler._staging) if hasattr(self.scheduler, '_staging') else 0
+                    inflight_count = len(self.scheduler._inflight) if hasattr(self.scheduler, '_inflight') else 0
+                    
+                    logger.info(f"[GPU Processor {self.worker_id}] [TRACE] Batch {batch_id} finished processing: "
+                               f"duration={batch_duration:.2f}s, processed={processed_count}, "
+                               f"queue_depth={queue_depth}, staging={staging_count}, inflight={inflight_count}")
+                    
                     if self.config.nc_diagnostic_logging:
-                        # Use cached queue depth for logging to reduce Redis calls
-                        queue_depth = await self._get_queue_depth_cached('gpu:inbox')
                         logger.debug(f"[GPU-PROC-DIAG-{self.worker_id}] Batch {batch_id} completed: "
                                   f"processed={processed_count}, time_since_start={batch_duration:.1f}s, "
-                                  f"staging={len(self.scheduler._staging)}, queue_depth={queue_depth}")
+                                  f"staging={staging_count}, queue_depth={queue_depth}")
                         self._queue_depths.append(queue_depth)
                     
                     # Reset idle log timer so we get immediate feedback if worker goes idle
                     self._last_idle_log_time = 0.0
+                    
+                    logger.info(f"[GPU Processor {self.worker_id}] [TRACE] Returning to main loop, will check for next batch")
                     
                     # Log progress periodically
                     if self.processed_batches % 10 == 0:

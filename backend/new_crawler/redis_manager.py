@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from .config import get_config
 from .data_structures import (
-    SiteTask, CandidateImage, ImageTask, FaceResult, 
+    SiteTask, CandidateImage, ImageTask, ImageMetadata, FaceResult,
     BatchRequest, QueueMetrics, TaskStatus, StorageTask
 )
 
@@ -190,19 +190,6 @@ class RedisManager:
             logger.error(f"Redis pop error: {e}")
             return None
     
-    def push_candidate(self, candidate: CandidateImage) -> bool:
-        """Push candidate image to candidates queue."""
-        try:
-            client = self._get_client()
-            queue_name = self.config.get_queue_name('candidates')
-            data = self._serialize(candidate)
-            result = client.rpush(queue_name, data)
-            logger.debug(f"Pushed candidate to queue: {candidate.img_url}")
-            return bool(result)
-        except redis.RedisError as e:
-            logger.error(f"Redis push error: {e}")
-            return False
-    
     async def push_candidate_async(self, candidate: CandidateImage) -> bool:
         """Push candidate image to candidates queue (async version)."""
         try:
@@ -286,19 +273,6 @@ class RedisManager:
             logger.error(f"Redis pop error: {e}")
             return None
     
-    def push_face_result(self, face_result: FaceResult) -> bool:
-        """Push face result to results queue."""
-        try:
-            client = self._get_client()
-            queue_name = self.config.get_queue_name('results')
-            data = self._serialize(face_result)
-            result = client.rpush(queue_name, data)
-            logger.debug(f"Pushed face result to queue: {face_result.image_task.candidate.img_url}")
-            return bool(result)
-        except redis.RedisError as e:
-            logger.error(f"Redis push error: {e}")
-            return False
-    
     async def push_face_result_async(self, face_result: FaceResult) -> bool:
         """Push face result to results queue (async version)."""
         try:
@@ -335,19 +309,6 @@ class RedisManager:
             return None
     
     # Storage Queue Operations
-    
-    def push_storage_task(self, storage_task: StorageTask) -> bool:
-        """Push storage task to storage queue."""
-        try:
-            client = self._get_client()
-            queue_name = self.config.get_queue_name('storage')
-            data = self._serialize(storage_task)
-            result = client.rpush(queue_name, data)
-            logger.debug(f"Pushed storage task to queue: {storage_task.image_task.phash[:8]}...")
-            return bool(result)
-        except redis.RedisError as e:
-            logger.error(f"Redis push storage task error: {e}")
-            return False
     
     async def push_storage_task_async(self, storage_task: StorageTask) -> bool:
         """Push storage task to storage queue (async version)."""
@@ -559,7 +520,99 @@ class RedisManager:
             Deserialized ImageTask
         """
         return self._deserialize(data, ImageTask)
-    
+
+    def serialize_image_metadata(self, metadata: ImageMetadata) -> bytes:
+        """
+        Serialize ImageMetadata to bytes.
+
+        Args:
+            metadata: ImageMetadata to serialize
+
+        Returns:
+            Serialized bytes
+        """
+        return self._serialize(metadata)
+
+    def deserialize_image_metadata(self, data: bytes) -> ImageMetadata:
+        """
+        Deserialize bytes to ImageMetadata.
+
+        Args:
+            data: Serialized bytes
+
+        Returns:
+            Deserialized ImageMetadata
+        """
+        return self._deserialize(data, ImageMetadata)
+
+    # Binary Data Storage (for Redis binary queues)
+
+    async def set_binary(self, key: str, data: bytes) -> bool:
+        """
+        Store binary data in Redis.
+
+        Args:
+            key: Redis key for the binary data
+            data: Binary data to store
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            client = await self._get_async_client()
+            result = await client.set(key, data)
+            logger.debug(f"[REDIS-BINARY] Stored {len(data)} bytes at key: {key}")
+            return result is True
+        except Exception as e:
+            logger.error(f"[REDIS-BINARY] Failed to store binary data at key {key}: {e}")
+            return False
+
+    async def get_binary(self, key: str) -> Optional[bytes]:
+        """
+        Retrieve binary data from Redis.
+
+        Args:
+            key: Redis key for the binary data
+
+        Returns:
+            Binary data if found, None otherwise
+        """
+        try:
+            client = await self._get_async_client()
+            data = await client.get(key)
+            if data is not None:
+                logger.debug(f"[REDIS-BINARY] Retrieved {len(data)} bytes from key: {key}")
+                return data
+            else:
+                logger.warning(f"[REDIS-BINARY] No data found for key: {key}")
+                return None
+        except Exception as e:
+            logger.error(f"[REDIS-BINARY] Failed to retrieve binary data from key {key}: {e}")
+            return None
+
+    async def delete_binary(self, key: str) -> bool:
+        """
+        Delete binary data from Redis.
+
+        Args:
+            key: Redis key for the binary data
+
+        Returns:
+            True if key was deleted, False otherwise
+        """
+        try:
+            client = await self._get_async_client()
+            result = await client.delete(key)
+            if result > 0:
+                logger.debug(f"[REDIS-BINARY] Deleted binary data at key: {key}")
+                return True
+            else:
+                logger.warning(f"[REDIS-BINARY] No binary data found to delete at key: {key}")
+                return False
+        except Exception as e:
+            logger.error(f"[REDIS-BINARY] Failed to delete binary data at key {key}: {e}")
+            return False
+
     # Queue Monitoring
     
     def get_queue_depth(self, queue_type: str) -> int:
@@ -809,17 +862,6 @@ class RedisManager:
             logger.error(f"Failed to check cache key {key}: {e}")
             return False
     
-    def url_seen(self, url: str) -> bool:
-        """Check if URL has been seen (for deduplication)."""
-        try:
-            client = self._get_client()
-            key = "candidates:urls_seen"
-            normalized_url = self._normalize_url(url)
-            return bool(client.sismember(key, normalized_url))
-        except redis.RedisError as e:
-            logger.error(f"Redis url_seen error: {e}")
-            return False
-    
     async def url_seen_async(self, url: str) -> bool:
         """Check if URL has been seen (async version)."""
         try:
@@ -829,20 +871,6 @@ class RedisManager:
             return bool(await client.sismember(key, normalized_url))
         except redis.RedisError as e:
             logger.error(f"Redis url_seen_async error: {e}")
-            return False
-    
-    def mark_url_seen(self, url: str, ttl_seconds: int = None) -> bool:
-        """Mark URL as seen (for deduplication)."""
-        try:
-            client = self._get_client()
-            key = "candidates:urls_seen"
-            normalized_url = self._normalize_url(url)
-            client.sadd(key, normalized_url)
-            if ttl_seconds:
-                client.expire(key, ttl_seconds)
-            return True
-        except redis.RedisError as e:
-            logger.error(f"Redis mark_url_seen error: {e}")
             return False
     
     async def mark_url_seen_async(self, url: str, ttl_seconds: int = None) -> bool:
@@ -974,19 +1002,6 @@ class RedisManager:
             }
     
     # Statistics Operations
-    
-    def update_site_stats(self, site_id: str, stats_update: Dict[str, int]) -> bool:
-        """Update site statistics in Redis."""
-        try:
-            client = self._get_client()
-            key = f"stats:{site_id}"
-            for field, value in stats_update.items():
-                client.hincrby(key, field, value)
-            logger.debug(f"Updated stats for site {site_id}: {stats_update}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to update stats for site {site_id}: {e}")
-            return False
     
     async def update_site_stats_async(self, site_id: str, stats_update: Dict[str, Any]) -> bool:
         """Update site statistics in Redis (async)."""
@@ -1226,16 +1241,6 @@ class RedisManager:
             return False
 
     # Site limit flags
-    def set_site_limit_reached(self, site_id: str) -> bool:
-        try:
-            client = self._get_client()
-            key = f"{self._site_limit_flag_prefix}{site_id}"
-            client.set(key, 1)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to set site limit flag for {site_id}: {e}")
-            return False
-
     async def set_site_limit_reached_async(self, site_id: str) -> bool:
         try:
             client = await self._get_async_client()
@@ -1244,14 +1249,6 @@ class RedisManager:
             return True
         except Exception as e:
             logger.error(f"Failed to set site limit flag for {site_id} (async): {e}")
-            return False
-
-    def is_site_limit_reached(self, site_id: str) -> bool:
-        try:
-            client = self._get_client()
-            key = f"{self._site_limit_flag_prefix}{site_id}"
-            return bool(client.exists(key))
-        except Exception:
             return False
 
     async def is_site_limit_reached_async(self, site_id: str) -> bool:
@@ -1274,16 +1271,6 @@ class RedisManager:
             return False
 
     # Queue clearing helpers
-    def clear_queue(self, queue_type: str) -> bool:
-        try:
-            client = self._get_client()
-            qn = self.config.get_queue_name(queue_type)
-            client.delete(qn)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to clear queue {queue_type}: {e}")
-            return False
-
     async def clear_queue_async(self, queue_type: str) -> bool:
         try:
             client = await self._get_async_client()
@@ -1298,7 +1285,7 @@ class RedisManager:
     def _get_site_queue_counter_key(self, site_id: str, queue_type: str) -> str:
         """Get Redis key for site queue counter."""
         return f"nc:site:queue:{site_id}:{queue_type}"
-    
+
     def increment_site_queue_counter(self, site_id: str, queue_type: str, count: int = 1) -> bool:
         """Increment counter for items from a site in a queue."""
         try:
@@ -1320,7 +1307,7 @@ class RedisManager:
         except Exception as e:
             logger.error(f"Failed to increment site queue counter for {site_id}:{queue_type} (async): {e}")
             return False
-    
+
     def decrement_site_queue_counter(self, site_id: str, queue_type: str, count: int = 1) -> bool:
         """Decrement counter for items from a site in a queue."""
         try:
@@ -1359,17 +1346,6 @@ class RedisManager:
             logger.error(f"Failed to decrement site queue counter for {site_id}:{queue_type} (async): {e}")
             return False
     
-    def get_site_queue_counter(self, site_id: str, queue_type: str) -> int:
-        """Get current counter value for items from a site in a queue."""
-        try:
-            client = self._get_client()
-            key = self._get_site_queue_counter_key(site_id, queue_type)
-            value = client.get(key)
-            return int(value) if value else 0
-        except Exception as e:
-            logger.error(f"Failed to get site queue counter for {site_id}:{queue_type}: {e}")
-            return 0
-    
     async def get_site_queue_counter_async(self, site_id: str, queue_type: str) -> int:
         """Get current counter value for items from a site in a queue (async)."""
         try:
@@ -1380,23 +1356,6 @@ class RedisManager:
         except Exception as e:
             logger.error(f"Failed to get site queue counter for {site_id}:{queue_type} (async): {e}")
             return 0
-    
-    def clear_site_queue_counters(self, site_id: str) -> bool:
-        """Clear all queue counters for a site."""
-        try:
-            client = self._get_client()
-            # Clear counters for all known queue types
-            queue_types = ['candidates', 'images', 'storage']
-            for queue_type in queue_types:
-                key = self._get_site_queue_counter_key(site_id, queue_type)
-                client.delete(key)
-            # Also clear gpu:inbox counter
-            gpu_key = self._get_site_queue_counter_key(site_id, 'gpu:inbox')
-            client.delete(gpu_key)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to clear site queue counters for {site_id}: {e}")
-            return False
     
     async def clear_site_queue_counters_async(self, site_id: str) -> bool:
         """Clear all queue counters for a site (async)."""
@@ -1431,72 +1390,6 @@ class RedisManager:
         except Exception as e:
             logger.debug(f"Failed to extract site_id from item: {e}")
             return None
-    
-    def remove_site_items_from_queue(self, queue_type: str, site_id: str) -> int:
-        """Remove all items for a specific site from a queue. Returns number of items removed."""
-        if not self.config.nc_strict_limits:
-            return 0
-        
-        try:
-            client = self._get_client()
-            # Get queue name (handle special case for gpu:inbox)
-            if queue_type == 'gpu:inbox':
-                queue_name = 'gpu:inbox'
-            else:
-                queue_name = self.config.get_queue_name(queue_type)
-            
-            # Get current queue length
-            queue_length = client.llen(queue_name)
-            if queue_length == 0:
-                return 0
-            
-            # Pop all items, filter, and push back non-matching items
-            items_to_keep = []
-            items_removed = 0
-            
-            # Process in batches to avoid memory issues
-            batch_size = 100
-            processed = 0
-            
-            while processed < queue_length:
-                # Pop a batch of items
-                batch = []
-                for _ in range(min(batch_size, queue_length - processed)):
-                    item = client.rpop(queue_name)
-                    if item is None:
-                        break
-                    batch.append(item)
-                
-                if not batch:
-                    break
-                
-                # Filter batch
-                for item in batch:
-                    item_site_id = self._extract_site_id_from_item(item, queue_type)
-                    if item_site_id == site_id:
-                        items_removed += 1
-                    else:
-                        items_to_keep.append(item)
-                
-                processed += len(batch)
-            
-            # Push back items to keep (in reverse order to maintain FIFO)
-            if items_to_keep:
-                # Reverse to maintain order (rpush in reverse order)
-                items_to_keep.reverse()
-                for item in items_to_keep:
-                    client.lpush(queue_name, item)
-            
-            # Update counter
-            if items_removed > 0:
-                self.decrement_site_queue_counter(site_id, queue_type, items_removed)
-            
-            logger.info(f"Removed {items_removed} items for site {site_id} from {queue_type} queue")
-            return items_removed
-            
-        except Exception as e:
-            logger.error(f"Failed to remove site items from queue {queue_type} for {site_id}: {e}")
-            return 0
     
     async def remove_site_items_from_queue_async(self, queue_type: str, site_id: str) -> int:
         """Remove all items for a specific site from a queue (async). Returns number of items removed."""

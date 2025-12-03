@@ -402,9 +402,12 @@ def _log_metrics_summary():
         _batch_metrics['interlaunch_times'] = []
         _batch_metrics['max_inflight'] = 0
 
-def _detect_faces_batch(images: List[np.ndarray], min_quality: float = 0.5) -> List[List[FaceDetection]]:
+def _detect_faces_batch(images: List[np.ndarray], min_quality: float) -> List[List[FaceDetection]]:
     """Detect faces in a batch of images."""
     global _batched_detector, _batched_detector_enabled, _batch_metrics, _metrics_lock, _detect_min_launch_ms, _last_summary_time
+    
+    if min_quality is None:
+        raise ValueError("min_quality must be provided")
     
     batch_start_time = time.perf_counter()
     batch_size = len(images)
@@ -645,7 +648,7 @@ async def health_check():
 async def detect_faces_batch_multipart(
     images: List[UploadFile] = File(...),
     image_hashes: str = Form(...),
-    min_face_quality: float = Form(0.5),
+    min_face_quality: float = Form(...),
     require_face: bool = Form(False),
     crop_faces: bool = Form(True),
     face_margin: float = Form(0.2)
@@ -657,8 +660,11 @@ async def detect_faces_batch_multipart(
     Results are keyed by phash for reliable linkage.
     """
     start_time = time.time()
+    batch_id = f"api_{int(start_time * 1000)}"
     
     try:
+        # Log request start
+        logger.info(f"[GPU-WORKER-API] REQUEST-START: batch_id={batch_id}, image_count={len(images)}, timestamp={start_time:.3f}")
         # Parse image_hashes JSON
         try:
             hash_mapping = json.loads(image_hashes)
@@ -729,23 +735,31 @@ async def detect_faces_batch_multipart(
         # Calculate additional metrics
         total_faces = sum(len(f) for f in results_dict.values())
         avg_faces_per_image = total_faces / len(decoded_images) if decoded_images else 0
+        gpu_used = _check_actual_gpu_usage()
         
         logger.info(f"[MULTIPART-BATCH] processed={len(decoded_images)} images, "
                    f"results={len(results_dict)}, faces={total_faces} "
                    f"(avg={avg_faces_per_image:.2f}/img), "
                    f"time={processing_time:.1f}ms ({processing_time/len(decoded_images):.2f}ms/img), "
-                   f"gpu_used={_check_actual_gpu_usage()}")
+                   f"gpu_used={gpu_used}")
+        
+        # Log request complete
+        logger.info(f"[GPU-WORKER-API] REQUEST-COMPLETE: batch_id={batch_id}, images={len(decoded_images)}, "
+                   f"faces={total_faces}, duration_ms={processing_time:.1f}, status=200, gpu_used={gpu_used}")
         
         return BatchResponsePhash(
             results=results_dict,
             processing_time_ms=processing_time,
-            gpu_used=_check_actual_gpu_usage()
+            gpu_used=gpu_used
         )
         
-    except HTTPException:
+    except HTTPException as e:
+        duration_ms = (time.time() - start_time) * 1000
+        logger.error(f"[GPU-WORKER-API] REQUEST-ERROR: batch_id={batch_id}, error={str(e)}, duration_ms={duration_ms:.1f}")
         raise
     except Exception as e:
-        logger.error(f"Error in detect_faces_batch_multipart: {e}", exc_info=True)
+        duration_ms = (time.time() - start_time) * 1000
+        logger.error(f"[GPU-WORKER-API] REQUEST-ERROR: batch_id={batch_id}, error={str(e)}, duration_ms={duration_ms:.1f}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

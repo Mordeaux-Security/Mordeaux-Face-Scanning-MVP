@@ -1,0 +1,625 @@
+Attaching to new-crawler-1
+new-crawler-1  | 2025-12-03 23:13:48,214 - new_crawler.config - INFO - Validating crawler configuration...
+new-crawler-1  | 2025-12-03 23:13:48,228 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+new-crawler-1  | 2025-12-03 23:13:48,229 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+new-crawler-1  | 2025-12-03 23:13:48,229 - new_crawler.config - INFO - Configuration validated: crawlers=1, extractors=2, gpu_processors=1
+new-crawler-1  | 2025-12-03 23:13:48,229 - new_crawler.config - INFO - === New Crawler Configuration ===
+new-crawler-1  | 2025-12-03 23:13:48,230 - new_crawler.config - INFO - Environment: development
+new-crawler-1  | 2025-12-03 23:13:48,230 - new_crawler.config - INFO - Log Level: error
+new-crawler-1  | 2025-12-03 23:13:48,230 - new_crawler.config - INFO - Docker: True
+new-crawler-1  | 2025-12-03 23:13:48,230 - new_crawler.config - INFO - Windows: False
+new-crawler-1  | 2025-12-03 23:13:48,230 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+new-crawler-1  | 2025-12-03 23:13:48,231 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+new-crawler-1  | 2025-12-03 23:13:48,231 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+new-crawler-1  | 2025-12-03 23:13:48,231 - new_crawler.config - INFO - Batch Size: 256
+new-crawler-1  | 2025-12-03 23:13:48,231 - new_crawler.config - INFO - GPU Min Batch Size: 64
+new-crawler-1  | 2025-12-03 23:13:48,231 - new_crawler.config - INFO - Max Queue Depth: 128
+new-crawler-1  | 2025-12-03 23:13:48,232 - new_crawler.config - INFO - Extractor Concurrency: 16
+new-crawler-1  | 2025-12-03 23:13:48,232 - new_crawler.config - INFO - Max Concurrent Sites per Worker: 2
+new-crawler-1  | 2025-12-03 23:13:48,232 - new_crawler.config - INFO - Max Concurrent Batches per Worker: 2
+new-crawler-1  | 2025-12-03 23:13:48,232 - new_crawler.config - INFO - Batch Flush Timeout: 5.0s
+new-crawler-1  | 2025-12-03 23:13:48,232 - new_crawler.config - INFO - Use 3x3 Mining: True
+new-crawler-1  | 2025-12-03 23:13:48,232 - new_crawler.config - INFO - Max Selector Patterns: 30
+new-crawler-1  | 2025-12-03 23:13:48,233 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+new-crawler-1  | 2025-12-03 23:13:48,233 - new_crawler.config - INFO - GPU Timeout: 60.0s
+new-crawler-1  | 2025-12-03 23:13:48,233 - new_crawler.config - INFO - JS Wait Strategy: fixed
+new-crawler-1  | 2025-12-03 23:13:48,233 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+new-crawler-1  | 2025-12-03 23:13:48,233 - new_crawler.config - INFO - JS Network Idle Timeout: 30.0s
+new-crawler-1  | 2025-12-03 23:13:48,234 - new_crawler.config - INFO - Extract Background Images: True
+new-crawler-1  | 2025-12-03 23:13:48,234 - new_crawler.config - INFO - Extract Srcset Images: True
+new-crawler-1  | 2025-12-03 23:13:48,234 - new_crawler.config - INFO - Extract Data Attributes: True
+new-crawler-1  | 2025-12-03 23:13:48,235 - new_crawler.config - INFO - Same Origin Redirects Only: True
+new-crawler-1  | 2025-12-03 23:13:48,236 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+new-crawler-1  | 2025-12-03 23:13:48,236 - new_crawler.config - INFO - Realistic Headers: True
+new-crawler-1  | 2025-12-03 23:13:48,236 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+new-crawler-1  | 2025-12-03 23:13:48,237 - new_crawler.config - INFO - Capture Network Images: True
+new-crawler-1  | 2025-12-03 23:13:48,237 - new_crawler.config - INFO - Extract Script Images: True
+new-crawler-1  | 2025-12-03 23:13:48,238 - new_crawler.config - INFO - Extract Noscript Images: True
+new-crawler-1  | 2025-12-03 23:13:48,239 - new_crawler.config - INFO - Extract JSON-LD Images: True
+new-crawler-1  | 2025-12-03 23:13:48,241 - new_crawler.config - INFO - Cache TTL: 90 days
+new-crawler-1  | 2025-12-03 23:13:48,242 - new_crawler.config - INFO - ================================
+new-crawler-1  | 2025-12-03 23:13:48,243 - __main__ - INFO - Loaded 2 sites from sites.txt
+new-crawler-1  | 2025-12-03 23:13:48,246 - __main__ - INFO - Starting crawl of 2 sites
+new-crawler-1  | 2025-12-03 23:13:48,247 - __main__ - INFO - Performing system health check...
+new-crawler-1  | 2025-12-03 23:13:48,251 - new_crawler.redis_manager - INFO - Redis connection successful
+new-crawler-1  | 2025-12-03 23:13:48,252 - __main__ - INFO - Redis: ✓
+new-crawler-1  | 2025-12-03 23:13:48,254 - __main__ - INFO - Cache: ✓
+new-crawler-1  | 2025-12-03 23:13:48,518 - __main__ - INFO - Storage: ✓
+new-crawler-1  | 2025-12-03 23:13:48,519 - new_crawler.gpu_interface - INFO - [GPU-INTERFACE] [TRACE] Creating httpx.AsyncClient - event loop exists: id=281472803534608
+new-crawler-1  | 2025-12-03 23:13:48,520 - new_crawler.gpu_interface - INFO - [GPU-INTERFACE] [TRACE] Instantiating httpx.AsyncClient with base_url=http://host.docker.internal:8765
+new-crawler-1  | 2025-12-03 23:13:48,540 - new_crawler.gpu_interface - INFO - [GPU-INTERFACE] [TRACE] httpx.AsyncClient created successfully, bound to event loop: id=281472803534608
+new-crawler-1  | 2025-12-03 23:13:48,604 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+new-crawler-1  | 2025-12-03 23:13:48,605 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+new-crawler-1  | 2025-12-03 23:13:48,605 - __main__ - INFO - GPU Worker: ✓
+new-crawler-1  | 2025-12-03 23:13:48,605 - __main__ - INFO - ✓ All systems healthy
+new-crawler-1  | 2025-12-03 23:13:48,607 - new_crawler.orchestrator - INFO - Starting crawl of 2 sites
+new-crawler-1  | 2025-12-03 23:13:48,608 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+new-crawler-1  | 2025-12-03 23:13:48,608 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+new-crawler-1  | 2025-12-03 23:13:48,609 - new_crawler.orchestrator - INFO - Pushing 2 sites to crawl queue
+new-crawler-1  | 2025-12-03 23:13:48,610 - new_crawler.orchestrator - INFO - Successfully pushed 2 sites to queue
+new-crawler-1  | 2025-12-03 23:13:48,611 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+new-crawler-1  | 2025-12-03 23:13:48,611 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+new-crawler-1  | 2025-12-03 23:13:48,611 - new_crawler.orchestrator - INFO - Starting worker processes...
+new-crawler-1  | 2025-12-03 23:13:48,638 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 16)
+new-crawler-1  | 2025-12-03 23:13:48,652 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 17)
+new-crawler-1  | 2025-12-03 23:13:48,659 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 18)
+new-crawler-1  | 2025-12-03 23:13:48,669 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 19)
+new-crawler-1  | 2025-12-03 23:13:48,679 - new_crawler.orchestrator - INFO - Started storage worker 0 (PID: 20)
+new-crawler-1  | 2025-12-03 23:13:48,681 - new_crawler.orchestrator - INFO - Started 1 crawlers, 2 extractors, 1 GPU processors, 1 storage workers
+new-crawler-1  | 2025-12-03 23:13:48,706 - Storage-0 - INFO - [STORAGE-0] Starting storage worker
+new-crawler-1  | 2025-12-03 23:13:48,728 - GPU-Processor-0 - INFO - [GPU Processor 0] Starting GPU processor worker process
+new-crawler-1  | 2025-12-03 23:13:48,733 - GPU-Processor-0 - INFO - [GPU Processor 0] Starting GPU processor worker with scheduler
+new-crawler-1  | 2025-12-03 23:13:48,746 - GPU-Processor-0 - INFO - [GPU-Processor-0] HEARTBEAT: state=IDLE, inbox_depth=0, staging=0, inflight=0, last_batch_finished=N/A
+new-crawler-1  | 2025-12-03 23:13:48,896 - Extractor-1 - INFO - [Extractor 1] Starting extractor worker process
+new-crawler-1  | 2025-12-03 23:13:48,896 - Crawler-0 - INFO - [Crawler 0] Starting crawler worker process
+new-crawler-1  | 2025-12-03 23:13:48,896 - Extractor-1 - INFO - [Extractor 1] Concurrency: 8 per worker (total: 16 across 2 workers)
+new-crawler-1  | 2025-12-03 23:13:48,897 - Extractor-0 - INFO - [Extractor 0] Starting extractor worker process
+new-crawler-1  | 2025-12-03 23:13:48,897 - Extractor-0 - INFO - [Extractor 0] Concurrency: 8 per worker (total: 16 across 2 workers)
+new-crawler-1  | 2025-12-03 23:13:48,898 - Extractor-1 - INFO - [Extractor 1] Using temp directory: /tmp/extractor_1_7oybs1lp
+new-crawler-1  | 2025-12-03 23:13:48,898 - Extractor-0 - INFO - [Extractor 0] Using temp directory: /tmp/extractor_0_e3rarjkb
+new-crawler-1  | 2025-12-03 23:13:48,899 - Crawler-0 - INFO - [Crawler 0] Starting worker with concurrent site processing
+new-crawler-1  | 2025-12-03 23:13:48,899 - Extractor-1 - INFO - [Extractor 1] Starting extractor worker
+new-crawler-1  | 2025-12-03 23:13:48,900 - Extractor-0 - INFO - [Extractor 0] Starting extractor worker
+new-crawler-1  | 2025-12-03 23:13:48,903 - Crawler-0 - INFO - [Crawler 0] Started site site_0001 (1/2 active)
+new-crawler-1  | 2025-12-03 23:13:48,905 - Crawler-0 - INFO - Starting 3x3 crawl for https://www.instagram.com (max_pages=10)
+new-crawler-1  | 2025-12-03 23:13:48,905 - Crawler-0 - INFO - [3x3-SAMPLE] Fetching base page: https://www.instagram.com
+new-crawler-1  | 2025-12-03 23:13:48,916 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:49,007 - Crawler-0 - INFO - [Crawler 0] Started site site_0000 (2/2 active)
+new-crawler-1  | 2025-12-03 23:13:49,008 - Crawler-0 - INFO - Starting 3x3 crawl for https://www.facebook.com (max_pages=10)
+new-crawler-1  | 2025-12-03 23:13:49,009 - Crawler-0 - INFO - [3x3-SAMPLE] Fetching base page: https://www.facebook.com
+new-crawler-1  | 2025-12-03 23:13:49,018 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:49,286 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=539.4
+new-crawler-1  | 2025-12-03 23:13:49,290 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=N/A, processed=0 batches, 0 images
+new-crawler-1  | 2025-12-03 23:13:49,574 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:49,575 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:49,751 - Crawler-0 - INFO - HTTP found only 0 images for https://www.facebook.com, trying JS rendering
+new-crawler-1  | 2025-12-03 23:13:49,751 - Crawler-0 - INFO - [JS-FETCH] Initializing browser pool for JavaScript rendering (memory=74.5MB RSS)
+new-crawler-1  | 2025-12-03 23:13:49,751 - Crawler-0 - INFO - [BROWSER-POOL] Initializing browser pool: browsers=1, memory_before=74.5MB RSS, system=2.3GB available
+new-crawler-1  | 2025-12-03 23:13:49,807 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=513.9
+new-crawler-1  | 2025-12-03 23:13:49,821 - Crawler-0 - INFO - HTTP found only 0 images for https://www.instagram.com, trying JS rendering
+new-crawler-1  | 2025-12-03 23:13:50,316 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=502.8
+new-crawler-1  | 2025-12-03 23:13:50,690 - new_crawler.orchestrator - INFO - Starting monitoring loop
+new-crawler-1  | 2025-12-03 23:13:50,711 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:13:50,743 - Storage-0 - INFO - [STORAGE-0] DIAG: No tasks in queue, depth=0, processed=0, waiting...
+new-crawler-1  | 2025-12-03 23:13:50,745 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:13:50,745 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+new-crawler-1  | 2025-12-03 23:13:50,831 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=510.5
+new-crawler-1  | 2025-12-03 23:13:51,037 - Crawler-0 - INFO - [BROWSER-POOL] Initialized: 1 contexts (1 per browser, RAM=3.8GB), memory_after=79.4MB RSS (+4.9MB), system=2.3GB available (41.1% used), total_time=1285.8ms (playwright=525.0ms, browsers=736.4ms, contexts=23.2ms)
+new-crawler-1  | 2025-12-03 23:13:51,037 - Crawler-0 - INFO - [JS-FETCH] Browser pool initialized: 1 browsers in 1286.5ms
+new-crawler-1  | 2025-12-03 23:13:51,144 - Crawler-0 - WARNING - [JS-RENDER] Context pool empty for https://www.instagram.com, creating new context (pool_size=0)
+new-crawler-1  | 2025-12-03 23:13:51,443 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=601.2
+new-crawler-1  | 2025-12-03 23:13:51,449 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=N/A, processed=0 batches, 0 images
+new-crawler-1  | 2025-12-03 23:13:51,545 - Crawler-0 - INFO - [JS-RENDER] Starting render: url=https://www.instagram.com, timeout=120.0s, browser=1, memory_before=79.5MB RSS, system_available=2.3GB, sem_acquire=0.0ms, context_acquire=135.4ms, context_dynamic=True
+new-crawler-1  | 2025-12-03 23:13:51,558 - Crawler-0 - INFO - [JS-RENDER] Starting render: url=https://www.facebook.com, timeout=120.0s, browser=1, memory_before=79.4MB RSS, system_available=2.3GB, sem_acquire=0.0ms, context_acquire=102.3ms, context_dynamic=False
+new-crawler-1  | 2025-12-03 23:13:52,063 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=607.5
+new-crawler-1  | 2025-12-03 23:13:52,669 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=592.0
+new-crawler-1  | 2025-12-03 23:13:53,284 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=601.8
+new-crawler-1  | 2025-12-03 23:13:53,799 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=505.2
+new-crawler-1  | 2025-12-03 23:13:53,804 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=N/A, processed=0 batches, 0 images
+new-crawler-1  | 2025-12-03 23:13:54,318 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=509.9
+new-crawler-1  | 2025-12-03 23:13:54,845 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=518.2
+new-crawler-1  | 2025-12-03 23:13:55,365 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=513.1
+new-crawler-1  | 2025-12-03 23:13:55,755 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:13:55,761 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:13:55,761 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+new-crawler-1  | 2025-12-03 23:13:55,878 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=503.5
+new-crawler-1  | 2025-12-03 23:13:55,881 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=N/A, processed=0 batches, 0 images
+new-crawler-1  | 2025-12-03 23:13:56,387 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=501.6
+new-crawler-1  | 2025-12-03 23:13:56,902 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=507.8
+new-crawler-1  | 2025-12-03 23:13:56,908 - GPU-Processor-0 - INFO - [GPU-Processor-0] HEARTBEAT: state=IDLE, inbox_depth=0, staging=0, inflight=0, last_batch_finished=N/A
+new-crawler-1  | 2025-12-03 23:13:57,513 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=604.4
+new-crawler-1  | 2025-12-03 23:13:57,525 - Crawler-0 - INFO - [JS-RENDER] Completed: url=https://www.facebook.com, total_time=6486.5ms (nav=5860.7ms, content=16.7ms, cleanup=16.8ms), html_size=114293 chars, network_images=3, network_requests=53, memory_after=82.8MB RSS (+3.4MB), system_available=2.1GB (45.6% used)
+new-crawler-1  | 2025-12-03 23:13:57,557 - Crawler-0 - INFO - JS rendering found 2 images for https://www.facebook.com (HTTP had 0)
+new-crawler-1  | 2025-12-03 23:13:57,578 - Crawler-0 - INFO - Broad image fallback found 2 candidates on https://www.facebook.com
+new-crawler-1  | 2025-12-03 23:13:57,579 - Crawler-0 - INFO - Found 2 unique image candidates from https://www.facebook.com
+new-crawler-1  | 2025-12-03 23:13:57,602 - Crawler-0 - INFO - Discovered 0 category pages
+new-crawler-1  | 2025-12-03 23:13:57,613 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:57,625 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:57,626 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:57,657 - Crawler-0 - INFO - [JS-RENDER] Completed: url=https://www.instagram.com, total_time=6603.5ms (nav=5850.8ms, content=147.4ms, cleanup=12.5ms), html_size=769537 chars, network_images=2, network_requests=34, memory_after=85.8MB RSS (+6.3MB), system_available=2.1GB (44.9% used)
+new-crawler-1  | 2025-12-03 23:13:57,663 - Extractor-1 - INFO - [EXTRACTOR-DIAG-1] Queue was empty for 6.29s, now popped 1 candidates, queue_depth_before=0, queue_depth_after=0
+new-crawler-1  | 2025-12-03 23:13:57,662 - Extractor-0 - INFO - [EXTRACTOR-DIAG-0] Queue was empty for 6.29s, now popped 1 candidates, queue_depth_before=0, queue_depth_after=0
+new-crawler-1  | 2025-12-03 23:13:57,707 - Crawler-0 - INFO - JS rendering found 1 images for https://www.instagram.com (HTTP had 0)
+new-crawler-1  | 2025-12-03 23:13:57,720 - Extractor-1 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0
+new-crawler-1  | 2025-12-03 23:13:57,721 - Extractor-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:57,753 - Crawler-0 - INFO - Broad image fallback found 1 candidates on https://www.instagram.com
+new-crawler-1  | 2025-12-03 23:13:57,759 - Crawler-0 - INFO - Found 1 unique image candidates from https://www.instagram.com
+new-crawler-1  | 2025-12-03 23:13:57,794 - Crawler-0 - INFO - Discovered 0 category pages
+new-crawler-1  | 2025-12-03 23:13:57,795 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:57,796 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:57,796 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0
+new-crawler-1  | 2025-12-03 23:13:57,799 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/settings "HTTP/2 302 Found"
+new-crawler-1  | 2025-12-03 23:13:57,799 - Extractor-0 - INFO - HTTP Request: GET https://static.xx.fbcdn.net/rsrc.php/y1/r/4lCu2zih0ca.svg "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:57,801 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Created temp file: /tmp/extractor_0_e3rarjkb/tmp2_sbji51.jpg, size=956bytes, expected=956bytes, age=0.0s, mtime=1764803637.8
+new-crawler-1  | 2025-12-03 23:13:57,841 - Extractor-1 - INFO - HTTP Request: GET https://facebook.com/security/hsts-pixel.gif "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:57,845 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Created temp file: /tmp/extractor_1_7oybs1lp/tmpacei436v.jpg, size=44bytes, expected=44bytes, age=0.0s, mtime=1764803637.8
+new-crawler-1  | 2025-12-03 23:13:57,857 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/lite/ "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:57,879 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/accounts/password/reset/ "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:57,880 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/accounts/meta_verified/?entrypoint=web_footer "HTTP/2 302 Found"
+new-crawler-1  | 2025-12-03 23:13:57,883 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/web/lite/ "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:57,890 - Extractor-0 - ERROR - Failed to compute phash for /tmp/extractor_0_e3rarjkb/tmp2_sbji51.jpg: cannot identify image file '/tmp/extractor_0_e3rarjkb/tmp2_sbji51.jpg'
+new-crawler-1  | 2025-12-03 23:13:57,890 - Extractor-1 - ERROR - Failed to compute phash for /tmp/extractor_1_7oybs1lp/tmpacei436v.jpg: cannot identify image file '/tmp/extractor_1_7oybs1lp/tmpacei436v.jpg'
+new-crawler-1  | 2025-12-03 23:13:57,890 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Deleting temp file (phash failed): /tmp/extractor_0_e3rarjkb/tmp2_sbji51.jpg, size=956bytes, age=0.1s
+new-crawler-1  | 2025-12-03 23:13:57,890 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Deleting temp file (phash failed): /tmp/extractor_1_7oybs1lp/tmpacei436v.jpg, size=44bytes, age=0.0s
+new-crawler-1  | 2025-12-03 23:13:57,892 - Crawler-0 - INFO - HTTP found only 0 images for https://www.facebook.com/lite/, trying JS rendering
+new-crawler-1  | 2025-12-03 23:13:57,903 - Extractor-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:13:57,911 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/login.php?next=https%3A%2F%2Fwww.facebook.com%2Fsettings "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:57,931 - Crawler-0 - INFO - HTTP found only 0 images for https://www.facebook.com/settings, trying JS rendering
+new-crawler-1  | 2025-12-03 23:13:57,950 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/reg/ "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:57,967 - Crawler-0 - INFO - HTTP found only 0 images for https://www.facebook.com/reg/, trying JS rendering
+new-crawler-1  | 2025-12-03 23:13:57,971 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Faccounts%2Fmeta_verified%2F%3Fentrypoint%3Dweb_footer%26__coig_login%3D1 "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:57,978 - Crawler-0 - INFO - HTTP found only 0 images for https://www.instagram.com/web/lite/, trying JS rendering
+new-crawler-1  | 2025-12-03 23:13:58,025 - Crawler-0 - INFO - HTTP found only 0 images for https://www.instagram.com/accounts/password/reset/, trying JS rendering
+new-crawler-1  | 2025-12-03 23:13:58,026 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=504.0
+new-crawler-1  | 2025-12-03 23:13:58,029 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=N/A, processed=0 batches, 0 images
+new-crawler-1  | 2025-12-03 23:13:58,066 - Extractor-0 - INFO - HTTP Request: GET https://www.instagram.com/images/assets_DO_NOT_HARDCODE/lox_brand/landing-2x.png "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:13:58,072 - Crawler-0 - INFO - HTTP found only 0 images for https://www.instagram.com/accounts/meta_verified/?entrypoint=web_footer, trying JS rendering
+new-crawler-1  | 2025-12-03 23:13:58,113 - Crawler-0 - INFO - [JS-RENDER] Starting render: url=https://www.facebook.com/settings, timeout=120.0s, browser=1, memory_before=87.7MB RSS, system_available=2.2GB, sem_acquire=0.0ms, context_acquire=20.9ms, context_dynamic=False
+new-crawler-1  | 2025-12-03 23:13:58,124 - Crawler-0 - INFO - [JS-RENDER] Starting render: url=https://www.facebook.com/lite/, timeout=120.0s, browser=1, memory_before=87.6MB RSS, system_available=2.2GB, sem_acquire=0.0ms, context_acquire=7.4ms, context_dynamic=False
+new-crawler-1  | 2025-12-03 23:13:58,125 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Created temp file: /tmp/extractor_0_e3rarjkb/tmp80ry5tfl.jpg, size=434006bytes, expected=434006bytes, age=0.0s, mtime=1764803638.1
+new-crawler-1  | 2025-12-03 23:13:58,618 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=584.4
+new-crawler-1  | 2025-12-03 23:13:58,619 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Passing temp file to GPU queue: /tmp/extractor_0_e3rarjkb/tmp80ry5tfl.jpg, size=434006bytes, age=0.5s, phash=83c34e67...
+new-crawler-1  | 2025-12-03 23:13:58,638 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=1 items, need=8, queue_depth=1, queue_depth_after=0, staging=1, wait_time_ms=11.6
+new-crawler-1  | 2025-12-03 23:13:59,259 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=7, queue_depth=0, staging=1, wait_time_ms=597.5
+new-crawler-1  | 2025-12-03 23:13:59,780 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=7, queue_depth=0, staging=1, wait_time_ms=512.8
+new-crawler-1  | 2025-12-03 23:13:59,787 - GPU-Processor-0 - INFO - [GPU Processor 0] Queues empty for 10.5s, force flushing 1 items from staging
+new-crawler-1  | 2025-12-03 23:13:59,787 - GPU-Processor-0 - INFO - [GPU Scheduler] FORCE FLUSH: Flushed 1 items from staging (queues empty)
+new-crawler-1  | 2025-12-03 23:13:59,789 - GPU-Processor-0 - INFO - [GPU Processor 0] Processing batch: 1764803639787-1, 1 images
+new-crawler-1  | 2025-12-03 23:13:59,984 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] About to call gpu_interface.process_batch() - event loop: id=281472367422160
+new-crawler-1  | 2025-12-03 23:13:59,984 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Accessing gpu_interface property (will create if needed)
+new-crawler-1  | 2025-12-03 23:13:59,984 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Creating GPUInterface - event loop exists: id=281472367422160
+new-crawler-1  | 2025-12-03 23:13:59,984 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Calling get_gpu_interface() to create singleton
+new-crawler-1  | 2025-12-03 23:13:59,984 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] GPUInterface created successfully
+new-crawler-1  | 2025-12-03 23:13:59,984 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Got gpu_interface, calling process_batch() with 1 images, batch_id=1764803639787-1
+new-crawler-1  | 2025-12-03 23:13:59,984 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] process_batch() called - event loop: id=281472367422160, images=1, batch_id=1764803639787-1
+new-crawler-1  | 2025-12-03 23:13:59,985 - GPU-Processor-0 - INFO - [GPU-WORKER-0] BATCH-START: 1764803639787-1, images=1
+new-crawler-1  | 2025-12-03 23:13:59,985 - GPU-Processor-0 - WARNING - [GPU-INTERFACE] [TRACE] Existing client bound to different event loop (old=281472803534608, new=281472367422160), recreating
+new-crawler-1  | 2025-12-03 23:13:59,988 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Creating httpx.AsyncClient - event loop exists: id=281472367422160
+new-crawler-1  | 2025-12-03 23:13:59,990 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Instantiating httpx.AsyncClient with base_url=http://host.docker.internal:8765
+new-crawler-1  | 2025-12-03 23:14:00,022 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] httpx.AsyncClient created successfully, bound to event loop: id=281472367422160
+new-crawler-1  | 2025-12-03 23:14:00,062 - GPU-Processor-0 - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+new-crawler-1  | 2025-12-03 23:14:00,063 - GPU-Processor-0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+new-crawler-1  | 2025-12-03 23:14:00,064 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] _gpu_worker_request() called - event loop: id=281472367422160
+new-crawler-1  | 2025-12-03 23:14:00,066 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] About to call _get_client() to get httpx client
+new-crawler-1  | 2025-12-03 23:14:00,066 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Got httpx client, about to make POST request
+new-crawler-1  | 2025-12-03 23:14:00,782 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+new-crawler-1  | 2025-12-03 23:14:01,539 - Storage-0 - INFO - [STORAGE-0] DIAG: No tasks in queue, depth=0, processed=0, waiting...
+new-crawler-1  | 2025-12-03 23:14:01,966 - GPU-Processor-0 - INFO - HTTP Request: POST http://host.docker.internal:8765/detect_faces_batch_multipart "HTTP/1.1 200 OK"
+new-crawler-1  | 2025-12-03 23:14:01,980 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] GPU worker returned results for 1 images
+new-crawler-1  | 2025-12-03 23:14:01,982 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Raw GPU response: 4 total faces across 1 images
+new-crawler-1  | 2025-12-03 23:14:01,983 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Image 83c34e67... has 4 faces before pose filtering
+new-crawler-1  | 2025-12-03 23:14:01,983 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Total faces before pose filtering: 4
+new-crawler-1  | 2025-12-03 23:14:01,986 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Pose filter: 4 total, 0 rejected, 4 kept
+new-crawler-1  | 2025-12-03 23:14:01,986 - GPU-Processor-0 - INFO - Pose filter: 4 total faces, 0 rejected, 4 kept (source=gpu, yaw_limit=75.0°, pitch_limit=75.0°)
+new-crawler-1  | 2025-12-03 23:14:01,986 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Total faces after pose filtering: 4 (rejected: 0)
+new-crawler-1  | 2025-12-03 23:14:01,987 - GPU-Processor-0 - INFO - ✓ GPU worker processed 1/1 images via multipart (no encoding) in 1907.6ms (GPU: False, worker: gpu-worker-1)
+new-crawler-1  | 2025-12-03 23:14:01,987 - GPU-Processor-0 - INFO - [GPU-WORKER-0] REQUEST-COMPLETE: 1 images, 4 faces, 1907.6ms, mode=CPU
+new-crawler-1  | 2025-12-03 23:14:01,987 - GPU-Processor-0 - INFO - [GPU-WORKER-0] BATCH-RESULT-OK: batch_id=1764803639787-1, images=1, faces=4, duration_ms=2002.8
+new-crawler-1  | 2025-12-03 23:14:01,988 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] process_batch() completed in 2004.4ms, results: 1 images
+new-crawler-1  | 2025-12-03 23:14:01,994 - GPU-Processor-0 - INFO - [GPU Processor 0] GPU batch 1764803639787-1 results: 1 images, 1 with faces, 4 total faces detected in 2004.4ms
+new-crawler-1  | 2025-12-03 23:14:02,091 - GPU-Processor-0 - INFO - [GPU Processor 0] Batch 1764803639787-1 summary: processed=1/1, cached=0, missing_phash=0, storage_tasks_created=1 (pushed=1, failed=0), faces_detected=4
+new-crawler-1  | 2025-12-03 23:14:02,091 - GPU-Processor-0 - INFO - [GPU Processor 0] Batch completed: 1/1 images processed in 2108.2ms using GPU
+new-crawler-1  | 2025-12-03 23:14:02,092 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803639787-1 fully completed, clearing GPU processing flag
+new-crawler-1  | 2025-12-03 23:14:02,093 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803639787-1 cleanup complete, returning processed_count=1
+new-crawler-1  | 2025-12-03 23:14:02,095 - Storage-0 - INFO - [STORAGE-0] DIAG: Popped task from queue: image=83c34e67..., faces=4, crops=4, queue_depth=0, temp_path=EXISTS
+new-crawler-1  | 2025-12-03 23:14:02,096 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803639787-1 finished processing: duration=2.31s, processed=1, queue_depth=0, staging=0, inflight=0
+new-crawler-1  | 2025-12-03 23:14:02,096 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Returning to main loop, will check for next batch
+new-crawler-1  | 2025-12-03 23:14:02,097 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] File exists before open: /tmp/extractor_0_e3rarjkb/tmp80ry5tfl.jpg, size=434006bytes, age=4.0s, mtime=1764803638.1
+new-crawler-1  | 2025-12-03 23:14:02,219 - Storage-0 - INFO - [STORAGE-DIAG] Save complete: raw=83c34e677e1c38a9.jpg, thumbs=4, total=122.9ms (raw=91.6ms, thumbs=25.0ms, metadata=5.9ms)
+new-crawler-1  | 2025-12-03 23:14:02,660 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=561.2
+new-crawler-1  | 2025-12-03 23:14:02,663 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=0.6s, processed=1 batches, 1 images
+new-crawler-1  | 2025-12-03 23:14:03,160 - Storage-0 - INFO - HTTP Request: PUT http://qdrant:6333/collections/faces_v1 "HTTP/1.1 409 Conflict"
+new-crawler-1  | 2025-12-03 23:14:03,161 - Storage-0 - INFO - Connected to Qdrant at http://qdrant:6333
+new-crawler-1  | 2025-12-03 23:14:03,174 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=507.1
+new-crawler-1  | 2025-12-03 23:14:03,187 - Storage-0 - INFO - HTTP Request: PUT http://qdrant:6333/collections/faces_v1/points?wait=true "HTTP/1.1 200 OK"
+new-crawler-1  | 2025-12-03 23:14:03,189 - Storage-0 - INFO - [STORAGE-0] Vectorized 4 faces to Qdrant (total: 4)
+new-crawler-1  | 2025-12-03 23:14:03,193 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Deleting temp file: /tmp/extractor_0_e3rarjkb/tmp80ry5tfl.jpg, size=434006bytes, age=5.1s, mtime=1764803638.1
+new-crawler-1  | 2025-12-03 23:14:03,193 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Successfully deleted temp file: /tmp/extractor_0_e3rarjkb/tmp80ry5tfl.jpg
+new-crawler-1  | 2025-12-03 23:14:03,194 - Storage-0 - INFO - [STORAGE-0] Saved: 83c34e67..., raw=True, thumbs=4, faces=4, vectorized=4, duration=1098.5ms
+new-crawler-1  | 2025-12-03 23:14:03,194 - Storage-0 - INFO - [STORAGE-0] Throughput: 0.07 tasks/sec, processed=1, failed=0, vectorized=4, vec_errors=0
+new-crawler-1  | 2025-12-03 23:14:03,685 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=505.9
+new-crawler-1  | 2025-12-03 23:14:03,696 - Crawler-0 - INFO - [JS-RENDER] Completed: url=https://www.facebook.com/lite/, total_time=5803.6ms (nav=5430.7ms, content=24.6ms, cleanup=33.2ms), html_size=82740 chars, network_images=2, network_requests=28, memory_after=92.1MB RSS (+4.5MB), system_available=2.0GB (46.8% used)
+new-crawler-1  | 2025-12-03 23:14:03,712 - Crawler-0 - INFO - [JS-RENDER] Completed: url=https://www.facebook.com/settings, total_time=5780.9ms (nav=5459.2ms, content=27.3ms, cleanup=42.6ms), html_size=94627 chars, network_images=3, network_requests=38, memory_after=92.1MB RSS (+4.4MB), system_available=2.1GB (46.4% used)
+new-crawler-1  | 2025-12-03 23:14:03,723 - Crawler-0 - INFO - JS rendering found 4 images for https://www.facebook.com/lite/ (HTTP had 0)
+new-crawler-1  | 2025-12-03 23:14:03,738 - Crawler-0 - INFO - Broad image fallback found 4 candidates on https://www.facebook.com/lite/
+new-crawler-1  | 2025-12-03 23:14:03,739 - Crawler-0 - INFO - Found 4 unique image candidates from https://www.facebook.com/lite/
+new-crawler-1  | 2025-12-03 23:14:03,743 - Crawler-0 - INFO - [3x3-SAMPLE] Page 1/7 yielded 4 candidates
+new-crawler-1  | 2025-12-03 23:14:03,758 - Crawler-0 - INFO - JS rendering found 2 images for https://www.facebook.com/settings (HTTP had 0)
+new-crawler-1  | 2025-12-03 23:14:03,781 - Crawler-0 - INFO - Broad image fallback found 2 candidates on https://www.facebook.com/settings
+new-crawler-1  | 2025-12-03 23:14:03,782 - Crawler-0 - INFO - Found 2 unique image candidates from https://www.facebook.com/settings
+new-crawler-1  | 2025-12-03 23:14:03,786 - Crawler-0 - INFO - [3x3-SAMPLE] Page 2/7 yielded 2 candidates
+new-crawler-1  | 2025-12-03 23:14:03,815 - Crawler-0 - INFO - [CRAWLER-DIAG-0] Throughput: 1.1 candidates/sec, queue_depth=0
+new-crawler-1  | 2025-12-03 23:14:03,816 - Extractor-0 - INFO - [EXTRACTOR-DIAG-0] Queue was empty for 2.88s, now popped 1 candidates, queue_depth_before=0, queue_depth_after=0
+new-crawler-1  | 2025-12-03 23:14:03,820 - Extractor-1 - INFO - [EXTRACTOR-DIAG-1] Queue was empty for 3.62s, now popped 5 candidates, queue_depth_before=0, queue_depth_after=0
+new-crawler-1  | 2025-12-03 23:14:03,841 - Extractor-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:03,856 - Extractor-1 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15
+new-crawler-1  | 2025-12-03 23:14:03,867 - Extractor-1 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0
+new-crawler-1  | 2025-12-03 23:14:03,868 - Extractor-1 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0
+new-crawler-1  | 2025-12-03 23:14:03,870 - Extractor-1 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0
+new-crawler-1  | 2025-12-03 23:14:03,887 - Extractor-1 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:03,939 - Crawler-0 - INFO - [JS-RENDER] Starting render: url=https://www.facebook.com/reg/, timeout=120.0s, browser=1, memory_before=88.1MB RSS, system_available=2.2GB, sem_acquire=5771.6ms, context_acquire=7.3ms, context_dynamic=False
+new-crawler-1  | 2025-12-03 23:14:03,973 - Crawler-0 - INFO - [JS-RENDER] Starting render: url=https://www.instagram.com/web/lite/, timeout=120.0s, browser=1, memory_before=89.0MB RSS, system_available=2.2GB, sem_acquire=5803.6ms, context_acquire=7.0ms, context_dynamic=False
+new-crawler-1  | 2025-12-03 23:14:04,173 - Extractor-1 - INFO - HTTP Request: GET https://facebook.com/security/hsts-pixel.gif "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:04,175 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Created temp file: /tmp/extractor_1_7oybs1lp/tmpz60i0f8b.jpg, size=44bytes, expected=44bytes, age=0.0s, mtime=1764803644.2
+new-crawler-1  | 2025-12-03 23:14:04,177 - Extractor-1 - ERROR - Failed to compute phash for /tmp/extractor_1_7oybs1lp/tmpz60i0f8b.jpg: cannot identify image file '/tmp/extractor_1_7oybs1lp/tmpz60i0f8b.jpg'
+new-crawler-1  | 2025-12-03 23:14:04,179 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Deleting temp file (phash failed): /tmp/extractor_1_7oybs1lp/tmpz60i0f8b.jpg, size=44bytes, age=0.0s
+new-crawler-1  | 2025-12-03 23:14:04,182 - Extractor-1 - INFO - HTTP Request: GET https://scontent.flas1-2.fna.fbcdn.net/v/t39.2365-6/11057043_645942585536385_1622935532_n.png?_nc_cat=101&ccb=1-7&_nc_sid=e280be&_nc_ohc=7K62K1wqsRgQ7kNvwG0A1S8&_nc_oc=AdnwojCCFcwSNv-rIZpZ9DfdwuwzYucHH_i_cngUP5t0OMFUYJglNYPKbco0cYdE7LU&_nc_zt=14&_nc_ht=scontent.flas1-2.fna&_nc_gid=REs51cFO9_7C9mqCcaVt9Q&oh=00_AfnYUZVLw8CapkLbtVqrSkMpg7iobF6AaQ74PEXaYt01cg&oe=694B201C "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:04,183 - Extractor-1 - INFO - HTTP Request: GET https://scontent.flas1-1.fna.fbcdn.net/v/t39.2365-6/11891345_543283905820402_1726537124_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=e280be&_nc_ohc=1_3jmVW2i2YQ7kNvwGf5UCX&_nc_oc=AdmVqoK8_1dHfPLpSdFZUZNPRgBzYCyu2dNRgts0m2pwKjccaaFi7YCCBKTPECwJbPM&_nc_zt=14&_nc_ht=scontent.flas1-1.fna&_nc_gid=REs51cFO9_7C9mqCcaVt9Q&oh=00_Afmn9jyL55T-GrG_pO4t71VuwognqVfwCAt68se-GgzagQ&oe=694B1D89 "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:04,184 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Created temp file: /tmp/extractor_1_7oybs1lp/tmp5vjaltch.jpg, size=2681bytes, expected=2681bytes, age=0.0s, mtime=1764803644.2
+new-crawler-1  | 2025-12-03 23:14:04,191 - Extractor-1 - INFO - HTTP Request: GET https://scontent.flas1-2.fna.fbcdn.net/v/t39.2365-6/12057197_852737431492335_893903077_n.png?_nc_cat=106&ccb=1-7&_nc_sid=e280be&_nc_ohc=VSIMp4_sr1kQ7kNvwHM926z&_nc_oc=Adlzw90xk1aZkNZfebTC6l79M_6dD3WG6rDJSAOfPEzYRputsepHo_lQSA8LMJ3WLzU&_nc_zt=14&_nc_ht=scontent.flas1-2.fna&_nc_gid=REs51cFO9_7C9mqCcaVt9Q&oh=00_AfmefOxw3b7CIYrzXI87GcTT2lMjXo7Pxk4O0_6P2ry2Ew&oe=694AF7DC "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:04,196 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Created temp file: /tmp/extractor_1_7oybs1lp/tmp2yq6u80h.jpg, size=20598bytes, expected=20598bytes, age=0.0s, mtime=1764803644.2
+new-crawler-1  | 2025-12-03 23:14:04,297 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=603.1
+new-crawler-1  | 2025-12-03 23:14:04,351 - Extractor-0 - INFO - HTTP Request: GET https://facebook.com/security/hsts-pixel.gif "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:04,362 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Created temp file: /tmp/extractor_0_e3rarjkb/tmpgu6ty6q3.jpg, size=44bytes, expected=44bytes, age=0.0s, mtime=1764803644.4
+new-crawler-1  | 2025-12-03 23:14:04,365 - Extractor-0 - ERROR - Failed to compute phash for /tmp/extractor_0_e3rarjkb/tmpgu6ty6q3.jpg: cannot identify image file '/tmp/extractor_0_e3rarjkb/tmpgu6ty6q3.jpg'
+new-crawler-1  | 2025-12-03 23:14:04,369 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Deleting temp file (phash failed): /tmp/extractor_0_e3rarjkb/tmpgu6ty6q3.jpg, size=44bytes, age=0.0s
+new-crawler-1  | 2025-12-03 23:14:04,397 - Extractor-1 - INFO - HTTP Request: GET https://static.xx.fbcdn.net/rsrc.php/y1/r/4lCu2zih0ca.svg "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:04,413 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Created temp file: /tmp/extractor_1_7oybs1lp/tmpyhyu6m2b.jpg, size=956bytes, expected=956bytes, age=0.0s, mtime=1764803644.4
+new-crawler-1  | 2025-12-03 23:14:04,415 - Extractor-1 - ERROR - Failed to compute phash for /tmp/extractor_1_7oybs1lp/tmpyhyu6m2b.jpg: cannot identify image file '/tmp/extractor_1_7oybs1lp/tmpyhyu6m2b.jpg'
+new-crawler-1  | 2025-12-03 23:14:04,416 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Deleting temp file (phash failed): /tmp/extractor_1_7oybs1lp/tmpyhyu6m2b.jpg, size=956bytes, age=0.0s
+new-crawler-1  | 2025-12-03 23:14:04,425 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Created temp file: /tmp/extractor_1_7oybs1lp/tmpr96xv415.jpg, size=172636bytes, expected=172636bytes, age=0.0s, mtime=1764803644.4
+new-crawler-1  | 2025-12-03 23:14:04,477 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Passing temp file to GPU queue: /tmp/extractor_1_7oybs1lp/tmp5vjaltch.jpg, size=2681bytes, age=0.3s, phash=e4db1897...
+new-crawler-1  | 2025-12-03 23:14:04,478 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Passing temp file to GPU queue: /tmp/extractor_1_7oybs1lp/tmp2yq6u80h.jpg, size=20598bytes, age=0.3s, phash=c5462f99...
+new-crawler-1  | 2025-12-03 23:14:04,479 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=2 items, need=8, queue_depth=0, queue_depth_after=0, staging=2, wait_time_ms=174.2
+new-crawler-1  | 2025-12-03 23:14:04,480 - GPU-Processor-0 - INFO - [GPU Processor 0] Queues empty for 15.2s, force flushing 2 items from staging
+new-crawler-1  | 2025-12-03 23:14:04,480 - GPU-Processor-0 - INFO - [GPU Scheduler] FORCE FLUSH: Flushed 2 items from staging (queues empty)
+new-crawler-1  | 2025-12-03 23:14:04,481 - GPU-Processor-0 - INFO - [GPU Processor 0] Processing batch: 1764803644480-2, 2 images
+new-crawler-1  | 2025-12-03 23:14:04,494 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Passing temp file to GPU queue: /tmp/extractor_1_7oybs1lp/tmpr96xv415.jpg, size=172636bytes, age=0.1s, phash=956b626c...
+new-crawler-1  | 2025-12-03 23:14:04,603 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] About to call gpu_interface.process_batch() - event loop: id=281472367422160
+new-crawler-1  | 2025-12-03 23:14:04,603 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Accessing gpu_interface property (will create if needed)
+new-crawler-1  | 2025-12-03 23:14:04,603 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Got gpu_interface, calling process_batch() with 3 images, batch_id=1764803644480-2
+new-crawler-1  | 2025-12-03 23:14:04,604 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] process_batch() called - event loop: id=281472367422160, images=3, batch_id=1764803644480-2
+new-crawler-1  | 2025-12-03 23:14:04,604 - GPU-Processor-0 - INFO - [GPU-WORKER-0] BATCH-START: 1764803644480-2, images=3
+new-crawler-1  | 2025-12-03 23:14:04,605 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] _gpu_worker_request() called - event loop: id=281472367422160
+new-crawler-1  | 2025-12-03 23:14:04,606 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] About to call _get_client() to get httpx client
+new-crawler-1  | 2025-12-03 23:14:04,606 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Got httpx client, about to make POST request
+new-crawler-1  | 2025-12-03 23:14:05,516 - GPU-Processor-0 - INFO - HTTP Request: POST http://host.docker.internal:8765/detect_faces_batch_multipart "HTTP/1.1 200 OK"
+new-crawler-1  | 2025-12-03 23:14:05,522 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] GPU worker returned results for 3 images
+new-crawler-1  | 2025-12-03 23:14:05,522 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Raw GPU response: 0 total faces across 3 images
+new-crawler-1  | 2025-12-03 23:14:05,522 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Total faces before pose filtering: 0
+new-crawler-1  | 2025-12-03 23:14:05,523 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Pose filter: 0 total, 0 rejected, 0 kept
+new-crawler-1  | 2025-12-03 23:14:05,523 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Total faces after pose filtering: 0 (rejected: 0)
+new-crawler-1  | 2025-12-03 23:14:05,523 - GPU-Processor-0 - INFO - ✓ GPU worker processed 3/3 images via multipart (no encoding) in 914.9ms (GPU: False, worker: gpu-worker-1)
+new-crawler-1  | 2025-12-03 23:14:05,523 - GPU-Processor-0 - INFO - [GPU-WORKER-0] REQUEST-COMPLETE: 3 images, 0 faces, 914.9ms, mode=CPU
+new-crawler-1  | 2025-12-03 23:14:05,524 - GPU-Processor-0 - INFO - [GPU-WORKER-0] BATCH-RESULT-OK: batch_id=1764803644480-2, images=3, faces=0, duration_ms=920.1
+new-crawler-1  | 2025-12-03 23:14:05,525 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] process_batch() completed in 922.3ms, results: 3 images
+new-crawler-1  | 2025-12-03 23:14:05,551 - GPU-Processor-0 - INFO - [GPU Processor 0] GPU batch 1764803644480-2 results: 3 images, 0 with faces, 0 total faces detected in 922.3ms
+new-crawler-1  | 2025-12-03 23:14:05,594 - Storage-0 - INFO - [STORAGE-0] DIAG: Popped task from queue: image=e4db1897..., faces=0, crops=0, queue_depth=0, temp_path=EXISTS
+new-crawler-1  | 2025-12-03 23:14:05,598 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] File exists before open: /tmp/extractor_1_7oybs1lp/tmp5vjaltch.jpg, size=2681bytes, age=1.4s, mtime=1764803644.2
+new-crawler-1  | 2025-12-03 23:14:05,601 - GPU-Processor-0 - INFO - [GPU Processor 0] Batch 1764803644480-2 summary: processed=3/3, cached=0, missing_phash=0, storage_tasks_created=3 (pushed=3, failed=0), faces_detected=0
+new-crawler-1  | 2025-12-03 23:14:05,603 - GPU-Processor-0 - INFO - [GPU Processor 0] Batch completed: 3/3 images processed in 1000.1ms using CPU (fallback)
+new-crawler-1  | 2025-12-03 23:14:05,605 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803644480-2 fully completed, clearing GPU processing flag
+new-crawler-1  | 2025-12-03 23:14:05,606 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803644480-2 cleanup complete, returning processed_count=3
+new-crawler-1  | 2025-12-03 23:14:05,616 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803644480-2 finished processing: duration=1.13s, processed=3, queue_depth=0, staging=0, inflight=0
+new-crawler-1  | 2025-12-03 23:14:05,616 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Returning to main loop, will check for next batch
+new-crawler-1  | 2025-12-03 23:14:05,619 - GPU-Processor-0 - INFO - [GPU-Processor-0] HEARTBEAT: state=IDLE, inbox_depth=0, staging=0, inflight=0, last_batch_finished=0.0s ago
+new-crawler-1  | 2025-12-03 23:14:05,640 - Storage-0 - INFO - [STORAGE-DIAG] Save complete: raw=e4db189733b414e5.jpg, thumbs=0, total=43.2ms (raw=34.4ms, thumbs=0.0ms, metadata=8.5ms)
+new-crawler-1  | 2025-12-03 23:14:05,649 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Deleting temp file: /tmp/extractor_1_7oybs1lp/tmp5vjaltch.jpg, size=2681bytes, age=1.5s, mtime=1764803644.2
+new-crawler-1  | 2025-12-03 23:14:05,650 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Successfully deleted temp file: /tmp/extractor_1_7oybs1lp/tmp5vjaltch.jpg
+new-crawler-1  | 2025-12-03 23:14:05,651 - Storage-0 - INFO - [STORAGE-0] Saved: e4db1897..., raw=True, thumbs=0, faces=0, vectorized=0, duration=54.7ms
+new-crawler-1  | 2025-12-03 23:14:05,656 - Storage-0 - INFO - [STORAGE-0] DIAG: Popped task from queue: image=c5462f99..., faces=0, crops=0, queue_depth=1, temp_path=EXISTS
+new-crawler-1  | 2025-12-03 23:14:05,660 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] File exists before open: /tmp/extractor_1_7oybs1lp/tmp2yq6u80h.jpg, size=20598bytes, age=1.5s, mtime=1764803644.2
+new-crawler-1  | 2025-12-03 23:14:05,683 - Storage-0 - INFO - [STORAGE-DIAG] Save complete: raw=c5462f99b273af08.jpg, thumbs=0, total=23.9ms (raw=16.1ms, thumbs=0.0ms, metadata=7.8ms)
+new-crawler-1  | 2025-12-03 23:14:05,689 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Deleting temp file: /tmp/extractor_1_7oybs1lp/tmp2yq6u80h.jpg, size=20598bytes, age=1.5s, mtime=1764803644.2
+new-crawler-1  | 2025-12-03 23:14:05,689 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Successfully deleted temp file: /tmp/extractor_1_7oybs1lp/tmp2yq6u80h.jpg
+new-crawler-1  | 2025-12-03 23:14:05,692 - Storage-0 - INFO - [STORAGE-0] Saved: c5462f99..., raw=True, thumbs=0, faces=0, vectorized=0, duration=33.0ms
+new-crawler-1  | 2025-12-03 23:14:05,696 - Storage-0 - INFO - [STORAGE-0] DIAG: Popped task from queue: image=956b626c..., faces=0, crops=0, queue_depth=0, temp_path=EXISTS
+new-crawler-1  | 2025-12-03 23:14:05,697 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] File exists before open: /tmp/extractor_1_7oybs1lp/tmpr96xv415.jpg, size=172636bytes, age=1.3s, mtime=1764803644.4
+new-crawler-1  | 2025-12-03 23:14:05,746 - Storage-0 - INFO - [STORAGE-DIAG] Save complete: raw=956b626cdb249399.jpg, thumbs=0, total=49.1ms (raw=34.9ms, thumbs=0.0ms, metadata=14.1ms)
+new-crawler-1  | 2025-12-03 23:14:05,760 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Deleting temp file: /tmp/extractor_1_7oybs1lp/tmpr96xv415.jpg, size=172636bytes, age=1.3s, mtime=1764803644.4
+new-crawler-1  | 2025-12-03 23:14:05,760 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Successfully deleted temp file: /tmp/extractor_1_7oybs1lp/tmpr96xv415.jpg
+new-crawler-1  | 2025-12-03 23:14:05,762 - Storage-0 - INFO - [STORAGE-0] Saved: 956b626c..., raw=True, thumbs=0, faces=0, vectorized=0, duration=64.5ms
+new-crawler-1  | 2025-12-03 23:14:05,791 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:05,805 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:05,805 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+new-crawler-1  | 2025-12-03 23:14:06,140 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=517.0
+new-crawler-1  | 2025-12-03 23:14:06,142 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=0.5s, processed=2 batches, 4 images
+new-crawler-1  | 2025-12-03 23:14:06,652 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=505.3
+new-crawler-1  | 2025-12-03 23:14:07,189 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=522.4
+new-crawler-1  | 2025-12-03 23:14:07,881 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=578.8
+new-crawler-1  | 2025-12-03 23:14:08,669 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=588.7
+new-crawler-1  | 2025-12-03 23:14:08,709 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=3.1s, processed=2 batches, 4 images
+new-crawler-1  | 2025-12-03 23:14:09,273 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=553.8
+new-crawler-1  | 2025-12-03 23:14:09,805 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=521.5
+new-crawler-1  | 2025-12-03 23:14:10,342 - Crawler-0 - INFO - [JS-RENDER] Completed: url=https://www.instagram.com/web/lite/, total_time=12361.0ms (nav=6131.1ms, content=68.0ms, cleanup=38.6ms), html_size=339096 chars, network_images=2, network_requests=26, memory_after=96.1MB RSS (+7.1MB), system_available=1.9GB (51.3% used)
+new-crawler-1  | 2025-12-03 23:14:10,380 - Crawler-0 - INFO - JS rendering found 1 images for https://www.instagram.com/web/lite/ (HTTP had 0)
+new-crawler-1  | 2025-12-03 23:14:10,402 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=575.7
+new-crawler-1  | 2025-12-03 23:14:10,431 - Crawler-0 - INFO - Broad image fallback found 1 candidates on https://www.instagram.com/web/lite/
+new-crawler-1  | 2025-12-03 23:14:10,434 - Crawler-0 - INFO - Found 1 unique image candidates from https://www.instagram.com/web/lite/
+new-crawler-1  | 2025-12-03 23:14:10,449 - Crawler-0 - INFO - [3x3-SAMPLE] Page 1/7 yielded 1 candidates
+new-crawler-1  | 2025-12-03 23:14:10,472 - Crawler-0 - INFO - [CRAWLER-DIAG-0] Throughput: 0.5 candidates/sec, queue_depth=0
+new-crawler-1  | 2025-12-03 23:14:10,483 - Extractor-0 - INFO - [EXTRACTOR-DIAG-0] Queue was empty for 3.79s, now popped 1 candidates, queue_depth_before=0, queue_depth_after=0
+new-crawler-1  | 2025-12-03 23:14:10,547 - Extractor-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0
+new-crawler-1  | 2025-12-03 23:14:10,650 - Crawler-0 - INFO - [JS-RENDER] Completed: url=https://www.facebook.com/reg/, total_time=12682.2ms (nav=6557.3ms, content=21.5ms, cleanup=35.5ms), html_size=142818 chars, network_images=5, network_requests=74, memory_after=97.2MB RSS (+9.1MB), system_available=1.9GB (49.1% used)
+new-crawler-1  | 2025-12-03 23:14:10,672 - Crawler-0 - INFO - JS rendering found 4 images for https://www.facebook.com/reg/ (HTTP had 0)
+new-crawler-1  | 2025-12-03 23:14:10,672 - Extractor-0 - INFO - HTTP Request: GET https://static.cdninstagram.com/rsrc.php/v4/yz/r/c5Rp7Ym-Klz.png "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:10,675 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Created temp file: /tmp/extractor_0_e3rarjkb/tmphe7fr9_u.jpg, size=5975bytes, expected=5975bytes, age=0.0s, mtime=1764803650.7
+new-crawler-1  | 2025-12-03 23:14:10,702 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Passing temp file to GPU queue: /tmp/extractor_0_e3rarjkb/tmphe7fr9_u.jpg, size=5975bytes, age=0.0s, phash=d86a0f95...
+new-crawler-1  | 2025-12-03 23:14:10,710 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=1 items, need=8, queue_depth=0, queue_depth_after=0, staging=1, wait_time_ms=294.2
+new-crawler-1  | 2025-12-03 23:14:10,713 - GPU-Processor-0 - INFO - [GPU Processor 0] Queues empty for 21.4s, force flushing 1 items from staging
+new-crawler-1  | 2025-12-03 23:14:10,713 - GPU-Processor-0 - INFO - [GPU Scheduler] FORCE FLUSH: Flushed 1 items from staging (queues empty)
+new-crawler-1  | 2025-12-03 23:14:10,714 - GPU-Processor-0 - INFO - [GPU Processor 0] Processing batch: 1764803650713-1, 1 images
+new-crawler-1  | 2025-12-03 23:14:10,724 - Crawler-0 - INFO - Broad image fallback found 4 candidates on https://www.facebook.com/reg/
+new-crawler-1  | 2025-12-03 23:14:10,726 - Crawler-0 - INFO - Found 3 unique image candidates from https://www.facebook.com/reg/
+new-crawler-1  | 2025-12-03 23:14:10,732 - Crawler-0 - INFO - [3x3-SAMPLE] Page 3/7 yielded 3 candidates
+new-crawler-1  | 2025-12-03 23:14:10,733 - Crawler-0 - INFO - [3x3-SAMPLE] Completed 3 sample pages
+new-crawler-1  | 2025-12-03 23:14:10,733 - Crawler-0 - INFO - [3x3-AGGREGATE] Total HTTP candidates: 0
+new-crawler-1  | 2025-12-03 23:14:10,733 - Crawler-0 - INFO - [3x3-AGGREGATE] Total JS candidates: 0
+new-crawler-1  | 2025-12-03 23:14:10,734 - Crawler-0 - INFO - [JS-RENDER] Starting render: url=https://www.instagram.com/accounts/password/reset/, timeout=120.0s, browser=1, memory_before=90.0MB RSS, system_available=2.2GB, sem_acquire=12408.7ms, context_acquire=22.8ms, context_dynamic=False
+new-crawler-1  | 2025-12-03 23:14:10,748 - Crawler-0 - INFO - Stored rendering strategy for www.facebook.com: use_js=False (HTTP=0, JS=0)
+new-crawler-1  | 2025-12-03 23:14:10,748 - Crawler-0 - INFO - [3x3-STRATEGY] Stored strategy for www.facebook.com: use_js=False (HTTP=0, JS=0)
+new-crawler-1  | 2025-12-03 23:14:10,758 - Crawler-0 - INFO - [3x3-BFS] Starting BFS with 18 initial URLs
+new-crawler-1  | 2025-12-03 23:14:10,761 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15
+new-crawler-1  | 2025-12-03 23:14:10,790 - Extractor-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:10,790 - Extractor-1 - INFO - [EXTRACTOR-DIAG-1] Queue was empty for 4.02s, now popped 1 candidates, queue_depth_before=0, queue_depth_after=0
+new-crawler-1  | 2025-12-03 23:14:10,795 - Extractor-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:10,796 - Extractor-1 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:10,807 - Extractor-0 - INFO - HTTP Request: GET https://static.xx.fbcdn.net/rsrc.php/v4/yb/r/GsNJNwuI-UM.gif "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:10,809 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Created temp file: /tmp/extractor_0_e3rarjkb/tmpkm5hozdo.jpg, size=522bytes, expected=522bytes, age=0.0s, mtime=1764803650.8
+new-crawler-1  | 2025-12-03 23:14:10,822 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] About to call gpu_interface.process_batch() - event loop: id=281472367422160
+new-crawler-1  | 2025-12-03 23:14:10,822 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Accessing gpu_interface property (will create if needed)
+new-crawler-1  | 2025-12-03 23:14:10,822 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Got gpu_interface, calling process_batch() with 1 images, batch_id=1764803650713-1
+new-crawler-1  | 2025-12-03 23:14:10,822 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] process_batch() called - event loop: id=281472367422160, images=1, batch_id=1764803650713-1
+new-crawler-1  | 2025-12-03 23:14:10,822 - GPU-Processor-0 - INFO - [GPU-WORKER-0] BATCH-START: 1764803650713-1, images=1
+new-crawler-1  | 2025-12-03 23:14:10,827 - Extractor-1 - INFO - HTTP Request: GET https://static.xx.fbcdn.net/rsrc.php/y1/r/4lCu2zih0ca.svg "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:10,834 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Created temp file: /tmp/extractor_1_7oybs1lp/tmpgykghzn4.jpg, size=956bytes, expected=956bytes, age=0.0s, mtime=1764803650.8
+new-crawler-1  | 2025-12-03 23:14:10,837 - Extractor-1 - ERROR - Failed to compute phash for /tmp/extractor_1_7oybs1lp/tmpgykghzn4.jpg: cannot identify image file '/tmp/extractor_1_7oybs1lp/tmpgykghzn4.jpg'
+new-crawler-1  | 2025-12-03 23:14:10,837 - Extractor-1 - INFO - [EXTRACTOR-1] [TEMP-FILE] Deleting temp file (phash failed): /tmp/extractor_1_7oybs1lp/tmpgykghzn4.jpg, size=956bytes, age=0.0s
+new-crawler-1  | 2025-12-03 23:14:10,840 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+new-crawler-1  | 2025-12-03 23:14:10,842 - GPU-Processor-0 - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+new-crawler-1  | 2025-12-03 23:14:10,843 - GPU-Processor-0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+new-crawler-1  | 2025-12-03 23:14:10,843 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] _gpu_worker_request() called - event loop: id=281472367422160
+new-crawler-1  | 2025-12-03 23:14:10,843 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] About to call _get_client() to get httpx client
+new-crawler-1  | 2025-12-03 23:14:10,843 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Got httpx client, about to make POST request
+new-crawler-1  | 2025-12-03 23:14:10,849 - Extractor-0 - INFO - HTTP Request: GET https://facebook.com/security/hsts-pixel.gif "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:10,851 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Created temp file: /tmp/extractor_0_e3rarjkb/tmp9b9n__7_.jpg, size=44bytes, expected=44bytes, age=0.0s, mtime=1764803650.8
+new-crawler-1  | 2025-12-03 23:14:10,856 - Extractor-0 - ERROR - Failed to compute phash for /tmp/extractor_0_e3rarjkb/tmp9b9n__7_.jpg: cannot identify image file '/tmp/extractor_0_e3rarjkb/tmp9b9n__7_.jpg'
+new-crawler-1  | 2025-12-03 23:14:10,858 - Extractor-0 - INFO - [EXTRACTOR-0] [TEMP-FILE] Deleting temp file (phash failed): /tmp/extractor_0_e3rarjkb/tmp9b9n__7_.jpg, size=44bytes, age=0.0s
+new-crawler-1  | 2025-12-03 23:14:10,885 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/recover/initiate/?privacy_mutation_token=eyJ0eXBlIjowLCJjcmVhdGlvbl90aW1lIjoxNzY0ODAzNjMxLCJjYWxsc2l0ZV9pZCI6MzgxMjI5MDc5NTc1OTQ2fQ%3D%3D&ars=facebook_login&next "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:10,889 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.facebook.com/recover/initiate/?privacy_mutation_token=eyJ0eXBlIjowLCJjcmVhdGlvbl90aW1lIjoxNzY0ODAzNjMxLCJjYWxsc2l0ZV9pZCI6MzgxMjI5MDc5NTc1OTQ2fQ%3D%3D&ars=facebook_login&next
+new-crawler-1  | 2025-12-03 23:14:10,889 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.facebook.com/recover/initiate/?privacy_mutation_token=eyJ0eXBlIjowLCJjcmVhdGlvbl90aW1lIjoxNzY0ODAzNjMxLCJjYWxsc2l0ZV9pZCI6MzgxMjI5MDc5NTc1OTQ2fQ%3D%3D&ars=facebook_login&next
+new-crawler-1  | 2025-12-03 23:14:10,895 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:10,930 - Crawler-0 - INFO - [JS-RENDER] Starting render: url=https://www.instagram.com/accounts/meta_verified/?entrypoint=web_footer, timeout=120.0s, browser=1, memory_before=90.7MB RSS, system_available=2.2GB, sem_acquire=12653.2ms, context_acquire=17.5ms, context_dynamic=False
+new-crawler-1  | 2025-12-03 23:14:11,128 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/r.php?entry_point=login "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:11,175 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.facebook.com/r.php?entry_point=login
+new-crawler-1  | 2025-12-03 23:14:11,176 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.facebook.com/r.php?entry_point=login
+new-crawler-1  | 2025-12-03 23:14:11,202 - GPU-Processor-0 - INFO - HTTP Request: POST http://host.docker.internal:8765/detect_faces_batch_multipart "HTTP/1.1 200 OK"
+new-crawler-1  | 2025-12-03 23:14:11,231 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:11,235 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] GPU worker returned results for 1 images
+new-crawler-1  | 2025-12-03 23:14:11,238 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Raw GPU response: 0 total faces across 1 images
+new-crawler-1  | 2025-12-03 23:14:11,238 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Total faces before pose filtering: 0
+new-crawler-1  | 2025-12-03 23:14:11,238 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Pose filter: 0 total, 0 rejected, 0 kept
+new-crawler-1  | 2025-12-03 23:14:11,238 - GPU-Processor-0 - INFO - [GPU-INTERFACE] [TRACE] Total faces after pose filtering: 0 (rejected: 0)
+new-crawler-1  | 2025-12-03 23:14:11,238 - GPU-Processor-0 - INFO - ✓ GPU worker processed 1/1 images via multipart (no encoding) in 391.5ms (GPU: False, worker: gpu-worker-1)
+new-crawler-1  | 2025-12-03 23:14:11,238 - GPU-Processor-0 - INFO - [GPU-WORKER-0] REQUEST-COMPLETE: 1 images, 0 faces, 391.5ms, mode=CPU
+new-crawler-1  | 2025-12-03 23:14:11,238 - GPU-Processor-0 - INFO - [GPU-WORKER-0] BATCH-RESULT-OK: batch_id=1764803650713-1, images=1, faces=0, duration_ms=416.3
+new-crawler-1  | 2025-12-03 23:14:11,239 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] process_batch() completed in 418.2ms, results: 1 images
+new-crawler-1  | 2025-12-03 23:14:11,249 - GPU-Processor-0 - INFO - [GPU Processor 0] GPU batch 1764803650713-1 results: 1 images, 0 with faces, 0 total faces detected in 418.2ms
+new-crawler-1  | 2025-12-03 23:14:11,298 - Storage-0 - INFO - [STORAGE-0] DIAG: Popped task from queue: image=d86a0f95..., faces=0, crops=0, queue_depth=0, temp_path=EXISTS
+new-crawler-1  | 2025-12-03 23:14:11,324 - GPU-Processor-0 - INFO - [GPU Processor 0] Batch 1764803650713-1 summary: processed=1/1, cached=0, missing_phash=0, storage_tasks_created=1 (pushed=1, failed=0), faces_detected=0
+new-crawler-1  | 2025-12-03 23:14:11,331 - GPU-Processor-0 - INFO - [GPU Processor 0] Batch completed: 1/1 images processed in 510.2ms using CPU (fallback)
+new-crawler-1  | 2025-12-03 23:14:11,347 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803650713-1 fully completed, clearing GPU processing flag
+new-crawler-1  | 2025-12-03 23:14:11,353 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803650713-1 cleanup complete, returning processed_count=1
+new-crawler-1  | 2025-12-03 23:14:11,353 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] File exists before open: /tmp/extractor_0_e3rarjkb/tmphe7fr9_u.jpg, size=5975bytes, age=0.7s, mtime=1764803650.7
+new-crawler-1  | 2025-12-03 23:14:11,367 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Batch 1764803650713-1 finished processing: duration=0.65s, processed=1, queue_depth=0, staging=0, inflight=0
+new-crawler-1  | 2025-12-03 23:14:11,367 - GPU-Processor-0 - INFO - [GPU Processor 0] [TRACE] Returning to main loop, will check for next batch
+new-crawler-1  | 2025-12-03 23:14:11,402 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/pages/create/?ref_type=registration_form "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:11,426 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.facebook.com/pages/create/?ref_type=registration_form
+new-crawler-1  | 2025-12-03 23:14:11,428 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.facebook.com/pages/create/?ref_type=registration_form
+new-crawler-1  | 2025-12-03 23:14:11,434 - Storage-0 - INFO - [STORAGE-DIAG] Save complete: raw=d86a0f95f0729c99.jpg, thumbs=0, total=100.0ms (raw=82.3ms, thumbs=2.7ms, metadata=10.6ms)
+new-crawler-1  | 2025-12-03 23:14:11,440 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:11,447 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Deleting temp file: /tmp/extractor_0_e3rarjkb/tmphe7fr9_u.jpg, size=5975bytes, age=0.8s, mtime=1764803650.7
+new-crawler-1  | 2025-12-03 23:14:11,447 - Storage-0 - INFO - [STORAGE] [TEMP-FILE] Successfully deleted temp file: /tmp/extractor_0_e3rarjkb/tmphe7fr9_u.jpg
+new-crawler-1  | 2025-12-03 23:14:11,449 - Storage-0 - INFO - [STORAGE-0] Saved: d86a0f95..., raw=True, thumbs=0, faces=0, vectorized=0, duration=145.3ms
+new-crawler-1  | 2025-12-03 23:14:11,628 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/ "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:11,633 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.facebook.com/
+new-crawler-1  | 2025-12-03 23:14:11,633 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.facebook.com/
+new-crawler-1  | 2025-12-03 23:14:11,646 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:11,748 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/watch/ "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:11,930 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=558.6
+new-crawler-1  | 2025-12-03 23:14:11,935 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=0.6s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:12,147 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.facebook.com/watch/
+new-crawler-1  | 2025-12-03 23:14:12,148 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.facebook.com/watch/
+new-crawler-1  | 2025-12-03 23:14:12,195 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:12,314 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/votinginformationcenter/?entry_point=c2l0ZQ%3D%3D "HTTP/2 302 Found"
+new-crawler-1  | 2025-12-03 23:14:12,435 - Crawler-0 - INFO - HTTP Request: GET https://www.facebook.com/search/top/?q=vote "HTTP/2 404 Not Found"
+new-crawler-1  | 2025-12-03 23:14:12,439 - Crawler-0 - WARNING - [HTTP-FETCH] HTTP error: https://www.facebook.com/votinginformationcenter/?entry_point=c2l0ZQ%3D%3D, status=404, elapsed=244.8ms
+new-crawler-1  | 2025-12-03 23:14:12,440 - Crawler-0 - WARNING - Failed to fetch page https://www.facebook.com/votinginformationcenter/?entry_point=c2l0ZQ%3D%3D: HTTP_404
+new-crawler-1  | 2025-12-03 23:14:12,451 - Crawler-0 - INFO - [3x3-BFS] Completed: 10 pages crawled, 10 URLs checked
+new-crawler-1  | 2025-12-03 23:14:12,451 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=509.3
+new-crawler-1  | 2025-12-03 23:14:12,454 - Crawler-0 - INFO - [Crawler 0] Pages limit reached for site site_0000, stopping new candidates (existing items will continue processing)
+new-crawler-1  | 2025-12-03 23:14:12,462 - Crawler-0 - INFO - [Crawler 0] Completed site site_0000: 11 candidates. Total: 1 sites, 11 candidates
+new-crawler-1  | 2025-12-03 23:14:13,059 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=585.3
+new-crawler-1  | 2025-12-03 23:14:13,479 - Storage-0 - INFO - [STORAGE-0] DIAG: No tasks in queue, depth=0, processed=5, waiting...
+new-crawler-1  | 2025-12-03 23:14:13,574 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=505.5
+new-crawler-1  | 2025-12-03 23:14:14,087 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=507.7
+new-crawler-1  | 2025-12-03 23:14:14,092 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=2.7s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:14,096 - GPU-Processor-0 - INFO - [GPU-Processor-0] HEARTBEAT: state=IDLE, inbox_depth=0, staging=0, inflight=0, last_batch_finished=2.7s ago
+new-crawler-1  | 2025-12-03 23:14:14,609 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=512.8
+new-crawler-1  | 2025-12-03 23:14:15,131 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=516.6
+new-crawler-1  | 2025-12-03 23:14:15,649 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=509.1
+new-crawler-1  | 2025-12-03 23:14:15,847 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:15,855 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:15,855 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+new-crawler-1  | 2025-12-03 23:14:16,168 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=512.4
+new-crawler-1  | 2025-12-03 23:14:16,175 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=4.8s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:16,783 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=601.8
+new-crawler-1  | 2025-12-03 23:14:16,877 - Crawler-0 - INFO - [JS-RENDER] Completed: url=https://www.instagram.com/accounts/meta_verified/?entrypoint=web_footer, total_time=18802.8ms (nav=5677.2ms, content=120.9ms, cleanup=26.7ms), html_size=794100 chars, network_images=1, network_requests=35, memory_after=104.0MB RSS (+13.3MB), system_available=1.8GB (52.6% used)
+new-crawler-1  | 2025-12-03 23:14:16,898 - Crawler-0 - INFO - JS rendering found 0 images for https://www.instagram.com/accounts/meta_verified/?entrypoint=web_footer (HTTP had 0)
+new-crawler-1  | 2025-12-03 23:14:16,910 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.instagram.com/accounts/meta_verified/?entrypoint=web_footer
+new-crawler-1  | 2025-12-03 23:14:16,911 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.instagram.com/accounts/meta_verified/?entrypoint=web_footer
+new-crawler-1  | 2025-12-03 23:14:16,911 - Crawler-0 - INFO - [3x3-SAMPLE] Page 2/7 yielded 0 candidates
+new-crawler-1  | 2025-12-03 23:14:17,302 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=507.3
+new-crawler-1  | 2025-12-03 23:14:17,820 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=502.8
+new-crawler-1  | 2025-12-03 23:14:18,429 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=602.4
+new-crawler-1  | 2025-12-03 23:14:18,435 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=7.1s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:18,940 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=502.0
+new-crawler-1  | 2025-12-03 23:14:19,464 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=517.3
+new-crawler-1  | 2025-12-03 23:14:19,981 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=508.8
+new-crawler-1  | 2025-12-03 23:14:20,501 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=512.6
+new-crawler-1  | 2025-12-03 23:14:20,505 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=9.1s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:20,861 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:20,866 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:20,866 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+new-crawler-1  | 2025-12-03 23:14:21,027 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=519.1
+new-crawler-1  | 2025-12-03 23:14:21,550 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=514.3
+new-crawler-1  | 2025-12-03 23:14:21,673 - Crawler-0 - WARNING - [JS-RENDER] TIMEOUT: Image selector wait timed out after 5016.9ms (limit=5.0s) for https://www.instagram.com/accounts/password/reset/
+new-crawler-1  | 2025-12-03 23:14:21,811 - Crawler-0 - INFO - [JS-RENDER] Completed: url=https://www.instagram.com/accounts/password/reset/, total_time=23784.1ms (nav=5916.5ms, content=109.4ms, cleanup=26.5ms), html_size=816004 chars, network_images=0, network_requests=115, memory_after=106.4MB RSS (+16.4MB), system_available=1.9GB (51.6% used)
+new-crawler-1  | 2025-12-03 23:14:21,836 - Crawler-0 - INFO - JS rendering found 0 images for https://www.instagram.com/accounts/password/reset/ (HTTP had 0)
+new-crawler-1  | 2025-12-03 23:14:21,848 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.instagram.com/accounts/password/reset/
+new-crawler-1  | 2025-12-03 23:14:21,848 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.instagram.com/accounts/password/reset/
+new-crawler-1  | 2025-12-03 23:14:21,848 - Crawler-0 - INFO - [3x3-SAMPLE] Page 3/7 yielded 0 candidates
+new-crawler-1  | 2025-12-03 23:14:21,850 - Crawler-0 - INFO - [3x3-SAMPLE] Completed 3 sample pages
+new-crawler-1  | 2025-12-03 23:14:21,850 - Crawler-0 - INFO - [3x3-AGGREGATE] Total HTTP candidates: 0
+new-crawler-1  | 2025-12-03 23:14:21,850 - Crawler-0 - INFO - [3x3-AGGREGATE] Total JS candidates: 0
+new-crawler-1  | 2025-12-03 23:14:21,851 - Crawler-0 - INFO - Stored rendering strategy for www.instagram.com: use_js=False (HTTP=0, JS=0)
+new-crawler-1  | 2025-12-03 23:14:21,851 - Crawler-0 - INFO - [3x3-STRATEGY] Stored strategy for www.instagram.com: use_js=False (HTTP=0, JS=0)
+new-crawler-1  | 2025-12-03 23:14:21,972 - Crawler-0 - INFO - [3x3-BFS] Starting BFS with 5 initial URLs
+new-crawler-1  | 2025-12-03 23:14:21,973 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:22,056 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/accounts/emailsignup/ "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:22,064 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=506.3
+new-crawler-1  | 2025-12-03 23:14:22,226 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.instagram.com/accounts/emailsignup/
+new-crawler-1  | 2025-12-03 23:14:22,226 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.instagram.com/accounts/emailsignup/
+new-crawler-1  | 2025-12-03 23:14:22,232 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:22,307 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/legal/privacy/ "HTTP/2 301 Moved Permanently"
+new-crawler-1  | 2025-12-03 23:14:22,308 - Crawler-0 - WARNING - [HTTP-FETCH] Cross-domain redirect blocked: https://www.instagram.com/legal/privacy/ -> https://privacycenter.instagram.com/policy/?entry_point=ig_help_center_data_policy_redirect, elapsed=75.9ms
+new-crawler-1  | 2025-12-03 23:14:22,308 - Crawler-0 - WARNING - Failed to fetch page https://www.instagram.com/legal/privacy/: CROSS_DOMAIN_REDIRECT_BLOCKED
+new-crawler-1  | 2025-12-03 23:14:22,309 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+new-crawler-1  | 2025-12-03 23:14:22,372 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/legal/privacy/health_privacy_policy/ "HTTP/2 301 Moved Permanently"
+new-crawler-1  | 2025-12-03 23:14:22,374 - Crawler-0 - WARNING - [HTTP-FETCH] Cross-domain redirect blocked: https://www.instagram.com/legal/privacy/health_privacy_policy/ -> https://privacycenter.instagram.com/policies/health/?entry_point=ig_help_center_data_policy_redirect, elapsed=64.3ms
+new-crawler-1  | 2025-12-03 23:14:22,374 - Crawler-0 - WARNING - Failed to fetch page https://www.instagram.com/legal/privacy/health_privacy_policy/: CROSS_DOMAIN_REDIRECT_BLOCKED
+new-crawler-1  | 2025-12-03 23:14:22,379 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15
+new-crawler-1  | 2025-12-03 23:14:22,438 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/legal/terms/ "HTTP/2 301 Moved Permanently"
+new-crawler-1  | 2025-12-03 23:14:22,440 - Crawler-0 - WARNING - [HTTP-FETCH] Cross-domain redirect blocked: https://www.instagram.com/legal/terms/ -> https://help.instagram.com/581066165581870/, elapsed=60.7ms
+new-crawler-1  | 2025-12-03 23:14:22,440 - Crawler-0 - WARNING - Failed to fetch page https://www.instagram.com/legal/terms/: CROSS_DOMAIN_REDIRECT_BLOCKED
+new-crawler-1  | 2025-12-03 23:14:22,443 - Crawler-0 - INFO - HTTP headers (UA) selected: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0
+new-crawler-1  | 2025-12-03 23:14:22,528 - Crawler-0 - INFO - HTTP Request: GET https://www.instagram.com/explore/locations/ "HTTP/2 200 OK"
+new-crawler-1  | 2025-12-03 23:14:22,582 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=511.7
+new-crawler-1  | 2025-12-03 23:14:22,586 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=11.2s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:22,591 - GPU-Processor-0 - INFO - [GPU-Processor-0] HEARTBEAT: state=IDLE, inbox_depth=0, staging=0, inflight=0, last_batch_finished=11.2s ago
+new-crawler-1  | 2025-12-03 23:14:22,772 - Crawler-0 - INFO - Broad image fallback found 0 candidates on https://www.instagram.com/explore/locations/
+new-crawler-1  | 2025-12-03 23:14:22,773 - Crawler-0 - INFO - Found 0 unique image candidates from https://www.instagram.com/explore/locations/
+new-crawler-1  | 2025-12-03 23:14:22,778 - Crawler-0 - INFO - [3x3-BFS] Completed: 9 pages crawled, 9 URLs checked
+new-crawler-1  | 2025-12-03 23:14:22,781 - Crawler-0 - INFO - [Crawler 0] Completed site site_0001: 2 candidates. Total: 2 sites, 13 candidates
+new-crawler-1  | 2025-12-03 23:14:23,094 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=502.4
+new-crawler-1  | 2025-12-03 23:14:23,617 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=516.1
+new-crawler-1  | 2025-12-03 23:14:24,144 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=518.6
+new-crawler-1  | 2025-12-03 23:14:24,355 - Storage-0 - INFO - [STORAGE-0] DIAG: No tasks in queue, depth=0, processed=5, waiting...
+new-crawler-1  | 2025-12-03 23:14:24,659 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=508.5
+new-crawler-1  | 2025-12-03 23:14:24,663 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=13.3s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:25,186 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=518.1
+new-crawler-1  | 2025-12-03 23:14:25,705 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=511.0
+new-crawler-1  | 2025-12-03 23:14:25,878 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:25,888 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:25,888 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+new-crawler-1  | 2025-12-03 23:14:26,227 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=512.9
+new-crawler-1  | 2025-12-03 23:14:26,752 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=519.0
+new-crawler-1  | 2025-12-03 23:14:26,756 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=15.4s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:27,270 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=510.0
+new-crawler-1  | 2025-12-03 23:14:27,790 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=513.0
+new-crawler-1  | 2025-12-03 23:14:28,313 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=515.9
+new-crawler-1  | 2025-12-03 23:14:28,831 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=509.4
+new-crawler-1  | 2025-12-03 23:14:28,835 - GPU-Processor-0 - INFO - [GPU Processor 0] IDLE STATE: queue_depth=0, staging=0, inflight=0, time_since_last_batch=17.5s, processed=3 batches, 5 images
+new-crawler-1  | 2025-12-03 23:14:29,355 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=515.3
+new-crawler-1  | 2025-12-03 23:14:29,874 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=512.0
+new-crawler-1  | 2025-12-03 23:14:30,399 - GPU-Processor-0 - INFO - [GPU Scheduler] DIAG: feed() added=0 items, need=8, queue_depth=0, staging=0, wait_time_ms=518.6
+new-crawler-1  | 2025-12-03 23:14:30,896 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+new-crawler-1  | 2025-12-03 23:14:30,898 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+new-crawler-1  | 2025-12-03 23:14:30,898 - new_crawler.orchestrator - INFO - Stopping worker processes...
+new-crawler-1  | 2025-12-03 23:14:30,977 - Storage-0 - INFO - [STORAGE-0] Received signal 15, shutting down gracefully...
+new-crawler-1  | 2025-12-03 23:14:30,997 - Storage-0 - INFO - [STORAGE-0] Storage worker stopped. Processed: 5, Failed: 0, Vectorized: 4, Vectorization Errors: 0
+new-crawler-1  | 2025-12-03 23:14:31,022 - new_crawler.orchestrator - INFO - All worker processes stopped
+new-crawler-1  | 2025-12-03 23:14:31,024 - new_crawler.orchestrator - INFO - Retrieved stats for 2 sites from Redis
+new-crawler-1  | 2025-12-03 23:14:31,027 - new_crawler.orchestrator - INFO - Consumed 5 results from queue
+new-crawler-1  | 2025-12-03 23:14:31,028 - new_crawler.orchestrator - INFO - From consumed results: faces=4, raw=5, thumbs=1 (thumb_count=4), mismatches=0
+new-crawler-1  | 2025-12-03 23:14:31,029 - new_crawler.orchestrator - INFO - From Redis stats: faces=4, raw=5, thumbs=4
+new-crawler-1  | 2025-12-03 23:14:31,029 - new_crawler.orchestrator - INFO - Total images processed: 5
+new-crawler-1  | 2025-12-03 23:14:31,029 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+new-crawler-1  | 2025-12-03 23:14:31,029 - new_crawler.orchestrator - INFO - Total sites processed: 2
+new-crawler-1  | 2025-12-03 23:14:31,029 - new_crawler.orchestrator - INFO - Total images processed: 5
+new-crawler-1  | 2025-12-03 23:14:31,029 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 5
+new-crawler-1  | 2025-12-03 23:14:31,030 - new_crawler.orchestrator - INFO - Total thumbnails saved: 4
+new-crawler-1  | 2025-12-03 23:14:31,030 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+new-crawler-1  | 2025-12-03 23:14:31,030 - new_crawler.orchestrator - INFO - Success rate: 19.2%
+new-crawler-1  | 2025-12-03 23:14:31,030 - new_crawler.orchestrator - INFO - Overall throughput: 0.12 images/second
+new-crawler-1  | 2025-12-03 23:14:31,031 - new_crawler.orchestrator - INFO - Crawl completed in 42.4s, success rate: 19.2%, throughput: 0.12 images/second
+new-crawler-1  | 
+new-crawler-1  | ============================================================
+new-crawler-1  | NEW CRAWLER RESULTS
+new-crawler-1  | ============================================================
+new-crawler-1  | Total time: 42.4s
+new-crawler-1  | Success rate: 19.2%
+new-crawler-1  | Sites processed: 2
+new-crawler-1  | Total images found: 26
+new-crawler-1  | Total images processed: 5
+new-crawler-1  | Total faces detected: 4
+new-crawler-1  | Raw images saved: 5
+new-crawler-1  | Thumbnails saved: 4
+new-crawler-1  | Overall throughput: 0.12 images/second
+new-crawler-1  | 
+new-crawler-1  | ============================================================
+new-crawler-1  | PER-SITE RESULTS
+new-crawler-1  | ============================================================
+new-crawler-1  | 
+new-crawler-1  | https://www.facebook.com:
+new-crawler-1  |   Pages crawled: 10
+new-crawler-1  |   Images found: 22
+new-crawler-1  |   Images processed: 3
+new-crawler-1  |   Images cached: 0
+new-crawler-1  |   Faces detected: 0
+new-crawler-1  |   Raw images saved: 3
+new-crawler-1  |   Thumbnails saved: 0
+new-crawler-1  |   Success rate: 0.1%
+new-crawler-1  |   Processing time: 42.4s
+new-crawler-1  |   Throughput: 0.07 images/second
+new-crawler-1  | 
+new-crawler-1  | https://www.instagram.com:
+new-crawler-1  |   Pages crawled: 9
+new-crawler-1  |   Images found: 4
+new-crawler-1  |   Images processed: 2
+new-crawler-1  |   Images cached: 0
+new-crawler-1  |   Faces detected: 4
+new-crawler-1  |   Raw images saved: 2
+new-crawler-1  |   Thumbnails saved: 4
+new-crawler-1  |   Success rate: 0.5%
+new-crawler-1  |   Processing time: 42.4s
+new-crawler-1  |   Throughput: 0.05 images/second
+new-crawler-1  | 
+new-crawler-1  | ============================================================
+new-crawler-1  | SYSTEM METRICS
+new-crawler-1  | ============================================================
+new-crawler-1  | Active crawlers: 0
+new-crawler-1  | Active extractors: 0
+new-crawler-1  | Active GPU processors: 0
+new-crawler-1  | GPU worker available: True
+new-crawler-1  | 
+new-crawler-1  | Queue metrics:
+new-crawler-1  |   sites: 0/128 (0.0%)
+new-crawler-1  |   candidates: 0/128 (0.0%)
+new-crawler-1  |   images: 0/128 (0.0%)
+new-crawler-1  |   results: 0/128 (0.0%)
+new-crawler-1  | 2025-12-03 23:14:31,033 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+new-crawler-1  | 2025-12-03 23:14:31,035 - new_crawler.orchestrator - INFO - Stopping worker processes...
+new-crawler-1  | 2025-12-03 23:14:31,035 - new_crawler.orchestrator - INFO - All worker processes stopped
+new-crawler-1  | 2025-12-03 23:14:31,037 - __main__ - INFO - Crawl completed successfully
+[Knew-crawler-1 exited with code 0

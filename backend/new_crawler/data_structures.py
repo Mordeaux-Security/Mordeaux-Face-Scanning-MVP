@@ -76,6 +76,16 @@ class ImageTask(BaseModel):
     status: TaskStatus = Field(default=TaskStatus.PENDING)
 
 
+class ImageMetadata(BaseModel):
+    """Metadata for image processing (JSON serializable, binary data stored separately)."""
+    phash: str = Field(..., description="Perceptual hash of the image")
+    candidate: CandidateImage = Field(..., description="Original candidate data")
+    file_size: int = Field(..., description="Image file size in bytes")
+    mime_type: str = Field(..., description="MIME type of the image")
+    redis_binary_key: str = Field(..., description="Redis key for binary image data")
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
 # TODO: ARCHITECTURE ISSUE - Duplicate Data Structures
 # FaceDetection is defined in THREE places:
 #   1. new_crawler/data_structures.py (this file)
@@ -223,7 +233,7 @@ class ProcessingStats(BaseModel):
 
 class BatchRequest(BaseModel):
     """Request for GPU worker batch processing."""
-    image_tasks: List[ImageTask] = Field(..., description="List of image tasks to process")
+    image_tasks: List[Union[ImageTask, ImageMetadata]] = Field(..., description="List of image tasks or metadata to process")
     min_face_quality: float = Field(default=0.5, description="Minimum face quality threshold")
     require_face: bool = Field(default=False, description="Whether to require at least one face")
     crop_faces: bool = Field(default=True, description="Whether to crop face regions")

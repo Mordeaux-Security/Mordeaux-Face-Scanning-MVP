@@ -47,6 +47,18 @@ class GPUWorkerLogger:
         """Log CPU fallback completion."""
         self.logger.info(f"[GPU-WORKER-{self.worker_id}] FALLBACK-COMPLETE: {image_count} images, {faces_found} faces, {time_ms:.1f}ms")
     
+    def log_batch_result_ok(self, batch_id: str, images: int, faces: int, duration_ms: float):
+        """Log successful batch processing result."""
+        self.logger.info(f"[GPU-WORKER-{self.worker_id}] BATCH-RESULT-OK: batch_id={batch_id}, images={images}, faces={faces}, duration_ms={duration_ms:.1f}")
+    
+    def log_batch_result_error(self, batch_id: str, err_type: str, fallback: str, duration_ms: float):
+        """Log batch processing error with error type and fallback decision."""
+        self.logger.error(f"[GPU-WORKER-{self.worker_id}] BATCH-RESULT-ERROR: batch_id={batch_id}, err_type={err_type}, fallback={fallback}, duration_ms={duration_ms:.1f}")
+    
+    def log_fallback_done(self, batch_id: str, images: int, faces: int, duration_ms: float):
+        """Log CPU fallback completion with batch ID."""
+        self.logger.info(f"[GPU-WORKER-{self.worker_id}] FALLBACK-DONE: batch_id={batch_id}, images={images}, faces={faces}, duration_ms={duration_ms:.1f}")
+    
     def log_batch_encoding_start(self, image_count: int):
         """Log batch encoding start."""
         self.logger.debug(f"[GPU-WORKER-{self.worker_id}] BATCH-ENCODING-START: encoding {image_count} images")

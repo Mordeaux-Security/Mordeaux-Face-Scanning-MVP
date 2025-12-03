@@ -68,6 +68,26 @@ class ExtractorWorker:
                     self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
                     return None
                 
+                # Check strict_limits BEFORE downloading image (quick cutoff to avoid wasting resources)
+                if self.config.nc_strict_limits:
+                    # Check if site has reached image limit (check directly, not just flag)
+                    stats = await asyncio.to_thread(self.redis.get_site_stats, candidate.site_id)
+                    if stats:
+                        thumbs = stats.get('images_saved_thumbs', 0)
+                        if self.config.nc_max_images_per_site > 0 and thumbs >= self.config.nc_max_images_per_site:
+                            logger.debug(f"[EXTRACTOR-{self.worker_id}] Not processing candidate (image limit reached: {thumbs} >= {self.config.nc_max_images_per_site}): {candidate.img_url}")
+                            # Log extraction end
+                            extraction_duration = (time.time() - extraction_start_time) * 1000
+                            self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
+                            return None
+                    # Also check site limit flag (set when pages or images limit reached)
+                    if await self.redis.is_site_limit_reached_async(candidate.site_id):
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] Not processing candidate (site limit flag set): {candidate.img_url}")
+                        # Log extraction end
+                        extraction_duration = (time.time() - extraction_start_time) * 1000
+                        self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
+                        return None
+                
                 # Log extraction start
                 self.timing_logger.log_extraction_start(candidate.site_id, candidate.img_url)
                 
@@ -161,8 +181,44 @@ class ExtractorWorker:
                 ttl_hours = self.config.nc_url_dedup_ttl_hours
                 ttl_seconds = ttl_hours * 3600 if ttl_hours > 0 else None
                 await self.redis.mark_url_seen_async(candidate.img_url, ttl_seconds)
-                
-                # Create image task
+
+                # Get actual file size for filtering
+                actual_file_size = os.path.getsize(temp_path) if os.path.exists(temp_path) else 0
+
+                # Check minimum file size for GPU processing (filter out tiny avatars/UI elements)
+                if actual_file_size < self.config.min_image_file_size_bytes:
+                    logger.debug(f"[EXTRACTOR-{self.worker_id}] Image too small for GPU processing "
+                                f"({actual_file_size} < {self.config.min_image_file_size_bytes} bytes): {candidate.img_url}")
+                    # Clean up temp file - don't waste GPU time on tiny images
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                    # Log extraction end
+                    extraction_duration = (time.time() - extraction_start_time) * 1000
+                    self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
+                    return None
+
+                # Check strict_limits before creating image task (quick check in case limit reached during processing)
+                # Note: Comprehensive check already done before download, this is just a safety check
+                if self.config.nc_strict_limits:
+                    if await self.redis.is_site_limit_reached_async(candidate.site_id):
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] Not creating image task (site limit flag set during processing): {candidate.img_url}")
+                        # Clean up temp file
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+                        # Log extraction end
+                        extraction_duration = (time.time() - extraction_start_time) * 1000
+                        self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
+                        return None
+
+                # Final validation: ensure temp file still exists before creating image task
+                if not os.path.exists(temp_path):
+                    logger.warning(f"[EXTRACTOR-{self.worker_id}] Temp file disappeared before image task creation: {temp_path}")
+                    # Log extraction end
+                    extraction_duration = (time.time() - extraction_start_time) * 1000
+                    self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
+                    return None
+
+                # All checks passed - create image task
                 image_task = ImageTask(
                     temp_path=temp_path,
                     phash=phash,
@@ -170,42 +226,20 @@ class ExtractorWorker:
                     file_size=download_info.get('content_length', 0),
                     mime_type=download_info.get('content_type', 'image/jpeg')
                 )
-                
+
                 # Log temp file path being passed to GPU queue
-                if os.path.exists(temp_path):
-                    file_size = os.path.getsize(temp_path)
-                    file_mtime = os.path.getmtime(temp_path)
-                    file_age = time.time() - file_mtime
-                    logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Passing temp file to GPU queue: "
-                              f"{temp_path}, size={file_size}bytes, age={file_age:.1f}s, phash={phash[:8]}...")
-                
-                # Check strict_limits before pushing to gpu:inbox
-                if self.config.nc_strict_limits:
-                    # Check if site has reached image limit (check directly, not just flag)
-                    stats = await asyncio.to_thread(self.redis.get_site_stats, candidate.site_id)
-                    if stats:
-                        thumbs = stats.get('images_saved_thumbs', 0)
-                        if self.config.nc_max_images_per_site > 0 and thumbs >= self.config.nc_max_images_per_site:
-                            logger.debug(f"[EXTRACTOR-{self.worker_id}] Not pushing to gpu:inbox (image limit reached: {thumbs} >= {self.config.nc_max_images_per_site}): {candidate.img_url}")
-                            # Clean up temp file
-                            if os.path.exists(temp_path):
-                                os.remove(temp_path)
-                            return None
-                    # Also check site limit flag (set when images limit reached elsewhere)
-                    if await self.redis.is_site_limit_reached_async(candidate.site_id):
-                        logger.debug(f"[EXTRACTOR-{self.worker_id}] Not pushing to gpu:inbox (site limit flag set): {candidate.img_url}")
-                        # Clean up temp file
-                        if os.path.exists(temp_path):
-                            os.remove(temp_path)
-                        return None
-                
+                file_mtime = os.path.getmtime(temp_path)
+                file_age = time.time() - file_mtime
+                logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Passing temp file to GPU queue: "
+                          f"{temp_path}, size={actual_file_size}bytes, age={file_age:.1f}s, phash={phash[:8]}...")
+
                 # Push immediately to GPU inbox (no batching - scheduler handles it)
                 payload = self.redis.serialize_image_task(image_task)
                 inbox_key = getattr(self.config, 'gpu_inbox_key', 'gpu:inbox')
                 pushed = await asyncio.to_thread(self.redis.push_many, inbox_key, [payload])
                 if pushed != 1:
                     logger.warning(f"[EXTRACTOR-{self.worker_id}] Failed to enqueue task: {image_task.candidate.img_url}")
-                
+
                 logger.debug(f"[Extractor {self.worker_id}] Created image task: {phash[:8]}...")
                 # Log extraction end
                 extraction_duration = (time.time() - extraction_start_time) * 1000

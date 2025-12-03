@@ -23,7 +23,7 @@ class GPUScheduler:
     Controls batch size, launch timing, and maximum inflight batches.
     """
     
-    def __init__(self, redis_mgr, deserializer, inbox_key: str,
+    def __init__(self, redis_mgr, deserializer, inbox_key: str, metadata_deserializer=None,
                  target_batch: int = 32, max_wait_ms: int = 12, min_launch_ms: int = 200,
                  config=None):
         """
@@ -39,7 +39,7 @@ class GPUScheduler:
             config: Optional config object for diagnostic logging
         """
         self.redis = redis_mgr
-        self.deserialize = deserializer
+        self.deserialize = metadata_deserializer or deserializer  # Use metadata deserializer if provided
         self.inbox_key = inbox_key
         self.config = config
         

@@ -3,11 +3,20 @@
 
 # Test sites that work well with our refactored architecture
 
-https://wikifeet.com
-https://candidteens.net
-https://forum.candidgirls.io
-https://motherless.com
-https://adultdeepfakes.com
+https://www.facebook.com
+https://www.instagram.com
+
+#https://www.healthboards.com
+#https://patient.info
+#https://healthunlocked.com
+#https://connect.mayoclinic.org
+
+
+#https://wikifeet.com
+#https://candidteens.net
+#https://forum.candidgirls.io
+#https://motherless.com
+#https://adultdeepfakes.com
 
 #https://www.voyeurshd.com
 #https://www.voyeurstyle.com
