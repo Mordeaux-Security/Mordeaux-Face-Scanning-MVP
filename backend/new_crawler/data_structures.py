@@ -52,16 +52,34 @@ class CandidateImage(BaseModel):
     width: Optional[int] = Field(None, description="Image width")
     height: Optional[int] = Field(None, description="Image height")
     discovered_at: datetime = Field(default_factory=datetime.now)
-    
+
     # NEW: Add metadata from HTML parsing to skip HEAD requests
     content_type: Optional[str] = Field(None, description="Content type inferred from URL extension")
     estimated_size: Optional[int] = Field(None, description="Estimated file size from dimensions")
     has_srcset: bool = Field(False, description="Whether image has srcset attribute")
-    
+
     @validator('img_url')
     def validate_img_url(cls, v):
         if not v.startswith(('http://', 'https://')):
             raise ValueError('Image URL must start with http:// or https://')
+        return v
+
+
+class CandidatePost(BaseModel):
+    """Candidate post found during crawling that may contain diabetes-related content."""
+    page_url: str = Field(..., description="URL of the page containing the post")
+    post_url: str = Field(..., description="Direct URL to the post")
+    selector_hint: str = Field(..., description="CSS selector that found this post")
+    site_id: str = Field(..., description="Site identifier")
+    title: Optional[str] = Field(None, description="Post title")
+    content: Optional[str] = Field(None, description="Post content text")
+    author: Optional[str] = Field(None, description="Post author")
+    discovered_at: datetime = Field(default_factory=datetime.now)
+
+    @validator('post_url')
+    def validate_post_url(cls, v):
+        if not v.startswith(('http://', 'https://')):
+            raise ValueError('Post URL must start with http:// or https://')
         return v
 
 
@@ -72,6 +90,14 @@ class ImageTask(BaseModel):
     candidate: CandidateImage = Field(..., description="Original candidate data")
     file_size: int = Field(..., description="Image file size in bytes")
     mime_type: str = Field(..., description="MIME type of the image")
+    created_at: datetime = Field(default_factory=datetime.now)
+    status: TaskStatus = Field(default=TaskStatus.PENDING)
+
+
+class PostTask(BaseModel):
+    """Task for processing a post for diabetes-related content."""
+    candidate: CandidatePost = Field(..., description="Original candidate data")
+    content_hash: str = Field(..., description="Hash of the post content")
     created_at: datetime = Field(default_factory=datetime.now)
     status: TaskStatus = Field(default=TaskStatus.PENDING)
 

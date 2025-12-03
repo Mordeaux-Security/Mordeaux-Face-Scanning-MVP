@@ -18,7 +18,7 @@ from .config import get_config
 from .redis_manager import get_redis_manager
 from .selector_miner import get_selector_miner
 from .http_utils import get_http_utils
-from .data_structures import SiteTask, CandidateImage, TaskStatus
+from .data_structures import SiteTask, CandidateImage, CandidatePost, TaskStatus
 from .timing_logger import get_timing_logger
 
 logger = logging.getLogger(__name__)
@@ -44,39 +44,44 @@ class CrawlerWorker:
         self._active_tasks_incr = self.redis.incr_active_tasks
         self._active_tasks_decr = self.redis.decr_active_tasks
         
-    async def _enqueue_candidates(self, candidates: List[CandidateImage]) -> int:
+    async def _enqueue_candidates(self, candidates) -> int:
         """Enqueue a batch of candidates to Redis queue."""
+        # Handle both CandidateImage and CandidatePost types
+        candidate_type = type(candidates[0]).__name__ if candidates else None
+
         # Filter out candidates from sites that reached limit
         valid_candidates = []
         for candidate in candidates:
             # Skip enqueue if site limit already reached
             if await self.redis.is_site_limit_reached_async(candidate.site_id):
-                logger.debug(f"[Crawler {self.worker_id}] Not enqueueing candidate (limit reached): {candidate.img_url}")
+                url_attr = getattr(candidate, 'img_url', getattr(candidate, 'post_url', 'unknown'))
+                logger.debug(f"[Crawler {self.worker_id}] Not enqueueing candidate (limit reached): {url_attr}")
                 continue
-            
+
             # If strict_limits enabled, also check if site has reached pages limit
             if self.config.nc_strict_limits:
                 stats = await asyncio.to_thread(self.redis.get_site_stats, candidate.site_id)
                 if stats:
                     pages_crawled = stats.get('pages_crawled', 0)
                     if self.config.nc_max_pages_per_site > 0 and pages_crawled >= self.config.nc_max_pages_per_site:
-                        logger.debug(f"[Crawler {self.worker_id}] Not enqueueing candidate (pages limit reached): {candidate.img_url}")
+                        url_attr = getattr(candidate, 'img_url', getattr(candidate, 'post_url', 'unknown'))
+                        logger.debug(f"[Crawler {self.worker_id}] Not enqueueing candidate (pages limit reached): {url_attr}")
                         continue
-            
+
             valid_candidates.append(candidate)
-        
+
         if not valid_candidates:
             return 0
-        
+
         # Batch push all valid candidates at once
         queue_name = self.config.get_queue_name('candidates')
         payloads = [self.redis._serialize(c) for c in valid_candidates]
         pushed = await asyncio.to_thread(self.redis.push_many, queue_name, payloads)
-        
+
         # Diagnostic logging
         if self.config.nc_diagnostic_logging:
             queue_depth = await self.redis.get_queue_length_by_key_async(queue_name)
-            
+
             # Track candidates/second rate
             now = time.time()
             if not hasattr(self, '_last_enqueue_time'):
@@ -84,7 +89,7 @@ class CrawlerWorker:
                 self._last_enqueue_count = 0
                 self._enqueue_count_window = 0
                 self._enqueue_time_window = now
-            
+
             self._enqueue_count_window += pushed
             elapsed = now - self._enqueue_time_window
             if elapsed >= 1.0:  # Calculate rate every second
@@ -93,9 +98,9 @@ class CrawlerWorker:
                           f"queue_depth={queue_depth}")
                 self._enqueue_count_window = 0
                 self._enqueue_time_window = now
-            
-            logger.debug(f"[CRAWLER-DIAG-{self.worker_id}] Pushed {pushed} candidates, queue_depth={queue_depth}")
-        
+
+            logger.debug(f"[CRAWLER-DIAG-{self.worker_id}] Pushed {pushed} {candidate_type}s, queue_depth={queue_depth}")
+
         return pushed if pushed else 0
 
     async def process_site(self, site_task: SiteTask) -> int:
@@ -107,28 +112,28 @@ class CrawlerWorker:
             # Log site start
             self.timing_logger.log_site_start(site_task.site_id, site_task.url)
             
-            # Mine selectors from site using streaming approach
+            # Mine posts for diabetes mentions using streaming approach
             # Increment active tasks counter for duration of JS/HTTP crawl
             self._active_tasks_incr(1)
             try:
                 enqueue_tasks = []
                 total_pages = 0
-                async for page_url, page_candidates in self.selector_miner.mine_with_3x3_crawl(
+                async for page_url, page_candidates in self.selector_miner.mine_posts_with_3x3_crawl(
                     site_task.url, site_task.site_id, site_task.max_pages
                 ):
                     # Log page start/end timing
                     page_start_time = time.time()
                     self.timing_logger.log_page_start(site_task.site_id, page_url)
-                    
+
                     # Enqueue candidates in background while we continue crawling
                     task = asyncio.create_task(self._enqueue_candidates(page_candidates))
                     enqueue_tasks.append(task)
-                    
+
                     # Log page end
                     page_duration = (time.time() - page_start_time) * 1000
                     self.timing_logger.log_page_end(site_task.site_id, page_url, page_duration, len(page_candidates))
                     total_pages += 1
-                
+
                 # After crawl completes, wait for all enqueues to finish
                 results = await asyncio.gather(*enqueue_tasks)
                 total_enqueued = sum(results)

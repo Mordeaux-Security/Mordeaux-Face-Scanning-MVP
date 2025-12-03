@@ -20,7 +20,7 @@ from .config import get_config
 from .redis_manager import get_redis_manager
 from .cache_manager import get_cache_manager
 from .http_utils import get_http_utils
-from .data_structures import CandidateImage, ImageTask, BatchRequest, TaskStatus
+from .data_structures import CandidateImage, CandidatePost, ImageTask, PostTask, BatchRequest, TaskStatus
 from .timing_logger import get_timing_logger
 
 logger = logging.getLogger(__name__)
@@ -53,9 +53,21 @@ class ExtractorWorker:
         self.temp_dir = tempfile.mkdtemp(prefix=f"extractor_{worker_id}_")
         logger.info(f"[Extractor {self.worker_id}] Using temp directory: {self.temp_dir}")
     
-    async def process_candidate(self, candidate: CandidateImage) -> Optional[ImageTask]:
-        """Process a single candidate image."""
+    async def process_candidate(self, candidate) -> Optional:
+        """Process a single candidate (either image or post)."""
         extraction_start_time = time.time()
+
+        # Handle different candidate types
+        if isinstance(candidate, CandidatePost):
+            return await self._process_post_candidate(candidate, extraction_start_time)
+        elif isinstance(candidate, CandidateImage):
+            return await self._process_image_candidate(candidate, extraction_start_time)
+        else:
+            logger.warning(f"[Extractor {self.worker_id}] Unknown candidate type: {type(candidate)}")
+            return None
+
+    async def _process_image_candidate(self, candidate: CandidateImage, extraction_start_time: float) -> Optional[ImageTask]:
+        """Process a single candidate image."""
         async with self._semaphore:  # Limit concurrent downloads
             try:
                 logger.debug(f"[Extractor {self.worker_id}] Processing candidate: {candidate.img_url}")
@@ -252,6 +264,89 @@ class ExtractorWorker:
                 extraction_duration = (time.time() - extraction_start_time) * 1000
                 self.timing_logger.log_extraction_end(candidate.site_id, candidate.img_url, extraction_duration)
                 return None
+
+    async def _process_post_candidate(self, candidate: CandidatePost, extraction_start_time: float) -> Optional[PostTask]:
+        """Process a diabetes-related post candidate."""
+        async with self._semaphore:  # Limit concurrent processing
+            try:
+                logger.debug(f"[Extractor {self.worker_id}] Processing diabetes post: {candidate.post_url}")
+
+                # Check URL deduplication
+                if await self.redis.url_seen_async(candidate.post_url):
+                    logger.debug(f"[Extractor {self.worker_id}] Post URL already seen, skipping: {candidate.post_url}")
+                    extraction_duration = (time.time() - extraction_start_time) * 1000
+                    self.timing_logger.log_extraction_end(candidate.site_id, candidate.post_url, extraction_duration)
+                    return None
+
+                # Check strict_limits
+                if self.config.nc_strict_limits:
+                    stats = await asyncio.to_thread(self.redis.get_site_stats, candidate.site_id)
+                    if stats:
+                        posts_saved = stats.get('posts_saved', 0)
+                        if self.config.nc_max_images_per_site > 0 and posts_saved >= self.config.nc_max_images_per_site:
+                            logger.debug(f"[EXTRACTOR-{self.worker_id}] Not processing post (limit reached: {posts_saved} >= {self.config.nc_max_images_per_site}): {candidate.post_url}")
+                            extraction_duration = (time.time() - extraction_start_time) * 1000
+                            self.timing_logger.log_extraction_end(candidate.site_id, candidate.post_url, extraction_duration)
+                            return None
+                    if await self.redis.is_site_limit_reached_async(candidate.site_id):
+                        logger.debug(f"[EXTRACTOR-{self.worker_id}] Not processing post (site limit flag set): {candidate.post_url}")
+                        extraction_duration = (time.time() - extraction_start_time) * 1000
+                        self.timing_logger.log_extraction_end(candidate.site_id, candidate.post_url, extraction_duration)
+                        return None
+
+                # Log extraction start
+                self.timing_logger.log_extraction_start(candidate.site_id, candidate.post_url)
+
+                # Create content hash
+                import hashlib
+                content_hash = hashlib.sha256((candidate.content or "").encode('utf-8')).hexdigest()
+
+                # Mark URL as seen
+                ttl_hours = self.config.nc_url_dedup_ttl_hours
+                ttl_seconds = ttl_hours * 3600 if ttl_hours > 0 else None
+                await self.redis.mark_url_seen_async(candidate.post_url, ttl_seconds)
+
+                # Create post task
+                post_task = PostTask(
+                    candidate=candidate,
+                    content_hash=content_hash
+                )
+
+                # Save post metadata directly (bypass GPU worker)
+                await self._save_post_metadata(post_task)
+
+                logger.debug(f"[Extractor {self.worker_id}] Saved diabetes post: {content_hash[:8]}...")
+                extraction_duration = (time.time() - extraction_start_time) * 1000
+                self.timing_logger.log_extraction_end(candidate.site_id, candidate.post_url, extraction_duration)
+
+                self.downloaded_images += 1  # Reuse counter for posts
+                return post_task
+
+            except Exception as e:
+                logger.error(f"[Extractor {self.worker_id}] Error processing post {candidate.post_url}: {e}")
+                extraction_duration = (time.time() - extraction_start_time) * 1000
+                self.timing_logger.log_extraction_end(candidate.site_id, candidate.post_url, extraction_duration)
+                return None
+
+    async def _save_post_metadata(self, post_task: PostTask):
+        """Save diabetes post metadata directly to storage."""
+        try:
+            # Store post metadata in Redis or database
+            # For now, just log it - in a real implementation you'd save to a database
+            logger.info(f"[Extractor {self.worker_id}] Saving diabetes post metadata: {post_task.content_hash[:8]}... "
+                       f"from {post_task.candidate.site_id}")
+
+            # Update site stats
+            await self.redis.update_site_stats_async(
+                post_task.candidate.site_id,
+                {'posts_saved': 1}
+            )
+
+            # You could save to a database here, e.g.:
+            # await self._save_to_database(post_task)
+
+        except Exception as e:
+            logger.error(f"[Extractor {self.worker_id}] Error saving post metadata: {e}")
     
     
     

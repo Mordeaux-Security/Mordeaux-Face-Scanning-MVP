@@ -16,7 +16,7 @@ import httpx
 
 from .config import get_config
 from .http_utils import get_http_utils
-from .data_structures import CandidateImage
+from .data_structures import CandidateImage, CandidatePost
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class SelectorMiner:
         try:
             soup = BeautifulSoup(html, 'html.parser')
             candidates = []
-            
+
             # Find images using core patterns
             for pattern in self.core_patterns[:self.config.nc_max_selector_patterns]:
                 try:
@@ -92,22 +92,22 @@ class SelectorMiner:
                     logger.info(f"Broad image fallback found {len(candidates)} candidates on {base_url}")
                 except Exception as e:
                     logger.debug(f"Error during broad image fallback: {e}")
-            
+
             # Extract images from noscript blocks if enabled
             if self.config.nc_extract_noscript_images:
                 noscript_candidates = self._extract_noscript_images(soup, base_url, site_id)
                 candidates.extend(noscript_candidates)
-            
+
             # Extract images from JSON-LD if enabled
             if self.config.nc_extract_jsonld_images:
                 jsonld_candidates = self._extract_jsonld_images(soup, base_url, site_id)
                 candidates.extend(jsonld_candidates)
-            
+
             # Extract images from script blocks if enabled
             if self.config.nc_extract_script_images:
                 script_candidates = self._extract_script_images(soup, base_url, site_id)
                 candidates.extend(script_candidates)
-            
+
             # Remove duplicates based on image URL
             seen_urls = set()
             unique_candidates = []
@@ -115,12 +115,196 @@ class SelectorMiner:
                 if candidate.img_url not in seen_urls:
                     seen_urls.add(candidate.img_url)
                     unique_candidates.append(candidate)
-            
+
             logger.info(f"Found {len(unique_candidates)} unique image candidates from {base_url}")
             return unique_candidates
-            
+
         except Exception as e:
             logger.error(f"Error mining selectors from {base_url}: {e}")
+            return []
+
+    async def mine_posts_with_3x3_crawl(self, base_url: str, site_id: str, max_pages: int = 5) -> AsyncIterator[Tuple[str, List[CandidatePost]]]:
+        """Perform 3x3 crawl for diabetes-related posts: 1 base + 3 category + 3 content pages."""
+        try:
+            from .redis_manager import get_redis_manager
+            from urllib.parse import urlparse
+            redis = get_redis_manager()
+            domain = urlparse(base_url).netloc
+
+            logger.info(f"Starting 3x3 diabetes post crawl for {base_url} (max_pages={max_pages})")
+            checked_urls = {base_url}
+            pages_crawled = 0
+
+            # PHASE 1: Sample crawl for diabetes posts
+
+            # Step 1: Fetch base page
+            logger.info(f"[3x3-POST-SAMPLE] Fetching base page: {base_url}")
+            async with self._semaphore:
+                html, error, _ = await self.http_utils.fetch_html(
+                    base_url, use_js_fallback=True, force_compare_first_visit=False
+                )
+
+            if not html:
+                logger.warning(f"Failed to fetch base page {base_url}: {error}")
+                return
+
+            pages_crawled += 1
+            base_candidates = await self.mine_posts_for_diabetes(html, base_url, site_id)
+            yield base_url, base_candidates
+
+            # Get category/content URLs for sampling
+            soup = BeautifulSoup(html, 'html.parser')
+            category_urls = await self._discover_category_pages(soup, base_url)
+            if not category_urls:
+                category_urls = await self._discover_random_same_domain_links(soup, base_url, limit=3)
+
+            # Step 2: Fetch up to 6 more sample pages in PARALLEL
+            sample_tasks = []
+            in_progress_urls = set()
+            url_task_map = {}
+            max_sample_pages = 7 if max_pages == -1 else min(7, max_pages)
+
+            for category_url in category_urls[:6]:  # Take up to 6 more
+                if category_url not in checked_urls and category_url not in in_progress_urls and pages_crawled < max_sample_pages:
+                    in_progress_urls.add(category_url)
+                    task = asyncio.create_task(self._fetch_post_page(category_url, site_id))
+                    sample_tasks.append(task)
+                    url_task_map[task] = category_url
+
+            # Process sample pages as they complete
+            for task in asyncio.as_completed(sample_tasks):
+                original_url = url_task_map.get(task)
+                url = original_url
+                try:
+                    candidates, returned_url = await task
+                    url = returned_url
+                    pages_crawled += 1
+
+                    checked_urls.add(url)
+                    in_progress_urls.discard(url)
+                    if url != original_url and original_url:
+                        in_progress_urls.discard(original_url)
+
+                    logger.info(f"[3x3-POST-SAMPLE] Page yielded {len(candidates)} diabetes post candidates")
+                    yield url, candidates
+
+                except Exception as e:
+                    logger.debug(f"Error processing post sample page: {e}")
+                    if original_url:
+                        in_progress_urls.discard(original_url)
+
+            # PHASE 2: Continue BFS crawl if more pages needed
+            if max_pages == -1 or pages_crawled < max_pages:
+                remaining_pages = max_pages - pages_crawled if max_pages != -1 else 1000
+
+                # Use discovered URLs for BFS expansion
+                discovered_urls = set()
+                for url in checked_urls:
+                    if url != base_url:  # Don't rediscover base
+                        discovered_urls.add(url)
+
+                # Convert to list and sort for deterministic order
+                bfs_queue = sorted(list(discovered_urls))
+
+                logger.info(f"[3x3-POST-BFS] Starting BFS with {len(bfs_queue)} URLs, remaining_pages={remaining_pages}")
+
+                for url in bfs_queue:
+                    if url in checked_urls:
+                        continue
+                    if max_pages != -1 and pages_crawled >= max_pages:
+                        break
+
+                    try:
+                        candidates, _ = await self._fetch_post_page(url, site_id)
+                        pages_crawled += 1
+                        checked_urls.add(url)
+
+                        logger.info(f"[3x3-POST-BFS] BFS page yielded {len(candidates)} diabetes post candidates")
+                        yield url, candidates
+
+                    except Exception as e:
+                        logger.debug(f"Error in BFS crawl for {url}: {e}")
+                        continue
+
+            logger.info(f"[3x3-POST] Completed diabetes crawl: {pages_crawled} pages, {len(checked_urls)} URLs checked")
+
+        except Exception as e:
+            logger.error(f"Error in 3x3 diabetes post crawl for {base_url}: {e}")
+
+    async def _fetch_post_page(self, url: str, site_id: str) -> Tuple[List[CandidatePost], str]:
+        """Fetch a page and mine diabetes-related posts."""
+        async with self._semaphore:
+            html, error, _ = await self.http_utils.fetch_html(
+                url, use_js_fallback=True, force_compare_first_visit=False
+            )
+
+        if not html:
+            logger.debug(f"Failed to fetch post page {url}: {error}")
+            return [], url
+
+        candidates = await self.mine_posts_for_diabetes(html, url, site_id)
+        return candidates, url
+
+    async def mine_posts_for_diabetes(self, html: str, base_url: str, site_id: str) -> List[CandidatePost]:
+        """Mine posts from HTML content and check for diabetes mentions."""
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+            candidates = []
+
+            # Post selector patterns for finding forum posts, articles, etc.
+            post_patterns = [
+                # Forum patterns
+                '.post', '.thread', '.topic', '.discussion',
+                '.forum-post', '.message', '.comment',
+                # Article patterns
+                'article', '.article', '.entry', '.post-content',
+                # Generic content patterns
+                '.content', '.text', '.body',
+                # Social media patterns
+                '.tweet', '.status', '.update',
+                # Health forum patterns
+                '.health-post', '.medical-post', '.patient-post'
+            ]
+
+            # Find posts using patterns
+            for pattern in post_patterns:
+                try:
+                    posts = soup.select(pattern)
+                    for post in posts:
+                        candidate = self._create_post_candidate(post, base_url, pattern, site_id)
+                        if candidate and self._contains_diabetes_keyword(candidate):
+                            candidates.append(candidate)
+                except Exception as e:
+                    logger.debug(f"Error with post pattern {pattern}: {e}")
+                    continue
+
+            # Broad fallback: if no candidates yet, check main content areas
+            if not candidates:
+                try:
+                    # Look for main content divs, articles, etc.
+                    content_selectors = ['main', 'article', '.main-content', '.content', '#content', '.post']
+                    for selector in content_selectors:
+                        content_elements = soup.select(selector)
+                        for element in content_elements:
+                            candidate = self._create_post_candidate(element, base_url, selector, site_id)
+                            if candidate and self._contains_diabetes_keyword(candidate):
+                                candidates.append(candidate)
+                except Exception as e:
+                    logger.debug(f"Error during broad post fallback: {e}")
+
+            # Remove duplicates based on post URL
+            seen_urls = set()
+            unique_candidates = []
+            for candidate in candidates:
+                if candidate.post_url not in seen_urls:
+                    seen_urls.add(candidate.post_url)
+                    unique_candidates.append(candidate)
+
+            logger.info(f"Found {len(unique_candidates)} unique diabetes-related post candidates from {base_url}")
+            return unique_candidates
+
+        except Exception as e:
+            logger.error(f"Error mining posts from {base_url}: {e}")
             return []
     
     def _create_candidate(self, img_element, base_url: str, selector: str, site_id: str) -> Optional[CandidateImage]:
@@ -130,31 +314,31 @@ class SelectorMiner:
             img_url = self._extract_image_url(img_element, base_url)
             if not img_url:
                 return None
-            
+
             # Get additional attributes
             alt_text = img_element.get('alt', '')
             width = img_element.get('width') or img_element.get('Width')
             height = img_element.get('height') or img_element.get('Height')
-            
+
             # Convert width/height to integers if possible
             try:
                 width = int(width) if width else None
                 height = int(height) if height else None
             except (ValueError, TypeError):
                 width = height = None
-            
+
             # Infer content type from URL extension
             content_type = self._infer_content_type(img_url)
-            
+
             # Estimate file size from dimensions (rough approximation)
             estimated_size = None
             if width and height:
                 # Rough estimate: width * height * 3 bytes (RGB) * compression factor
                 estimated_size = int(width * height * 3 * 0.3)  # 30% compression factor
-            
+
             # Check for srcset
             has_srcset = bool(img_element.get('srcset'))
-            
+
             return CandidateImage(
                 page_url=base_url,
                 img_url=img_url,
@@ -167,10 +351,75 @@ class SelectorMiner:
                 estimated_size=estimated_size,
                 has_srcset=has_srcset
             )
-            
+
         except Exception as e:
             logger.debug(f"Error creating candidate: {e}")
             return None
+
+    def _create_post_candidate(self, post_element, base_url: str, selector: str, site_id: str) -> Optional[CandidatePost]:
+        """Create candidate post from HTML element."""
+        try:
+            # Extract post URL from links within the element
+            post_url = base_url  # Default to page URL
+            link = post_element.find('a', href=True)
+            if link:
+                post_url = urljoin(base_url, link['href'])
+
+            # Extract title
+            title = None
+            title_elem = post_element.find(['h1', 'h2', 'h3', 'h4', '.title', '.subject'])
+            if title_elem:
+                title = title_elem.get_text(strip=True)
+
+            # Extract content
+            content = post_element.get_text(strip=True)
+
+            # Extract author
+            author = None
+            author_elem = post_element.find(['.author', '.username', '.byline', '.poster'])
+            if author_elem:
+                author = author_elem.get_text(strip=True)
+
+            # Skip if content is too short
+            if len(content) < 50:
+                return None
+
+            return CandidatePost(
+                page_url=base_url,
+                post_url=post_url,
+                selector_hint=selector,
+                site_id=site_id,
+                title=title,
+                content=content,
+                author=author
+            )
+
+        except Exception as e:
+            logger.debug(f"Error creating post candidate: {e}")
+            return None
+
+    def _contains_diabetes_keyword(self, candidate: CandidatePost) -> bool:
+        """Check if post content contains diabetes-related keywords."""
+        if not candidate.content:
+            return False
+
+        content_lower = candidate.content.lower()
+        title_lower = candidate.title.lower() if candidate.title else ""
+
+        # Diabetes-related keywords
+        diabetes_keywords = [
+            'diabetes', 'diabetic', 'insulin', 'blood sugar', 'glucose',
+            'type 1 diabetes', 'type 2 diabetes', 'gestational diabetes',
+            'diabetes mellitus', 'hyperglycemia', 'hypoglycemia',
+            'a1c', 'hba1c', 'blood glucose', 'sugar levels'
+        ]
+
+        # Check content and title for keywords
+        for keyword in diabetes_keywords:
+            if keyword in content_lower or keyword in title_lower:
+                return True
+
+        return False
     
     def _extract_image_url(self, img_element, base_url: str) -> Optional[str]:
         """Extract image URL with comprehensive attribute checking."""
