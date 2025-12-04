@@ -1,0 +1,30 @@
+# Core HTTP + async
+httpx==0.27.0
+redis==5.0.4
+
+# Configuration & validation
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# HTML parsing & selector mining
+beautifulsoup4==4.12.2
+python-dateutil==2.9.0.post0
+
+# Image handling & hashing
+Pillow==10.4.0
+imagehash==4.3.1
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+
+# GPU/CPU face detection fallback
+insightface==0.7.3
+onnxruntime>=1.20.0
+
+# Storage & cloud integrations
+boto3==1.34.162
+minio>=7.2.7
+qdrant-client==1.8.2
+
+# System + diagnostics
+psutil==6.1.0
+playwright==1.48.0

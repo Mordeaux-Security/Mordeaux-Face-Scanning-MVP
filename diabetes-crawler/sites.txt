@@ -1,0 +1,2 @@
+https://example.com/models
+https://another-example.com/gallery
