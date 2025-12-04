@@ -193,6 +193,15 @@ def process_image(message: dict) -> dict:
             for face in raw_faces:
                 quality_result = evaluate_face_quality(img_bgr, face, cfg=CRAWLER_INGEST_QUALITY)
                 if quality_result.is_usable:
+                    # CRITICAL: Preserve the embedding from InsightFace's app.get()
+                    # This ensures embeddings match those from GPU worker/crawler
+                    # which also uses app.get() for embedding generation
+                    embedding = None
+                    if hasattr(face, 'embedding') and face.embedding is not None:
+                        embedding = face.embedding.tolist()
+                    elif hasattr(face, 'normed_embedding') and face.normed_embedding is not None:
+                        embedding = face.normed_embedding.tolist()
+                    
                     # Convert to dict format for downstream processing
                     face_detections.append({
                         "bbox": [float(v) for v in face.bbox.tolist()],
@@ -200,6 +209,7 @@ def process_image(message: dict) -> dict:
                         "confidence": float(getattr(face, "det_score", 1.0)),
                         "quality_score": quality_result.score,
                         "quality_reasons": quality_result.reasons,
+                        "embedding": embedding,  # Preserve InsightFace embedding
                     })
                 else:
                     faces_quality_rejected += 1
@@ -293,8 +303,19 @@ def process_image(message: dict) -> dict:
         )
 
         # Embedding (512-d float32) with normalization verification
+        # CRITICAL: Use pre-computed embedding from InsightFace app.get() when available
+        # This ensures embeddings match those from GPU worker/crawler for consistency
         with timer("embed_ms"):
-            vec = embed(crop_bgr)
+            pre_computed_embedding = fd.get("embedding")
+            
+            if pre_computed_embedding is not None:
+                # Use InsightFace's embedding directly (matches GPU worker)
+                vec = np.array(pre_computed_embedding, dtype=np.float32)
+                logger.debug("Using pre-computed embedding from InsightFace")
+            else:
+                # Fallback: compute embedding (for face_hints without embeddings)
+                vec = embed(crop_bgr)
+                logger.debug("Computing embedding via embed() fallback")
             
             # Verify embedding is properly L2-normalized (should be ~1.0)
             # This is critical for cosine similarity accuracy

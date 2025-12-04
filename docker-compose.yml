@@ -97,6 +97,8 @@ services:
       VERIFY_TOP_K: "50"
       VERIFY_HNSW_EF: "128"
       LOG_LEVEL: INFO
+    volumes:
+      - insightface-models:/root/.insightface  # Persist InsightFace models across rebuilds
     ports:
       - "8001:8001"
     networks: [mordeaux]
@@ -191,3 +193,4 @@ networks:
 volumes:
   minio-data: {}
   qdrant-data: {}
+  insightface-models: {}  # Persist InsightFace models

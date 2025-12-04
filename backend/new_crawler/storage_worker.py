@@ -1,3 +1,4 @@
+
 """
 Storage Worker for New Crawler System
 
@@ -15,6 +16,7 @@ import sys
 import time
 import uuid
 from typing import Optional, List, Dict, Any
+import numpy as np
 
 from .config import get_config
 from .redis_manager import get_redis_manager
@@ -277,6 +279,21 @@ class StorageWorker:
                 if face_result.thumbnail_keys and face_idx < len(face_result.thumbnail_keys):
                     thumb_key = face_result.thumbnail_keys[face_idx]
                 
+                # Process embedding: ensure it's a numpy array, copy it, and normalize
+                vec = face.embedding
+                
+                # Convert to numpy array and ensure it's float32
+                vec = np.asarray(vec, dtype=np.float32).copy()
+                
+                # Normalize the embedding vector (L2 normalization for cosine similarity)
+                norm = np.linalg.norm(vec)
+                if norm > 1e-6:
+                    vec = vec / norm
+                else:
+                    # Skip faces with near-zero embeddings (invalid embeddings)
+                    logger.warning(f"[STORAGE-{self.worker_id}] Received near-zero embedding norm ({norm:.6f}) for face {face_id}, skipping")
+                    continue
+                
                 # Build metadata payload
                 payload = {
                     "tenant_id": tenant_id,
@@ -293,10 +310,11 @@ class StorageWorker:
                     "indexed_at": time.time(),
                 }
                 
+                # Convert normalized vector to list for Qdrant
                 points.append(
                     qm.PointStruct(
                         id=face_id,
-                        vector=face.embedding,
+                        vector=vec.tolist(),
                         payload=payload
                     )
                 )

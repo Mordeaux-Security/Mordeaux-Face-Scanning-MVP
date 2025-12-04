@@ -36,10 +36,12 @@ class Settings(BaseModel):
     HNSW_EF: int = int(os.getenv("HNSW_EF", "256"))
 
     # ----- Face Detection -----
-    # Increased from 640,640 to 1024,1024 for better small face detection
-    DET_SIZE: str = os.getenv("DET_SIZE", "1024,1024")
-    # Increased from 0.45 to 0.65 to reduce false positive detections
-    DET_SCORE_THRESH: float = float(os.getenv("DET_SCORE_THRESH", "0.65"))
+    # Changed back to 640,640 - larger det_size (1024,1024) fails for smaller images
+    # The 640,640 setting works better for typical web images and user uploads
+    DET_SIZE: str = os.getenv("DET_SIZE", "640,640")
+    # Detection threshold: 0.60 balances false positives vs. missing valid faces
+    # Lowered from 0.65 to help detect faces in high-quality enrollment images
+    DET_SCORE_THRESH: float = float(os.getenv("DET_SCORE_THRESH", "0.60"))
     ONNX_PROVIDERS_CSV: str = os.getenv("ONNX_PROVIDERS_CSV", "CPUExecutionProvider")
     IMAGE_SIZE: int = int(os.getenv("IMAGE_SIZE", "112"))
     
