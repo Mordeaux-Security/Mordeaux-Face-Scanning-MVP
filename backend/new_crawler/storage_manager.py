@@ -17,7 +17,7 @@ import json
 from datetime import datetime
 
 from .config import get_config
-from .data_structures import ImageTask, FaceDetection, FaceResult, StorageTask
+from .data_structures import ImageTask, FaceDetection, FaceResult, StorageTask, PostTask, PostMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -336,6 +336,197 @@ class StorageManager:
         except Exception as e:
             logger.error(f"Failed to save metadata: {e}")
             return False
+    
+    def save_post_metadata(self, post_task: PostTask) -> Tuple[Optional[str], Optional[str]]:
+        """Save post metadata as JSON file and raw HTML to MinIO.
+        
+        ALL posts are saved to raw-images bucket.
+        Only posts with diabetes keywords are saved to posts bucket (thumbs).
+        """
+        try:
+            # Create PostMetadata object
+            post_metadata = PostMetadata(
+                title=post_task.candidate.title,
+                content=post_task.candidate.content,
+                author=post_task.candidate.author,
+                url=post_task.candidate.post_url,  # Map post_url to url
+                date=post_task.candidate.date,
+                site_id=post_task.candidate.site_id,
+                content_hash=post_task.content_hash,
+                discovered_at=post_task.candidate.discovered_at,
+                page_url=post_task.candidate.page_url
+            )
+            
+            # Convert to JSON - use model_dump_json() which handles datetime serialization automatically
+            metadata_json = post_metadata.model_dump_json(indent=2)
+            metadata_data = metadata_json.encode('utf-8')
+            
+            # Upload to MinIO
+            client = self._get_client()
+            
+            # STEP 1: Save ALL posts to raw-images bucket
+            raw_key = f"posts/{post_task.candidate.site_id}/{post_task.content_hash}.json"
+            
+            # Check Redis for content hash deduplication (atomic check before saving)
+            try:
+                from .redis_manager import get_redis_manager
+                redis_manager = get_redis_manager()
+                content_hash_key = f"nc:content_hash:{post_task.content_hash}"
+                redis_client = redis_manager._get_client()
+                # Use SETNX (set if not exists) for atomic check-and-set
+                if redis_client.set(content_hash_key, "1", nx=True, ex=86400):  # Expire after 24 hours
+                    # Hash not seen before, proceed with save
+                    logger.debug(f"[STORAGE] Content hash {post_task.content_hash[:8]}... not seen before, proceeding")
+                else:
+                    # Hash already exists, skip save
+                    logger.info(f"[STORAGE] Post already exists (content hash dedup): {post_task.content_hash[:8]}...")
+                    return raw_key, f"{self.config.s3_endpoint}/{self.config.s3_bucket_raw}/{raw_key}" if self.config.s3_endpoint else None
+            except Exception as e:
+                logger.warning(f"[STORAGE] Failed to check Redis for content hash dedup: {e}")
+                # Continue with MinIO check as fallback
+            
+            # Check if file already exists in MinIO (fallback deduplication)
+            if self.config.s3_endpoint:
+                try:
+                    # Check if object already exists
+                    try:
+                        client.stat_object(self.config.s3_bucket_raw, raw_key)
+                        logger.info(f"[STORAGE] Post already exists in raw-images (skipping duplicate): {raw_key}")
+                        # Still return the key to indicate success, but don't save again
+                        return raw_key, f"{self.config.s3_endpoint}/{self.config.s3_bucket_raw}/{raw_key}"
+                    except Exception:
+                        # Object doesn't exist, proceed with save
+                        pass
+                except Exception:
+                    pass
+            
+            # Ensure raw-images bucket exists
+            if self.config.s3_endpoint:
+                try:
+                    client.make_bucket(self.config.s3_bucket_raw)
+                except Exception:
+                    pass  # Bucket may already exist
+            
+            if self.config.s3_endpoint:
+                # MinIO - wrap bytes in BytesIO
+                client.put_object(
+                    bucket_name=self.config.s3_bucket_raw,
+                    object_name=raw_key,
+                    data=io.BytesIO(metadata_data),
+                    length=len(metadata_data),
+                    content_type='application/json'
+                )
+                raw_url = f"{self.config.s3_endpoint}/{self.config.s3_bucket_raw}/{raw_key}"
+            else:
+                # AWS S3
+                client.put_object(
+                    Bucket=self.config.s3_bucket_raw,
+                    Key=raw_key,
+                    Body=metadata_data,
+                    ContentType='application/json'
+                )
+                raw_url = f"https://{self.config.s3_bucket_raw}.s3.{self.config.s3_region}.amazonaws.com/{raw_key}"
+            
+            logger.info(f"[STORAGE] Saved post metadata to raw-images: {raw_key}")
+            
+            # Also save raw HTML to raw-images if available
+            if post_task.candidate.raw_html:
+                raw_html_key = f"posts/{post_task.candidate.site_id}/{post_task.content_hash}.html"
+                html_data = post_task.candidate.raw_html.encode('utf-8')
+                
+                if self.config.s3_endpoint:
+                    client.put_object(
+                        bucket_name=self.config.s3_bucket_raw,
+                        object_name=raw_html_key,
+                        data=io.BytesIO(html_data),
+                        length=len(html_data),
+                        content_type='text/html'
+                    )
+                else:
+                    client.put_object(
+                        Bucket=self.config.s3_bucket_raw,
+                        Key=raw_html_key,
+                        Body=html_data,
+                        ContentType='text/html'
+                    )
+                
+                logger.info(f"[STORAGE] Saved post raw HTML to raw-images: {raw_html_key}")
+            
+            # STEP 2: Save only keyword-filtered posts to posts bucket (thumbs)
+            if post_task.has_keywords:
+                # Generate key: posts/{site_id}/{content_hash}.json
+                key = f"posts/{post_task.candidate.site_id}/{post_task.content_hash}.json"
+                
+                # Ensure posts bucket exists
+                if self.config.s3_endpoint:
+                    try:
+                        client.make_bucket(self.config.s3_bucket_posts)
+                    except Exception:
+                        pass  # Bucket may already exist
+                
+                if self.config.s3_endpoint:
+                    # MinIO - wrap bytes in BytesIO
+                    client.put_object(
+                        bucket_name=self.config.s3_bucket_posts,
+                        object_name=key,
+                        data=io.BytesIO(metadata_data),
+                        length=len(metadata_data),
+                        content_type='application/json'
+                    )
+                    url = f"{self.config.s3_endpoint}/{self.config.s3_bucket_posts}/{key}"
+                else:
+                    # AWS S3
+                    client.put_object(
+                        Bucket=self.config.s3_bucket_posts,
+                        Key=key,
+                        Body=metadata_data,
+                        ContentType='application/json'
+                    )
+                    url = f"https://{self.config.s3_bucket_posts}.s3.{self.config.s3_region}.amazonaws.com/{key}"
+                
+                logger.info(f"[STORAGE] Saved post metadata to posts (thumbs): {key}")
+                
+                # Also save raw HTML to posts bucket if available
+                if post_task.candidate.raw_html:
+                    html_key = f"posts/{post_task.candidate.site_id}/{post_task.content_hash}.html"
+                    html_data = post_task.candidate.raw_html.encode('utf-8')
+                    
+                    if self.config.s3_endpoint:
+                        client.put_object(
+                            bucket_name=self.config.s3_bucket_posts,
+                            object_name=html_key,
+                            data=io.BytesIO(html_data),
+                            length=len(html_data),
+                            content_type='text/html'
+                        )
+                        html_url = f"{self.config.s3_endpoint}/{self.config.s3_bucket_posts}/{html_key}"
+                    else:
+                        client.put_object(
+                            Bucket=self.config.s3_bucket_posts,
+                            Key=html_key,
+                            Body=html_data,
+                            ContentType='text/html'
+                        )
+                        html_url = f"https://{self.config.s3_bucket_posts}.s3.{self.config.s3_region}.amazonaws.com/{html_key}"
+                    
+                    logger.info(f"[STORAGE] Saved post raw HTML to posts (thumbs): {html_key}")
+                
+                return key, url
+            else:
+                logger.info(f"[STORAGE] Post does not contain keywords, skipping posts bucket (saved to raw-images only): {raw_key}")
+                return raw_key, raw_url
+            
+        except Exception as e:
+            logger.error(f"Failed to save post metadata: {e}")
+            return None, None
+    
+    async def save_post_metadata_async(self, post_task: PostTask) -> Tuple[Optional[str], Optional[str]]:
+        """Save post metadata as JSON file to MinIO (async wrapper)."""
+        try:
+            return await asyncio.to_thread(self.save_post_metadata, post_task)
+        except Exception as e:
+            logger.error(f"Failed to save post metadata (async): {e}")
+            return None, None
     
     
     # DEPRECATED: Cropping methods moved to gpu_processor_worker.py

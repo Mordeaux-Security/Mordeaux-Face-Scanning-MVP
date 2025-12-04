@@ -10,7 +10,7 @@ import logging
 import random
 import time
 import os
-from typing import Optional, Tuple, Dict, Any, List
+from typing import Optional, Tuple, Dict, Any, List, TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
 from contextlib import asynccontextmanager
 from collections import deque
@@ -37,6 +37,9 @@ try:
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
     async_playwright = None
+    # Create dummy types for type hints when Playwright is not available
+    Browser = Any
+    BrowserContext = Any
 
 from .config import get_config
 
@@ -909,12 +912,12 @@ class BrowserPool:
         self._playwright = None
         self._lock = asyncio.Lock()
         self._js_semaphore: Optional[asyncio.Semaphore] = None
-        self._contexts: List[BrowserContext] = []  # Add context pool
+        self._contexts: List[Any] = []  # Add context pool (BrowserContext when Playwright available)
         self._context_lock = asyncio.Lock()  # For thread-safe context access
         self._browser_idx = 0  # Round-robin counter
         self._config = cfg
     
-    async def _setup_resource_blocking(self, context: BrowserContext):
+    async def _setup_resource_blocking(self, context: Any):  # BrowserContext when Playwright available
         """Set up resource blocking to block CSS, fonts, media, etc. Only allow HTML, JS, and images."""
         if not getattr(self._config, 'nc_js_block_resources', True):
             return  # Resource blocking disabled

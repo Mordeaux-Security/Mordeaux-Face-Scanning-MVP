@@ -2,24 +2,24 @@
 # One URL per line, lines starting with # are comments
 
 # Health forums and diabetes communities
-https://www.healthboards.com
+https://www.healthboards.com/boards/index.php
 https://patient.info/forums
-https://healthunlocked.com
+https://healthunlocked.com/diabetes-support
 https://connect.mayoclinic.org
 https://forum.diabetes.org.uk
-https://community.diabetes.org
+#https://community.diabetes.org
 https://www.diabetes.co.uk/forum
-https://www.diabetessisters.org
-https://www.tudiabetes.org
+#https://www.diabetessisters.org
+#https://www.tudiabetes.org
 https://www.reddit.com/r/diabetes/
-https://www.reddit.com/r/Type1Diabetes/
-https://www.reddit.com/r/Type2Diabetes/
-https://www.reddit.com/r/DiabetesUK/
+#https://www.reddit.com/r/Type1Diabetes/
+#https://www.reddit.com/r/Type2Diabetes/
+#https://www.reddit.com/r/DiabetesUK/
 
 # Medical Q&A sites
-https://www.quora.com/topic/Diabetes
+#https://www.quora.com/topic/Diabetes
 
 # News and information sites
-https://www.diabetes.org
-https://www.jdrf.org
-https://www.ada.org
+#https://www.diabetes.org
+#https://www.jdrf.org
+#https://www.ada.org

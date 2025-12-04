@@ -1,0 +1,132 @@
+[
+  {
+    "tag": "html",
+    "classes": [
+      "has-js",
+      "template-forum_list",
+      "has-no-touchevents",
+      "has-passiveeventlisteners",
+      "has-hiddenscroll"
+    ],
+    "id": "XF",
+    "text_preview": "Diabetes ForumHomeForumsNew postsSearch forumsWhat's newFeatured contentNew postsLatest activityMembersCurrent visitorsLog inRegisterWhat's New?SearchSearchSearch titles onlyNoteBy:SearchAdvanced Sear",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id20",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Greetings and IntroductionsIntroduce yourself to the Diabetes Community. Use this area to say hello and meet people for the first time. Welcome to the Diabetes Forum!Threads9KMessages86.5KThreads9KMes",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id39",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Newly DiagnosedIf you are newly diagnosed with diabetes and would like to share your experiences or support with other people that have recently been diagnosed, please use this forum.Threads7.2KMessag",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id1",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Diabetes DiscussionsDiscuss diabetes issues, get help about diabetes, share your diabetes experiences, offer support, meet other diabetics and learn more about diabetes.Threads15KMessages311KThreads15",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id15",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Ask A QuestionIf you have a question relating to your diabetes, managing your diabetes or anything else that is diabetes related, ask the Diabetes Community here.Threads36KMessages337.5KThreads36KMess",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id19",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Type 1 DiabetesUse this area of the forum for all discussion specifically relating to Type 1 Diabetes.Threads15.6KMessages234.4KSub-ForumsSub-ForumsEating disorders and diabetesThreads15.6KMessages234",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id14",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Insulin Pump ForumForum for insulin pumpers and anyone interested in insulin pumps to discuss pump equipment, advantages, techniques, ask questions and offer support.Threads4.4KMessages43.6KThreads4.4",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id25",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Type 2 DiabetesUse this area of the forum for all discussion specifically relating to Type 2 Diabetes.Threads14.9KMessages342.7KSub-ForumsSub-ForumsType 2 with InsulinThreads14.9KMessages342.7KFasting",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id41",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Type 1.5/LADA DiabetesUse this area of the forum for all discussion specifically relating to Type 1.5/LADA Diabetes.Threads643Messages10KThreads643Messages10KGgad-something injections anyone had exper",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id73",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Type 3c (Pancreatic) DiabetesForum to ask questions, find support and share experiences with people with Pancreatic Diabetes (aka Type 3c Diabetes).Threads180Messages2.5KThreads180Messages2.5KSConfusi",
+    "has_links": true
+  }
+]

@@ -74,6 +74,8 @@ class CandidatePost(BaseModel):
     title: Optional[str] = Field(None, description="Post title")
     content: Optional[str] = Field(None, description="Post content text")
     author: Optional[str] = Field(None, description="Post author")
+    date: Optional[datetime] = Field(None, description="Post date extracted from HTML")
+    raw_html: Optional[str] = Field(None, description="Full HTML of the post element(s)")
     discovered_at: datetime = Field(default_factory=datetime.now)
 
     @validator('post_url')
@@ -98,8 +100,22 @@ class PostTask(BaseModel):
     """Task for processing a post for diabetes-related content."""
     candidate: CandidatePost = Field(..., description="Original candidate data")
     content_hash: str = Field(..., description="Hash of the post content")
+    has_keywords: bool = Field(default=False, description="Whether post contains diabetes keywords")
     created_at: datetime = Field(default_factory=datetime.now)
     status: TaskStatus = Field(default=TaskStatus.PENDING)
+
+
+class PostMetadata(BaseModel):
+    """Metadata for a diabetes-related post to be stored in MinIO."""
+    title: Optional[str] = Field(None, description="Post title")
+    content: Optional[str] = Field(None, description="Post content text")
+    author: Optional[str] = Field(None, description="Post author")
+    url: str = Field(..., description="Post URL")
+    date: Optional[datetime] = Field(None, description="Post date")
+    site_id: str = Field(..., description="Site identifier")
+    content_hash: str = Field(..., description="Hash of the post content")
+    discovered_at: datetime = Field(..., description="When the post was discovered")
+    page_url: str = Field(..., description="URL of the page containing the post")
 
 
 class ImageMetadata(BaseModel):

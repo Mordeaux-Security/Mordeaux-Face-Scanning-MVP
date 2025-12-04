@@ -1,0 +1,132 @@
+[
+  {
+    "tag": "html",
+    "classes": [
+      "has-js",
+      "template-forum_list",
+      "has-no-touchevents",
+      "has-passiveeventlisteners",
+      "has-hiddenscroll"
+    ],
+    "id": "XF",
+    "text_preview": "Diabetes UK ForumTalk to us about diabetes0345 123 2399helpline@diabetes.org.ukDonateForumsNew postsSearch forumsWhat's newFeatured contentNew postsNew mediaNew media commentsLatest activityMediaNew m",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id37",
+      "node--depth2",
+      "node--forum",
+      "node--read"
+    ],
+    "id": "",
+    "text_preview": "Welcome and Getting StartedInformation on how to use the forum, our guidelines, FAQs and posting for research. For questions about diabetes, please go to the general messageboard.Threads11Messages33Th",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id2",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "General Message BoardUse this forum for general chat about diabetes and health issuesThreads42.2KMessages683.7KThreads42.2KMessages683.7KGroup 7-day waking average?19 minutes agoNortherner",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id12",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Newbies say hello here!Welcome to the site - please use this thread to introduce yourself and say hi. If you have any questions please post them in the general messageboard.Threads14.2KMessages165.6KT",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id54",
+      "node--depth2",
+      "node--forum",
+      "node--read"
+    ],
+    "id": "",
+    "text_preview": "StigmaThreads16Messages557Threads16Messages557Word Diabetes Day 2024! If you knew...Nov 24, 2025everydayupsanddowns",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id15",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Exercise/SportPlease post all your exercise/sport queries and experiences in this forum.Threads1.2KMessages14.5KThreads1.2KMessages14.5KSBicycle exerciseYesterday at 1:03 PMSharron1",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id4",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Food/carb queries + recipesComing to terms with diabetes and food can be very difficult - this forum is for all your food and carbohydrate queries and a place to post your favourite recipes!Threads5.4",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id5",
+      "node--depth2",
+      "node--forum",
+      "node--read"
+    ],
+    "id": "",
+    "text_preview": "EventsPost details of forthcoming fundraising events and post event reports.Threads400Messages6.4KThreads400Messages6.4KRecent Presentation on Low Carb DietsNov 12, 2025Leadinglights",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id17",
+      "node--depth2",
+      "node--forum",
+      "node--read"
+    ],
+    "id": "",
+    "text_preview": "Driving/DVLAPlease post your comments/queries about diabetes and driving in hereThreads425Messages4.9KThreads425Messages4.9KNon-medical renewal forms received today - is this right?Friday at 9:53 AMev",
+    "has_links": true
+  },
+  {
+    "tag": "div",
+    "classes": [
+      "node",
+      "node--id20",
+      "node--depth2",
+      "node--forum",
+      "node--unread"
+    ],
+    "id": "",
+    "text_preview": "Pumping and TechnologyThis is the place to discuss issues and experiences with insulin pumps, CGM, Freestyle Libre and other gadgetsThreads3.2KMessages40.6KThreads3.2KMessages40.6KPhone AppsToday at 1",
+    "has_links": true
+  }
+]

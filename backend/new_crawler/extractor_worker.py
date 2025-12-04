@@ -14,7 +14,7 @@ import sys
 import tempfile
 import time
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from .config import get_config
 from .redis_manager import get_redis_manager
@@ -239,12 +239,6 @@ class ExtractorWorker:
                     mime_type=download_info.get('content_type', 'image/jpeg')
                 )
 
-                # Log temp file path being passed to GPU queue
-                file_mtime = os.path.getmtime(temp_path)
-                file_age = time.time() - file_mtime
-                logger.info(f"[EXTRACTOR-{self.worker_id}] [TEMP-FILE] Passing temp file to GPU queue: "
-                          f"{temp_path}, size={actual_file_size}bytes, age={file_age:.1f}s, phash={phash[:8]}...")
-
                 # Push immediately to GPU inbox (no batching - scheduler handles it)
                 payload = self.redis.serialize_image_task(image_task)
                 inbox_key = getattr(self.config, 'gpu_inbox_key', 'gpu:inbox')
@@ -283,8 +277,8 @@ class ExtractorWorker:
                     stats = await asyncio.to_thread(self.redis.get_site_stats, candidate.site_id)
                     if stats:
                         posts_saved = stats.get('posts_saved', 0)
-                        if self.config.nc_max_images_per_site > 0 and posts_saved >= self.config.nc_max_images_per_site:
-                            logger.debug(f"[EXTRACTOR-{self.worker_id}] Not processing post (limit reached: {posts_saved} >= {self.config.nc_max_images_per_site}): {candidate.post_url}")
+                        if self.config.nc_max_posts_per_site > 0 and posts_saved >= self.config.nc_max_posts_per_site:
+                            logger.debug(f"[EXTRACTOR-{self.worker_id}] Not processing post (limit reached: {posts_saved} >= {self.config.nc_max_posts_per_site}): {candidate.post_url}")
                             extraction_duration = (time.time() - extraction_start_time) * 1000
                             self.timing_logger.log_extraction_end(candidate.site_id, candidate.post_url, extraction_duration)
                             return None
@@ -301,21 +295,44 @@ class ExtractorWorker:
                 import hashlib
                 content_hash = hashlib.sha256((candidate.content or "").encode('utf-8')).hexdigest()
 
+                # Check if post contains diabetes keywords
+                diabetes_keywords = [
+                    'diabetes', 'diabetic', 'insulin', 'blood sugar', 'glucose',
+                    'type 1 diabetes', 'type 2 diabetes', 'gestational diabetes',
+                    'diabetes mellitus', 'hyperglycemia', 'hypoglycemia',
+                    'a1c', 'hba1c', 'blood glucose', 'sugar levels'
+                ]
+                has_keywords = False
+                # Check title
+                if candidate.title:
+                    title_lower = candidate.title.lower()
+                    if any(kw in title_lower for kw in diabetes_keywords):
+                        has_keywords = True
+                # Check content
+                if not has_keywords and candidate.content:
+                    content_lower = candidate.content.lower()
+                    if any(kw in content_lower for kw in diabetes_keywords):
+                        has_keywords = True
+
                 # Mark URL as seen
                 ttl_hours = self.config.nc_url_dedup_ttl_hours
                 ttl_seconds = ttl_hours * 3600 if ttl_hours > 0 else None
                 await self.redis.mark_url_seen_async(candidate.post_url, ttl_seconds)
 
-                # Create post task
+                # Create post task with keyword flag
                 post_task = PostTask(
                     candidate=candidate,
-                    content_hash=content_hash
+                    content_hash=content_hash,
+                    has_keywords=has_keywords
                 )
 
-                # Save post metadata directly (bypass GPU worker)
-                await self._save_post_metadata(post_task)
+                # Push directly to storage queue (bypass GPU worker)
+                await self.redis.push_post_task_async(post_task)
 
-                logger.debug(f"[Extractor {self.worker_id}] Saved diabetes post: {content_hash[:8]}...")
+                if has_keywords:
+                    logger.info(f"[Extractor {self.worker_id}] Pushed post with keywords to storage: {content_hash[:8]}...")
+                else:
+                    logger.info(f"[Extractor {self.worker_id}] Pushed post without keywords to storage (will save to raw-images only): {content_hash[:8]}...")
                 extraction_duration = (time.time() - extraction_start_time) * 1000
                 self.timing_logger.log_extraction_end(candidate.site_id, candidate.post_url, extraction_duration)
 
@@ -328,66 +345,58 @@ class ExtractorWorker:
                 self.timing_logger.log_extraction_end(candidate.site_id, candidate.post_url, extraction_duration)
                 return None
 
-    async def _save_post_metadata(self, post_task: PostTask):
-        """Save diabetes post metadata directly to storage."""
-        try:
-            # Store post metadata in Redis or database
-            # For now, just log it - in a real implementation you'd save to a database
-            logger.info(f"[Extractor {self.worker_id}] Saving diabetes post metadata: {post_task.content_hash[:8]}... "
-                       f"from {post_task.candidate.site_id}")
-
-            # Update site stats
-            await self.redis.update_site_stats_async(
-                post_task.candidate.site_id,
-                {'posts_saved': 1}
-            )
-
-            # You could save to a database here, e.g.:
-            # await self._save_to_database(post_task)
-
-        except Exception as e:
-            logger.error(f"[Extractor {self.worker_id}] Error saving post metadata: {e}")
     
     
     
-    async def _process_candidate_with_stats(self, candidate: CandidateImage, site_extraction_times: dict) -> None:
+    async def _process_candidate_with_stats(self, candidate: Union[CandidateImage, CandidatePost], site_extraction_times: dict) -> None:
         """Process candidate and update statistics."""
         site_id = candidate.site_id
         
-        # Process candidate
-        image_task = await self.process_candidate(candidate)
+        # Process candidate (returns ImageTask or PostTask)
+        task = await self.process_candidate(candidate)
         
-        if image_task:
-            self.downloaded_images += 1
-            
-            # Diagnostic logging: Log when image_task is pushed to gpu:inbox
-            if self.config.nc_diagnostic_logging:
-                gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
-                logger.debug(f"[EXTRACTOR-DIAG-{self.worker_id}] Pushed image_task to gpu:inbox, "
-                           f"gpu_inbox_depth={gpu_inbox_depth}")
-            
-            # Update extraction end time
-            site_extraction_times[site_id]['end'] = datetime.now()
-            
-            # Update statistics in Redis
-            await self.redis.update_site_stats_async(
-                site_id,
-                {
-                    'images_processed': 1,
-                    'extraction_end_time': site_extraction_times[site_id]['end']
-                }
-            )
-            
-            # Check and set site limit flag if reached
-            stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
-            thumbs = stats.get('images_saved_thumbs', 0) if stats else 0
-            if thumbs >= self.config.nc_max_images_per_site:
-                await self.redis.set_site_limit_reached_async(site_id)
-                # If strict_limits enabled, cleanup gpu:inbox queue for this site
-                if self.config.nc_strict_limits:
-                    removed = await self.redis.remove_site_items_from_queue_async('gpu:inbox', site_id)
-                    if removed > 0:
-                        logger.info(f"[Extractor {self.worker_id}] Removed {removed} items from gpu:inbox for site {site_id} (image limit reached)")
+        if task:
+            # Handle different task types
+            if isinstance(task, ImageTask):
+                self.downloaded_images += 1
+                
+                # Update extraction end time
+                site_extraction_times[site_id]['end'] = datetime.now()
+                
+                # Update statistics in Redis
+                await self.redis.update_site_stats_async(
+                    site_id,
+                    {
+                        'images_processed': 1,
+                        'extraction_end_time': site_extraction_times[site_id]['end']
+                    }
+                )
+                
+                # Check and set site limit flag if reached
+                stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
+                thumbs = stats.get('images_saved_thumbs', 0) if stats else 0
+                if thumbs >= self.config.nc_max_images_per_site:
+                    await self.redis.set_site_limit_reached_async(site_id)
+                    # If strict_limits enabled, cleanup gpu:inbox queue for this site
+                    if self.config.nc_strict_limits:
+                        removed = await self.redis.remove_site_items_from_queue_async('gpu:inbox', site_id)
+                        if removed > 0:
+                            logger.info(f"[Extractor {self.worker_id}] Removed {removed} items from gpu:inbox for site {site_id} (image limit reached)")
+            elif isinstance(task, PostTask):
+                # PostTask is already pushed to storage queue, just update stats
+                self.downloaded_images += 1  # Reuse counter for posts
+                
+                # Update extraction end time
+                site_extraction_times[site_id]['end'] = datetime.now()
+                
+                # Update statistics in Redis
+                await self.redis.update_site_stats_async(
+                    site_id,
+                    {
+                        'posts_processed': 1,
+                        'extraction_end_time': site_extraction_times[site_id]['end']
+                    }
+                )
         
         self.processed_candidates += 1
         
@@ -407,10 +416,8 @@ class ExtractorWorker:
             elapsed = now - self._throughput_start_time
             if elapsed > 0:
                 images_per_sec = self.downloaded_images / elapsed if hasattr(self, '_throughput_start_time') else 0
-                gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
                 logger.info(f"[EXTRACTOR-DIAG-{self.worker_id}] Throughput: {images_per_sec:.1f} images/sec, "
-                          f"processed={self.processed_candidates}, downloaded={self.downloaded_images}, "
-                          f"gpu_inbox_depth={gpu_inbox_depth}")
+                          f"processed={self.processed_candidates}, downloaded={self.downloaded_images}")
                 
                 # Reset for next window
                 self._throughput_start_time = now
@@ -475,11 +482,19 @@ class ExtractorWorker:
                     await asyncio.sleep(0.1)
                     continue
                 
-                # Deserialize all candidates
+                # Deserialize all candidates (can be CandidateImage or CandidatePost)
                 candidates = []
                 for raw in raw_candidates:
                     try:
-                        candidate = self.redis._deserialize(raw, CandidateImage)
+                        # Try to determine type by checking JSON structure
+                        data_str = raw.decode('utf-8') if isinstance(raw, bytes) else raw
+                        import json
+                        data_dict = json.loads(data_str)
+                        # Check if it's a CandidatePost by looking for post_url field
+                        if 'post_url' in data_dict and 'img_url' not in data_dict:
+                            candidate = self.redis._deserialize(raw, CandidatePost)
+                        else:
+                            candidate = self.redis._deserialize(raw, CandidateImage)
                         if candidate:
                             candidates.append(candidate)
                     except Exception as e:

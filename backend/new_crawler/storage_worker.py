@@ -21,7 +21,7 @@ from .redis_manager import get_redis_manager
 from .storage_manager import get_storage_manager
 from .cache_manager import get_cache_manager
 from .timing_logger import get_timing_logger
-from .data_structures import StorageTask, FaceResult, ImageTask, FaceDetection
+from .data_structures import StorageTask, FaceResult, ImageTask, FaceDetection, PostTask
 
 logger = logging.getLogger(__name__)
 
@@ -88,23 +88,35 @@ class StorageWorker:
         
         while self.running:
             try:
-                # Pop storage task from queue
-                storage_task = await self.redis.pop_storage_task_async(timeout=2.0)
+                # Pop task from queue (can be StorageTask or PostTask)
+                task = await self.redis.pop_storage_task_async(timeout=2.0)
                 
-                if storage_task:
+                if task:
                     # Log queue depth for monitoring
                     queue_depth = await self.redis.get_queue_length_by_key_async(self.config.get_queue_name('storage'))
-                    image_task = storage_task.image_task
-                    faces_count = len(storage_task.face_result.faces) if storage_task.face_result else 0
-                    crops_count = len(storage_task.face_crops) if storage_task.face_crops else 0
-                    temp_path_exists = image_task.temp_path and os.path.exists(image_task.temp_path) if image_task.temp_path else False
-                    logger.info(f"[STORAGE-{self.worker_id}] DIAG: Popped task from queue: "
-                               f"image={image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
-                               f"faces={faces_count}, crops={crops_count}, "
-                               f"queue_depth={queue_depth}, "
-                               f"temp_path={'EXISTS' if temp_path_exists else 'MISSING'}")
                     
-                    await self._process_storage_task(storage_task)
+                    # Route based on task type
+                    if isinstance(task, PostTask):
+                        logger.info(f"[STORAGE-{self.worker_id}] DIAG: Popped post task from queue: "
+                                   f"post={task.content_hash[:8]}..., "
+                                   f"queue_depth={queue_depth}")
+                        await self._process_post_task(task)
+                    elif isinstance(task, StorageTask):
+                        image_task = task.image_task
+                        faces_count = len(task.face_result.faces) if task.face_result else 0
+                        crops_count = len(task.face_crops) if task.face_crops else 0
+                        temp_path_exists = image_task.temp_path and os.path.exists(image_task.temp_path) if image_task.temp_path else False
+                        logger.info(f"[STORAGE-{self.worker_id}] DIAG: Popped storage task from queue: "
+                                   f"image={image_task.phash[:8] if image_task.phash else 'NO_PHASH'}..., "
+                                   f"faces={faces_count}, crops={crops_count}, "
+                                   f"queue_depth={queue_depth}, "
+                                   f"temp_path={'EXISTS' if temp_path_exists else 'MISSING'}")
+                        await self._process_storage_task(task)
+                    else:
+                        logger.warning(f"[STORAGE-{self.worker_id}] Unknown task type: {type(task)}")
+                        self.failed_tasks += 1
+                        continue
+                    
                     self.processed_tasks += 1
                     
                     # Periodic throughput logging
@@ -322,6 +334,49 @@ class StorageWorker:
             logger.error(f"[STORAGE-{self.worker_id}] Failed to upsert embeddings to Qdrant: {e}", 
                         exc_info=True)
             return 0
+    
+    async def _process_post_task(self, post_task: PostTask):
+        """Process a single post task."""
+        storage_start_time = time.time()
+        site_id = post_task.candidate.site_id
+        post_id = post_task.content_hash[:8]
+        
+        try:
+            # Save post metadata to MinIO
+            key, url = await self.storage.save_post_metadata_async(post_task)
+            
+            if not key:
+                raise Exception("Failed to save post metadata to MinIO")
+            
+            # Update site statistics
+            await self.redis.update_site_stats_async(
+                site_id,
+                {'posts_saved': 1}
+            )
+            
+            # Check if site post limit reached
+            if self.config.nc_strict_limits:
+                stats = await asyncio.to_thread(self.redis.get_site_stats, site_id)
+                if stats:
+                    posts_saved = stats.get('posts_saved', 0)
+                    if posts_saved >= self.config.nc_max_posts_per_site:
+                        await self.redis.set_site_limit_reached_async(site_id)
+                        # Remove remaining post items from storage queue
+                        removed = await self.redis.remove_site_items_from_queue_async('storage', site_id)
+                        if removed > 0:
+                            logger.info(f"[Storage {self.worker_id}] Removed {removed} storage items for site {site_id} (post limit reached)")
+            
+            # Calculate duration
+            storage_duration = (time.time() - storage_start_time) * 1000
+            
+            logger.info(f"[STORAGE-{self.worker_id}] Saved post: {post_id}..., "
+                       f"key={key}, duration={storage_duration:.1f}ms")
+            
+        except Exception as e:
+            self.failed_tasks += 1
+            storage_duration = (time.time() - storage_start_time) * 1000
+            logger.error(f"[STORAGE-{self.worker_id}] Failed to process post task {post_id}... "
+                        f"(duration={storage_duration:.1f}ms): {e}", exc_info=True)
 
 
 def storage_worker_process(worker_id: int):

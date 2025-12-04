@@ -6,12 +6,14 @@ Handles site crawling with 3x3 mining and pushes candidates to Redis queue.
 """
 
 import asyncio
+import json
 import logging
 import multiprocessing
 import os
 import signal
 import sys
 import time
+from pathlib import Path
 from typing import List, Optional
 
 from .config import get_config
@@ -46,6 +48,35 @@ class CrawlerWorker:
         
     async def _enqueue_candidates(self, candidates) -> int:
         """Enqueue a batch of candidates to Redis queue."""
+        # Write candidates to file for debugging
+        if candidates:
+            debug_dir = Path("backend/crawl_output/debug")
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            candidates_file = debug_dir / f"enqueued_candidates_{self.worker_id}_{int(time.time())}.json"
+            candidates_data = []
+            for candidate in candidates:
+                if isinstance(candidate, CandidatePost):
+                    candidates_data.append({
+                        'type': 'CandidatePost',
+                        'post_url': candidate.post_url,
+                        'page_url': candidate.page_url,
+                        'title': candidate.title,
+                        'content_preview': candidate.content[:200] if candidate.content else None,
+                        'author': candidate.author,
+                        'date': candidate.date.isoformat() if candidate.date else None,
+                        'site_id': candidate.site_id
+                    })
+                elif isinstance(candidate, CandidateImage):
+                    candidates_data.append({
+                        'type': 'CandidateImage',
+                        'img_url': candidate.img_url,
+                        'page_url': candidate.page_url,
+                        'site_id': candidate.site_id
+                    })
+            with open(candidates_file, 'w', encoding='utf-8') as f:
+                json.dump(candidates_data, f, indent=2, default=str)
+            logger.info(f"[Crawler {self.worker_id}] Wrote {len(candidates)} candidates to {candidates_file}")
+        
         # Handle both CandidateImage and CandidatePost types
         candidate_type = type(candidates[0]).__name__ if candidates else None
 
@@ -138,12 +169,12 @@ class CrawlerWorker:
                 results = await asyncio.gather(*enqueue_tasks)
                 total_enqueued = sum(results)
                 
-                # Persist accurate pages crawled and images found for this site
+                # Persist accurate pages crawled and posts found for this site
                 await self.redis.update_site_stats_async(
                     site_task.site_id,
                     {
                         'pages_crawled': total_pages,
-                        'images_found': total_enqueued
+                        'posts_found': total_enqueued
                     }
                 )
                 
@@ -176,13 +207,8 @@ class CrawlerWorker:
             # Process site
             candidates_count = await self.process_site(site_task)
             
-            # Update statistics in Redis
-            await self.redis.update_site_stats_async(
-                site_task.site_id,
-                {
-                    'images_found': candidates_count
-                }
-            )
+            # Note: process_site() already updates posts_found in Redis, so this is just for local stats
+            # No need to update Redis again here
             
             # Update local statistics
             self.processed_sites += 1

@@ -20,8 +20,8 @@ from pydantic import BaseModel
 
 from .config import get_config
 from .data_structures import (
-    SiteTask, CandidateImage, ImageTask, ImageMetadata, FaceResult,
-    BatchRequest, QueueMetrics, TaskStatus, StorageTask
+    SiteTask, CandidateImage, CandidatePost, ImageTask, ImageMetadata, FaceResult,
+    BatchRequest, QueueMetrics, TaskStatus, StorageTask, PostTask
 )
 
 logger = logging.getLogger(__name__)
@@ -190,21 +190,22 @@ class RedisManager:
             logger.error(f"Redis pop error: {e}")
             return None
     
-    async def push_candidate_async(self, candidate: CandidateImage) -> bool:
-        """Push candidate image to candidates queue (async version)."""
+    async def push_candidate_async(self, candidate: Union[CandidateImage, CandidatePost]) -> bool:
+        """Push candidate image or post to candidates queue (async version)."""
         try:
             client = await self._get_async_client()
             queue_name = self.config.get_queue_name('candidates')
             data = self._serialize(candidate)
             result = await client.rpush(queue_name, data)
-            logger.debug(f"Pushed candidate to queue (async): {candidate.img_url}")
+            url_attr = getattr(candidate, 'img_url', getattr(candidate, 'post_url', 'unknown'))
+            logger.debug(f"Pushed candidate to queue (async): {url_attr}")
             return bool(result)
         except redis.RedisError as e:
             logger.error(f"Redis push error (async): {e}")
             return False
     
-    def pop_candidate(self, timeout: float = 1.0) -> Optional[CandidateImage]:
-        """Pop candidate image from candidates queue."""
+    def pop_candidate(self, timeout: float = 1.0) -> Optional[Union[CandidateImage, CandidatePost]]:
+        """Pop candidate image or post from candidates queue."""
         try:
             client = self._get_client()
             queue_name = self.config.get_queue_name('candidates')
@@ -212,7 +213,19 @@ class RedisManager:
             
             if result:
                 _, data = result
-                return self._deserialize(data, CandidateImage)
+                # Try to determine type by checking for img_url vs post_url
+                try:
+                    data_str = data.decode('utf-8') if isinstance(data, bytes) else data
+                    import json
+                    data_dict = json.loads(data_str)
+                    # Check if it's a CandidatePost by looking for post_url field
+                    if 'post_url' in data_dict and 'img_url' not in data_dict:
+                        return self._deserialize(data, CandidatePost)
+                    else:
+                        return self._deserialize(data, CandidateImage)
+                except (json.JSONDecodeError, KeyError, ValueError):
+                    # Fallback to CandidateImage
+                    return self._deserialize(data, CandidateImage)
             return None
         except redis.RedisError as e:
             logger.error(f"Redis pop error: {e}")
@@ -343,19 +356,49 @@ class RedisManager:
             logger.error(f"Redis pop storage task error: {e}")
             return None
     
-    async def pop_storage_task_async(self, timeout: float = 5.0) -> Optional[StorageTask]:
-        """Pop storage task from storage queue (async version)."""
+    async def pop_storage_task_async(self, timeout: float = 5.0) -> Optional[Union[StorageTask, PostTask]]:
+        """Pop storage task or post task from storage queue (async version)."""
         try:
             queue_name = self.config.get_queue_name('storage')
             # Use blpop_many to ensure counter tracking when strict_limits enabled
             items = await asyncio.to_thread(self.blpop_many, queue_name, max_n=1, timeout=timeout)
             
             if items and len(items) > 0:
-                return self._deserialize(items[0], StorageTask)
+                # Try to deserialize as PostTask first (check for content_hash field)
+                try:
+                    data_str = items[0].decode('utf-8') if isinstance(items[0], bytes) else items[0]
+                    import json
+                    data_dict = json.loads(data_str)
+                    # Check if it's a PostTask by looking for content_hash field
+                    if 'content_hash' in data_dict and 'candidate' in data_dict:
+                        return self._deserialize(items[0], PostTask)
+                    else:
+                        return self._deserialize(items[0], StorageTask)
+                except (json.JSONDecodeError, KeyError, ValueError):
+                    # Fallback to StorageTask if deserialization fails
+                    return self._deserialize(items[0], StorageTask)
             return None
         except redis.RedisError as e:
             logger.error(f"Redis pop storage task error (async): {e}")
             return None
+    
+    async def push_post_task_async(self, post_task: PostTask) -> bool:
+        """Push post task to storage queue (async version)."""
+        try:
+            queue_name = self.config.get_queue_name('storage')
+            data = self._serialize(post_task)
+            # Use push_many to ensure counter tracking when strict_limits enabled
+            pushed_count = await asyncio.to_thread(self.push_many, queue_name, [data])
+            pushed = pushed_count > 0
+            queue_depth = await self.get_queue_length_by_key_async(queue_name)
+            post_hash = post_task.content_hash[:8] if post_task.content_hash else 'NO_HASH'
+            logger.debug(f"[REDIS] DIAG: Pushed post task: {post_hash}..., "
+                       f"success={pushed}, queue_depth={queue_depth}")
+            logger.debug(f"Pushed post task to queue (async): {post_task.candidate.post_url}")
+            return pushed
+        except redis.RedisError as e:
+            logger.error(f"Redis push post task error (async): {e}")
+            return False
     
     # GPU Inbox Operations (new centralized batching)
     
@@ -1378,14 +1421,37 @@ class RedisManager:
         """Extract site_id from a serialized queue item."""
         try:
             if queue_type == 'candidates':
-                candidate = self._deserialize(data, CandidateImage)
+                # Try CandidatePost first, then CandidateImage
+                try:
+                    data_str = data.decode('utf-8') if isinstance(data, bytes) else data
+                    import json
+                    data_dict = json.loads(data_str)
+                    if 'post_url' in data_dict and 'img_url' not in data_dict:
+                        candidate = self._deserialize(data, CandidatePost)
+                    else:
+                        candidate = self._deserialize(data, CandidateImage)
+                except (json.JSONDecodeError, KeyError, ValueError):
+                    candidate = self._deserialize(data, CandidateImage)
                 return candidate.site_id
             elif queue_type == 'gpu:inbox' or queue_type == 'images':
                 image_task = self.deserialize_image_task(data)
                 return image_task.candidate.site_id
             elif queue_type == 'storage':
-                storage_task = self._deserialize(data, StorageTask)
-                return storage_task.image_task.candidate.site_id
+                # Try PostTask first, then StorageTask
+                try:
+                    data_str = data.decode('utf-8') if isinstance(data, bytes) else data
+                    import json
+                    data_dict = json.loads(data_str)
+                    if 'content_hash' in data_dict and 'candidate' in data_dict:
+                        post_task = self._deserialize(data, PostTask)
+                        return post_task.candidate.site_id
+                    else:
+                        storage_task = self._deserialize(data, StorageTask)
+                        return storage_task.image_task.candidate.site_id
+                except (json.JSONDecodeError, KeyError, ValueError):
+                    # Fallback to StorageTask
+                    storage_task = self._deserialize(data, StorageTask)
+                    return storage_task.image_task.candidate.site_id
             return None
         except Exception as e:
             logger.debug(f"Failed to extract site_id from item: {e}")
