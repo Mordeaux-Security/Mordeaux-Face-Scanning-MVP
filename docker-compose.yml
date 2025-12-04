@@ -114,6 +114,16 @@ services:
       timeout: 3s
       retries: 20
 
+  frontend-dev:
+    image: python:3.11-alpine
+    working_dir: /app
+    command: python -m http.server 3000
+    volumes:
+      - ./frontend:/app:ro
+    ports:
+      - "3000:3000"
+    networks: [mordeaux]
+
 networks:
   mordeaux: {}
 

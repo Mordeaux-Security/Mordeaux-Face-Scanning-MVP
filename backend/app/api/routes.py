@@ -30,6 +30,12 @@ async def search_passthrough(payload: dict):
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             r = await client.post(url, json=payload)
+        
+        # Check if the face-pipeline returned an error
+        if r.status_code != 200:
+            error_detail = r.json()
+            raise HTTPException(status_code=r.status_code, detail=error_detail)
+        
         return r.json()
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"pipeline_unreachable: {e}")

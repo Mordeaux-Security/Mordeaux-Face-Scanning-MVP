@@ -13,6 +13,7 @@ import './App.css';
 import TestPage from './TestPage';
 import EnrollIdentityPage from './pages/EnrollIdentityPage';
 import VerifySearchPage from './pages/VerifySearchPage';
+import UploadTestPage from './pages/UploadTestPage';
 
 // Lazy load SearchDevPage to avoid loading broken components on initial load
 const SearchDevPage = lazy(() => import('./pages/SearchDevPage'));
@@ -25,6 +26,9 @@ function App() {
       <Routes>
         {/* Diagnostics route (optional) */}
         <Route path="/test" element={<TestPage />} />
+        
+        {/* E2E Integration Test */}
+        <Route path="/upload-test" element={<UploadTestPage />} />
         
         {/* New Identity-Safe Flow */}
         <Route path="/enroll" element={<EnrollIdentityPage />} />

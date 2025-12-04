@@ -3,6 +3,9 @@ from .api.routes import router as api_router
 
 app = FastAPI(title="backend-cpu")
 
+# Note: CORS is handled by nginx (see nginx/default.conf)
+# Do not add CORS middleware here to avoid duplicate headers
+
 @app.get("/")
 def root():
     return {"ok": True}
