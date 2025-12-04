@@ -115,13 +115,28 @@ def embed_one_b64_strict(
     if not usable_faces:
         # No usable faces -> return a clean error with reasons from all faces
         all_reasons = []
+        quality_details = []
         for fwq in faces_with_quality:
             if fwq.quality.reasons:
                 all_reasons.extend(fwq.quality.reasons)
+            quality_details.append({
+                "is_usable": fwq.quality.is_usable,
+                "score": fwq.quality.score,
+                "reasons": fwq.quality.reasons,
+                "blur_var": fwq.quality.blur_var,
+                "yaw": fwq.quality.yaw_deg,
+                "pitch": fwq.quality.pitch_deg,
+            })
         detail = {
             "error": "no_usable_faces",
             "reasons": list(set(all_reasons)) if all_reasons else ["no_faces_detected"],
+            "num_faces_detected": len(faces_with_quality),
+            "quality_details": quality_details,
         }
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Search: No usable faces found. Detected {len(faces_with_quality)} faces. Reasons: {all_reasons}")
+        logger.warning(f"Search: Quality details: {quality_details}")
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
 
     if require_single_face:
@@ -139,17 +154,33 @@ def embed_one_b64_strict(
 
     face = fwq.face
 
-    # Embed using the SAME method as ingest pipeline (processor.py)
-    # This ensures search queries produce embeddings compatible with stored vectors
+    # CRITICAL: Use InsightFace's pre-computed embedding directly
+    # This ensures search queries produce embeddings IDENTICAL to those stored by:
+    # 1. GPU worker/crawler (uses face_app.get() -> face.embedding)
+    # 2. Face pipeline processor (now also uses face.embedding)
+    # 
+    # Previously, we re-aligned and re-embedded which could produce slightly
+    # different vectors due to alignment/preprocessing differences.
     try:
-        # Get landmarks from face for alignment
-        landmarks = [[float(x), float(y)] for x, y in face.kps]
+        # Prefer embedding from InsightFace's app.get() (already computed in detect_faces_raw)
+        if hasattr(face, 'embedding') and face.embedding is not None:
+            emb = face.embedding.astype(np.float32)
+        elif hasattr(face, 'normed_embedding') and face.normed_embedding is not None:
+            emb = face.normed_embedding.astype(np.float32)
+        else:
+            # Fallback: compute embedding manually (should rarely happen)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("No pre-computed embedding found, computing manually (may cause mismatch)")
+            landmarks = [[float(x), float(y)] for x, y in face.kps]
+            crop_bgr = align_and_crop(img, landmarks)
+            emb = embed(crop_bgr)
         
-        # Align and crop to 112x112 (same as ingest pipeline)
-        crop_bgr = align_and_crop(img, landmarks)
-        
-        # Generate embedding using embedder.embed (same as ingest pipeline)
-        emb = embed(crop_bgr)
+        # Ensure L2 normalization for cosine similarity
+        emb_norm = np.linalg.norm(emb)
+        if emb_norm > 1e-6 and abs(emb_norm - 1.0) > 0.01:
+            emb = emb / emb_norm
+            
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

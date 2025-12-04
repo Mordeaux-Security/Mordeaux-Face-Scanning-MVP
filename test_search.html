@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Diagnostic Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Search Diagnostic Test</h1>
+    
+    <div class="test">
+        <h3>Test 1: Backend Health</h3>
+        <button onclick="testBackend()">Test Backend</button>
+        <pre id="backend-result">Click button to test...</pre>
+    </div>
+    
+    <div class="test">
+        <h3>Test 2: Face Pipeline Health</h3>
+        <button onclick="testPipeline()">Test Pipeline</button>
+        <pre id="pipeline-result">Click button to test...</pre>
+    </div>
+    
+    <div class="test">
+        <h3>Test 3: Search with Dummy Image (should fail gracefully)</h3>
+        <button onclick="testSearchDummy()">Test Search</button>
+        <pre id="search-dummy-result">Click button to test...</pre>
+    </div>
+    
+    <div class="test">
+        <h3>Test 4: Search with Your Image</h3>
+        <input type="file" id="image-input" accept="image/*">
+        <button onclick="testSearchReal()">Test Real Search</button>
+        <pre id="search-real-result">Select image and click button to test...</pre>
+    </div>
+    
+    <script>
+        async function testBackend() {
+            const resultEl = document.getElementById('backend-result');
+            resultEl.textContent = 'Testing...';
+            try {
+                const response = await fetch('/api/v1/health');
+                const data = await response.json();
+                resultEl.textContent = `✅ Success (${response.status}):\n${JSON.stringify(data, null, 2)}`;
+                resultEl.parentElement.className = 'test success';
+            } catch (e) {
+                resultEl.textContent = `❌ Error: ${e.message}`;
+                resultEl.parentElement.className = 'test error';
+            }
+        }
+        
+        async function testPipeline() {
+            const resultEl = document.getElementById('pipeline-result');
+            resultEl.textContent = 'Testing...';
+            try {
+                const response = await fetch('/pipeline/api/v1/health');
+                const data = await response.json();
+                resultEl.textContent = `✅ Success (${response.status}):\n${JSON.stringify(data, null, 2)}`;
+                resultEl.parentElement.className = 'test success';
+            } catch (e) {
+                resultEl.textContent = `❌ Error: ${e.message}`;
+                resultEl.parentElement.className = 'test error';
+            }
+        }
+        
+        async function testSearchDummy() {
+            const resultEl = document.getElementById('search-dummy-result');
+            resultEl.textContent = 'Testing...';
+            
+            // Tiny 1x1 PNG (no face - should fail gracefully)
+            const dummyB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+            
+            try {
+                const response = await fetch('/api/v1/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tenant_id: 'demo-tenant',
+                        image_b64: dummyB64,
+                        top_k: 5,
+                        threshold: 0.0
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    resultEl.textContent = `✅ Search worked (${response.status}):\nCount: ${data.count}\nHits: ${data.hits?.length || 0}\n\nFull response:\n${JSON.stringify(data, null, 2).substring(0, 1000)}`;
+                    resultEl.parentElement.className = 'test success';
+                } else {
+                    resultEl.textContent = `⚠️ Expected error (${response.status}):\n${JSON.stringify(data, null, 2)}`;
+                    resultEl.parentElement.className = 'test';
+                }
+            } catch (e) {
+                resultEl.textContent = `❌ Error: ${e.message}\n${e.stack}`;
+                resultEl.parentElement.className = 'test error';
+            }
+        }
+        
+        async function testSearchReal() {
+            const fileInput = document.getElementById('image-input');
+            const resultEl = document.getElementById('search-real-result');
+            
+            if (!fileInput.files || !fileInput.files[0]) {
+                resultEl.textContent = '❌ Please select an image first!';
+                resultEl.parentElement.className = 'test error';
+                return;
+            }
+            
+            resultEl.textContent = 'Converting image to base64...';
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                const base64 = e.target.result.split(',')[1];
+                resultEl.textContent = 'Sending search request...';
+                
+                try {
+                    const response = await fetch('/api/v1/search', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tenant_id: 'demo-tenant',
+                            image_b64: base64,
+                            top_k: 10,
+                            threshold: 0.0  // Very low threshold to see all results
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        resultEl.textContent = `✅ Search Success (${response.status})!\n\nCount: ${data.count}\nHits: ${data.hits?.length || 0}\n\nResults:\n${JSON.stringify(data, null, 2).substring(0, 2000)}`;
+                        resultEl.parentElement.className = 'test success';
+                        
+                        if (data.count === 0) {
+                            resultEl.textContent += '\n\n⚠️ WARNING: No matches found even with threshold=0.0. This suggests:\n- The face in your image is not in the database, OR\n- There is an embedding mismatch issue';
+                            resultEl.parentElement.className = 'test error';
+                        }
+                    } else {
+                        resultEl.textContent = `❌ Search Failed (${response.status}):\n${JSON.stringify(data, null, 2)}`;
+                        resultEl.parentElement.className = 'test error';
+                    }
+                } catch (e) {
+                    resultEl.textContent = `❌ Network Error: ${e.message}\n${e.stack}`;
+                    resultEl.parentElement.className = 'test error';
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
+

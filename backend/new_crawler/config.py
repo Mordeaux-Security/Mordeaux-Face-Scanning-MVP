@@ -148,7 +148,7 @@ class CrawlerConfig(BaseSettings):
     
     # Vector Database Configuration
     vectorization_enabled: bool = True  # Enable/disable vector DB upserts after storage
-    default_tenant_id: str = "crawler"  # Default tenant ID for crawled faces
+    default_tenant_id: str = "demo-tenant"  # Default tenant ID for crawled faces (matches website default)
     qdrant_url: str = "http://qdrant:6333"  # Qdrant URL for vector storage
     vector_index: str = "faces_v1"  # Collection name for face vectors
     

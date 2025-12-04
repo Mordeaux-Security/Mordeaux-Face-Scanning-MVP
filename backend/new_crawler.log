@@ -12494,3 +12494,978 @@
 2025-11-26 01:07:59,004 - new_crawler.orchestrator - INFO - Stopping worker processes...
 2025-11-26 01:07:59,004 - new_crawler.orchestrator - INFO - All worker processes stopped
 2025-11-26 01:07:59,005 - __main__ - INFO - Crawl completed successfully
+2025-12-01 23:47:51,457 - new_crawler.config - INFO - Validating crawler configuration...
+2025-12-01 23:47:51,473 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - Configuration validated: crawlers=1, extractors=2, gpu_processors=1
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - Environment: development
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - Log Level: error
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - Docker: True
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - Windows: False
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-12-01 23:47:51,474 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Batch Size: 256
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - GPU Min Batch Size: 64
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Max Queue Depth: 128
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Max Concurrent Sites per Worker: 2
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Max Concurrent Batches per Worker: 2
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Batch Flush Timeout: 5.0s
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - JS Wait Strategy: fixed
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - JS Network Idle Timeout: 30.0s
+2025-12-01 23:47:51,475 - new_crawler.config - INFO - Extract Background Images: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Realistic Headers: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Capture Network Images: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Extract Script Images: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-12-01 23:47:51,476 - new_crawler.config - INFO - ================================
+2025-12-01 23:47:51,477 - __main__ - INFO - Loaded 5 sites from sites.txt
+2025-12-01 23:47:51,477 - __main__ - INFO - Starting crawl of 5 sites
+2025-12-01 23:47:51,477 - __main__ - INFO - Performing system health check...
+2025-12-01 23:47:51,478 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-12-01 23:47:51,478 - __main__ - INFO - Redis: ✓
+2025-12-01 23:47:51,487 - __main__ - INFO - Cache: ✓
+2025-12-01 23:47:51,653 - __main__ - INFO - Storage: ✓
+2025-12-01 23:47:51,825 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-12-01 23:47:51,826 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-12-01 23:47:51,826 - __main__ - INFO - GPU Worker: ✓
+2025-12-01 23:47:51,826 - __main__ - INFO - ✓ All systems healthy
+2025-12-01 23:47:51,828 - new_crawler.orchestrator - INFO - Starting crawl of 5 sites
+2025-12-01 23:47:51,829 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+2025-12-01 23:47:51,829 - new_crawler.redis_manager - INFO - Cleared 1 site stats
+2025-12-01 23:47:51,830 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-12-01 23:47:51,830 - new_crawler.orchestrator - INFO - Pushing 5 sites to crawl queue
+2025-12-01 23:47:51,838 - new_crawler.orchestrator - INFO - Successfully pushed 5 sites to queue
+2025-12-01 23:47:51,838 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-12-01 23:47:51,839 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-12-01 23:47:51,839 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-12-01 23:47:51,853 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 16)
+2025-12-01 23:47:51,863 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 17)
+2025-12-01 23:47:51,875 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 18)
+2025-12-01 23:47:51,883 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 19)
+2025-12-01 23:47:51,905 - new_crawler.orchestrator - INFO - Started storage worker 0 (PID: 20)
+2025-12-01 23:47:51,916 - new_crawler.orchestrator - INFO - Started 1 crawlers, 2 extractors, 1 GPU processors, 1 storage workers
+2025-12-01 23:47:53,926 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-12-01 23:47:53,948 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:47:53,959 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:47:53,959 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:47:55,977 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=93.0%, gpu_inbox=0.8%
+2025-12-01 23:47:58,016 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=105.5%, gpu_inbox=16.4%
+2025-12-01 23:47:59,024 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=119, images=0, gpu_inbox=21, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:48:00,177 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=80.5%, gpu_inbox=17.2%
+2025-12-01 23:48:04,117 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:04,647 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:04,671 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=38, images=0, gpu_inbox=62, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:09,788 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:09,961 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:09,962 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=91, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:14,973 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:15,012 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:15,013 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=91, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:20,042 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:20,065 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:20,066 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=65, images=0, gpu_inbox=91, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:21,575 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=109.4%
+2025-12-01 23:48:23,799 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=109.4%
+2025-12-01 23:48:25,106 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:25,137 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:25,137 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=140, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:25,848 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=109.4%
+2025-12-01 23:48:27,866 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=109.4%
+2025-12-01 23:48:29,887 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=109.4%
+2025-12-01 23:48:30,144 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:30,178 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:30,179 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=140, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:31,917 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=108.6%, gpu_inbox=109.4%
+2025-12-01 23:48:33,954 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=108.6%, gpu_inbox=120.3%
+2025-12-01 23:48:35,258 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:35,290 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:35,290 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=107, images=0, gpu_inbox=177, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:35,978 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=71.1%, gpu_inbox=151.6%
+2025-12-01 23:48:38,038 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=58.6%, gpu_inbox=157.8%
+2025-12-01 23:48:40,079 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=109.4%, gpu_inbox=172.7%
+2025-12-01 23:48:40,317 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:40,371 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:40,372 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=140, images=0, gpu_inbox=221, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:42,114 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=257.8%, gpu_inbox=178.1%
+2025-12-01 23:48:44,176 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=145.3%, gpu_inbox=179.7%
+2025-12-01 23:48:45,486 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:45,511 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:45,511 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=58, images=0, gpu_inbox=240, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:46,191 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:48:48,304 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:48:50,317 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:48:50,519 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:50,529 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:50,529 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=245, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:52,370 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:48:55,914 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:48:56,659 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:56,797 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:48:56,798 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=245, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:48:58,560 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:49:00,577 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:49:01,888 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:01,938 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:01,941 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=245, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:49:02,601 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:49:04,662 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:49:06,701 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=191.4%
+2025-12-01 23:49:06,972 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:06,988 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:06,988 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=245, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:49:08,736 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=21.9%, gpu_inbox=191.4%
+2025-12-01 23:49:10,752 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=243.8%, gpu_inbox=187.5%
+2025-12-01 23:49:12,085 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=248, images=0, gpu_inbox=259, storage=7, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:49:12,760 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=168.8%, gpu_inbox=212.5%
+2025-12-01 23:49:14,771 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=93.8%, gpu_inbox=248.4%
+2025-12-01 23:49:16,783 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=31.2%, gpu_inbox=249.2%
+2025-12-01 23:49:17,139 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:17,271 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:17,272 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=40, images=0, gpu_inbox=319, storage=7, results=0, gpu_processor=IDLE
+2025-12-01 23:49:18,796 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=18.8%, gpu_inbox=253.9%
+2025-12-01 23:49:20,826 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=6.2%, gpu_inbox=262.5%
+2025-12-01 23:49:22,334 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:22,346 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:22,350 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=343, storage=3, results=0, gpu_processor=IDLE
+2025-12-01 23:49:22,840 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=268.0%
+2025-12-01 23:49:24,982 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=72.7%, gpu_inbox=263.3%
+2025-12-01 23:49:27,143 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=35.2%, gpu_inbox=263.3%
+2025-12-01 23:49:27,553 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=45, images=0, gpu_inbox=345, storage=3, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:49:29,208 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=22.7%, gpu_inbox=279.7%
+2025-12-01 23:49:31,255 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=301.6%
+2025-12-01 23:49:32,606 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:32,631 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:32,632 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=387, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:49:33,375 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=302.3%
+2025-12-01 23:49:35,402 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=302.3%
+2025-12-01 23:49:37,427 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=232.8%, gpu_inbox=296.1%
+2025-12-01 23:49:37,760 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=298, images=0, gpu_inbox=379, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:49:39,485 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=195.3%, gpu_inbox=300.8%
+2025-12-01 23:49:41,577 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=157.8%, gpu_inbox=325.0%
+2025-12-01 23:49:42,790 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:42,987 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:42,988 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=138, images=0, gpu_inbox=418, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:49:43,707 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=95.3%, gpu_inbox=335.9%
+2025-12-01 23:49:45,715 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=82.8%, gpu_inbox=358.6%
+2025-12-01 23:49:47,818 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=70.3%, gpu_inbox=371.1%
+2025-12-01 23:49:48,081 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:48,319 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:48,326 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=90, images=0, gpu_inbox=476, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:49:50,050 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=57.8%, gpu_inbox=372.7%
+2025-12-01 23:49:52,092 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=45.3%, gpu_inbox=372.7%
+2025-12-01 23:49:53,353 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=161, images=0, gpu_inbox=475, storage=6, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:49:54,244 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=113.3%, gpu_inbox=371.1%
+2025-12-01 23:49:56,271 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=100.8%, gpu_inbox=371.1%
+2025-12-01 23:49:58,307 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=88.3%, gpu_inbox=376.6%
+2025-12-01 23:49:58,363 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:58,390 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:49:58,392 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=113, images=0, gpu_inbox=482, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:50:00,319 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=63.3%, gpu_inbox=384.4%
+2025-12-01 23:50:02,369 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=455.5%
+2025-12-01 23:50:03,381 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:50:03,401 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:50:03,402 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=583, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:50:04,487 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=25.0%, gpu_inbox=449.2%
+2025-12-01 23:50:06,871 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=25.0%, gpu_inbox=449.2%
+2025-12-01 23:50:08,434 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=32, images=0, gpu_inbox=575, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:50:08,930 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=25.0%, gpu_inbox=449.2%
+2025-12-01 23:50:11,008 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=25.0%, gpu_inbox=449.2%
+2025-12-01 23:50:13,047 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=460.2%
+2025-12-01 23:50:13,441 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:50:13,509 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:50:13,528 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=589, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:50:15,058 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=457.8%
+2025-12-01 23:50:17,076 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=464.8%
+2025-12-01 23:50:18,577 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=599, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:50:19,091 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=468.0%
+2025-12-01 23:50:21,100 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=468.0%
+2025-12-01 23:50:23,108 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=461.7%
+2025-12-01 23:50:23,622 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=591, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:50:25,120 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=461.7%
+2025-12-01 23:50:27,141 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=455.5%
+2025-12-01 23:50:28,651 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=583, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:50:29,152 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=455.5%
+2025-12-01 23:50:31,209 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=3.1%, gpu_inbox=455.5%
+2025-12-01 23:50:33,223 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=455.5%
+2025-12-01 23:50:33,695 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:50:33,710 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:50:33,711 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=583, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:50:35,258 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=449.2%
+2025-12-01 23:50:37,297 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=449.2%
+2025-12-01 23:50:38,738 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=575, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:50:39,309 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=449.2%
+2025-12-01 23:50:41,317 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=449.2%
+2025-12-01 23:50:43,328 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=449.2%
+2025-12-01 23:50:43,778 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=567, storage=7, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:50:45,338 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=443.0%
+2025-12-01 23:50:47,349 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=443.0%
+2025-12-01 23:50:48,783 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:50:48,790 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:50:48,790 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=567, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:50:49,355 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=443.0%
+2025-12-01 23:50:51,364 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=436.7%
+2025-12-01 23:50:53,373 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=436.7%
+2025-12-01 23:50:53,746 - new_crawler.orchestrator - INFO - Consumed 100 results from queue
+2025-12-01 23:50:53,810 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=551, storage=1, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:50:55,379 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=430.5%
+2025-12-01 23:50:57,386 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=418.0%
+2025-12-01 23:50:58,827 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=535, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:50:59,390 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=411.7%
+2025-12-01 23:51:01,405 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=405.5%
+2025-12-01 23:51:03,427 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=399.2%
+2025-12-01 23:51:03,857 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=511, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:05,433 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=399.2%
+2025-12-01 23:51:07,438 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=393.0%
+2025-12-01 23:51:08,878 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=495, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:09,443 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=386.7%
+2025-12-01 23:51:11,452 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=380.5%
+2025-12-01 23:51:13,458 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=380.5%
+2025-12-01 23:51:13,893 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=479, storage=4, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:15,470 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=374.2%
+2025-12-01 23:51:17,475 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=368.0%
+2025-12-01 23:51:18,906 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=471, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:19,482 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=361.7%
+2025-12-01 23:51:21,488 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=361.7%
+2025-12-01 23:51:22,680 - new_crawler.orchestrator - INFO - Consumed 200 results from queue
+2025-12-01 23:51:23,497 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=355.5%
+2025-12-01 23:51:23,921 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=455, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:25,502 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=349.2%
+2025-12-01 23:51:27,511 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=349.2%
+2025-12-01 23:51:28,941 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=439, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:29,518 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=343.0%
+2025-12-01 23:51:31,526 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=336.7%
+2025-12-01 23:51:33,537 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=330.5%
+2025-12-01 23:51:33,953 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=423, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:35,557 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=324.2%
+2025-12-01 23:51:37,572 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=324.2%
+2025-12-01 23:51:38,974 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=407, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:39,584 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=318.0%
+2025-12-01 23:51:41,632 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=311.7%
+2025-12-01 23:51:43,655 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=311.7%
+2025-12-01 23:51:43,996 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=399, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:45,677 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=311.7%
+2025-12-01 23:51:47,691 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=305.5%
+2025-12-01 23:51:49,024 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=391, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:49,770 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=305.5%
+2025-12-01 23:51:51,874 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=305.5%
+2025-12-01 23:51:53,906 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=299.2%
+2025-12-01 23:51:54,041 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=383, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:55,927 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=299.2%
+2025-12-01 23:51:57,946 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=293.0%
+2025-12-01 23:51:59,057 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=367, storage=1, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:51:59,962 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=286.7%
+2025-12-01 23:52:01,972 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=286.7%
+2025-12-01 23:52:04,023 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=280.5%
+2025-12-01 23:52:04,069 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=359, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:06,041 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=280.5%
+2025-12-01 23:52:06,740 - new_crawler.orchestrator - INFO - Consumed 300 results from queue
+2025-12-01 23:52:08,057 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=274.2%
+2025-12-01 23:52:09,081 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=351, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:10,062 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=268.0%
+2025-12-01 23:52:12,076 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=268.0%
+2025-12-01 23:52:14,090 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=261.7%
+2025-12-01 23:52:14,099 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=335, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:16,103 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=261.7%
+2025-12-01 23:52:18,121 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=255.5%
+2025-12-01 23:52:19,123 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=327, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:20,134 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=249.2%
+2025-12-01 23:52:22,143 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=249.2%
+2025-12-01 23:52:24,139 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=311, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:24,147 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=243.0%
+2025-12-01 23:52:26,152 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=243.0%
+2025-12-01 23:52:28,165 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=236.7%
+2025-12-01 23:52:29,173 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=303, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:30,175 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=236.7%
+2025-12-01 23:52:32,185 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=230.5%
+2025-12-01 23:52:34,189 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=230.5%
+2025-12-01 23:52:34,205 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=295, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:36,200 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=224.2%
+2025-12-01 23:52:38,212 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=224.2%
+2025-12-01 23:52:39,227 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=287, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:40,244 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=218.0%
+2025-12-01 23:52:42,252 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=211.7%
+2025-12-01 23:52:44,256 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=271, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:44,259 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=211.7%
+2025-12-01 23:52:46,270 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=205.5%
+2025-12-01 23:52:48,279 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=205.5%
+2025-12-01 23:52:49,342 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=263, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:50,385 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=205.5%
+2025-12-01 23:52:52,495 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=199.2%
+2025-12-01 23:52:52,693 - new_crawler.orchestrator - INFO - Consumed 400 results from queue
+2025-12-01 23:52:54,354 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=255, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:52:54,500 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=199.2%
+2025-12-01 23:52:56,511 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=193.0%
+2025-12-01 23:52:58,518 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=186.7%
+2025-12-01 23:52:59,373 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=239, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:00,529 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=186.7%
+2025-12-01 23:53:02,538 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=180.5%
+2025-12-01 23:53:04,728 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=180.5%
+2025-12-01 23:53:04,822 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=231, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:06,747 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=174.2%
+2025-12-01 23:53:08,761 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=174.2%
+2025-12-01 23:53:09,855 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=223, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:10,776 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=168.0%
+2025-12-01 23:53:12,789 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=168.0%
+2025-12-01 23:53:14,797 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=161.7%
+2025-12-01 23:53:14,870 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=207, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:16,804 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=155.5%
+2025-12-01 23:53:18,811 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=155.5%
+2025-12-01 23:53:19,888 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=191, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:20,823 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=149.2%
+2025-12-01 23:53:22,832 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=149.2%
+2025-12-01 23:53:24,862 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=143.0%
+2025-12-01 23:53:24,901 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=183, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:26,869 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=136.7%
+2025-12-01 23:53:28,883 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=136.7%
+2025-12-01 23:53:29,916 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=167, storage=2, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:30,904 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=130.5%
+2025-12-01 23:53:32,913 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=130.5%
+2025-12-01 23:53:34,925 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=124.2%
+2025-12-01 23:53:34,937 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=159, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:36,675 - new_crawler.orchestrator - INFO - Consumed 500 results from queue
+2025-12-01 23:53:36,933 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=118.0%
+2025-12-01 23:53:38,947 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=118.0%
+2025-12-01 23:53:39,972 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=143, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:40,954 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=111.7%
+2025-12-01 23:53:42,977 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=105.5%
+2025-12-01 23:53:44,994 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=105.5%
+2025-12-01 23:53:45,004 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=135, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:47,004 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=105.5%
+2025-12-01 23:53:49,011 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=99.2%
+2025-12-01 23:53:50,045 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=119, storage=7, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:51,470 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=93.0%
+2025-12-01 23:53:53,489 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=93.0%
+2025-12-01 23:53:55,061 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=111, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:53:55,494 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=86.7%
+2025-12-01 23:53:57,509 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=86.7%
+2025-12-01 23:53:59,522 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=80.5%
+2025-12-01 23:54:00,084 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=103, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:01,540 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=80.5%
+2025-12-01 23:54:05,129 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=95, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:10,230 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=87, storage=6, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:15,260 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:54:15,278 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:54:15,279 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=87, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:54:20,298 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=79, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:25,327 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=63, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:29,763 - new_crawler.orchestrator - INFO - Consumed 600 results from queue
+2025-12-01 23:54:30,341 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=55, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:35,351 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:54:35,360 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:54:35,361 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=55, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:54:40,390 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=47, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:45,613 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=39, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:50,746 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=31, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:54:55,761 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=15, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:55:00,773 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=7, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-01 23:55:05,780 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:55:05,785 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:55:05,786 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-01 23:55:10,789 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-01 23:55:10,790 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+2025-12-01 23:55:10,793 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-12-01 23:55:11,997 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-12-01 23:55:12,010 - new_crawler.orchestrator - INFO - Retrieved stats for 5 sites from Redis
+2025-12-01 23:55:12,014 - new_crawler.orchestrator - INFO - Consumed 663 results from queue
+2025-12-01 23:55:12,036 - new_crawler.orchestrator - INFO - From consumed results: faces=523, raw=662, thumbs=243 (thumb_count=370), mismatches=149
+2025-12-01 23:55:12,036 - new_crawler.orchestrator - INFO - From Redis stats: faces=523, raw=662, thumbs=370
+2025-12-01 23:55:12,036 - new_crawler.orchestrator - INFO - Total images processed: 663
+2025-12-01 23:55:12,036 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+2025-12-01 23:55:12,036 - new_crawler.orchestrator - INFO - Total sites processed: 5
+2025-12-01 23:55:12,037 - new_crawler.orchestrator - INFO - Total images processed: 663
+2025-12-01 23:55:12,037 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 662
+2025-12-01 23:55:12,037 - new_crawler.orchestrator - INFO - Total thumbnails saved: 370
+2025-12-01 23:55:12,037 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+2025-12-01 23:55:12,037 - new_crawler.orchestrator - INFO - Success rate: 17.6%
+2025-12-01 23:55:12,038 - new_crawler.orchestrator - INFO - Overall throughput: 1.51 images/second
+2025-12-01 23:55:12,040 - new_crawler.orchestrator - INFO - Crawl completed in 440.2s, success rate: 17.6%, throughput: 1.51 images/second
+2025-12-01 23:55:12,049 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+2025-12-01 23:55:12,049 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-12-01 23:55:12,049 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-12-01 23:55:12,055 - __main__ - INFO - Crawl completed successfully
+2025-12-02 05:34:19,789 - new_crawler.config - INFO - Validating crawler configuration...
+2025-12-02 05:34:19,798 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-12-02 05:34:19,798 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - Configuration validated: crawlers=1, extractors=2, gpu_processors=1
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - Environment: development
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - Log Level: error
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - Docker: True
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - Windows: False
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - Batch Size: 256
+2025-12-02 05:34:19,799 - new_crawler.config - INFO - GPU Min Batch Size: 64
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Max Queue Depth: 128
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Max Concurrent Sites per Worker: 2
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Max Concurrent Batches per Worker: 2
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Batch Flush Timeout: 5.0s
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - JS Wait Strategy: fixed
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - JS Network Idle Timeout: 30.0s
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Extract Background Images: True
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-12-02 05:34:19,800 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - Realistic Headers: True
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - Capture Network Images: True
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - Extract Script Images: True
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-12-02 05:34:19,801 - new_crawler.config - INFO - ================================
+2025-12-02 05:34:19,802 - __main__ - INFO - Loaded 5 sites from sites.txt
+2025-12-02 05:34:19,802 - __main__ - INFO - Starting crawl of 5 sites
+2025-12-02 05:34:19,802 - __main__ - INFO - Performing system health check...
+2025-12-02 05:34:19,803 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-12-02 05:34:19,803 - __main__ - INFO - Redis: ✓
+2025-12-02 05:34:19,811 - __main__ - INFO - Cache: ✓
+2025-12-02 05:34:20,010 - __main__ - INFO - Storage: ✓
+2025-12-02 05:34:20,147 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-12-02 05:34:20,148 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-12-02 05:34:20,148 - __main__ - INFO - GPU Worker: ✓
+2025-12-02 05:34:20,148 - __main__ - INFO - ✓ All systems healthy
+2025-12-02 05:34:20,150 - new_crawler.orchestrator - INFO - Starting crawl of 5 sites
+2025-12-02 05:34:20,151 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+2025-12-02 05:34:20,152 - new_crawler.redis_manager - INFO - Cleared 5 site stats
+2025-12-02 05:34:20,153 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-12-02 05:34:20,153 - new_crawler.orchestrator - INFO - Pushing 5 sites to crawl queue
+2025-12-02 05:34:20,155 - new_crawler.orchestrator - INFO - Successfully pushed 5 sites to queue
+2025-12-02 05:34:20,155 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-12-02 05:34:20,155 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-12-02 05:34:20,156 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-12-02 05:34:20,167 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 16)
+2025-12-02 05:34:20,177 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 17)
+2025-12-02 05:34:20,182 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 18)
+2025-12-02 05:34:20,191 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 19)
+2025-12-02 05:34:20,197 - new_crawler.orchestrator - INFO - Started storage worker 0 (PID: 20)
+2025-12-02 05:34:20,198 - new_crawler.orchestrator - INFO - Started 1 crawlers, 2 extractors, 1 GPU processors, 1 storage workers
+2025-12-02 05:34:22,202 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-12-02 05:34:22,230 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:22,239 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:22,240 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:34:26,305 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=105.5%, gpu_inbox=0.8%
+2025-12-02 05:34:27,343 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=135, images=0, gpu_inbox=1, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:34:28,506 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=93.0%, gpu_inbox=0.8%
+2025-12-02 05:34:32,498 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:32,669 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:32,675 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=39, images=0, gpu_inbox=2, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:34:37,706 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:37,750 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:37,764 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=2, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:34:42,847 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:42,938 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:42,939 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=2, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:34:47,979 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:48,008 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:48,009 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=34, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:34:53,066 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:53,116 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:53,117 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=34, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:34:55,088 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=110.2%, gpu_inbox=39.1%
+2025-12-02 05:34:57,108 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=110.2%, gpu_inbox=42.2%
+2025-12-02 05:34:58,152 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:58,344 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:34:58,346 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=109, images=0, gpu_inbox=66, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:34:59,121 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=85.2%, gpu_inbox=57.0%
+2025-12-02 05:35:03,447 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:03,606 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:03,618 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=45, images=0, gpu_inbox=78, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:35:08,680 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:08,737 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:08,737 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=104, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:35:09,547 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=82.8%
+2025-12-02 05:35:11,578 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=82.8%
+2025-12-02 05:35:13,655 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=82.8%
+2025-12-02 05:35:13,771 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:13,861 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:13,864 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=106, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:35:15,836 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=82.8%
+2025-12-02 05:35:17,893 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=82.8%
+2025-12-02 05:35:19,396 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:20,008 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:20,011 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=107, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:35:20,025 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=83.6%
+2025-12-02 05:35:22,065 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=91.4%
+2025-12-02 05:35:24,220 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=91.4%
+2025-12-02 05:35:25,126 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:25,206 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:25,208 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=117, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:35:26,280 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=91.4%
+2025-12-02 05:35:28,351 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=91.4%
+2025-12-02 05:35:30,347 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:30,379 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=91.4%
+2025-12-02 05:35:30,408 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:30,416 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=117, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:35:32,404 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=85.2%
+2025-12-02 05:35:34,706 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=85.2%
+2025-12-02 05:35:35,535 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=109, storage=7, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:35:36,791 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=85.2%
+2025-12-02 05:35:38,819 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=85.2%
+2025-12-02 05:35:40,585 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:40,603 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:35:40,603 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=109, storage=15, results=0, gpu_processor=IDLE
+2025-12-02 05:35:40,833 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=78.9%
+2025-12-02 05:35:42,939 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=78.9%
+2025-12-02 05:35:44,968 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=78.9%
+2025-12-02 05:35:45,694 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=93, storage=11, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:35:51,727 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=106, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:35:51,744 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=87.5%
+2025-12-02 05:35:53,767 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=83.6%
+2025-12-02 05:35:55,804 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=83.6%
+2025-12-02 05:35:56,764 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=99, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:35:57,836 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=77.3%
+2025-12-02 05:35:59,884 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=247.7%, gpu_inbox=77.3%
+2025-12-02 05:36:01,928 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=197.7%, gpu_inbox=72.7%
+2025-12-02 05:36:02,069 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=253, images=0, gpu_inbox=93, storage=2, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:36:05,514 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=197.7%, gpu_inbox=84.4%
+2025-12-02 05:36:07,150 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:36:07,216 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:36:07,263 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=221, images=0, gpu_inbox=123, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:36:07,587 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=172.7%, gpu_inbox=96.1%
+2025-12-02 05:36:09,709 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=172.7%, gpu_inbox=112.5%
+2025-12-02 05:36:11,948 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=147.7%, gpu_inbox=121.1%
+2025-12-02 05:36:12,612 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:36:13,116 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:36:13,119 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=189, images=0, gpu_inbox=156, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:36:14,093 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=147.7%, gpu_inbox=124.2%
+2025-12-02 05:36:16,276 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=110.2%, gpu_inbox=125.8%
+2025-12-02 05:36:18,238 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=109, images=0, gpu_inbox=176, storage=2, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:36:18,336 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=85.2%, gpu_inbox=137.5%
+2025-12-02 05:36:22,264 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=60.2%, gpu_inbox=146.1%
+2025-12-02 05:36:23,564 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:36:23,768 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:36:23,770 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=77, images=0, gpu_inbox=194, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:36:24,328 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=60.2%, gpu_inbox=153.9%
+2025-12-02 05:36:26,353 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=154.7%
+2025-12-02 05:36:28,388 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=155.5%
+2025-12-02 05:36:28,813 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=199, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:36:30,405 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=149.2%
+2025-12-02 05:36:32,572 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=149.2%
+2025-12-02 05:36:34,000 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=191, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:36:34,627 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=149.2%
+2025-12-02 05:36:36,717 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=143.0%
+2025-12-02 05:36:38,752 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=143.0%
+2025-12-02 05:36:39,089 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=183, storage=2, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:36:40,818 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=143.0%
+2025-12-02 05:36:42,916 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=136.7%
+2025-12-02 05:36:45,382 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=78.9%, gpu_inbox=136.7%
+2025-12-02 05:36:45,582 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=86, images=0, gpu_inbox=175, storage=5, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:36:47,387 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=67.2%, gpu_inbox=136.7%
+2025-12-02 05:36:50,094 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=67.2%, gpu_inbox=136.7%
+2025-12-02 05:36:55,220 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:36:56,455 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=67.2%, gpu_inbox=136.7%
+2025-12-02 05:36:56,642 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:36:56,712 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=86, images=0, gpu_inbox=175, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:36:58,574 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=67.2%, gpu_inbox=143.8%
+2025-12-02 05:37:00,706 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=42.2%, gpu_inbox=146.1%
+2025-12-02 05:37:01,697 - new_crawler.orchestrator - INFO - Consumed 100 results from queue
+2025-12-02 05:37:01,819 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=38, images=0, gpu_inbox=219, storage=3, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:02,761 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=17.2%, gpu_inbox=188.3%
+2025-12-02 05:37:04,854 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=209.4%
+2025-12-02 05:37:06,846 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:37:06,861 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:37:06,862 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=268, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:37:06,886 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=209.4%
+2025-12-02 05:37:08,909 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=203.1%
+2025-12-02 05:37:10,944 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=203.1%
+2025-12-02 05:37:11,942 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=260, storage=5, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:13,051 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=196.9%
+2025-12-02 05:37:15,061 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=196.9%
+2025-12-02 05:37:17,104 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=190.6%
+2025-12-02 05:37:17,136 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=244, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:19,077 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=190.6%
+2025-12-02 05:37:21,106 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=184.4%
+2025-12-02 05:37:22,137 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=236, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:23,128 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=184.4%
+2025-12-02 05:37:25,154 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=178.1%
+2025-12-02 05:37:27,177 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=178.1%
+2025-12-02 05:37:27,213 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=228, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:29,202 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=171.9%
+2025-12-02 05:37:31,226 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=171.9%
+2025-12-02 05:37:32,247 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=220, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:33,279 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=171.9%
+2025-12-02 05:37:35,298 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=165.6%
+2025-12-02 05:37:37,300 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=212, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:37,334 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=165.6%
+2025-12-02 05:37:39,356 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=159.4%
+2025-12-02 05:37:41,368 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=159.4%
+2025-12-02 05:37:42,332 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=196, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:43,375 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=153.1%
+2025-12-02 05:37:45,394 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=146.9%
+2025-12-02 05:37:47,357 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=180, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:47,401 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=140.6%
+2025-12-02 05:37:49,511 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=140.6%
+2025-12-02 05:37:50,342 - new_crawler.orchestrator - INFO - Consumed 200 results from queue
+2025-12-02 05:37:51,527 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=134.4%
+2025-12-02 05:37:52,489 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=172, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:53,545 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=134.4%
+2025-12-02 05:37:55,557 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=128.1%
+2025-12-02 05:37:57,517 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=156, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:37:57,564 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=121.9%
+2025-12-02 05:37:59,572 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=121.9%
+2025-12-02 05:38:01,590 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=115.6%
+2025-12-02 05:38:02,531 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=148, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:03,598 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=109.4%
+2025-12-02 05:38:05,607 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=109.4%
+2025-12-02 05:38:07,545 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=132, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:07,615 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=103.1%
+2025-12-02 05:38:09,632 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=96.9%
+2025-12-02 05:38:11,645 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=96.9%
+2025-12-02 05:38:12,573 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=124, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:13,653 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=90.6%
+2025-12-02 05:38:15,659 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=90.6%
+2025-12-02 05:38:17,607 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=108, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:17,666 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=84.4%
+2025-12-02 05:38:19,675 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=78.1%
+2025-12-02 05:38:21,695 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=0.0%, gpu_inbox=78.1%
+2025-12-02 05:38:22,628 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=100, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:27,643 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=84, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:32,673 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=76, storage=5, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:37,691 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:38:37,723 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:38:37,728 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=76, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:38:38,669 - new_crawler.orchestrator - INFO - Consumed 300 results from queue
+2025-12-02 05:38:42,764 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=68, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:47,806 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=60, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:52,838 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=44, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:38:57,868 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=36, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:39:02,892 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=28, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:39:07,939 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=12, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:39:12,965 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=4, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 05:39:17,969 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:39:17,974 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:39:17,974 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=1, results=0, gpu_processor=IDLE
+2025-12-02 05:39:22,980 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:39:22,985 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:39:22,985 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 05:39:27,992 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 05:39:27,993 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+2025-12-02 05:39:27,996 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-12-02 05:39:28,881 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-12-02 05:39:28,895 - new_crawler.orchestrator - INFO - Retrieved stats for 5 sites from Redis
+2025-12-02 05:39:28,901 - new_crawler.orchestrator - INFO - Consumed 380 results from queue
+2025-12-02 05:39:28,902 - new_crawler.orchestrator - INFO - From consumed results: faces=244, raw=375, thumbs=112 (thumb_count=135), mismatches=109
+2025-12-02 05:39:28,902 - new_crawler.orchestrator - INFO - From Redis stats: faces=244, raw=375, thumbs=135
+2025-12-02 05:39:28,902 - new_crawler.orchestrator - INFO - Total images processed: 380
+2025-12-02 05:39:28,902 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+2025-12-02 05:39:28,902 - new_crawler.orchestrator - INFO - Total sites processed: 5
+2025-12-02 05:39:28,903 - new_crawler.orchestrator - INFO - Total images processed: 380
+2025-12-02 05:39:28,903 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 375
+2025-12-02 05:39:28,903 - new_crawler.orchestrator - INFO - Total thumbnails saved: 135
+2025-12-02 05:39:28,903 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+2025-12-02 05:39:28,903 - new_crawler.orchestrator - INFO - Success rate: 14.3%
+2025-12-02 05:39:28,903 - new_crawler.orchestrator - INFO - Overall throughput: 1.23 images/second
+2025-12-02 05:39:28,904 - new_crawler.orchestrator - INFO - Crawl completed in 308.7s, success rate: 14.3%, throughput: 1.23 images/second
+2025-12-02 05:39:28,914 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+2025-12-02 05:39:28,914 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-12-02 05:39:28,914 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-12-02 05:39:28,923 - __main__ - INFO - Crawl completed successfully
+2025-12-02 06:52:15,792 - new_crawler.config - INFO - Validating crawler configuration...
+2025-12-02 06:52:15,807 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-12-02 06:52:15,807 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-12-02 06:52:15,807 - new_crawler.config - INFO - Configuration validated: crawlers=1, extractors=2, gpu_processors=1
+2025-12-02 06:52:15,807 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-12-02 06:52:15,807 - new_crawler.config - INFO - Environment: development
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Log Level: error
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Docker: True
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Windows: False
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Batch Size: 256
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - GPU Min Batch Size: 64
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Max Queue Depth: 128
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Max Concurrent Sites per Worker: 2
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Max Concurrent Batches per Worker: 2
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Batch Flush Timeout: 5.0s
+2025-12-02 06:52:15,808 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - JS Wait Strategy: fixed
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - JS Network Idle Timeout: 30.0s
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Extract Background Images: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Realistic Headers: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Capture Network Images: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Extract Script Images: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-12-02 06:52:15,809 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-12-02 06:52:15,810 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-12-02 06:52:15,810 - new_crawler.config - INFO - ================================
+2025-12-02 06:52:15,810 - __main__ - INFO - Loaded 5 sites from sites.txt
+2025-12-02 06:52:15,810 - __main__ - INFO - Starting crawl of 5 sites
+2025-12-02 06:52:15,811 - __main__ - INFO - Performing system health check...
+2025-12-02 06:52:15,811 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-12-02 06:52:15,811 - __main__ - INFO - Redis: ✓
+2025-12-02 06:52:15,824 - __main__ - INFO - Cache: ✓
+2025-12-02 06:52:16,003 - __main__ - INFO - Storage: ✓
+2025-12-02 06:52:16,107 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-12-02 06:52:16,108 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-12-02 06:52:16,108 - __main__ - INFO - GPU Worker: ✓
+2025-12-02 06:52:16,108 - __main__ - INFO - ✓ All systems healthy
+2025-12-02 06:52:16,110 - new_crawler.orchestrator - INFO - Starting crawl of 5 sites
+2025-12-02 06:52:16,110 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+2025-12-02 06:52:16,112 - new_crawler.redis_manager - INFO - Cleared 5 site stats
+2025-12-02 06:52:16,112 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-12-02 06:52:16,112 - new_crawler.orchestrator - INFO - Pushing 5 sites to crawl queue
+2025-12-02 06:52:16,114 - new_crawler.orchestrator - INFO - Successfully pushed 5 sites to queue
+2025-12-02 06:52:16,115 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-12-02 06:52:16,115 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-12-02 06:52:16,115 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-12-02 06:52:16,125 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 15)
+2025-12-02 06:52:16,132 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 16)
+2025-12-02 06:52:16,141 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 17)
+2025-12-02 06:52:16,146 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 18)
+2025-12-02 06:52:16,155 - new_crawler.orchestrator - INFO - Started storage worker 0 (PID: 19)
+2025-12-02 06:52:16,156 - new_crawler.orchestrator - INFO - Started 1 crawlers, 2 extractors, 1 GPU processors, 1 storage workers
+2025-12-02 06:52:18,161 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-12-02 06:52:18,174 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:18,179 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:18,180 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:52:20,183 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=80.5%, gpu_inbox=0.0%
+2025-12-02 06:52:22,225 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=105.5%, gpu_inbox=0.0%
+2025-12-02 06:52:23,233 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=87, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 06:52:28,259 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:28,290 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:28,292 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:52:33,317 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:33,349 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:33,350 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=16, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:52:38,398 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:38,460 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:38,461 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=16, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:52:43,493 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:43,625 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:43,625 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=16, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:52:48,566 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:48,577 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:48,577 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=16, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:52:53,586 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:53,630 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:53,630 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=29, images=0, gpu_inbox=16, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:52:58,672 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:58,692 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:52:58,692 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=16, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:53:03,712 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=1, storage=12, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 06:53:08,779 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (1 in-flight)
+2025-12-02 06:53:13,795 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (1 in-flight)
+2025-12-02 06:53:18,871 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (1 in-flight)
+2025-12-02 06:53:23,890 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (1 in-flight)
+2025-12-02 06:53:29,772 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (1 in-flight)
+2025-12-02 06:53:34,838 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (1 in-flight)
+2025-12-02 06:53:40,219 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (1 in-flight)
+2025-12-02 06:53:45,291 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=34, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 06:53:50,380 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=26, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 06:53:55,400 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:53:55,415 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:53:55,417 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=26, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:54:00,441 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=18, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 06:54:05,462 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=10, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 06:54:10,542 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=2, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 06:54:15,571 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-02 06:54:20,576 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:54:20,586 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:54:20,586 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-02 06:54:25,590 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-02 06:54:25,591 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+2025-12-02 06:54:25,592 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-12-02 06:54:27,287 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-12-02 06:54:27,293 - new_crawler.orchestrator - INFO - Retrieved stats for 5 sites from Redis
+2025-12-02 06:54:27,297 - new_crawler.orchestrator - INFO - Consumed 66 results from queue
+2025-12-02 06:54:27,297 - new_crawler.orchestrator - INFO - From consumed results: faces=74, raw=66, thumbs=28 (thumb_count=47), mismatches=26
+2025-12-02 06:54:27,297 - new_crawler.orchestrator - INFO - From Redis stats: faces=74, raw=66, thumbs=47
+2025-12-02 06:54:27,298 - new_crawler.orchestrator - INFO - Total images processed: 66
+2025-12-02 06:54:27,298 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+2025-12-02 06:54:27,298 - new_crawler.orchestrator - INFO - Total sites processed: 5
+2025-12-02 06:54:27,298 - new_crawler.orchestrator - INFO - Total images processed: 66
+2025-12-02 06:54:27,298 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 66
+2025-12-02 06:54:27,299 - new_crawler.orchestrator - INFO - Total thumbnails saved: 47
+2025-12-02 06:54:27,299 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+2025-12-02 06:54:27,299 - new_crawler.orchestrator - INFO - Success rate: 5.0%
+2025-12-02 06:54:27,299 - new_crawler.orchestrator - INFO - Overall throughput: 0.50 images/second
+2025-12-02 06:54:27,299 - new_crawler.orchestrator - INFO - Crawl completed in 131.2s, success rate: 5.0%, throughput: 0.50 images/second
+2025-12-02 06:54:27,308 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+2025-12-02 06:54:27,308 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-12-02 06:54:27,308 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-12-02 06:54:27,310 - __main__ - INFO - Crawl completed successfully
+2025-12-03 01:04:55,673 - new_crawler.config - INFO - Validating crawler configuration...
+2025-12-03 01:04:55,692 - new_crawler.config - INFO - Redis connection validated: redis://redis:6379/0
+2025-12-03 01:04:55,692 - new_crawler.config - INFO - GPU worker URL validated: http://host.docker.internal:8765
+2025-12-03 01:04:55,693 - new_crawler.config - INFO - Configuration validated: crawlers=1, extractors=2, gpu_processors=1
+2025-12-03 01:04:55,693 - new_crawler.config - INFO - === New Crawler Configuration ===
+2025-12-03 01:04:55,693 - new_crawler.config - INFO - Environment: development
+2025-12-03 01:04:55,693 - new_crawler.config - INFO - Log Level: error
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Docker: True
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Windows: False
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Redis URL: redis://redis:6379/0
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - GPU Worker URL: http://host.docker.internal:8765
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - GPU Worker Host: http://host.docker.internal:8765
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Batch Size: 256
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - GPU Min Batch Size: 64
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Max Queue Depth: 128
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Extractor Concurrency: 16
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Max Concurrent Sites per Worker: 2
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Max Concurrent Batches per Worker: 2
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Batch Flush Timeout: 5.0s
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Use 3x3 Mining: True
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - Max Selector Patterns: 30
+2025-12-03 01:04:55,694 - new_crawler.config - INFO - HTTP Timeout: 30.0s
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - GPU Timeout: 60.0s
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - JS Wait Strategy: fixed
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - JS Wait Timeout: 5.0s
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - JS Network Idle Timeout: 30.0s
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Extract Background Images: True
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Extract Srcset Images: True
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Extract Data Attributes: True
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Same Origin Redirects Only: True
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Blocklist Redirect Hosts: ['progress-tm.com', 'google.com']
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Realistic Headers: True
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - JS Wait Selectors: img, picture source, noscript img, [style*="background-image"]
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Capture Network Images: True
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Extract Script Images: True
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Extract Noscript Images: True
+2025-12-03 01:04:55,695 - new_crawler.config - INFO - Extract JSON-LD Images: True
+2025-12-03 01:04:55,696 - new_crawler.config - INFO - Cache TTL: 90 days
+2025-12-03 01:04:55,696 - new_crawler.config - INFO - ================================
+2025-12-03 01:04:55,696 - __main__ - INFO - Loaded 5 sites from sites.txt
+2025-12-03 01:04:55,696 - __main__ - INFO - Starting crawl of 5 sites
+2025-12-03 01:04:55,697 - __main__ - INFO - Performing system health check...
+2025-12-03 01:04:55,698 - new_crawler.redis_manager - INFO - Redis connection successful
+2025-12-03 01:04:55,698 - __main__ - INFO - Redis: ✓
+2025-12-03 01:04:55,717 - __main__ - INFO - Cache: ✓
+2025-12-03 01:04:55,967 - __main__ - INFO - Storage: ✓
+2025-12-03 01:04:56,082 - httpx - INFO - HTTP Request: GET http://host.docker.internal:8765/health "HTTP/1.1 200 OK"
+2025-12-03 01:04:56,083 - gpu_worker_0 - INFO - [GPU-WORKER-0] HEALTH-CHECK: OK
+2025-12-03 01:04:56,083 - __main__ - INFO - GPU Worker: ✓
+2025-12-03 01:04:56,083 - __main__ - INFO - ✓ All systems healthy
+2025-12-03 01:04:56,085 - new_crawler.orchestrator - INFO - Starting crawl of 5 sites
+2025-12-03 01:04:56,086 - new_crawler.redis_manager - INFO - Cleared 0 crawler queues
+2025-12-03 01:04:56,087 - new_crawler.redis_manager - INFO - Cleared 5 site stats
+2025-12-03 01:04:56,087 - new_crawler.orchestrator - INFO - Cleared shared batch accumulator
+2025-12-03 01:04:56,087 - new_crawler.orchestrator - INFO - Pushing 5 sites to crawl queue
+2025-12-03 01:04:56,089 - new_crawler.orchestrator - INFO - Successfully pushed 5 sites to queue
+2025-12-03 01:04:56,089 - new_crawler.orchestrator - INFO - Checking GPU worker availability...
+2025-12-03 01:04:56,089 - new_crawler.orchestrator - INFO - ✓ GPU worker is available
+2025-12-03 01:04:56,089 - new_crawler.orchestrator - INFO - Starting worker processes...
+2025-12-03 01:04:56,105 - new_crawler.orchestrator - INFO - Started crawler worker 0 (PID: 15)
+2025-12-03 01:04:56,115 - new_crawler.orchestrator - INFO - Started extractor worker 0 (PID: 16)
+2025-12-03 01:04:56,126 - new_crawler.orchestrator - INFO - Started extractor worker 1 (PID: 17)
+2025-12-03 01:04:56,135 - new_crawler.orchestrator - INFO - Started GPU processor worker 0 (PID: 18)
+2025-12-03 01:04:56,150 - new_crawler.orchestrator - INFO - Started storage worker 0 (PID: 19)
+2025-12-03 01:04:56,152 - new_crawler.orchestrator - INFO - Started 1 crawlers, 2 extractors, 1 GPU processors, 1 storage workers
+2025-12-03 01:04:58,160 - new_crawler.orchestrator - INFO - Starting monitoring loop
+2025-12-03 01:04:58,191 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:04:58,203 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:04:58,204 - new_crawler.orchestrator - INFO - Queues: sites=3, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:02,219 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=105.5%, gpu_inbox=15.6%
+2025-12-03 01:05:03,291 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=119, images=0, gpu_inbox=20, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:05:08,337 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:08,434 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:08,475 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=20, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:13,552 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:13,568 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:13,569 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=20, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:18,600 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:18,619 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:18,620 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=20, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:23,633 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:23,649 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:23,650 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=20, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:28,647 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:28,661 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:28,661 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=60, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:33,675 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:33,688 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:33,689 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=60, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:38,897 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:39,220 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:39,221 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=24, images=0, gpu_inbox=74, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:44,271 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:44,283 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:44,284 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=74, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:05:49,292 - new_crawler.orchestrator - INFO - Queues: sites=2, candidates=0, images=0, gpu_inbox=66, storage=7, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:05:53,170 - new_crawler.orchestrator - WARNING - Back-pressure active: candidates=88.3%, gpu_inbox=52.3%
+2025-12-03 01:05:54,389 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:54,462 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:05:54,464 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=49, images=0, gpu_inbox=67, storage=7, results=0, gpu_processor=IDLE
+2025-12-03 01:05:59,464 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=59, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:06:04,483 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=51, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:06:09,497 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=43, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:06:14,654 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=27, storage=6, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:06:19,751 - new_crawler.orchestrator - INFO - Queues: sites=1, candidates=0, images=0, gpu_inbox=11, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:06:24,768 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (4 in-flight)
+2025-12-03 01:06:29,822 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=72, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=BUSY (4 in-flight)
+2025-12-03 01:06:34,838 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=71, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:06:39,884 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:06:39,924 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:06:39,929 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=71, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:06:45,185 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:06:45,202 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:06:45,203 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=75, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:06:47,443 - new_crawler.orchestrator - INFO - Consumed 100 results from queue
+2025-12-03 01:06:50,237 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=67, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:06:55,295 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=59, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:07:00,276 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:07:00,290 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:07:00,291 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=59, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:07:05,304 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=51, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:07:10,328 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=35, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:07:15,339 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=27, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:07:20,348 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=11, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:07:25,360 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=3, storage=0, results=0, gpu_processor=BUSY (8 in-flight)
+2025-12-03 01:07:30,399 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:07:30,403 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:07:30,403 - new_crawler.orchestrator - INFO - Queues: sites=0, candidates=0, images=0, gpu_inbox=0, storage=0, results=0, gpu_processor=IDLE
+2025-12-03 01:07:35,407 - new_crawler.orchestrator - INFO - GPU processor IDLE: no images in staging or processing (all workers: staging=0, inflight=0)
+2025-12-03 01:07:35,408 - new_crawler.orchestrator - INFO - Crawl complete (queues empty, no active tasks), shutting down
+2025-12-03 01:07:35,410 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-12-03 01:07:36,210 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-12-03 01:07:36,216 - new_crawler.orchestrator - INFO - Retrieved stats for 5 sites from Redis
+2025-12-03 01:07:36,219 - new_crawler.orchestrator - INFO - Consumed 179 results from queue
+2025-12-03 01:07:36,221 - new_crawler.orchestrator - INFO - From consumed results: faces=179, raw=177, thumbs=58 (thumb_count=100), mismatches=75
+2025-12-03 01:07:36,221 - new_crawler.orchestrator - INFO - From Redis stats: faces=179, raw=177, thumbs=100
+2025-12-03 01:07:36,221 - new_crawler.orchestrator - INFO - Total images processed: 179
+2025-12-03 01:07:36,221 - new_crawler.orchestrator - INFO - === Crawl Summary ===
+2025-12-03 01:07:36,221 - new_crawler.orchestrator - INFO - Total sites processed: 5
+2025-12-03 01:07:36,221 - new_crawler.orchestrator - INFO - Total images processed: 179
+2025-12-03 01:07:36,221 - new_crawler.orchestrator - INFO - Total images saved to raw-images: 177
+2025-12-03 01:07:36,222 - new_crawler.orchestrator - INFO - Total thumbnails saved: 100
+2025-12-03 01:07:36,222 - new_crawler.orchestrator - INFO - Total images skipped due to limits: 0
+2025-12-03 01:07:36,222 - new_crawler.orchestrator - INFO - Success rate: 9.4%
+2025-12-03 01:07:36,222 - new_crawler.orchestrator - INFO - Overall throughput: 1.12 images/second
+2025-12-03 01:07:36,223 - new_crawler.orchestrator - INFO - Crawl completed in 160.1s, success rate: 9.4%, throughput: 1.12 images/second
+2025-12-03 01:07:36,228 - new_crawler.orchestrator - INFO - Stopping orchestrator...
+2025-12-03 01:07:36,228 - new_crawler.orchestrator - INFO - Stopping worker processes...
+2025-12-03 01:07:36,228 - new_crawler.orchestrator - INFO - All worker processes stopped
+2025-12-03 01:07:36,231 - __main__ - INFO - Crawl completed successfully

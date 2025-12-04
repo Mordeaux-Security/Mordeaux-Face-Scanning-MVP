@@ -165,12 +165,13 @@ CRAWLER_INGEST_QUALITY = FaceQualityConfig(
 )
 
 # ENROLL_QUALITY: Used when a user enrolls their identity (high quality needed)
+# Further relaxed for real-world usage - allow more photos to pass
 ENROLL_QUALITY = FaceQualityConfig(
-    min_size=100,          # Larger face for enrollment
-    min_blur_var=100.0,    # Sharp image required
-    max_yaw_deg=20.0,      # Frontal face preferred
-    max_pitch_deg=20.0,
-    min_score=0.70         # High quality bar for enrollment
+    min_size=64,           # Face should be at least 64px (more lenient)
+    min_blur_var=30.0,     # Much more tolerant blur threshold (was 80.0)
+    max_yaw_deg=30.0,      # Allow more angle variation (was 25.0)
+    max_pitch_deg=30.0,    # Allow more up/down angle (was 25.0)
+    min_score=0.40         # Much more lenient quality bar (was 0.60)
 )
 
 # VERIFY_QUALITY: Used for 1:1 verification against enrolled identity
@@ -183,13 +184,13 @@ VERIFY_QUALITY = FaceQualityConfig(
 )
 
 # SEARCH_QUALITY: Used for 1:N search queries (user searching database)
-# Slightly more lenient since user may not have ideal photo
+# Very lenient to match what crawler accepts - we want to find matches even with imperfect photos
 SEARCH_QUALITY = FaceQualityConfig(
-    min_size=64,           # Allow smaller faces in search
-    min_blur_var=50.0,     # Some blur tolerance
-    max_yaw_deg=30.0,      # More pose flexibility for search
-    max_pitch_deg=30.0,
-    min_score=0.50         # Lower bar for search queries
+    min_size=32,           # Allow very small faces (crawler accepts small faces)
+    min_blur_var=30.0,     # More blur tolerance (match ENROLL_QUALITY)
+    max_yaw_deg=45.0,      # Very flexible pose (allow side profiles)
+    max_pitch_deg=45.0,
+    min_score=0.30         # Very low bar - just need a detectable face for search
 )
 
 

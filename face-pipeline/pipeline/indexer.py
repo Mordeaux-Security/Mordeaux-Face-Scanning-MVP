@@ -138,10 +138,10 @@ def search(
         query_filter=flt,
         with_payload=True,
         with_vectors=False,
-        # HNSW search params for better accuracy
+        # Use exact search for maximum accuracy (trades speed for precision)
+        # Exact search ensures accurate cosine similarity scores
         search_params=SearchParams(
-            hnsw_ef=effective_hnsw_ef,
-            exact=False,  # Use ANN, not brute force
+            exact=True,  # Exact cosine similarity for maximum accuracy
         ),
     )
     return res
