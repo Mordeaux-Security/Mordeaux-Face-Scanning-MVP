@@ -3,6 +3,8 @@
 ## Overview
 This document explains how the crawler system has been adapted from image crawling to diabetes post crawling, focusing on `crawler_worker.py` and the overall architecture.
 
+**Current Mode**: Post-focused crawler with image extraction and GPU processing **DISABLED**.
+
 ---
 
 ## System Architecture Flow
@@ -82,12 +84,22 @@ This is redundant since `process_site()` already updates `posts_found` correctly
   4. Filters for diabetes-related keywords
   5. Returns `List[CandidatePost]`
 
+#### Image Extraction (DEPRECATED):
+⚠️ **DISABLED** - Image extraction methods are disabled in post-focused mode:
+- `mine_selectors()` - Returns empty list if `nc_enable_image_extraction = False`
+- `_extract_noscript_images()` - Returns empty list
+- `_extract_jsonld_images()` - Returns empty list
+- `_extract_script_images()` - Returns empty list
+- `_extract_background_image()` - Returns None
+- `_extract_from_srcset()` - Returns None
+
 #### Alignment with Post Finding:
 ✅ **FULLY ALIGNED** - All methods updated for posts:
 - `_discover_category_pages()` prioritizes forum/board links
 - `mine_posts_for_diabetes()` extracts post metadata
 - `_create_post_candidate()` builds `CandidatePost` objects
 - `_detect_page_type()` differentiates listing vs. detail pages
+- Image extraction methods disabled via `nc_enable_image_extraction` flag
 
 ---
 
@@ -109,7 +121,7 @@ This is redundant since `process_site()` already updates `posts_found` correctly
 - **Main Loop**: `run()` pops `CandidatePost` or `CandidateImage` from candidates queue
 - **Routing**: `process_candidate()` routes to:
   - `_process_post_candidate()` for posts
-  - `_process_image_candidate()` for images (legacy)
+  - `_process_image_candidate()` for images (legacy, **SKIPPED** if `nc_enable_image_extraction = False`)
 
 #### Post Processing Flow:
 1. Checks URL deduplication
@@ -118,12 +130,19 @@ This is redundant since `process_site()` already updates `posts_found` correctly
 4. Creates `PostTask`
 5. **Bypasses GPU** - pushes directly to storage queue
 
+#### Image Processing (DEPRECATED):
+⚠️ **DISABLED** - Image candidates are skipped if `nc_enable_image_extraction = False`:
+- `CandidateImage` objects return `None` immediately
+- No image downloads or temp file creation
+- No GPU inbox enqueueing
+
 #### Alignment with Post Finding:
 ✅ **FULLY ALIGNED** - Post processing is complete:
-- `_process_post_candidate()` handles posts (line 262)
-- Bypasses GPU worker (line 310)
-- Pushes to storage queue (line 310)
-- Updates stats with `posts_processed` (line 373)
+- `_process_post_candidate()` handles posts (line 268)
+- Bypasses GPU worker (line 336)
+- Pushes to storage queue (line 336)
+- Updates stats with `posts_processed` (line 402)
+- Image processing skipped when disabled
 
 ---
 
@@ -178,10 +197,14 @@ This is redundant since `process_site()` already updates `posts_found` correctly
 
 #### Post-Related Config:
 - `nc_max_posts_per_site: int = 100` - Max posts per site
-- `s3_bucket_posts: str = "diabetes-posts"` - MinIO bucket for posts
+- `s3_bucket_posts: str = "raw-images"` - MinIO bucket for posts (reuses raw-images bucket)
+
+#### Feature Flags (Post-Focused Mode):
+- `nc_enable_image_extraction: bool = False` - **DISABLED** - Controls image extraction in selector_miner
+- `nc_enable_gpu_processing: bool = False` - **DISABLED** - Controls GPU processor workers
 
 #### Alignment with Post Finding:
-✅ **FULLY ALIGNED** - Post configuration exists
+✅ **FULLY ALIGNED** - Post configuration exists with image/GPU features disabled
 
 ---
 
@@ -221,10 +244,12 @@ This is redundant since `process_site()` already updates `posts_found` correctly
 - ✅ Supports concurrent site processing
 
 ### What's Different from Image Crawling:
-1. **No GPU Processing**: Posts bypass GPU worker entirely
-2. **Different Queue Path**: `candidates → storage` (no GPU inbox)
-3. **Different Statistics**: Tracks `posts_found` instead of `images_found`
-4. **Different Storage**: Saves JSON metadata instead of images
+1. **No Image Extraction**: Image extraction methods disabled via `nc_enable_image_extraction = False`
+2. **No GPU Processing**: GPU processor workers disabled via `nc_enable_gpu_processing = False`
+3. **Different Queue Path**: `candidates → storage` (no GPU inbox, no image processing)
+4. **Different Statistics**: Tracks `posts_found` instead of `images_found`
+5. **Different Storage**: Saves JSON metadata instead of images
+6. **Simplified Flow**: Posts go directly from extractor to storage (no GPU worker)
 
 ---
 
@@ -238,13 +263,38 @@ This is redundant since `process_site()` already updates `posts_found` correctly
 
 ---
 
+## Post-Focused Mode Implementation
+
+### Image Extraction Disabled
+- `mine_selectors()` returns empty list when `nc_enable_image_extraction = False`
+- All image extraction helper methods return empty lists/None
+- Only `CandidatePost` objects are created, never `CandidateImage`
+
+### GPU Processing Disabled
+- `num_gpu_processors` set to 0 when `nc_enable_gpu_processing = False`
+- GPU processor workers are not started
+- GPU queue monitoring (gpu:inbox, gpu:inflight) is skipped
+- Back-pressure monitoring excludes GPU queues
+
+### Post Extraction Flow
+1. **Listing Page** → `mine_posts_with_3x3_crawl()` discovers post links
+2. **Detail Page** → `mine_posts_for_diabetes()` extracts post content
+3. **Extraction** → `_process_post_candidate()` creates `PostTask`
+4. **Storage** → `save_post_metadata_async()` saves to MinIO
+
+### MinIO Storage Structure
+- **All posts**: `raw-images/posts/{site_id}/{content_hash}.json`
+- **All posts HTML**: `raw-images/posts/{site_id}/{content_hash}.html` (if available)
+- **Keyword-filtered posts**: `posts/{site_id}/{content_hash}.json` (diabetes keywords only)
+
 ## Conclusion
 
-The crawler system is **95% aligned** with the post-finding goal. The only minor issue is a redundant statistics update in `crawler_worker.py`. The architecture correctly:
+The crawler system is **fully aligned** with the post-finding goal. Image extraction and GPU processing are disabled via configuration flags. The architecture correctly:
 - Discovers posts using heuristic patterns
-- Processes posts without GPU
+- Processes posts without GPU (directly to storage)
 - Saves post metadata to MinIO
 - Tracks post-related statistics
+- Skips all image extraction and GPU processing
 
-The system is ready for testing and should work correctly for diabetes post crawling.
+The system is ready for testing and should work correctly for diabetes post crawling in post-focused mode.
 

@@ -38,6 +38,10 @@ class CrawlerConfig(BaseSettings):
     nc_max_post_links_per_page: int = 100 #Maximum post links to navigate to per listing page (prevents resource exhaustion)
     nc_strict_limits: bool = True  # When enabled, stops feeding queues and removes existing items when site limits are reached
     
+    # Feature Flags
+    nc_enable_image_extraction: bool = False  # Enable/disable image extraction (post-focused mode)
+    nc_enable_gpu_processing: bool = False  # Enable/disable GPU processing (post-focused mode)
+    
     # Debug Logging
     nc_debug_logging: bool = True
     nc_gpu_worker_logging: bool = True

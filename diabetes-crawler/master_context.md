@@ -5,9 +5,10 @@
 This document provides comprehensive documentation for all Python files in the diabetes crawler system. The crawler is a multi-process, distributed web crawling system designed to extract diabetes-related posts and images from websites. It uses Redis for queue management, MinIO for storage, and includes GPU-accelerated face detection capabilities.
 
 **System Architecture:**
+
 - **Entry Point**: `main.py` - CLI interface and orchestration
 - **Orchestration**: `orchestrator.py` - Manages worker processes and system coordination
-- **Workers**: 
+- **Workers**:
   - `crawler_worker.py` - Fetches HTML and discovers posts/images
   - `extractor_worker.py` - Downloads and processes candidates
   - `gpu_processor_worker.py` - GPU-accelerated face detection
@@ -41,6 +42,7 @@ This document provides comprehensive documentation for all Python files in the d
 - **Used By**: Python import system
 
 #### Methods
+
 None (empty file)
 
 ---
@@ -51,7 +53,7 @@ None (empty file)
 - **Lines**: 349
 - **Scope**: Data models and type definitions
 - **Purpose**: Defines all Pydantic models used throughout the system for type safety and serialization
-- **Dependencies**: 
+- **Dependencies**:
   - `pydantic` (BaseModel, Field, validator, model_serializer, field_validator)
   - `datetime`
   - `enum`
@@ -61,50 +63,61 @@ None (empty file)
 #### Classes
 
 ##### TaskStatus (Enum)
+
 - **Purpose**: Status enumeration for processing tasks
 - **Values**: PENDING, PROCESSING, COMPLETED, FAILED, SKIPPED
 
 ##### SiteTask (BaseModel)
+
 - **Purpose**: Task for crawling a site
 - **Fields**: url, site_id, priority, max_pages, max_images_per_site, use_3x3_mining, pages_crawled, images_saved, created_at, status
 - **Validators**: `validate_url()` - Ensures URL starts with http:// or https://
 
 ##### CandidateImage (BaseModel)
+
 - **Purpose**: Candidate image found during crawling
 - **Fields**: page_url, img_url, selector_hint, site_id, alt_text, width, height, discovered_at, content_type, estimated_size, has_srcset
 - **Validators**: `validate_img_url()` - Ensures image URL starts with http:// or https://
 
 ##### CandidatePost (BaseModel)
+
 - **Purpose**: Candidate post found during crawling that may contain diabetes-related content
 - **Fields**: page_url, post_url, selector_hint, site_id, title, content, author, date, raw_html, discovered_at
 - **Validators**: `validate_post_url()` - Ensures post URL starts with http:// or https://
 
 ##### ImageTask (BaseModel)
+
 - **Purpose**: Task for processing an image
 - **Fields**: temp_path, phash, candidate, file_size, mime_type, created_at, status
 
 ##### PostTask (BaseModel)
+
 - **Purpose**: Task for processing a post for diabetes-related content
 - **Fields**: candidate, content_hash, has_keywords, created_at, status
 
 ##### PostMetadata (BaseModel)
+
 - **Purpose**: Metadata for a diabetes-related post to be stored in MinIO
 - **Fields**: title, content, author, url, date, site_id, content_hash, discovered_at, page_url
 
 ##### ImageMetadata (BaseModel)
+
 - **Purpose**: Metadata for image processing (JSON serializable, binary data stored separately)
 - **Fields**: phash, candidate, file_size, mime_type, redis_binary_key, created_at
 
 ##### FaceDetection (BaseModel)
+
 - **Purpose**: Face detection result
 - **Fields**: bbox, landmarks, embedding, quality, age, gender
 - **Validators**: `validate_bbox()` - Ensures bounding box has exactly 4 coordinates
 
 ##### FaceResult (BaseModel)
+
 - **Purpose**: Result of face processing for an image
 - **Fields**: image_task, faces, crop_paths, raw_image_key, thumbnail_keys, processing_time_ms, gpu_used, saved_to_raw, saved_to_thumbs, skip_reason, created_at
 
 ##### StorageTask (BaseModel)
+
 - **Purpose**: Task for storage operations - pre-cropped faces ready for I/O
 - **Fields**: image_task, face_result, face_crops, batch_start_time, created_at
 - **Methods**:
@@ -113,6 +126,7 @@ None (empty file)
   - `decode_face_crops()` (field_validator) - Decode base64 strings back to bytes if needed
 
 ##### ProcessingStats (BaseModel)
+
 - **Purpose**: Statistics for site processing
 - **Fields**: site_id, site_url, pages_fetched, pages_crawled, images_found, images_processed, images_saved_raw, images_saved_thumbs, images_skipped_limit, images_cached, faces_detected, errors, start_time, end_time, total_time_seconds, extraction_start_time, extraction_end_time, gpu_processing_start_time, gpu_processing_end_time, storage_start_time, storage_end_time
 - **Properties**:
@@ -122,22 +136,27 @@ None (empty file)
   - `gpu_images_per_second` - Calculate GPU processing throughput
 
 ##### BatchRequest (BaseModel)
+
 - **Purpose**: Request for GPU worker batch processing
 - **Fields**: image_tasks, min_face_quality, require_face, crop_faces, face_margin, batch_id, created_at
 
 ##### BatchResponse (BaseModel)
+
 - **Purpose**: Response from GPU worker batch processing
 - **Fields**: batch_id, results, processing_time_ms, gpu_used, worker_id, created_at
 
 ##### QueueMetrics (BaseModel)
+
 - **Purpose**: Metrics for queue monitoring
 - **Fields**: queue_name, depth, max_depth, utilization_percent, last_updated
 
 ##### SystemMetrics (BaseModel)
+
 - **Purpose**: Overall system metrics
 - **Fields**: active_crawlers, active_extractors, active_gpu_processors, queue_metrics, total_sites_processed, total_images_processed, total_faces_detected, gpu_worker_available, last_updated
 
 ##### CrawlResults (BaseModel)
+
 - **Purpose**: Final results of a crawl operation
 - **Fields**: sites, system_metrics, total_time_seconds, success_rate, created_at
 - **Properties**:
@@ -147,6 +166,7 @@ None (empty file)
   - `overall_images_per_second` - Calculate overall images/second across all sites
 
 #### Methods
+
 None (data models only)
 
 ---
@@ -157,7 +177,7 @@ None (data models only)
 - **Lines**: 438
 - **Scope**: Configuration management
 - **Purpose**: Centralized configuration using Pydantic Settings with environment variable loading, Docker/Windows addressing, and validation
-- **Dependencies**: 
+- **Dependencies**:
   - `os`, `logging`, `redis`
   - `pydantic` (BaseModel, Field, field_validator)
   - `pydantic_settings` (BaseSettings)
@@ -167,6 +187,7 @@ None (data models only)
 #### Classes
 
 ##### CrawlerConfig (BaseSettings)
+
 - **Purpose**: Configuration for the new crawler system
 - **Configuration Categories**:
   - Environment: environment, log_level
@@ -197,6 +218,7 @@ None (data models only)
 #### Methods
 
 ##### validate_gpu_worker_url() (classmethod, field_validator)
+
 - **Signature**: `@classmethod def validate_gpu_worker_url(cls, v) -> str`
 - **Pseudocode**:
   ```
@@ -212,6 +234,7 @@ None (data models only)
 - **Called By**: Pydantic validation (automatic)
 
 ##### validate_redis_url() (classmethod, field_validator)
+
 - **Signature**: `@classmethod def validate_redis_url(cls, v) -> str`
 - **Pseudocode**:
   ```
@@ -225,6 +248,7 @@ None (data models only)
 - **Called By**: Pydantic validation (automatic)
 
 ##### validate_log_level() (classmethod, field_validator)
+
 - **Signature**: `@classmethod def validate_log_level(cls, v) -> str`
 - **Pseudocode**:
   ```
@@ -238,6 +262,7 @@ None (data models only)
 - **Called By**: Pydantic validation (automatic)
 
 ##### validate_js_wait_strategy() (classmethod, field_validator)
+
 - **Signature**: `@classmethod def validate_js_wait_strategy(cls, v) -> str`
 - **Pseudocode**:
   ```
@@ -251,6 +276,7 @@ None (data models only)
 - **Called By**: Pydantic validation (automatic)
 
 ##### validate_js_wait_timeout() (classmethod, field_validator)
+
 - **Signature**: `@classmethod def validate_js_wait_timeout(cls, v) -> float`
 - **Pseudocode**:
   ```
@@ -264,6 +290,7 @@ None (data models only)
 - **Called By**: Pydantic validation (automatic)
 
 ##### validate_blocklist_redirect_hosts() (classmethod, field_validator)
+
 - **Signature**: `@classmethod def validate_blocklist_redirect_hosts(cls, v) -> list[str]`
 - **Pseudocode**:
   ```
@@ -279,6 +306,7 @@ None (data models only)
 - **Called By**: Pydantic validation (automatic)
 
 ##### validate_js_wait_selectors() (classmethod, field_validator)
+
 - **Signature**: `@classmethod def validate_js_wait_selectors(cls, v) -> str`
 - **Pseudocode**:
   ```
@@ -293,6 +321,7 @@ None (data models only)
 - **Called By**: Pydantic validation (automatic)
 
 ##### validate_max_pages() (classmethod, field_validator)
+
 - **Signature**: `@classmethod def validate_max_pages(cls, v) -> int`
 - **Pseudocode**:
   ```
@@ -306,6 +335,7 @@ None (data models only)
 - **Called By**: Pydantic validation (automatic)
 
 ##### is_docker (property)
+
 - **Signature**: `@property def is_docker(self) -> bool`
 - **Pseudocode**:
   ```
@@ -319,6 +349,7 @@ None (data models only)
 - **Called By**: Various files checking environment
 
 ##### is_windows (property)
+
 - **Signature**: `@property def is_windows(self) -> bool`
 - **Pseudocode**:
   ```
@@ -332,6 +363,7 @@ None (data models only)
 - **Called By**: Various files checking environment
 
 ##### gpu_worker_host_resolved (property)
+
 - **Signature**: `@property def gpu_worker_host_resolved(self) -> str`
 - **Pseudocode**:
   ```
@@ -348,6 +380,7 @@ None (data models only)
 - **Called By**: gpu_interface.py, main.py
 
 ##### queue_names (property)
+
 - **Signature**: `@property def queue_names(self) -> Dict[str, str]`
 - **Pseudocode**:
   ```
@@ -366,6 +399,7 @@ None (data models only)
 - **Called By**: redis_manager.py, orchestrator.py
 
 ##### cache_keys (property)
+
 - **Signature**: `@property def cache_keys(self) -> Dict[str, str]`
 - **Pseudocode**:
   ```
@@ -381,6 +415,7 @@ None (data models only)
 - **Called By**: cache_manager.py, redis_manager.py
 
 ##### get_queue_name()
+
 - **Signature**: `def get_queue_name(self, queue_type: str) -> str`
 - **Pseudocode**:
   ```
@@ -395,6 +430,7 @@ None (data models only)
 - **Called By**: redis_manager.py, orchestrator.py, crawler_worker.py, extractor_worker.py, storage_worker.py
 
 ##### get_cache_key()
+
 - **Signature**: `def get_cache_key(self, cache_type: str, **kwargs) -> str`
 - **Pseudocode**:
   ```
@@ -410,6 +446,7 @@ None (data models only)
 - **Called By**: cache_manager.py, redis_manager.py
 
 ##### validate_environment()
+
 - **Signature**: `def validate_environment(self) -> None`
 - **Pseudocode**:
   ```
@@ -426,6 +463,7 @@ None (data models only)
 - **Called By**: get_config() (automatic on first access)
 
 ##### log_configuration()
+
 - **Signature**: `def log_configuration(self) -> None`
 - **Pseudocode**:
   ```
@@ -441,6 +479,7 @@ None (data models only)
 #### Functions
 
 ##### get_config()
+
 - **Signature**: `def get_config() -> CrawlerConfig`
 - **Pseudocode**:
   ```
@@ -457,6 +496,7 @@ None (data models only)
 - **Called By**: Virtually all files (main entry point for config access)
 
 ##### reload_config()
+
 - **Signature**: `def reload_config() -> CrawlerConfig`
 - **Pseudocode**:
   ```
@@ -471,6 +511,7 @@ None (data models only)
 - **Called By**: Test code, configuration reload scenarios
 
 ##### validate_configuration()
+
 - **Signature**: `def validate_configuration() -> bool`
 - **Pseudocode**:
   ```
@@ -497,7 +538,7 @@ None (data models only)
 - **Lines**: 296
 - **Scope**: Caching layer for image deduplication
 - **Purpose**: Handles Redis caching with perceptual hash (phash) computation for deduplication. Provides efficient image deduplication and caching of processing results.
-- **Dependencies**: 
+- **Dependencies**:
   - `hashlib`, `logging`, `time`
   - `pathlib` (Path)
   - `imagehash` (phash computation)
@@ -511,11 +552,13 @@ None (data models only)
 #### Classes
 
 ##### CacheManager
+
 - **Purpose**: Cache manager for image deduplication and result caching
 
 #### Methods
 
-##### __init__()
+##### **init**()
+
 - **Signature**: `def __init__(self, config=None, redis_manager=None)`
 - **Pseudocode**:
   ```
@@ -529,6 +572,7 @@ None (data models only)
 - **Called By**: get_cache_manager() (singleton creation)
 
 ##### compute_phash()
+
 - **Signature**: `def compute_phash(self, image_path: str) -> Optional[str]`
 - **Pseudocode**:
   ```
@@ -542,9 +586,10 @@ None (data models only)
   OUTPUT: Perceptual hash string or None
   ```
 - **Assumptions**: image_path exists and is a valid image file
-- **Called By**: extractor_worker.py::_process_image_candidate()
+- **Called By**: extractor_worker.py::\_process_image_candidate()
 
 ##### compute_phash_from_bytes()
+
 - **Signature**: `def compute_phash_from_bytes(self, image_bytes: bytes) -> Optional[str]`
 - **Pseudocode**:
   ```
@@ -561,6 +606,7 @@ None (data models only)
 - **Called By**: Internal use, gpu_processor_worker.py
 
 ##### compute_file_hash()
+
 - **Signature**: `def compute_file_hash(self, file_path: str) -> Optional[str]`
 - **Pseudocode**:
   ```
@@ -577,6 +623,7 @@ None (data models only)
 - **Called By**: Internal use
 
 ##### get_phash_cache_key()
+
 - **Signature**: `def get_phash_cache_key(self, phash: str) -> str`
 - **Pseudocode**:
   ```
@@ -590,6 +637,7 @@ None (data models only)
 - **Called By**: Internal methods (is_image_cached, cache_image_info, etc.)
 
 ##### is_image_cached()
+
 - **Signature**: `def is_image_cached(self, phash: str) -> bool`
 - **Pseudocode**:
   ```
@@ -601,9 +649,10 @@ None (data models only)
   OUTPUT: Boolean indicating if image is cached
   ```
 - **Assumptions**: phash is valid, Redis is accessible
-- **Called By**: extractor_worker.py::_process_image_candidate()
+- **Called By**: extractor_worker.py::\_process_image_candidate()
 
 ##### get_cached_image_info()
+
 - **Signature**: `def get_cached_image_info(self, phash: str) -> Optional[Dict[str, Any]]`
 - **Pseudocode**:
   ```
@@ -618,6 +667,7 @@ None (data models only)
 - **Called By**: should_skip_image(), process_image_task()
 
 ##### cache_image_info()
+
 - **Signature**: `def cache_image_info(self, phash: str, image_info: Dict[str, Any]) -> bool`
 - **Pseudocode**:
   ```
@@ -632,6 +682,7 @@ None (data models only)
 - **Called By**: Internal use
 
 ##### cache_face_result()
+
 - **Signature**: `def cache_face_result(self, phash: str, face_result: FaceResult) -> bool`
 - **Pseudocode**:
   ```
@@ -650,6 +701,7 @@ None (data models only)
 - **Called By**: store_processing_result()
 
 ##### get_cached_face_result()
+
 - **Signature**: `def get_cached_face_result(self, phash: str) -> Optional[Dict[str, Any]]`
 - **Pseudocode**:
   ```
@@ -664,6 +716,7 @@ None (data models only)
 - **Called By**: Internal use
 
 ##### should_skip_image()
+
 - **Signature**: `def should_skip_image(self, phash: str) -> Tuple[bool, Optional[Dict[str, Any]]]`
 - **Pseudocode**:
   ```
@@ -680,6 +733,7 @@ None (data models only)
 - **Called By**: process_image_task()
 
 ##### process_image_task()
+
 - **Signature**: `def process_image_task(self, image_task: ImageTask) -> Tuple[bool, Optional[Dict[str, Any]]]`
 - **Pseudocode**:
   ```
@@ -695,6 +749,7 @@ None (data models only)
 - **Called By**: extractor_worker.py, gpu_processor_worker.py
 
 ##### store_processing_result()
+
 - **Signature**: `def store_processing_result(self, image_task: ImageTask, face_result: FaceResult) -> bool`
 - **Pseudocode**:
   ```
@@ -706,9 +761,10 @@ None (data models only)
   OUTPUT: Boolean indicating success
   ```
 - **Assumptions**: image_task and face_result are valid
-- **Called By**: storage_worker.py::_process_storage_task()
+- **Called By**: storage_worker.py::\_process_storage_task()
 
 ##### get_site_stats_cache_key()
+
 - **Signature**: `def get_site_stats_cache_key(self, site_id: str) -> str`
 - **Pseudocode**:
   ```
@@ -722,6 +778,7 @@ None (data models only)
 - **Called By**: Internal methods
 
 ##### cache_site_stats()
+
 - **Signature**: `def cache_site_stats(self, site_id: str, stats: Dict[str, Any]) -> bool`
 - **Pseudocode**:
   ```
@@ -736,6 +793,7 @@ None (data models only)
 - **Called By**: update_site_stats()
 
 ##### get_cached_site_stats()
+
 - **Signature**: `def get_cached_site_stats(self, site_id: str) -> Optional[Dict[str, Any]]`
 - **Pseudocode**:
   ```
@@ -750,6 +808,7 @@ None (data models only)
 - **Called By**: update_site_stats()
 
 ##### update_site_stats()
+
 - **Signature**: `def update_site_stats(self, site_id: str, updates: Dict[str, Any]) -> bool`
 - **Pseudocode**:
   ```
@@ -766,6 +825,7 @@ None (data models only)
 - **Called By**: Internal use
 
 ##### get_cache_stats()
+
 - **Signature**: `def get_cache_stats(self) -> Dict[str, Any]`
 - **Pseudocode**:
   ```
@@ -787,6 +847,7 @@ None (data models only)
 - **Called By**: health_check(), orchestrator.py
 
 ##### clear_cache()
+
 - **Signature**: `def clear_cache(self, pattern: str = None) -> bool`
 - **Pseudocode**:
   ```
@@ -807,6 +868,7 @@ None (data models only)
 - **Called By**: Test code, cleanup operations
 
 ##### cleanup_expired_cache()
+
 - **Signature**: `def cleanup_expired_cache(self) -> int`
 - **Pseudocode**:
   ```
@@ -822,6 +884,7 @@ None (data models only)
 - **Called By**: Cleanup operations
 
 ##### health_check()
+
 - **Signature**: `def health_check(self) -> Dict[str, Any]`
 - **Pseudocode**:
   ```
@@ -845,6 +908,7 @@ None (data models only)
 #### Functions
 
 ##### get_cache_manager()
+
 - **Signature**: `def get_cache_manager() -> CacheManager`
 - **Pseudocode**:
   ```
@@ -860,6 +924,7 @@ None (data models only)
 - **Called By**: extractor_worker.py, gpu_processor_worker.py, storage_worker.py
 
 ##### close_cache_manager()
+
 - **Signature**: `def close_cache_manager() -> None`
 - **Pseudocode**:
   ```
@@ -876,6 +941,7 @@ None (data models only)
 ## Documentation Status
 
 **Completed Files (10/20):**
+
 1. ✅ `__init__.py` - Complete
 2. ✅ `data_structures.py` - Complete (all classes and models documented)
 3. ✅ `config.py` - Complete (all methods and validators documented)
@@ -888,6 +954,7 @@ None (data models only)
 10. ✅ `crawler_worker.py` - Complete (all methods documented)
 
 **Remaining Files (16/20):**
+
 - Tier 2: `timing_logger.py`, `extraction_tracer.py`, `gpu_worker_logger.py`
 - Tier 3: `http_utils.py`, `redis_manager.py`, `storage_manager.py`, `gpu_interface.py`, `gpu_scheduler.py`
 - Tier 4: `crawler_worker.py`, `extractor_worker.py`, `gpu_processor_worker.py`, `storage_worker.py`
@@ -896,6 +963,7 @@ None (data models only)
 **Total Methods to Document:** ~429 methods across 20 files
 
 **Note:** This is a comprehensive documentation effort. The structure above demonstrates the format for all files. Each remaining file should follow the same pattern:
+
 - File metadata (path, lines, scope, purpose, dependencies, used by)
 - Classes with descriptions
 - Methods with:
@@ -905,6 +973,7 @@ None (data models only)
   - Callers (what files/methods call this)
 
 **Key Call Graphs Identified:**
+
 - `cache_manager.compute_phash()` → Called by: `extractor_worker.py::_process_image_candidate()`
 - `cache_manager.is_image_cached()` → Called by: `extractor_worker.py::_process_image_candidate()`, `gpu_processor_worker.py`
 - `cache_manager.store_processing_result()` → Called by: `storage_worker.py::_process_storage_task()`
@@ -940,6 +1009,7 @@ To complete this documentation:
    - `test_suite.py` (536 lines, ~14 methods)
 
 **Validation Checklist:**
+
 - [ ] All 20 files documented
 - [ ] All classes documented
 - [ ] All methods documented with pseudocode
@@ -952,29 +1022,29 @@ To complete this documentation:
 
 ## File Summary Statistics
 
-| File | Lines | Classes | Methods | Status |
-|------|-------|---------|---------|--------|
-| `__init__.py` | 0 | 0 | 0 | ✅ Complete |
-| `data_structures.py` | 349 | 15 | 0 | ✅ Complete |
-| `config.py` | 438 | 1 | 20 | ✅ Complete |
-| `cache_manager.py` | 296 | 1 | 23 | ✅ Complete |
-| `timing_logger.py` | 135 | 1 | 24 | ⏳ Pending |
-| `extraction_tracer.py` | 103 | 2 | 4 | ⏳ Pending |
-| `gpu_worker_logger.py` | 104 | 1 | 23 | ⏳ Pending |
-| `http_utils.py` | 1458 | 3 | 36 | ⏳ Pending |
-| `redis_manager.py` | 1636 | 1 | 94 | ⏳ Pending |
-| `storage_manager.py` | 977 | 1 | 25 | ⏳ Pending |
-| `gpu_interface.py` | 1004 | 1 | 26 | ⏳ Pending |
-| `gpu_scheduler.py` | 186 | 1 | 7 | ⏳ Pending |
-| `crawler_worker.py` | 307 | 1 | 8 | ⏳ Pending |
-| `extractor_worker.py` | 634 | 1 | 11 | ⏳ Pending |
-| `gpu_processor_worker.py` | 1263 | 1 | 17 | ⏳ Pending |
-| `storage_worker.py` | 419 | 1 | 9 | ⏳ Pending |
-| `selector_miner.py` | 3117 | 1 | 45 | ⏳ Pending |
-| `orchestrator.py` | 894 | 1 | 21 | ⏳ Pending |
-| `main.py` | 286 | 0 | 7 | ⏳ Pending |
-| `test_suite.py` | 536 | 1 | 14 | ⏳ Pending |
-| **TOTAL** | **14,643** | **33** | **429** | **10/20 Complete** |
+| File                      | Lines      | Classes | Methods | Status             |
+| ------------------------- | ---------- | ------- | ------- | ------------------ |
+| `__init__.py`             | 0          | 0       | 0       | ✅ Complete        |
+| `data_structures.py`      | 349        | 15      | 0       | ✅ Complete        |
+| `config.py`               | 438        | 1       | 20      | ✅ Complete        |
+| `cache_manager.py`        | 296        | 1       | 23      | ✅ Complete        |
+| `timing_logger.py`        | 135        | 1       | 24      | ⏳ Pending         |
+| `extraction_tracer.py`    | 103        | 2       | 4       | ⏳ Pending         |
+| `gpu_worker_logger.py`    | 104        | 1       | 23      | ⏳ Pending         |
+| `http_utils.py`           | 1458       | 3       | 36      | ⏳ Pending         |
+| `redis_manager.py`        | 1636       | 1       | 94      | ⏳ Pending         |
+| `storage_manager.py`      | 977        | 1       | 25      | ⏳ Pending         |
+| `gpu_interface.py`        | 1004       | 1       | 26      | ⏳ Pending         |
+| `gpu_scheduler.py`        | 186        | 1       | 7       | ⏳ Pending         |
+| `crawler_worker.py`       | 307        | 1       | 8       | ⏳ Pending         |
+| `extractor_worker.py`     | 634        | 1       | 11      | ⏳ Pending         |
+| `gpu_processor_worker.py` | 1263       | 1       | 17      | ⏳ Pending         |
+| `storage_worker.py`       | 419        | 1       | 9       | ⏳ Pending         |
+| `selector_miner.py`       | 3117       | 1       | 45      | ⏳ Pending         |
+| `orchestrator.py`         | 894        | 1       | 21      | ⏳ Pending         |
+| `main.py`                 | 286        | 0       | 7       | ⏳ Pending         |
+| `test_suite.py`           | 536        | 1       | 14      | ⏳ Pending         |
+| **TOTAL**                 | **14,643** | **33**  | **429** | **10/20 Complete** |
 
 ---
 
@@ -984,7 +1054,7 @@ To complete this documentation:
 - **Lines**: 307
 - **Scope**: Entry point and CLI interface
 - **Purpose**: Provides command-line interface and main entry point for the new crawler system. Handles argument parsing, logging setup, health checks, and orchestrates the crawl process.
-- **Dependencies**: 
+- **Dependencies**:
   - `argparse`, `asyncio`, `logging`, `sys`
   - `pathlib` (Path)
   - `typing` (List)
@@ -999,6 +1069,7 @@ To complete this documentation:
 #### Methods
 
 ##### setup_logging()
+
 - **Signature**: `def setup_logging(log_level: str = "info") -> None`
 - **Pseudocode**:
   ```
@@ -1015,6 +1086,7 @@ To complete this documentation:
 - **Called By**: main()
 
 ##### load_sites_from_file()
+
 - **Signature**: `def load_sites_from_file(file_path: str) -> List[str]`
 - **Pseudocode**:
   ```
@@ -1033,6 +1105,7 @@ To complete this documentation:
 - **Called By**: main()
 
 ##### load_sites_from_args()
+
 - **Signature**: `def load_sites_from_args(sites_arg: List[str]) -> List[str]`
 - **Pseudocode**:
   ```
@@ -1049,6 +1122,7 @@ To complete this documentation:
 - **Called By**: main()
 
 ##### health_check()
+
 - **Signature**: `async def health_check() -> bool`
 - **Pseudocode**:
   ```
@@ -1067,6 +1141,7 @@ To complete this documentation:
 - **Called By**: main(), run_crawl()
 
 ##### run_crawl()
+
 - **Signature**: `async def run_crawl(sites: List[str], config_file: str = None) -> CrawlResults`
 - **Pseudocode**:
   ```
@@ -1087,6 +1162,7 @@ To complete this documentation:
 - **Called By**: main()
 
 ##### print_results()
+
 - **Signature**: `def print_results(results: CrawlResults) -> None`
 - **Pseudocode**:
   ```
@@ -1113,6 +1189,7 @@ To complete this documentation:
 - **Called By**: run_crawl()
 
 ##### main()
+
 - **Signature**: `def main() -> None`
 - **Pseudocode**:
   ```
@@ -1150,7 +1227,7 @@ To complete this documentation:
 - **Lines**: 142
 - **Scope**: Performance timing instrumentation
 - **Purpose**: Thread-safe singleton logger for detailed performance timing instrumentation. Writes structured timing data to timings.txt for performance analysis (currently disabled to reduce memory usage).
-- **Dependencies**: 
+- **Dependencies**:
   - `threading`, `time`
   - `datetime`
   - `typing` (Optional)
@@ -1160,12 +1237,14 @@ To complete this documentation:
 #### Classes
 
 ##### TimingLogger
+
 - **Purpose**: Thread-safe singleton timing logger
 - **Pattern**: Singleton with double-checked locking
 
 #### Methods
 
-##### __new__()
+##### **new**()
+
 - **Signature**: `def __new__(cls) -> TimingLogger`
 - **Pseudocode**:
   ```
@@ -1183,7 +1262,8 @@ To complete this documentation:
 - **Assumptions**: Thread-safe singleton pattern
 - **Called By**: get_timing_logger() (automatic on first access)
 
-##### __init__()
+##### **init**()
+
 - **Signature**: `def __init__(self) -> None`
 - **Pseudocode**:
   ```
@@ -1196,10 +1276,11 @@ To complete this documentation:
     - Note: File writing is currently DISABLED to reduce memory usage
   OUTPUT: None (initializes instance)
   ```
-- **Assumptions**: Called after __new__()
+- **Assumptions**: Called after **new**()
 - **Called By**: get_timing_logger() (automatic on first access)
 
-##### _log()
+##### \_log()
+
 - **Signature**: `def _log(self, event_type: str, *args) -> None`
 - **Pseudocode**:
   ```
@@ -1210,9 +1291,10 @@ To complete this documentation:
   OUTPUT: None (no-op currently)
   ```
 - **Assumptions**: event_type is a string
-- **Called By**: All log_* methods (internal)
+- **Called By**: All log\_\* methods (internal)
 
 ##### log_system_start()
+
 - **Signature**: `def log_system_start(self) -> None`
 - **Pseudocode**:
   ```
@@ -1222,9 +1304,10 @@ To complete this documentation:
   OUTPUT: None
   ```
 - **Assumptions**: None
-- **Called By**: orchestrator.py::__init__()
+- **Called By**: orchestrator.py::**init**()
 
 ##### log_crawl_start()
+
 - **Signature**: `def log_crawl_start(self) -> None`
 - **Pseudocode**:
   ```
@@ -1237,6 +1320,7 @@ To complete this documentation:
 - **Called By**: orchestrator.py::crawl_sites()
 
 ##### log_site_start()
+
 - **Signature**: `def log_site_start(self, site_id: str, url: str) -> None`
 - **Pseudocode**:
   ```
@@ -1249,6 +1333,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py::process_site()
 
 ##### log_page_start()
+
 - **Signature**: `def log_page_start(self, site_id: str, page_url: str) -> None`
 - **Pseudocode**:
   ```
@@ -1261,6 +1346,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py::process_site()
 
 ##### log_page_end()
+
 - **Signature**: `def log_page_end(self, site_id: str, page_url: str, duration_ms: float, candidate_count: int) -> None`
 - **Pseudocode**:
   ```
@@ -1275,6 +1361,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py::process_site()
 
 ##### log_site_end()
+
 - **Signature**: `def log_site_end(self, site_id: str, duration_ms: float, total_pages: int, total_candidates: int) -> None`
 - **Pseudocode**:
   ```
@@ -1290,6 +1377,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py::process_site()
 
 ##### log_extraction_start()
+
 - **Signature**: `def log_extraction_start(self, site_id: str, image_url: str) -> None`
 - **Pseudocode**:
   ```
@@ -1299,9 +1387,10 @@ To complete this documentation:
   OUTPUT: None
   ```
 - **Assumptions**: site_id and image_url are valid strings
-- **Called By**: extractor_worker.py::_process_image_candidate(), extractor_worker.py::_process_post_candidate()
+- **Called By**: extractor_worker.py::\_process_image_candidate(), extractor_worker.py::\_process_post_candidate()
 
 ##### log_extraction_end()
+
 - **Signature**: `def log_extraction_end(self, site_id: str, image_url: str, duration_ms: float) -> None`
 - **Pseudocode**:
   ```
@@ -1312,9 +1401,10 @@ To complete this documentation:
   OUTPUT: None
   ```
 - **Assumptions**: All parameters are valid
-- **Called By**: extractor_worker.py::_process_image_candidate(), extractor_worker.py::_process_post_candidate()
+- **Called By**: extractor_worker.py::\_process_image_candidate(), extractor_worker.py::\_process_post_candidate()
 
 ##### log_gpu_batch_start()
+
 - **Signature**: `def log_gpu_batch_start(self, batch_id: str, image_count: int) -> None`
 - **Pseudocode**:
   ```
@@ -1328,6 +1418,7 @@ To complete this documentation:
 - **Called By**: gpu_processor_worker.py::process_batch()
 
 ##### log_gpu_recognition_start()
+
 - **Signature**: `def log_gpu_recognition_start(self, batch_id: str) -> None`
 - **Pseudocode**:
   ```
@@ -1340,6 +1431,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py, gpu_processor_worker.py
 
 ##### log_gpu_recognition_end()
+
 - **Signature**: `def log_gpu_recognition_end(self, batch_id: str, duration_ms: float, face_count: int) -> None`
 - **Pseudocode**:
   ```
@@ -1354,6 +1446,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py, gpu_processor_worker.py
 
 ##### log_gpu_crop_start()
+
 - **Signature**: `def log_gpu_crop_start(self, image_id: str, face_index: int) -> None`
 - **Pseudocode**:
   ```
@@ -1367,6 +1460,7 @@ To complete this documentation:
 - **Called By**: gpu_processor_worker.py
 
 ##### log_gpu_crop_end()
+
 - **Signature**: `def log_gpu_crop_end(self, image_id: str, face_index: int, duration_ms: float) -> None`
 - **Pseudocode**:
   ```
@@ -1381,6 +1475,7 @@ To complete this documentation:
 - **Called By**: gpu_processor_worker.py
 
 ##### log_gpu_storage_start()
+
 - **Signature**: `def log_gpu_storage_start(self, image_id: str, storage_type: str) -> None`
 - **Pseudocode**:
   ```
@@ -1393,6 +1488,7 @@ To complete this documentation:
 - **Called By**: gpu_processor_worker.py
 
 ##### log_gpu_storage_end()
+
 - **Signature**: `def log_gpu_storage_end(self, image_id: str, storage_type: str, duration_ms: float) -> None`
 - **Pseudocode**:
   ```
@@ -1406,6 +1502,7 @@ To complete this documentation:
 - **Called By**: gpu_processor_worker.py
 
 ##### log_gpu_batch_end()
+
 - **Signature**: `def log_gpu_batch_end(self, batch_id: str, duration_ms: float, images_processed: int) -> None`
 - **Pseudocode**:
   ```
@@ -1420,6 +1517,7 @@ To complete this documentation:
 - **Called By**: gpu_processor_worker.py::process_batch()
 
 ##### log_storage_start()
+
 - **Signature**: `def log_storage_start(self, site_id: str, image_id: str) -> None`
 - **Pseudocode**:
   ```
@@ -1429,9 +1527,10 @@ To complete this documentation:
   OUTPUT: None
   ```
 - **Assumptions**: site_id and image_id are valid strings
-- **Called By**: storage_worker.py::_process_storage_task()
+- **Called By**: storage_worker.py::\_process_storage_task()
 
 ##### log_storage_end()
+
 - **Signature**: `def log_storage_end(self, site_id: str, image_id: str, duration_ms: float, faces_count: int, raw_saved: bool, thumbs_count: int) -> None`
 - **Pseudocode**:
   ```
@@ -1445,9 +1544,10 @@ To complete this documentation:
   OUTPUT: None
   ```
 - **Assumptions**: All parameters are valid
-- **Called By**: storage_worker.py::_process_storage_task()
+- **Called By**: storage_worker.py::\_process_storage_task()
 
 ##### log_crawl_end()
+
 - **Signature**: `def log_crawl_end(self, duration_ms: float, total_sites: int, total_images: int) -> None`
 - **Pseudocode**:
   ```
@@ -1463,6 +1563,7 @@ To complete this documentation:
 - **Called By**: orchestrator.py::crawl_sites()
 
 ##### log_system_shutdown()
+
 - **Signature**: `def log_system_shutdown(self) -> None`
 - **Pseudocode**:
   ```
@@ -1477,6 +1578,7 @@ To complete this documentation:
 #### Functions
 
 ##### get_timing_logger()
+
 - **Signature**: `def get_timing_logger() -> TimingLogger`
 - **Pseudocode**:
   ```
@@ -1497,7 +1599,7 @@ To complete this documentation:
 - **Lines**: 115
 - **Scope**: Extraction attempt tracking
 - **Purpose**: Tracks every extraction attempt with structured logging to enable debugging and analysis of extraction failures and strategy effectiveness. Currently file writing is disabled to reduce memory usage.
-- **Dependencies**: 
+- **Dependencies**:
   - `json`, `logging`, `time`
   - `datetime`
   - `pathlib` (Path)
@@ -1508,15 +1610,18 @@ To complete this documentation:
 #### Classes
 
 ##### ExtractionAttempt (dataclass)
+
 - **Purpose**: Structured data for a single extraction attempt
 - **Fields**: url, page_type, strategy_used, success, failure_reason, content_length, title_found, author_found, date_found, timestamp, html_sample, strategy_order, strategy_results
 
 ##### ExtractionTracer
+
 - **Purpose**: Tracks extraction attempts and writes structured logs
 
 #### Methods
 
-##### __init__()
+##### **init**()
+
 - **Signature**: `def __init__(self) -> None`
 - **Pseudocode**:
   ```
@@ -1531,6 +1636,7 @@ To complete this documentation:
 - **Called By**: get_extraction_tracer() (singleton creation)
 
 ##### log_attempt()
+
 - **Signature**: `def log_attempt(self, url: str, page_type: str, strategy_used: Optional[str] = None, success: bool = False, failure_reason: Optional[str] = None, content_length: int = 0, title_found: bool = False, author_found: bool = False, date_found: bool = False, html_sample: Optional[str] = None, strategy_order: Optional[List[str]] = None, strategy_results: Optional[Dict[str, Any]] = None) -> None`
 - **Pseudocode**:
   ```
@@ -1548,6 +1654,7 @@ To complete this documentation:
 - **Called By**: selector_miner.py (various extraction methods)
 
 ##### flush()
+
 - **Signature**: `def flush(self, site_id: Optional[str] = None) -> None`
 - **Pseudocode**:
   ```
@@ -1564,6 +1671,7 @@ To complete this documentation:
 #### Functions
 
 ##### get_extraction_tracer()
+
 - **Signature**: `def get_extraction_tracer() -> ExtractionTracer`
 - **Pseudocode**:
   ```
@@ -1586,7 +1694,7 @@ To complete this documentation:
 - **Lines**: 118
 - **Scope**: GPU operation logging
 - **Purpose**: Dedicated logger for GPU operations with consistent formatting and comprehensive tracking. Provides structured logging for all GPU worker operations.
-- **Dependencies**: 
+- **Dependencies**:
   - `logging`
   - `typing` (Optional)
 - **Used By**: gpu_interface.py
@@ -1594,11 +1702,13 @@ To complete this documentation:
 #### Classes
 
 ##### GPUWorkerLogger
+
 - **Purpose**: Dedicated logger for GPU worker operations
 
 #### Methods
 
-##### __init__()
+##### **init**()
+
 - **Signature**: `def __init__(self, worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -1610,9 +1720,10 @@ To complete this documentation:
   OUTPUT: None (initializes instance)
   ```
 - **Assumptions**: worker_id is a valid integer
-- **Called By**: gpu_interface.py::__init__()
+- **Called By**: gpu_interface.py::**init**()
 
 ##### log_batch_start()
+
 - **Signature**: `def log_batch_start(self, batch_id: str, image_count: int) -> None`
 - **Pseudocode**:
   ```
@@ -1625,6 +1736,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py
 
 ##### log_health_check()
+
 - **Signature**: `def log_health_check(self, available: bool, error: Optional[str] = None) -> None`
 - **Pseudocode**:
   ```
@@ -1637,9 +1749,10 @@ To complete this documentation:
   OUTPUT: None (logs to logger)
   ```
 - **Assumptions**: available is boolean, error is string if provided
-- **Called By**: gpu_interface.py::_check_health()
+- **Called By**: gpu_interface.py::\_check_health()
 
 ##### log_request_start()
+
 - **Signature**: `def log_request_start(self, image_count: int, url: str) -> None`
 - **Pseudocode**:
   ```
@@ -1649,9 +1762,10 @@ To complete this documentation:
   OUTPUT: None (logs to logger)
   ```
 - **Assumptions**: image_count is non-negative, url is valid string
-- **Called By**: gpu_interface.py::_gpu_worker_request()
+- **Called By**: gpu_interface.py::\_gpu_worker_request()
 
 ##### log_request_complete()
+
 - **Signature**: `def log_request_complete(self, image_count: int, faces_found: int, time_ms: float, gpu_used: bool) -> None`
 - **Pseudocode**:
   ```
@@ -1662,9 +1776,10 @@ To complete this documentation:
   OUTPUT: None (logs to logger)
   ```
 - **Assumptions**: All parameters are valid
-- **Called By**: gpu_interface.py::_gpu_worker_request()
+- **Called By**: gpu_interface.py::\_gpu_worker_request()
 
 ##### log_request_failed()
+
 - **Signature**: `def log_request_failed(self, error: str) -> None`
 - **Pseudocode**:
   ```
@@ -1674,9 +1789,10 @@ To complete this documentation:
   OUTPUT: None (logs to logger)
   ```
 - **Assumptions**: error is valid string
-- **Called By**: gpu_interface.py::_gpu_worker_request()
+- **Called By**: gpu_interface.py::\_gpu_worker_request()
 
 ##### log_fallback_start()
+
 - **Signature**: `def log_fallback_start(self, image_count: int) -> None`
 - **Pseudocode**:
   ```
@@ -1689,6 +1805,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (CPU fallback path)
 
 ##### log_fallback_complete()
+
 - **Signature**: `def log_fallback_complete(self, image_count: int, faces_found: int, time_ms: float) -> None`
 - **Pseudocode**:
   ```
@@ -1701,6 +1818,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (CPU fallback path)
 
 ##### log_batch_result_ok()
+
 - **Signature**: `def log_batch_result_ok(self, batch_id: str, images: int, faces: int, duration_ms: float) -> None`
 - **Pseudocode**:
   ```
@@ -1713,6 +1831,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py::process_batch()
 
 ##### log_batch_result_error()
+
 - **Signature**: `def log_batch_result_error(self, batch_id: str, err_type: str, fallback: str, duration_ms: float) -> None`
 - **Pseudocode**:
   ```
@@ -1725,6 +1844,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py::process_batch()
 
 ##### log_fallback_done()
+
 - **Signature**: `def log_fallback_done(self, batch_id: str, images: int, faces: int, duration_ms: float) -> None`
 - **Pseudocode**:
   ```
@@ -1737,6 +1857,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (CPU fallback completion)
 
 ##### log_batch_encoding_start()
+
 - **Signature**: `def log_batch_encoding_start(self, image_count: int) -> None`
 - **Pseudocode**:
   ```
@@ -1749,6 +1870,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (encoding operations)
 
 ##### log_batch_encoding_complete()
+
 - **Signature**: `def log_batch_encoding_complete(self, image_count: int, encoded_size: int) -> None`
 - **Pseudocode**:
   ```
@@ -1761,6 +1883,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (encoding operations)
 
 ##### log_result_decoding_start()
+
 - **Signature**: `def log_result_decoding_start(self, response_size: int) -> None`
 - **Pseudocode**:
   ```
@@ -1770,9 +1893,10 @@ To complete this documentation:
   OUTPUT: None (logs to logger)
   ```
 - **Assumptions**: response_size is non-negative
-- **Called By**: gpu_interface.py::_gpu_worker_request()
+- **Called By**: gpu_interface.py::\_gpu_worker_request()
 
 ##### log_result_decoding_complete()
+
 - **Signature**: `def log_result_decoding_complete(self, faces_found: int) -> None`
 - **Pseudocode**:
   ```
@@ -1782,9 +1906,10 @@ To complete this documentation:
   OUTPUT: None (logs to logger)
   ```
 - **Assumptions**: faces_found is non-negative
-- **Called By**: gpu_interface.py::_gpu_worker_request()
+- **Called By**: gpu_interface.py::\_gpu_worker_request()
 
 ##### log_circuit_breaker_open()
+
 - **Signature**: `def log_circuit_breaker_open(self, reason: str) -> None`
 - **Pseudocode**:
   ```
@@ -1794,9 +1919,10 @@ To complete this documentation:
   OUTPUT: None (logs to logger)
   ```
 - **Assumptions**: reason is valid string
-- **Called By**: gpu_interface.py::_check_health()
+- **Called By**: gpu_interface.py::\_check_health()
 
 ##### log_circuit_breaker_close()
+
 - **Signature**: `def log_circuit_breaker_close(self) -> None`
 - **Pseudocode**:
   ```
@@ -1806,9 +1932,10 @@ To complete this documentation:
   OUTPUT: None (logs to logger)
   ```
 - **Assumptions**: None
-- **Called By**: gpu_interface.py::_check_health()
+- **Called By**: gpu_interface.py::\_check_health()
 
 ##### log_retry_attempt()
+
 - **Signature**: `def log_retry_attempt(self, attempt: int, max_retries: int, error: str) -> None`
 - **Pseudocode**:
   ```
@@ -1821,6 +1948,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (retry logic)
 
 ##### log_timeout()
+
 - **Signature**: `def log_timeout(self, timeout_seconds: float) -> None`
 - **Pseudocode**:
   ```
@@ -1833,6 +1961,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (timeout handling)
 
 ##### log_connection_error()
+
 - **Signature**: `def log_connection_error(self, error: str) -> None`
 - **Pseudocode**:
   ```
@@ -1845,6 +1974,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (connection error handling)
 
 ##### log_http_error()
+
 - **Signature**: `def log_http_error(self, status_code: int, error: str) -> None`
 - **Pseudocode**:
   ```
@@ -1857,6 +1987,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (HTTP error handling)
 
 ##### log_processing_error()
+
 - **Signature**: `def log_processing_error(self, error: str) -> None`
 - **Pseudocode**:
   ```
@@ -1869,6 +2000,7 @@ To complete this documentation:
 - **Called By**: gpu_interface.py (processing error handling)
 
 ##### log_metrics()
+
 - **Signature**: `def log_metrics(self, metrics: dict) -> None`
 - **Pseudocode**:
   ```
@@ -1888,7 +2020,7 @@ To complete this documentation:
 - **Lines**: 194
 - **Scope**: GPU batch scheduling
 - **Purpose**: Centralized batching and pacing control for GPU processing. Eliminates sawtooth utilization patterns by controlling batch timing and size. Manages staging area, launch timing, and maximum inflight batches (max 2).
-- **Dependencies**: 
+- **Dependencies**:
   - `time`, `logging`
   - `collections` (deque)
   - `typing` (List, Optional)
@@ -1898,11 +2030,13 @@ To complete this documentation:
 #### Classes
 
 ##### GPUScheduler
+
 - **Purpose**: Centralized GPU batch scheduler that manages batching and pacing
 
 #### Methods
 
-##### __init__()
+##### **init**()
+
 - **Signature**: `def __init__(self, redis_mgr, deserializer, inbox_key: str, metadata_deserializer=None, target_batch: int = 32, max_wait_ms: int = 12, min_launch_ms: int = 200, config=None)`
 - **Pseudocode**:
   ```
@@ -1916,9 +2050,10 @@ To complete this documentation:
   OUTPUT: None (initializes instance)
   ```
 - **Assumptions**: redis_mgr has blpop_many and get_queue_length_by_key methods, deserializer converts bytes to ImageTask
-- **Called By**: gpu_processor_worker.py::__init__()
+- **Called By**: gpu_processor_worker.py::**init**()
 
-##### _now_ms() (staticmethod)
+##### \_now_ms() (staticmethod)
+
 - **Signature**: `@staticmethod def _now_ms() -> float`
 - **Pseudocode**:
   ```
@@ -1930,9 +2065,10 @@ To complete this documentation:
   OUTPUT: Current time in milliseconds (float)
   ```
 - **Assumptions**: None
-- **Called By**: _can_launch(), next_batch(), mark_launched()
+- **Called By**: \_can_launch(), next_batch(), mark_launched()
 
-##### _can_launch()
+##### \_can_launch()
+
 - **Signature**: `def _can_launch(self) -> bool`
 - **Pseudocode**:
   ```
@@ -1944,10 +2080,11 @@ To complete this documentation:
     - Return True if time_since_launch >= MIN_LAUNCH_MS, False otherwise
   OUTPUT: Boolean indicating if new batch can be launched
   ```
-- **Assumptions**: _inflight and _last_launch_ms are initialized
+- **Assumptions**: \_inflight and \_last_launch_ms are initialized
 - **Called By**: next_batch()
 
 ##### feed()
+
 - **Signature**: `def feed(self) -> int`
 - **Pseudocode**:
   ```
@@ -1975,6 +2112,7 @@ To complete this documentation:
 - **Called By**: gpu_processor_worker.py::run() (main loop)
 
 ##### next_batch()
+
 - **Signature**: `def next_batch(self, force_flush: bool = False) -> Optional[List[ImageTask]]`
 - **Pseudocode**:
   ```
@@ -2003,10 +2141,11 @@ To complete this documentation:
     - Return None
   OUTPUT: List of ImageTasks ready for processing, or None if not ready
   ```
-- **Assumptions**: _staging contains valid ImageTask objects
+- **Assumptions**: \_staging contains valid ImageTask objects
 - **Called By**: gpu_processor_worker.py::run() (main loop)
 
 ##### mark_launched()
+
 - **Signature**: `def mark_launched(self, batch_id: str) -> None`
 - **Pseudocode**:
   ```
@@ -2017,10 +2156,11 @@ To complete this documentation:
     - Note: deque automatically maintains maxlen=2
   OUTPUT: None (updates internal state)
   ```
-- **Assumptions**: batch_id is valid string, _inflight has space (maxlen=2)
+- **Assumptions**: batch_id is valid string, \_inflight has space (maxlen=2)
 - **Called By**: gpu_processor_worker.py::process_batch()
 
 ##### mark_completed()
+
 - **Signature**: `def mark_completed(self, batch_id: str) -> None`
 - **Pseudocode**:
   ```
@@ -2041,7 +2181,7 @@ To complete this documentation:
 - **Lines**: 332
 - **Scope**: HTML fetching and selector mining worker
 - **Purpose**: HTML fetching and selector mining worker process. Handles site crawling with 3x3 mining and pushes candidates to Redis queue. Supports concurrent site processing.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `json`, `logging`, `multiprocessing`, `os`, `signal`, `sys`, `time`
   - `pathlib` (Path)
   - `typing` (List, Optional)
@@ -2056,11 +2196,13 @@ To complete this documentation:
 #### Classes
 
 ##### CrawlerWorker
+
 - **Purpose**: Crawler worker for HTML fetching and selector mining
 
 #### Methods
 
-##### __init__()
+##### **init**()
+
 - **Signature**: `def __init__(self, worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -2077,7 +2219,8 @@ To complete this documentation:
 - **Assumptions**: All singleton managers are available
 - **Called By**: crawler_worker_process()
 
-##### _enqueue_candidates()
+##### \_enqueue_candidates()
+
 - **Signature**: `async def _enqueue_candidates(self, candidates) -> int`
 - **Pseudocode**:
   ```
@@ -2104,6 +2247,7 @@ To complete this documentation:
 - **Called By**: process_site() (as background task)
 
 ##### process_site()
+
 - **Signature**: `async def process_site(self, site_task: SiteTask) -> int`
 - **Pseudocode**:
   ```
@@ -2130,9 +2274,10 @@ To complete this documentation:
   OUTPUT: Integer count of candidates found and enqueued
   ```
 - **Assumptions**: site_task is valid, selector_miner is initialized
-- **Called By**: _process_site_task()
+- **Called By**: \_process_site_task()
 
-##### _process_site_task()
+##### \_process_site_task()
+
 - **Signature**: `async def _process_site_task(self, site_task: SiteTask) -> None`
 - **Pseudocode**:
   ```
@@ -2150,6 +2295,7 @@ To complete this documentation:
 - **Called By**: run() (as async task)
 
 ##### run()
+
 - **Signature**: `async def run(self) -> None`
 - **Pseudocode**:
   ```
@@ -2176,6 +2322,7 @@ To complete this documentation:
 - **Called By**: crawler_worker_process() (via event loop)
 
 ##### stop()
+
 - **Signature**: `def stop(self) -> None`
 - **Pseudocode**:
   ```
@@ -2189,6 +2336,7 @@ To complete this documentation:
 - **Called By**: Orchestrator (on shutdown)
 
 ##### get_stats()
+
 - **Signature**: `def get_stats(self) -> dict`
 - **Pseudocode**:
   ```
@@ -2207,6 +2355,7 @@ To complete this documentation:
 #### Functions
 
 ##### crawler_worker_process()
+
 - **Signature**: `def crawler_worker_process(worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -2222,7 +2371,7 @@ To complete this documentation:
   OUTPUT: None (process entry point)
   ```
 - **Assumptions**: worker_id is valid integer
-- **Called By**: orchestrator.py::_run_crawler_worker() (spawned as Process)
+- **Called By**: orchestrator.py::\_run_crawler_worker() (spawned as Process)
 
 ---
 
@@ -2232,7 +2381,7 @@ To complete this documentation:
 - **Lines**: 634
 - **Scope**: Image download and batch preparation worker
 - **Purpose**: Image download and batch preparation worker process. Downloads images, performs HEAD/GET validation, computes phash, and creates batches. Handles both CandidateImage and CandidatePost processing.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `logging`, `multiprocessing`, `os`, `signal`, `sys`, `tempfile`, `time`
   - `datetime`
   - `typing` (List, Optional, Tuple, Union)
@@ -2247,11 +2396,13 @@ To complete this documentation:
 #### Classes
 
 ##### ExtractorWorker
+
 - **Purpose**: Extractor worker for image download and batch preparation
 
 #### Methods
 
-##### __init__()
+##### **init**()
+
 - **Signature**: `def __init__(self, worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -2271,6 +2422,7 @@ To complete this documentation:
 - **Called By**: extractor_worker_process()
 
 ##### process_candidate()
+
 - **Signature**: `async def process_candidate(self, candidate) -> Optional[Union[ImageTask, PostTask]]`
 - **Pseudocode**:
   ```
@@ -2286,9 +2438,10 @@ To complete this documentation:
   OUTPUT: ImageTask, PostTask, or None
   ```
 - **Assumptions**: candidate is valid CandidateImage or CandidatePost
-- **Called By**: _process_candidate_with_stats()
+- **Called By**: \_process_candidate_with_stats()
 
-##### _process_image_candidate()
+##### \_process_image_candidate()
+
 - **Signature**: `async def _process_image_candidate(self, candidate: CandidateImage, extraction_start_time: float) -> Optional[ImageTask]`
 - **Pseudocode**:
   ```
@@ -2323,7 +2476,8 @@ To complete this documentation:
 - **Assumptions**: candidate has valid img_url, temp directory is writable
 - **Called By**: process_candidate()
 
-##### _process_post_candidate()
+##### \_process_post_candidate()
+
 - **Signature**: `async def _process_post_candidate(self, candidate: CandidatePost, extraction_start_time: float) -> Optional[PostTask]`
 - **Pseudocode**:
   ```
@@ -2347,7 +2501,8 @@ To complete this documentation:
 - **Assumptions**: candidate has valid post_url and content
 - **Called By**: process_candidate()
 
-##### _process_candidate_with_stats()
+##### \_process_candidate_with_stats()
+
 - **Signature**: `async def _process_candidate_with_stats(self, candidate: Union[CandidateImage, CandidatePost], site_extraction_times: dict) -> None`
 - **Pseudocode**:
   ```
@@ -2364,6 +2519,7 @@ To complete this documentation:
 - **Called By**: run() (main loop)
 
 ##### run()
+
 - **Signature**: `async def run(self) -> None`
 - **Pseudocode**:
   ```
@@ -2384,7 +2540,8 @@ To complete this documentation:
 - **Assumptions**: Redis is accessible
 - **Called By**: extractor_worker_process() (via event loop)
 
-##### _cleanup_temp_dir()
+##### \_cleanup_temp_dir()
+
 - **Signature**: `def _cleanup_temp_dir(self) -> None`
 - **Pseudocode**:
   ```
@@ -2400,6 +2557,7 @@ To complete this documentation:
 - **Called By**: cleanup()
 
 ##### cleanup()
+
 - **Signature**: `def cleanup(self) -> None`
 - **Pseudocode**:
   ```
@@ -2412,6 +2570,7 @@ To complete this documentation:
 - **Called By**: extractor_worker_process() (on shutdown)
 
 ##### stop()
+
 - **Signature**: `def stop(self) -> None`
 - **Pseudocode**:
   ```
@@ -2424,6 +2583,7 @@ To complete this documentation:
 - **Called By**: Orchestrator (on shutdown)
 
 ##### get_stats()
+
 - **Signature**: `def get_stats(self) -> dict`
 - **Pseudocode**:
   ```
@@ -2443,6 +2603,7 @@ To complete this documentation:
 #### Functions
 
 ##### extractor_worker_process()
+
 - **Signature**: `def extractor_worker_process(worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -2459,7 +2620,7 @@ To complete this documentation:
   OUTPUT: None (process entry point)
   ```
 - **Assumptions**: worker_id is valid integer
-- **Called By**: orchestrator.py::_run_extractor_worker() (spawned as Process)
+- **Called By**: orchestrator.py::\_run_extractor_worker() (spawned as Process)
 
 ---
 
@@ -2469,7 +2630,7 @@ To complete this documentation:
 - **Lines**: 433
 - **Scope**: Storage operations worker
 - **Purpose**: Consumes storage tasks from Redis queue and saves them to MinIO. Handles I/O operations only - all compute (cropping) happens in GPU processor. After saving to MinIO, upserts face embeddings to Qdrant vector database.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `logging`, `multiprocessing`, `os`, `signal`, `sys`, `time`, `uuid`
   - `typing` (Optional, List, Dict, Any)
   - `.config` (get_config)
@@ -2484,11 +2645,13 @@ To complete this documentation:
 #### Classes
 
 ##### StorageWorker
+
 - **Purpose**: Storage worker that consumes storage queue and saves to MinIO
 
 #### Functions
 
-##### _get_vector_client()
+##### \_get_vector_client()
+
 - **Signature**: `def _get_vector_client() -> QdrantClient`
 - **Pseudocode**:
   ```
@@ -2504,11 +2667,12 @@ To complete this documentation:
   OUTPUT: QdrantClient singleton instance
   ```
 - **Assumptions**: Qdrant is accessible, vectorization_enabled in config
-- **Called By**: _upsert_embeddings_to_vector_db()
+- **Called By**: \_upsert_embeddings_to_vector_db()
 
 #### Methods
 
-##### __init__()
+##### **init**()
+
 - **Signature**: `def __init__(self, worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -2525,6 +2689,7 @@ To complete this documentation:
 - **Called By**: storage_worker_process()
 
 ##### run()
+
 - **Signature**: `async def run(self) -> None`
 - **Pseudocode**:
   ```
@@ -2551,7 +2716,8 @@ To complete this documentation:
 - **Assumptions**: Redis is accessible
 - **Called By**: storage_worker_process() (via event loop)
 
-##### _process_storage_task()
+##### \_process_storage_task()
+
 - **Signature**: `async def _process_storage_task(self, storage_task: StorageTask) -> None`
 - **Pseudocode**:
   ```
@@ -2582,7 +2748,8 @@ To complete this documentation:
 - **Assumptions**: storage_task has valid image_task and face_result
 - **Called By**: run() (main loop)
 
-##### _upsert_embeddings_to_vector_db()
+##### \_upsert_embeddings_to_vector_db()
+
 - **Signature**: `async def _upsert_embeddings_to_vector_db(self, face_result: FaceResult, image_task: ImageTask) -> int`
 - **Pseudocode**:
   ```
@@ -2606,9 +2773,10 @@ To complete this documentation:
   OUTPUT: Integer count of faces successfully upserted
   ```
 - **Assumptions**: Qdrant is accessible, vectorization_enabled is True, faces have embeddings
-- **Called By**: _process_storage_task()
+- **Called By**: \_process_storage_task()
 
-##### _process_post_task()
+##### \_process_post_task()
+
 - **Signature**: `async def _process_post_task(self, post_task: PostTask) -> None`
 - **Pseudocode**:
   ```
@@ -2630,6 +2798,7 @@ To complete this documentation:
 - **Called By**: run() (main loop)
 
 ##### stop()
+
 - **Signature**: `def stop(self) -> None`
 - **Pseudocode**:
   ```
@@ -2644,6 +2813,7 @@ To complete this documentation:
 #### Functions
 
 ##### storage_worker_process()
+
 - **Signature**: `def storage_worker_process(worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -2659,7 +2829,7 @@ To complete this documentation:
   OUTPUT: None (process entry point)
   ```
 - **Assumptions**: worker_id is valid integer
-- **Called By**: orchestrator.py::_run_storage_worker() (spawned as Process)
+- **Called By**: orchestrator.py::\_run_storage_worker() (spawned as Process)
 
 ---
 
@@ -2669,7 +2839,7 @@ To complete this documentation:
 - **Lines**: 1483
 - **Scope**: HTTP fetching and JavaScript rendering utilities
 - **Purpose**: Provides utilities for HTTP fetching, including retry logic, realistic headers, and JavaScript rendering fallback using Playwright. Manages per-domain connection pools, circuit breakers, and a JS cache.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `logging`, `time`, `random`, `tempfile`, `os`
   - `typing` (Dict, List, Optional, Tuple, Any)
   - `httpx`
@@ -2682,17 +2852,21 @@ To complete this documentation:
 #### Classes
 
 ##### DomainConnectionPool
+
 - **Purpose**: Manages per-domain HTTP connection pools with circuit breaker pattern
 
 ##### HTTPUtils
+
 - **Purpose**: Main HTTP utilities class for fetching HTML and downloading images
 
 ##### BrowserPool
+
 - **Purpose**: Manages Playwright browser instances for JavaScript rendering
 
 #### Key Methods
 
 ##### HTTPUtils.fetch_html()
+
 - **Signature**: `async def fetch_html(self, url: str, use_js_fallback: bool = True, force_compare_first_visit: bool = False) -> Tuple[Optional[str], str, Optional[Dict[str, int]]]`
 - **Pseudocode**:
   ```
@@ -2718,6 +2892,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py, selector_miner.py
 
 ##### HTTPUtils.head_check()
+
 - **Signature**: `async def head_check(self, url: str) -> Tuple[bool, Dict[str, Any]]`
 - **Pseudocode**:
   ```
@@ -2733,9 +2908,10 @@ To complete this documentation:
   OUTPUT: Tuple of (boolean success, info dictionary)
   ```
 - **Assumptions**: url is valid
-- **Called By**: extractor_worker.py::_process_image_candidate()
+- **Called By**: extractor_worker.py::\_process_image_candidate()
 
 ##### HTTPUtils.download_to_temp()
+
 - **Signature**: `async def download_to_temp(self, url: str, temp_dir: str = None) -> Tuple[Optional[str], Dict[str, Any]]`
 - **Pseudocode**:
   ```
@@ -2753,9 +2929,10 @@ To complete this documentation:
   OUTPUT: Tuple of (temp file path or None, metadata dictionary)
   ```
 - **Assumptions**: url is valid, temp_dir is writable
-- **Called By**: extractor_worker.py::_process_image_candidate()
+- **Called By**: extractor_worker.py::\_process_image_candidate()
 
-##### HTTPUtils._fetch_with_redirects()
+##### HTTPUtils.\_fetch_with_redirects()
+
 - **Signature**: `async def _fetch_with_redirects(self, url: str) -> Tuple[Optional[str], str]`
 - **Pseudocode**:
   ```
@@ -2774,7 +2951,8 @@ To complete this documentation:
 - **Assumptions**: url is valid
 - **Called By**: fetch_html()
 
-##### HTTPUtils._fetch_with_js()
+##### HTTPUtils.\_fetch_with_js()
+
 - **Signature**: `async def _fetch_with_js(self, url: str) -> Tuple[Optional[str], str]`
 - **Pseudocode**:
   ```
@@ -2795,6 +2973,7 @@ To complete this documentation:
 #### Functions
 
 ##### get_http_utils()
+
 - **Signature**: `def get_http_utils() -> HTTPUtils`
 - **Pseudocode**:
   ```
@@ -2810,6 +2989,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py, selector_miner.py, extractor_worker.py
 
 ##### close_http_utils()
+
 - **Signature**: `async def close_http_utils() -> None`
 - **Pseudocode**:
   ```
@@ -2831,7 +3011,7 @@ To complete this documentation:
 - **Lines**: 1689
 - **Scope**: Redis queue and cache management
 - **Purpose**: Manages all interactions with Redis, including connection pooling, serialization/deserialization of Pydantic models, queue operations (push/pop for sites, candidates, images, results, storage, GPU inbox), URL deduplication, site statistics, and active task tracking.
-- **Dependencies**: 
+- **Dependencies**:
   - `redis`, `aioredis`
   - `json`, `logging`, `time`
   - `typing` (List, Optional, Dict, Any, Union)
@@ -2842,11 +3022,13 @@ To complete this documentation:
 #### Classes
 
 ##### RedisManager
+
 - **Purpose**: Manages all Redis operations including queues, caching, and deduplication
 
 #### Key Methods
 
 ##### RedisManager.push_site()
+
 - **Signature**: `def push_site(self, site_task: SiteTask, timeout: float = 5.0) -> bool`
 - **Pseudocode**:
   ```
@@ -2861,6 +3043,7 @@ To complete this documentation:
 - **Called By**: orchestrator.py::push_sites()
 
 ##### RedisManager.pop_site()
+
 - **Signature**: `def pop_site(self, timeout: float = 5.0) -> Optional[SiteTask]`
 - **Pseudocode**:
   ```
@@ -2875,6 +3058,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py::run()
 
 ##### RedisManager.push_many()
+
 - **Signature**: `def push_many(self, key: str, payloads: list[bytes]) -> int`
 - **Pseudocode**:
   ```
@@ -2886,9 +3070,10 @@ To complete this documentation:
   OUTPUT: Integer count
   ```
 - **Assumptions**: key is valid queue name, payloads is list of bytes
-- **Called By**: crawler_worker.py::_enqueue_candidates(), extractor_worker.py
+- **Called By**: crawler_worker.py::\_enqueue_candidates(), extractor_worker.py
 
 ##### RedisManager.blpop_many()
+
 - **Signature**: `def blpop_many(self, key: str, max_n: int, timeout: float = 0.5) -> list[bytes]`
 - **Pseudocode**:
   ```
@@ -2903,6 +3088,7 @@ To complete this documentation:
 - **Called By**: extractor_worker.py::run(), gpu_scheduler.py::feed()
 
 ##### RedisManager.get_queue_length_by_key()
+
 - **Signature**: `def get_queue_length_by_key(self, key: str) -> int`
 - **Pseudocode**:
   ```
@@ -2916,6 +3102,7 @@ To complete this documentation:
 - **Called By**: orchestrator.py, gpu_scheduler.py, many workers
 
 ##### RedisManager.mark_url_seen_async()
+
 - **Signature**: `async def mark_url_seen_async(self, url: str, ttl_seconds: Optional[int] = None) -> bool`
 - **Pseudocode**:
   ```
@@ -2930,6 +3117,7 @@ To complete this documentation:
 - **Called By**: extractor_worker.py, crawler_worker.py
 
 ##### RedisManager.url_seen_async()
+
 - **Signature**: `async def url_seen_async(self, url: str) -> bool`
 - **Pseudocode**:
   ```
@@ -2944,6 +3132,7 @@ To complete this documentation:
 - **Called By**: extractor_worker.py, crawler_worker.py
 
 ##### RedisManager.update_site_stats_async()
+
 - **Signature**: `async def update_site_stats_async(self, site_id: str, stats: Dict[str, Any]) -> bool`
 - **Pseudocode**:
   ```
@@ -2959,6 +3148,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py, storage_worker.py, extractor_worker.py
 
 ##### RedisManager.get_site_stats()
+
 - **Signature**: `def get_site_stats(self, site_id: str) -> Optional[Dict[str, Any]]`
 - **Pseudocode**:
   ```
@@ -2973,6 +3163,7 @@ To complete this documentation:
 - **Called By**: orchestrator.py, extractor_worker.py, many workers
 
 ##### RedisManager.set_site_limit_reached_async()
+
 - **Signature**: `async def set_site_limit_reached_async(self, site_id: str) -> bool`
 - **Pseudocode**:
   ```
@@ -2986,6 +3177,7 @@ To complete this documentation:
 - **Called By**: storage_worker.py, extractor_worker.py
 
 ##### RedisManager.is_site_limit_reached_async()
+
 - **Signature**: `async def is_site_limit_reached_async(self, site_id: str) -> bool`
 - **Pseudocode**:
   ```
@@ -3001,6 +3193,7 @@ To complete this documentation:
 #### Functions
 
 ##### get_redis_manager()
+
 - **Signature**: `def get_redis_manager() -> RedisManager`
 - **Pseudocode**:
   ```
@@ -3016,6 +3209,7 @@ To complete this documentation:
 - **Called By**: All workers and managers
 
 ##### close_redis_manager()
+
 - **Signature**: `def close_redis_manager() -> None`
 - **Pseudocode**:
   ```
@@ -3037,7 +3231,7 @@ To complete this documentation:
 - **Lines**: 993
 - **Scope**: MinIO/S3 storage operations
 - **Purpose**: Handles saving data to MinIO/S3, including raw images, face thumbnails, and post metadata. Computes content hashes and manages object keys.
-- **Dependencies**: 
+- **Dependencies**:
   - `minio`, `io`, `json`, `logging`, `os`, `time`, `tempfile`
   - `asyncio`
   - `typing` (Dict, List, Optional, Tuple, Any)
@@ -3049,11 +3243,13 @@ To complete this documentation:
 #### Classes
 
 ##### StorageManager
+
 - **Purpose**: Manages all MinIO/S3 storage operations
 
 #### Key Methods
 
 ##### StorageManager.save_raw_image()
+
 - **Signature**: `def save_raw_image(self, image_task: ImageTask) -> Tuple[Optional[str], Optional[str]]`
 - **Pseudocode**:
   ```
@@ -3070,6 +3266,7 @@ To complete this documentation:
 - **Called By**: save_storage_task_async(), save_face_result_async()
 
 ##### StorageManager.save_face_thumbnail()
+
 - **Signature**: `def save_face_thumbnail(self, face_crop_data: bytes, face_detection: FaceDetection, image_task: ImageTask) -> Tuple[Optional[str], Optional[str]]`
 - **Pseudocode**:
   ```
@@ -3085,6 +3282,7 @@ To complete this documentation:
 - **Called By**: save_storage_task_async(), save_face_result_async()
 
 ##### StorageManager.save_post_metadata()
+
 - **Signature**: `def save_post_metadata(self, post_task: PostTask) -> Tuple[Optional[str], Optional[str]]`
 - **Pseudocode**:
   ```
@@ -3101,6 +3299,7 @@ To complete this documentation:
 - **Called By**: save_post_metadata_async()
 
 ##### StorageManager.save_storage_task_async()
+
 - **Signature**: `async def save_storage_task_async(self, storage_task: StorageTask) -> Tuple[FaceResult, Dict[str, int]]`
 - **Pseudocode**:
   ```
@@ -3114,9 +3313,10 @@ To complete this documentation:
   OUTPUT: Tuple of (FaceResult, save counts dictionary)
   ```
 - **Assumptions**: storage_task has valid image_task, face_result, and face_crops
-- **Called By**: storage_worker.py::_process_storage_task()
+- **Called By**: storage_worker.py::\_process_storage_task()
 
 ##### StorageManager.health_check()
+
 - **Signature**: `def health_check(self) -> Dict[str, Any]`
 - **Pseudocode**:
   ```
@@ -3133,6 +3333,7 @@ To complete this documentation:
 #### Functions
 
 ##### get_storage_manager()
+
 - **Signature**: `def get_storage_manager() -> StorageManager`
 - **Pseudocode**:
   ```
@@ -3148,6 +3349,7 @@ To complete this documentation:
 - **Called By**: storage_worker.py, main.py
 
 ##### close_storage_manager()
+
 - **Signature**: `def close_storage_manager() -> None`
 - **Pseudocode**:
   ```
@@ -3169,7 +3371,7 @@ To complete this documentation:
 - **Lines**: 987
 - **Scope**: GPU worker communication interface
 - **Purpose**: Provides interface for communicating with external GPU worker service. Handles HTTP requests, image encoding, result decoding, and implements circuit breaker pattern for resilience. Includes CPU fallback for face detection.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `httpx`, `json`, `logging`, `os`, `time`, `traceback`
   - `typing` (Dict, List, Optional, Any)
   - `insightface` (optional, for CPU fallback)
@@ -3181,11 +3383,13 @@ To complete this documentation:
 #### Classes
 
 ##### GPUInterface
+
 - **Purpose**: Interface for GPU worker communication with circuit breaker and CPU fallback
 
 #### Key Methods
 
 ##### GPUInterface.process_batch()
+
 - **Signature**: `async def process_batch(self, image_tasks: List[ImageTask], batch_id: Optional[str] = None) -> Optional[Dict[str, List[FaceDetection]]]`
 - **Pseudocode**:
   ```
@@ -3206,7 +3410,8 @@ To complete this documentation:
 - **Assumptions**: image_tasks have valid temp_path
 - **Called By**: gpu_processor_worker.py::process_batch()
 
-##### GPUInterface._gpu_worker_request()
+##### GPUInterface.\_gpu_worker_request()
+
 - **Signature**: `async def _gpu_worker_request(self, image_tasks: List[ImageTask]) -> Optional[Dict[str, List[FaceDetection]]]`
 - **Pseudocode**:
   ```
@@ -3225,7 +3430,8 @@ To complete this documentation:
 - **Assumptions**: GPU worker is accessible, images exist at temp_path
 - **Called By**: process_batch()
 
-##### GPUInterface._cpu_fallback()
+##### GPUInterface.\_cpu_fallback()
+
 - **Signature**: `async def _cpu_fallback(self, image_tasks: List[ImageTask], batch_id: Optional[str] = None) -> Dict[str, List[FaceDetection]]`
 - **Pseudocode**:
   ```
@@ -3241,7 +3447,8 @@ To complete this documentation:
 - **Assumptions**: insightface is available, images exist at temp_path
 - **Called By**: process_batch() (when GPU unavailable)
 
-##### GPUInterface._check_health()
+##### GPUInterface.\_check_health()
+
 - **Signature**: `async def _check_health(self) -> bool`
 - **Pseudocode**:
   ```
@@ -3262,6 +3469,7 @@ To complete this documentation:
 #### Functions
 
 ##### get_gpu_interface()
+
 - **Signature**: `def get_gpu_interface() -> GPUInterface`
 - **Pseudocode**:
   ```
@@ -3277,6 +3485,7 @@ To complete this documentation:
 - **Called By**: gpu_processor_worker.py, main.py
 
 ##### close_gpu_interface()
+
 - **Signature**: `async def close_gpu_interface() -> None`
 - **Pseudocode**:
   ```
@@ -3298,7 +3507,7 @@ To complete this documentation:
 - **Lines**: 1288
 - **Scope**: GPU batch processing worker
 - **Purpose**: Processes batches of ImageTask objects. Copies temp files, validates images, sends them to GPU worker via gpu_interface, and then pushes the results as StorageTask to the storage queue. Handles CPU fallback if GPU worker is unavailable.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `logging`, `multiprocessing`, `os`, `signal`, `sys`, `tempfile`, `time`, `shutil`
   - `typing` (List, Optional, Dict, Any)
   - `.config` (get_config)
@@ -3313,11 +3522,13 @@ To complete this documentation:
 #### Classes
 
 ##### GPUProcessorWorker
+
 - **Purpose**: GPU processor worker for batch face detection
 
 #### Key Methods
 
 ##### GPUProcessorWorker.process_batch()
+
 - **Signature**: `async def process_batch(self, batch_request: BatchRequest) -> int`
 - **Pseudocode**:
   ```
@@ -3338,6 +3549,7 @@ To complete this documentation:
 - **Called By**: run() (main loop)
 
 ##### GPUProcessorWorker.run()
+
 - **Signature**: `async def run(self) -> None`
 - **Pseudocode**:
   ```
@@ -3361,6 +3573,7 @@ To complete this documentation:
 #### Functions
 
 ##### gpu_processor_worker_process()
+
 - **Signature**: `def gpu_processor_worker_process(worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -3376,7 +3589,7 @@ To complete this documentation:
   OUTPUT: None (process entry point)
   ```
 - **Assumptions**: worker_id is valid integer
-- **Called By**: orchestrator.py::_run_gpu_processor_worker() (spawned as Process)
+- **Called By**: orchestrator.py::\_run_gpu_processor_worker() (spawned as Process)
 
 ---
 
@@ -3386,7 +3599,7 @@ To complete this documentation:
 - **Lines**: 3192
 - **Scope**: Post discovery and extraction engine
 - **Purpose**: The "post discovery engine" that performs multi-page crawling (3x3 approach) to find diabetes-related posts. Extracts post metadata (title, content, author, date) and filters for keywords. Image extraction methods are largely disabled in post-focused mode.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `logging`, `re`, `time`
   - `typing` (List, Optional, Tuple, Dict, Any, AsyncIterator)
   - `beautifulsoup4` (BeautifulSoup)
@@ -3401,11 +3614,13 @@ To complete this documentation:
 #### Classes
 
 ##### SelectorMiner
+
 - **Purpose**: Post discovery and extraction engine with 3x3 crawling strategy
 
 #### Key Methods
 
 ##### SelectorMiner.mine_posts_with_3x3_crawl()
+
 - **Signature**: `async def mine_posts_with_3x3_crawl(self, base_url: str, site_id: str, max_pages: int = 5) -> AsyncIterator[Tuple[str, List[CandidatePost]]]`
 - **Pseudocode**:
   ```
@@ -3428,6 +3643,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py::process_site()
 
 ##### SelectorMiner.mine_posts_for_diabetes()
+
 - **Signature**: `async def mine_posts_for_diabetes(self, html: str, base_url: str, site_id: str) -> List[CandidatePost]`
 - **Pseudocode**:
   ```
@@ -3447,9 +3663,10 @@ To complete this documentation:
   OUTPUT: List of CandidatePost objects
   ```
 - **Assumptions**: html is valid HTML string
-- **Called By**: mine_posts_with_3x3_crawl(), _fetch_post_page()
+- **Called By**: mine_posts_with_3x3_crawl(), \_fetch_post_page()
 
-##### SelectorMiner._detect_page_type()
+##### SelectorMiner.\_detect_page_type()
+
 - **Signature**: `def _detect_page_type(self, soup: BeautifulSoup, url: Optional[str] = None) -> str`
 - **Pseudocode**:
   ```
@@ -3463,7 +3680,8 @@ To complete this documentation:
 - **Assumptions**: soup is valid BeautifulSoup object
 - **Called By**: mine_posts_for_diabetes()
 
-##### SelectorMiner._extract_full_post_and_replies()
+##### SelectorMiner.\_extract_full_post_and_replies()
+
 - **Signature**: `async def _extract_full_post_and_replies(self, soup: BeautifulSoup, post_url: str, site_id: str) -> Optional[dict]`
 - **Pseudocode**:
   ```
@@ -3482,6 +3700,7 @@ To complete this documentation:
 #### Functions
 
 ##### get_selector_miner()
+
 - **Signature**: `def get_selector_miner() -> SelectorMiner`
 - **Pseudocode**:
   ```
@@ -3497,6 +3716,7 @@ To complete this documentation:
 - **Called By**: crawler_worker.py
 
 ##### close_selector_miner()
+
 - **Signature**: `def close_selector_miner() -> None`
 - **Pseudocode**:
   ```
@@ -3518,7 +3738,7 @@ To complete this documentation:
 - **Lines**: 903
 - **Scope**: System orchestration and coordination
 - **Purpose**: The main coordinator of the crawler system. Starts and stops all worker processes, monitors queue depths for back-pressure, consumes final results, and aggregates system metrics.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `logging`, `multiprocessing`, `signal`, `time`
   - `typing` (List, Dict, Any, Optional)
   - `.config` (get_config)
@@ -3530,11 +3750,13 @@ To complete this documentation:
 #### Classes
 
 ##### Orchestrator
+
 - **Purpose**: Main system orchestrator that coordinates all workers
 
 #### Key Methods
 
-##### Orchestrator.__init__()
+##### Orchestrator.**init**()
+
 - **Signature**: `def __init__(self) -> None`
 - **Pseudocode**:
   ```
@@ -3552,6 +3774,7 @@ To complete this documentation:
 - **Called By**: main.py::run_crawl()
 
 ##### Orchestrator.start_workers()
+
 - **Signature**: `def start_workers(self) -> None`
 - **Pseudocode**:
   ```
@@ -3569,6 +3792,7 @@ To complete this documentation:
 - **Called By**: crawl_sites()
 
 ##### Orchestrator.crawl_sites()
+
 - **Signature**: `async def crawl_sites(self, sites: List[str]) -> CrawlResults`
 - **Pseudocode**:
   ```
@@ -3589,6 +3813,7 @@ To complete this documentation:
 - **Called By**: main.py::run_crawl()
 
 ##### Orchestrator.monitor_loop()
+
 - **Signature**: `async def monitor_loop(self) -> None`
 - **Pseudocode**:
   ```
@@ -3605,7 +3830,8 @@ To complete this documentation:
 - **Assumptions**: None
 - **Called By**: crawl_sites() (as background task)
 
-##### Orchestrator._consume_results()
+##### Orchestrator.\_consume_results()
+
 - **Signature**: `async def _consume_results(self) -> None`
 - **Pseudocode**:
   ```
@@ -3621,6 +3847,7 @@ To complete this documentation:
 - **Called By**: crawl_sites() (as background task)
 
 ##### Orchestrator.stop()
+
 - **Signature**: `def stop(self) -> None`
 - **Pseudocode**:
   ```
@@ -3635,6 +3862,7 @@ To complete this documentation:
 - **Called By**: main.py::run_crawl() (on completion or error)
 
 ##### Orchestrator.get_system_metrics()
+
 - **Signature**: `def get_system_metrics(self) -> SystemMetrics`
 - **Pseudocode**:
   ```
@@ -3652,7 +3880,8 @@ To complete this documentation:
 
 #### Functions
 
-##### Orchestrator._run_crawler_worker()
+##### Orchestrator.\_run_crawler_worker()
+
 - **Signature**: `@staticmethod def _run_crawler_worker(worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -3665,7 +3894,8 @@ To complete this documentation:
 - **Assumptions**: worker_id is valid integer
 - **Called By**: start_workers() (spawned as Process)
 
-##### Orchestrator._run_extractor_worker()
+##### Orchestrator.\_run_extractor_worker()
+
 - **Signature**: `@staticmethod def _run_extractor_worker(worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -3678,7 +3908,8 @@ To complete this documentation:
 - **Assumptions**: worker_id is valid integer
 - **Called By**: start_workers() (spawned as Process)
 
-##### Orchestrator._run_gpu_processor_worker()
+##### Orchestrator.\_run_gpu_processor_worker()
+
 - **Signature**: `@staticmethod def _run_gpu_processor_worker(worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -3691,7 +3922,8 @@ To complete this documentation:
 - **Assumptions**: worker_id is valid integer
 - **Called By**: start_workers() (spawned as Process)
 
-##### Orchestrator._run_storage_worker()
+##### Orchestrator.\_run_storage_worker()
+
 - **Signature**: `@staticmethod def _run_storage_worker(worker_id: int) -> None`
 - **Pseudocode**:
   ```
@@ -3712,7 +3944,7 @@ To complete this documentation:
 - **Lines**: ~500 (estimated)
 - **Scope**: Test suite for crawler components
 - **Purpose**: Contains a test suite for various components of the crawler, including Redis, HTTP utilities, selector mining, and the crawler worker.
-- **Dependencies**: 
+- **Dependencies**:
   - `asyncio`, `logging`
   - `.config` (get_config)
   - `.redis_manager` (get_redis_manager)
@@ -3725,11 +3957,13 @@ To complete this documentation:
 #### Classes
 
 ##### TestSuite
+
 - **Purpose**: Test suite for crawler components
 
 #### Key Methods
 
 ##### TestSuite.run_tests()
+
 - **Signature**: `async def run_tests(self) -> None`
 - **Pseudocode**:
   ```
@@ -3747,6 +3981,7 @@ To complete this documentation:
 - **Called By**: main() (if test mode)
 
 ##### TestSuite.test_crawler_worker_only()
+
 - **Signature**: `async def test_crawler_worker_only(self) -> None`
 - **Pseudocode**:
   ```
@@ -3765,6 +4000,7 @@ To complete this documentation:
 #### Functions
 
 ##### main()
+
 - **Signature**: `def main() -> None`
 - **Pseudocode**:
   ```
@@ -3795,6 +4031,7 @@ This `master_context.md` file provides comprehensive documentation for all 20 Py
    - Called By (callers of the method)
 
 The documentation follows a tiered approach:
+
 - **Tier 1**: Core data structures and configuration
 - **Tier 2**: Utility and logging modules
 - **Tier 3**: Infrastructure (HTTP, Redis, Storage, GPU interface)
@@ -3802,4 +4039,3 @@ The documentation follows a tiered approach:
 - **Tier 5**: High-level coordination (Selector Miner, Orchestrator, Main, Test Suite)
 
 This comprehensive documentation enables developers to understand the entire system architecture, data flow, and inter-component dependencies.
-

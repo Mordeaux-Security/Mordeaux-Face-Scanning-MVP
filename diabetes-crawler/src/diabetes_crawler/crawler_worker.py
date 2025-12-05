@@ -48,34 +48,35 @@ class CrawlerWorker:
         
     async def _enqueue_candidates(self, candidates) -> int:
         """Enqueue a batch of candidates to Redis queue."""
+        # DISABLED: Debug file writing to reduce memory usage
         # Write candidates to file for debugging
-        if candidates:
-            debug_dir = Path("crawl_output/debug")
-            debug_dir.mkdir(parents=True, exist_ok=True)
-            candidates_file = debug_dir / f"enqueued_candidates_{self.worker_id}_{int(time.time())}.json"
-            candidates_data = []
-            for candidate in candidates:
-                if isinstance(candidate, CandidatePost):
-                    candidates_data.append({
-                        'type': 'CandidatePost',
-                        'post_url': candidate.post_url,
-                        'page_url': candidate.page_url,
-                        'title': candidate.title,
-                        'content_preview': candidate.content[:200] if candidate.content else None,
-                        'author': candidate.author,
-                        'date': candidate.date.isoformat() if candidate.date else None,
-                        'site_id': candidate.site_id
-                    })
-                elif isinstance(candidate, CandidateImage):
-                    candidates_data.append({
-                        'type': 'CandidateImage',
-                        'img_url': candidate.img_url,
-                        'page_url': candidate.page_url,
-                        'site_id': candidate.site_id
-                    })
-            with open(candidates_file, 'w', encoding='utf-8') as f:
-                json.dump(candidates_data, f, indent=2, default=str)
-            logger.info(f"[Crawler {self.worker_id}] Wrote {len(candidates)} candidates to {candidates_file}")
+        # if candidates:
+        #     debug_dir = Path("crawl_output/debug")
+        #     debug_dir.mkdir(parents=True, exist_ok=True)
+        #     candidates_file = debug_dir / f"enqueued_candidates_{self.worker_id}_{int(time.time())}.json"
+        #     candidates_data = []
+        #     for candidate in candidates:
+        #         if isinstance(candidate, CandidatePost):
+        #             candidates_data.append({
+        #                 'type': 'CandidatePost',
+        #                 'post_url': candidate.post_url,
+        #                 'page_url': candidate.page_url,
+        #                 'title': candidate.title,
+        #                 'content_preview': candidate.content[:200] if candidate.content else None,
+        #                 'author': candidate.author,
+        #                 'date': candidate.date.isoformat() if candidate.date else None,
+        #                 'site_id': candidate.site_id
+        #             })
+        #         elif isinstance(candidate, CandidateImage):
+        #             candidates_data.append({
+        #                 'type': 'CandidateImage',
+        #                 'img_url': candidate.img_url,
+        #                 'page_url': candidate.page_url,
+        #                 'site_id': candidate.site_id
+        #             })
+        #     with open(candidates_file, 'w', encoding='utf-8') as f:
+        #         json.dump(candidates_data, f, indent=2, default=str)
+        #     logger.info(f"[Crawler {self.worker_id}] Wrote {len(candidates)} candidates to {candidates_file}")
         
         # Handle both CandidateImage and CandidatePost types
         candidate_type = type(candidates[0]).__name__ if candidates else None

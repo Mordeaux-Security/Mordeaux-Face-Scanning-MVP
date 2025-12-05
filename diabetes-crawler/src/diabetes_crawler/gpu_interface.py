@@ -471,6 +471,8 @@ class GPUInterface:
                 # Fallback to PIL if OpenCV fails
                 pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
                 img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+                # Explicitly delete PIL image to free memory immediately
+                del pil_img
             
             if img is None:
                 logger.warning(f"CPU fallback: Failed to decode image for {task.phash[:8]}...")
@@ -478,6 +480,8 @@ class GPUInterface:
             
             # Detect faces using InsightFace
             faces = app.get(img)
+            # Explicitly delete image array to free memory immediately after processing
+            del img
             
             # Convert to FaceDetection objects with quality filtering (same as GPU)
             face_detections = []
@@ -562,6 +566,8 @@ class GPUInterface:
                 try:
                     pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
                     img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+                    # Explicitly delete PIL image to free memory immediately
+                    del pil_img
                 except Exception as e:
                     logger.debug(f"CPU fallback: Failed to decode image {task.phash[:8]}...: {e}")
                     return (task.phash, [], 0, 0)
@@ -571,6 +577,8 @@ class GPUInterface:
             
             # Detect faces using InsightFace
             faces = app.get(img)
+            # Explicitly delete image array to free memory immediately after processing
+            del img
             
             # Convert to FaceDetection objects with quality filtering
             face_detections = []
@@ -977,12 +985,25 @@ class GPUInterface:
         }
     
     async def close(self):
-        """Close HTTP client."""
+        """Close HTTP client and unload CPU fallback model."""
         if self._client:
             await self._client.aclose()
             self._client = None
             self._client_event_loop_id = None
-            self._client_event_loop_id = None
+        
+        # Unload CPU fallback model to free memory
+        if self._cpu_app is not None:
+            try:
+                # InsightFace models don't have explicit cleanup, but we can clear the reference
+                # This allows Python GC to free the memory
+                self._cpu_app = None
+                logger.debug("CPU fallback: Unloaded face detection model")
+            except Exception as e:
+                logger.warning(f"Error unloading CPU fallback model: {e}")
+        
+        # Reset locks
+        self._client_lock = None
+        self._cpu_app_lock = None
 
 
 

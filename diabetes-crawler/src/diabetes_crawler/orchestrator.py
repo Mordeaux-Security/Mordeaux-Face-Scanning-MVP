@@ -11,6 +11,9 @@ import multiprocessing
 import signal
 import sys
 import time
+import psutil
+import os
+from collections import deque, OrderedDict
 from typing import List, Dict, Any, Optional
 from multiprocessing import Process, Queue
 import json
@@ -31,6 +34,11 @@ class Orchestrator:
         self.redis = get_redis_manager()
         self.timing_logger = get_timing_logger()
         
+        # Disable GPU processors if GPU processing is disabled
+        if not self.config.nc_enable_gpu_processing:
+            self.config.num_gpu_processors = 0
+            logger.info("GPU processing disabled (post-focused mode), setting num_gpu_processors=0")
+        
         # Process management
         self.crawler_processes: List[Process] = []
         self.extractor_processes: List[Process] = []
@@ -44,11 +52,14 @@ class Orchestrator:
         
         # Results consumer
         self._results_consumer_task: Optional[asyncio.Task] = None
-        self._consumed_results: List[FaceResult] = []
+        # Use deque with maxlen to prevent unbounded growth (circular buffer)
+        self._consumed_results: deque = deque(maxlen=1000)
         
         # Control
         self.start_time = None
-        self.site_stats: Dict[str, ProcessingStats] = {}
+        # Site stats with max limit to prevent unbounded growth (OrderedDict for FIFO removal)
+        self.site_stats: OrderedDict[str, ProcessingStats] = OrderedDict()
+        self._max_site_stats = 100  # Maximum number of sites to track
         
         # Metrics
         self.total_sites_processed = 0
@@ -72,20 +83,25 @@ class Orchestrator:
                 candidates_depth = queue_lengths.get('candidates', 0)
                 candidates_util = candidates_depth / self.config.nc_max_queue_depth
                 
-                # Check if GPU inbox queue is backing up (replaces old images queue monitoring)
-                inbox_key = getattr(self.config, 'gpu_inbox_key', 'gpu:inbox')
-                inbox_depth = await asyncio.to_thread(
-                    self.redis._get_client().llen, inbox_key
-                )
-                inbox_util = inbox_depth / self.config.nc_max_queue_depth
+                # Check if GPU inbox queue is backing up (only if GPU processing enabled)
+                inbox_util = 0.0
+                if self.config.nc_enable_gpu_processing:
+                    inbox_key = getattr(self.config, 'gpu_inbox_key', 'gpu:inbox')
+                    inbox_depth = await asyncio.to_thread(
+                        self.redis._get_client().llen, inbox_key
+                    )
+                    inbox_util = inbox_depth / self.config.nc_max_queue_depth
                 
                 # Apply back-pressure if any queue > 75% full
                 self._should_throttle = (
-                    candidates_util > 0.75 or inbox_util > 0.75
+                    candidates_util > 0.75 or (self.config.nc_enable_gpu_processing and inbox_util > 0.75)
                 )
                 
                 if self._should_throttle:
-                    logger.warning(f"Back-pressure active: candidates={candidates_util:.1%}, gpu_inbox={inbox_util:.1%}")
+                    if self.config.nc_enable_gpu_processing:
+                        logger.warning(f"Back-pressure active: candidates={candidates_util:.1%}, gpu_inbox={inbox_util:.1%}")
+                    else:
+                        logger.warning(f"Back-pressure active: candidates={candidates_util:.1%}")
                 
                 await asyncio.sleep(self.config.backpressure_check_interval)
             except Exception as e:
@@ -103,6 +119,7 @@ class Orchestrator:
                 )
                 
                 if result:
+                    # Deque automatically maintains maxlen, so old items are removed
                     self._consumed_results.append(result)
                     # Update aggregated statistics
                     self.total_images_processed += 1
@@ -116,7 +133,7 @@ class Orchestrator:
                     
                     # Log periodically or when there are issues
                     if len(self._consumed_results) % 100 == 0:
-                        logger.info(f"Consumed {len(self._consumed_results)} results from queue")
+                        logger.info(f"Consumed {len(self._consumed_results)} results from queue (max: 1000)")
                     elif faces_count > 0 and thumbs_count == 0:
                         logger.debug(f"DIAG: Consumed result {image_id}... with {faces_count} faces but 0 thumbs saved, "
                                    f"raw={saved_raw}, saved_to_thumbs={result.saved_to_thumbs}")
@@ -140,7 +157,7 @@ class Orchestrator:
         # Start crawler workers
         for i in range(self.config.num_crawlers):
             process = Process(
-                target=self._run_crawler_worker,
+                target=Orchestrator._run_crawler_worker,
                 args=(i,),
                 name=f"Crawler-{i}"
             )
@@ -151,7 +168,7 @@ class Orchestrator:
         # Start extractor workers
         for i in range(self.config.num_extractors):
             process = Process(
-                target=self._run_extractor_worker,
+                target=Orchestrator._run_extractor_worker,
                 args=(i,),
                 name=f"Extractor-{i}"
             )
@@ -159,21 +176,24 @@ class Orchestrator:
             self.extractor_processes.append(process)
             logger.info(f"Started extractor worker {i} (PID: {process.pid})")
         
-        # Start GPU processor workers
-        for i in range(self.config.num_gpu_processors):
-            process = Process(
-                target=self._run_gpu_processor_worker,
-                args=(i,),
-                name=f"GPU-Processor-{i}"
-            )
-            process.start()
-            self.gpu_processor_processes.append(process)
-            logger.info(f"Started GPU processor worker {i} (PID: {process.pid})")
+        # Start GPU processor workers (only if enabled)
+        if self.config.num_gpu_processors > 0:
+            for i in range(self.config.num_gpu_processors):
+                process = Process(
+                    target=Orchestrator._run_gpu_processor_worker,
+                    args=(i,),
+                    name=f"GPU-Processor-{i}"
+                )
+                process.start()
+                self.gpu_processor_processes.append(process)
+                logger.info(f"Started GPU processor worker {i} (PID: {process.pid})")
+        else:
+            logger.info("GPU processors disabled (post-focused mode)")
         
         # Start storage workers
         for i in range(self.config.num_storage_workers):
             process = Process(
-                target=self._run_storage_worker,
+                target=Orchestrator._run_storage_worker,
                 args=(i,),
                 name=f"Storage-{i}"
             )
@@ -228,22 +248,26 @@ class Orchestrator:
         
         logger.info("All worker processes stopped")
     
-    def _run_crawler_worker(self, worker_id: int):
+    @staticmethod
+    def _run_crawler_worker(worker_id: int):
         """Run crawler worker process."""
         from .crawler_worker import crawler_worker_process
         crawler_worker_process(worker_id)
     
-    def _run_extractor_worker(self, worker_id: int):
+    @staticmethod
+    def _run_extractor_worker(worker_id: int):
         """Run extractor worker process."""
         from .extractor_worker import extractor_worker_process
         extractor_worker_process(worker_id)
     
-    def _run_gpu_processor_worker(self, worker_id: int):
+    @staticmethod
+    def _run_gpu_processor_worker(worker_id: int):
         """Run GPU processor worker process."""
         from .gpu_processor_worker import gpu_processor_worker_process
         gpu_processor_worker_process(worker_id)
     
-    def _run_storage_worker(self, worker_id: int):
+    @staticmethod
+    def _run_storage_worker(worker_id: int):
         """Run storage worker process."""
         from .storage_worker import storage_worker_process
         storage_worker_process(worker_id)
@@ -261,7 +285,13 @@ class Orchestrator:
             )
             
             if self.redis.push_site(site_task):
-                # Initialize site stats
+                # Initialize site stats with bounded OrderedDict behavior
+                # Remove oldest entry if at limit (FIFO)
+                if len(self.site_stats) >= self._max_site_stats:
+                    oldest_site_id = next(iter(self.site_stats))
+                    del self.site_stats[oldest_site_id]
+                    logger.debug(f"Removed oldest site {oldest_site_id} from site_stats (limit: {self._max_site_stats})")
+                
                 self.site_stats[site_task.site_id] = ProcessingStats(
                     site_id=site_task.site_id,
                     site_url=site_task.url
@@ -352,17 +382,18 @@ class Orchestrator:
             if not is_alive:
                 health['overall_healthy'] = False
         
-        # Check GPU processor processes
-        for i, process in enumerate(self.gpu_processor_processes):
-            is_alive = process.is_alive()
-            health['gpu_processors'].append({
-                'worker_id': i,
-                'pid': process.pid,
-                'alive': is_alive,
-                'exitcode': process.exitcode
-            })
-            if not is_alive:
-                health['overall_healthy'] = False
+        # Check GPU processor processes (only if enabled)
+        if self.config.num_gpu_processors > 0:
+            for i, process in enumerate(self.gpu_processor_processes):
+                is_alive = process.is_alive()
+                health['gpu_processors'].append({
+                    'worker_id': i,
+                    'pid': process.pid,
+                    'alive': is_alive,
+                    'exitcode': process.exitcode
+                })
+                if not is_alive:
+                    health['overall_healthy'] = False
         
         return health
     
@@ -399,23 +430,28 @@ class Orchestrator:
             results_depth = queue_lengths.get('results', 0)
             results_manageable = results_depth < 50
             
-            # Also check gpu:inbox queue
-            gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
-            gpu_inbox_empty = gpu_inbox_depth == 0
-            
-            # Check for in-flight images in GPU processor workers
-            # Look for any staging or inflight batches across all workers
-            gpu_inflight_images = await self._check_gpu_inflight_images()
-            
-            return (sites_empty and candidates_empty and images_empty and 
-                    storage_empty and gpu_inbox_empty and results_manageable and 
-                    gpu_inflight_images == 0)
+            # Check GPU queues only if GPU processing is enabled
+            if self.config.nc_enable_gpu_processing:
+                gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
+                gpu_inbox_empty = gpu_inbox_depth == 0
+                gpu_inflight_images = await self._check_gpu_inflight_images()
+                return (sites_empty and candidates_empty and images_empty and 
+                        storage_empty and gpu_inbox_empty and results_manageable and 
+                        gpu_inflight_images == 0)
+            else:
+                # GPU processing disabled, skip GPU-related checks
+                return (sites_empty and candidates_empty and images_empty and 
+                        storage_empty and results_manageable)
         except Exception as e:
             logger.error(f"Error checking crawl completion (async): {e}")
             return False
     
     async def _check_gpu_inflight_images(self) -> int:
         """Check total number of images in-flight across all GPU processor workers."""
+        # Return 0 if GPU processing is disabled
+        if not self.config.nc_enable_gpu_processing or self.config.num_gpu_processors == 0:
+            return 0
+        
         try:
             client = await self.redis._get_async_client()
             total_inflight = 0
@@ -585,6 +621,11 @@ class Orchestrator:
                                         
                                         # Clear counters for this site
                                         await self.redis.clear_site_queue_counters_async(site_id)
+                                        
+                                        # Remove completed site from site_stats immediately
+                                        if site_id in self.site_stats:
+                                            del self.site_stats[site_id]
+                                            logger.debug(f"Removed completed site {site_id} from site_stats (image limit reached)")
                     except Exception as e:
                         logger.error(f"Error checking strict limits in monitor loop: {e}")
                 if queues_empty and active_tasks == 0:
@@ -603,17 +644,42 @@ class Orchestrator:
                 # Check worker health
                 worker_health = self.check_worker_health()
                 
-                # Log status - include gpu:inbox queue depth and GPU processor state
-                gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
-                gpu_inflight_images = await self._check_gpu_inflight_images()
-                gpu_processor_state = "IDLE" if gpu_inflight_images == 0 else f"BUSY ({gpu_inflight_images} in-flight)"
-                logger.info(f"Queues: sites={queue_info.get('queue_lengths', {}).get('sites', 0)}, "
-                           f"candidates={queue_info.get('queue_lengths', {}).get('candidates', 0)}, "
-                           f"images={queue_info.get('queue_lengths', {}).get('images', 0)}, "
-                           f"gpu_inbox={gpu_inbox_depth}, "
-                           f"storage={queue_info.get('queue_lengths', {}).get('storage', 0)}, "
-                           f"results={queue_info.get('queue_lengths', {}).get('results', 0)}, "
-                           f"gpu_processor={gpu_processor_state}")
+                # Log status - include gpu:inbox queue depth and GPU processor state (only if enabled)
+                if self.config.nc_enable_gpu_processing:
+                    gpu_inbox_depth = await self.redis.get_queue_length_by_key_async('gpu:inbox')
+                    gpu_inflight_images = await self._check_gpu_inflight_images()
+                    gpu_processor_state = "IDLE" if gpu_inflight_images == 0 else f"BUSY ({gpu_inflight_images} in-flight)"
+                    logger.info(f"Queues: sites={queue_info.get('queue_lengths', {}).get('sites', 0)}, "
+                               f"candidates={queue_info.get('queue_lengths', {}).get('candidates', 0)}, "
+                               f"images={queue_info.get('queue_lengths', {}).get('images', 0)}, "
+                               f"gpu_inbox={gpu_inbox_depth}, "
+                               f"storage={queue_info.get('queue_lengths', {}).get('storage', 0)}, "
+                               f"results={queue_info.get('queue_lengths', {}).get('results', 0)}, "
+                               f"gpu_processor={gpu_processor_state}")
+                else:
+                    logger.info(f"Queues: sites={queue_info.get('queue_lengths', {}).get('sites', 0)}, "
+                               f"candidates={queue_info.get('queue_lengths', {}).get('candidates', 0)}, "
+                               f"images={queue_info.get('queue_lengths', {}).get('images', 0)}, "
+                               f"storage={queue_info.get('queue_lengths', {}).get('storage', 0)}, "
+                               f"results={queue_info.get('queue_lengths', {}).get('results', 0)}, "
+                               f"gpu_processor=DISABLED")
+                
+                # Log memory usage periodically to detect leaks
+                try:
+                    process = psutil.Process(os.getpid())
+                    mem_info = process.memory_info()
+                    mem_mb = mem_info.rss / (1024 * 1024)
+                    system_mem = psutil.virtual_memory()
+                    system_available_gb = system_mem.available / (1024 * 1024 * 1024)
+                    system_percent = system_mem.percent
+                    
+                    # Log memory warning if using more than 4GB or system has less than 2GB available
+                    if mem_mb > 4096 or system_available_gb < 2.0 or system_percent > 90:
+                        logger.warning(f"[MEMORY] Process RSS: {mem_mb:.1f}MB, System: {system_percent:.1f}% used, {system_available_gb:.2f}GB available")
+                    elif mem_mb > 2048 or system_percent > 80:
+                        logger.info(f"[MEMORY] Process RSS: {mem_mb:.1f}MB, System: {system_percent:.1f}% used, {system_available_gb:.2f}GB available")
+                except Exception as e:
+                    logger.debug(f"Failed to get memory info: {e}")
                 
                 await asyncio.sleep(5.0)  # Reduced from 10.0 for faster completion detection
         finally:
@@ -765,6 +831,21 @@ class Orchestrator:
             raise
         finally:
             self.running = False
+            
+            # Cleanup completed sites from site_stats
+            completed_sites = [
+                site_id for site_id, stats in self.site_stats.items()
+                if stats.total_time_seconds is not None and stats.total_time_seconds > 0
+            ]
+            for site_id in completed_sites:
+                del self.site_stats[site_id]
+            if completed_sites:
+                logger.info(f"Cleaned up {len(completed_sites)} completed sites from site_stats")
+            
+            # Clear consumed results (already bounded, but explicit clear on completion)
+            self._consumed_results.clear()
+            logger.debug("Cleared consumed results deque")
+            
             # Log system shutdown
             self.timing_logger.log_system_shutdown()
     
@@ -778,6 +859,44 @@ class Orchestrator:
             self._backpressure_task.cancel()
         if self._results_consumer_task:
             self._results_consumer_task.cancel()
+        
+        # Cleanup resources (note: workers have their own cleanup)
+        # HTTP utils and GPU interface are singletons that should be closed by workers
+        # This is a fallback in case they weren't closed
+        try:
+            from .http_utils import get_http_utils, close_http_utils
+            from .gpu_interface import close_gpu_interface
+            import asyncio
+            
+            # Try to close HTTP utils and GPU interface
+            # Use a new event loop if needed
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Can't run in running loop, schedule for later
+                    logger.debug("Event loop is running, cleanup will be handled by workers")
+                else:
+                    # Run cleanup synchronously
+                    loop.run_until_complete(close_http_utils())
+                    loop.run_until_complete(close_gpu_interface())
+            except RuntimeError:
+                # No event loop, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(close_http_utils())
+                    loop.run_until_complete(close_gpu_interface())
+                finally:
+                    loop.close()
+        except Exception as e:
+            logger.warning(f"Error during resource cleanup: {e}")
+        
+        # Clear accumulated data structures
+        consumed_count = len(self._consumed_results)
+        site_stats_count = len(self.site_stats)
+        self._consumed_results.clear()
+        self.site_stats.clear()
+        logger.info(f"Cleared accumulated data structures: {consumed_count} consumed results, {site_stats_count} site stats")
         
         self.stop_workers()
 

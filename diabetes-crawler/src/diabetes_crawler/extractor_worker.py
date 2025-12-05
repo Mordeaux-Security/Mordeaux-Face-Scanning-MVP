@@ -51,6 +51,8 @@ class ExtractorWorker:
         
         # Create temp directory
         self.temp_dir = tempfile.mkdtemp(prefix=f"extractor_{worker_id}_")
+        # Track temp files for cleanup (file_path -> timestamp when created)
+        self._temp_files: dict = {}
         logger.info(f"[Extractor {self.worker_id}] Using temp directory: {self.temp_dir}")
     
     async def process_candidate(self, candidate) -> Optional:
@@ -61,6 +63,10 @@ class ExtractorWorker:
         if isinstance(candidate, CandidatePost):
             return await self._process_post_candidate(candidate, extraction_start_time)
         elif isinstance(candidate, CandidateImage):
+            # Skip image processing if image extraction is disabled
+            if not self.config.nc_enable_image_extraction:
+                logger.debug(f"[Extractor {self.worker_id}] Image extraction disabled, skipping: {candidate.img_url}")
+                return None
             return await self._process_image_candidate(candidate, extraction_start_time)
         else:
             logger.warning(f"[Extractor {self.worker_id}] Unknown candidate type: {type(candidate)}")
@@ -129,6 +135,10 @@ class ExtractorWorker:
                 temp_path, download_info = await self.http_utils.download_to_temp(
                     candidate.img_url, self.temp_dir
                 )
+                
+                # Track temp file for cleanup
+                if temp_path:
+                    self._temp_files[temp_path] = time.time()
                 
                 if not temp_path:
                     logger.debug(f"[EXTRACTOR-{self.worker_id}] Download: {candidate.img_url} - FAILED")
@@ -533,19 +543,59 @@ class ExtractorWorker:
                 # Process all candidates concurrently
                 if tasks:
                     await asyncio.gather(*tasks, return_exceptions=True)
+                
+                # Periodic cleanup of old temp files (every batch)
+                # More aggressive cleanup: reduce threshold and delay
+                max_tracked_files = 500
+                if len(self._temp_files) > max_tracked_files:
+                    logger.info(f"[Extractor {self.worker_id}] Temp files exceed limit ({len(self._temp_files)} > {max_tracked_files}), forcing cleanup")
+                    self._cleanup_temp_dir()
+                elif len(self._temp_files) > 100:  # Cleanup when we have many tracked files
+                    self._cleanup_temp_dir()
                     
         finally:
-            # No cleanup needed - GPU worker will drain gpu:inbox queue
+            # Final cleanup on exit
             self._cleanup_temp_dir()
     
     def _cleanup_temp_dir(self):
-        """Cleanup temporary files with delay to prevent race condition."""
+        """Cleanup temporary files with proper tracking and delayed deletion."""
         try:
-            # Don't cleanup immediately - give GPU processor time to copy files
-            # Files will be cleaned by OS tmpfs or periodic cleanup
-            # This prevents race condition where GPU processor can't access temp files
-            logger.info(f"[Extractor {self.worker_id}] Temp files in {self.temp_dir} will be cleaned by system")
-            logger.info(f"[Extractor {self.worker_id}] Delaying cleanup to prevent race condition with GPU processor")
+            import time
+            import os
+            
+            # Clean up files older than 2 minutes (reduced from 5 minutes)
+            current_time = time.time()
+            cleanup_delay = 120  # 2 minutes
+            files_cleaned = 0
+            files_failed = 0
+            
+            # Clean tracked files
+            for file_path, created_time in list(self._temp_files.items()):
+                if current_time - created_time > cleanup_delay:
+                    try:
+                        if os.path.exists(file_path):
+                            os.unlink(file_path)
+                            files_cleaned += 1
+                        del self._temp_files[file_path]
+                    except Exception as e:
+                        logger.warning(f"[Extractor {self.worker_id}] Failed to delete temp file {file_path}: {e}")
+                        files_failed += 1
+                        # Keep in dict to retry later
+            
+            # Also try to clean entire temp directory if empty or old
+            try:
+                if os.path.exists(self.temp_dir):
+                    remaining_files = [f for f in os.listdir(self.temp_dir) if os.path.isfile(os.path.join(self.temp_dir, f))]
+                    if not remaining_files:
+                        os.rmdir(self.temp_dir)
+                        logger.info(f"[Extractor {self.worker_id}] Cleaned up empty temp directory: {self.temp_dir}")
+                    else:
+                        logger.debug(f"[Extractor {self.worker_id}] Temp directory still has {len(remaining_files)} files")
+            except Exception as e:
+                logger.debug(f"[Extractor {self.worker_id}] Could not remove temp directory: {e}")
+            
+            if files_cleaned > 0:
+                logger.info(f"[Extractor {self.worker_id}] Cleaned up {files_cleaned} temp files (failed: {files_failed}, remaining: {len(self._temp_files)})")
         except Exception as e:
             logger.error(f"[Extractor {self.worker_id}] Error during cleanup: {e}")
     

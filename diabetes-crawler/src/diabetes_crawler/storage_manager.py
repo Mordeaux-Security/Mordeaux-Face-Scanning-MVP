@@ -89,8 +89,12 @@ class StorageManager:
     
     def _create_metadata(self, image_task: ImageTask, face_result: FaceResult) -> Dict[str, Any]:
         """Create metadata for image."""
+        # Read file with context manager to prevent memory leaks
+        with open(image_task.temp_path, 'rb') as f:
+            file_content = f.read()
+        content_hash = self._compute_content_hash(file_content)
         return {
-            'content_hash': self._compute_content_hash(open(image_task.temp_path, 'rb').read()),
+            'content_hash': content_hash,
             'phash': image_task.phash,
             'site_id': image_task.candidate.site_id,
             'page_url': image_task.candidate.page_url,
@@ -632,10 +636,13 @@ class StorageManager:
                 # Crop the face
                 face_crop = img.crop((x1, y1, x2, y2))
                 
-                # Convert to bytes with higher quality
-                output = io.BytesIO()
-                face_crop.save(output, format='JPEG', quality=95)
-                return output.getvalue()
+                # Convert to bytes with higher quality - use context manager to prevent memory leaks
+                with io.BytesIO() as output:
+                    face_crop.save(output, format='JPEG', quality=95)
+                    result = output.getvalue()
+                # Explicitly delete face_crop to free memory immediately
+                del face_crop
+                return result
                 
         except Exception as e:
             logger.error(f"Failed to crop face from {image_path}: {e}", exc_info=True)

@@ -127,6 +127,11 @@ class SelectorMiner:
     
     async def mine_selectors(self, html: str, base_url: str, site_id: str) -> List[CandidateImage]:
         """Mine selectors from HTML content with script/noscript/JSON-LD extraction."""
+        # DEPRECATED: Image extraction disabled for post-focused crawler
+        if not self.config.nc_enable_image_extraction:
+            logger.debug(f"Image extraction disabled, skipping mine_selectors for {base_url}")
+            return []
+        
         try:
             soup = BeautifulSoup(html, 'html.parser')
             candidates = []
@@ -767,22 +772,26 @@ class SelectorMiner:
                     'text_preview': item.get_text(strip=True)[:200],
                     'has_links': bool(item.find('a', href=True))
                 })
-            with open(items_file, 'w', encoding='utf-8') as f:
-                json.dump(items_data, f, indent=2)
-            logger.info(f"[POST-FIND] Wrote {len(items_data)} post items to {items_file}")
+            # DISABLED: Debug file writing to reduce memory usage
+            # with open(items_file, 'w', encoding='utf-8') as f:
+            #     json.dump(items_data, f, indent=2)
+            # logger.info(f"[POST-FIND] Wrote {len(items_data)} post items to {items_file}")
+            logger.debug(f"[POST-FIND] Found {len(items_data)} post items (debug file writing disabled)")
         else:
             # Write why no items were found
             debug_dir = Path("crawl_output/debug")
             debug_dir.mkdir(parents=True, exist_ok=True)
-            no_items_file = debug_dir / f"no_post_items_{id(soup)}.json"
-            with open(no_items_file, 'w', encoding='utf-8') as f:
-                json.dump({
-                    'total_elements': len(soup.find_all(True)),
-                    'total_links': len(soup.find_all('a', href=True)),
-                    'has_threadbits': len(soup.select('tbody[id*="threadbits"]')) > 0,
-                    'has_activity_rows': len(soup.select('.ch-activity-simple-row')) > 0
-                }, f, indent=2)
-            logger.info(f"[POST-FIND] Wrote no-items analysis to {no_items_file}")
+            # DISABLED: Debug file writing to reduce memory usage
+            # no_items_file = debug_dir / f"no_post_items_{id(soup)}.json"
+            # with open(no_items_file, 'w', encoding='utf-8') as f:
+            #     json.dump({
+            #         'total_elements': len(soup.find_all(True)),
+            #         'total_links': len(soup.find_all('a', href=True)),
+            #         'has_threadbits': len(soup.select('tbody[id*="threadbits"]')) > 0,
+            #         'has_activity_rows': len(soup.select('.ch-activity-simple-row')) > 0
+            #     }, f, indent=2)
+            # logger.info(f"[POST-FIND] Wrote no-items analysis to {no_items_file}")
+            logger.debug(f"[POST-FIND] No post items found (debug file writing disabled)")
         return unique_items
     
     def _extract_post_links(self, post_items: List, base_url: str) -> List[tuple]:
@@ -1671,12 +1680,15 @@ class SelectorMiner:
             debug_dir = Path("crawl_output/debug")
             debug_dir.mkdir(parents=True, exist_ok=True)
             
+            # DISABLED: Debug file writing to reduce memory usage
             # Write HTML sample to file
+            # safe_url = base_url.replace("https://", "").replace("http://", "").replace("/", "_")[:100]
+            # html_file = debug_dir / f"html_{site_id}_{safe_url}.html"
+            # with open(html_file, 'w', encoding='utf-8') as f:
+            #     f.write(html[:50000])  # First 50k chars
+            # logger.info(f"[POST-MINE] Wrote HTML sample to {html_file}")
             safe_url = base_url.replace("https://", "").replace("http://", "").replace("/", "_")[:100]
-            html_file = debug_dir / f"html_{site_id}_{safe_url}.html"
-            with open(html_file, 'w', encoding='utf-8') as f:
-                f.write(html[:50000])  # First 50k chars
-            logger.info(f"[POST-MINE] Wrote HTML sample to {html_file}")
+            logger.debug(f"[POST-MINE] HTML sample writing disabled (size: {len(html)} chars)")
             
             # Clear strategy metrics for this site to prevent unbounded growth
             site_metrics_keys = [k for k in self._strategy_metrics.keys() if k.startswith(f"{site_id}:")]
@@ -1702,22 +1714,23 @@ class SelectorMiner:
             has_post_classes = len(soup.find_all(True, class_=re.compile(r'post|thread|discussion', re.I))) > 0
             logger.info(f"[POST-MINE] Page indicators: threadbits={has_threadbits}, activity_rows={has_activity_rows}, post_classes={has_post_classes}")
             
+            # DISABLED: Debug file writing to reduce memory usage
             # Write page analysis to file
-            analysis_file = debug_dir / f"analysis_{site_id}_{safe_url}.json"
-            with open(analysis_file, 'w', encoding='utf-8') as f:
-                json.dump({
-                    'url': base_url,
-                    'site_id': site_id,
-                    'page_type': page_type,
-                    'html_size': len(html),
-                    'total_links': len(all_links),
-                    'indicators': {
-                        'threadbits': has_threadbits,
-                        'activity_rows': has_activity_rows,
-                        'post_classes': has_post_classes
-                    }
-                }, f, indent=2)
-            logger.info(f"[POST-MINE] Wrote page analysis to {analysis_file}")
+            # analysis_file = debug_dir / f"analysis_{site_id}_{safe_url}.json"
+            # with open(analysis_file, 'w', encoding='utf-8') as f:
+            #     json.dump({
+            #         'url': base_url,
+            #         'site_id': site_id,
+            #         'page_type': page_type,
+            #         'html_size': len(html),
+            #         'total_links': len(all_links),
+            #         'indicators': {
+            #             'threadbits': has_threadbits,
+            #             'activity_rows': has_activity_rows,
+            #             'post_classes': has_post_classes
+            #         }
+            #     }, f, indent=2)
+            logger.debug(f"[POST-MINE] Page analysis file writing disabled")
 
             if page_type == 'listing':
                 # Phase 1: Find post items with links
@@ -1831,33 +1844,39 @@ class SelectorMiner:
 
             logger.info(f"Found {len(unique_candidates)} unique diabetes-related post candidates from {base_url}")
             
+            # DISABLED: Debug file writing to reduce memory usage
             # Write candidates to file
+            # if unique_candidates:
+            #     candidates_file = debug_dir / f"candidates_{site_id}_{safe_url}.json"
+            #     with open(candidates_file, 'w', encoding='utf-8') as f:
+            #         candidates_data = []
+            #         for candidate in unique_candidates:
+            #             candidates_data.append({
+            #                 'post_url': candidate.post_url,
+            #                 'page_url': candidate.page_url,
+            #                 'title': candidate.title,
+            #                 'content_preview': candidate.content[:200] if candidate.content else None,
+            #                 'author': candidate.author,
+            #                 'date': candidate.date.isoformat() if candidate.date else None,
+            #                 'site_id': candidate.site_id
+            #             })
+            #         json.dump(candidates_data, f, indent=2, default=str)
+            #     logger.info(f"[POST-MINE] Wrote {len(unique_candidates)} candidates to {candidates_file}")
+            # else:
+            #     # Write why no candidates were found
+            #     no_candidates_file = debug_dir / f"no_candidates_{site_id}_{safe_url}.json"
+            #     with open(no_candidates_file, 'w', encoding='utf-8') as f:
+            #         json.dump({
+            #             'url': base_url,
+            #             'site_id': site_id,
+            #             'page_type': page_type,
+            #             'reason': 'No candidates found - check logs for details'
+            #         }, f, indent=2)
             if unique_candidates:
-                candidates_file = debug_dir / f"candidates_{site_id}_{safe_url}.json"
-                with open(candidates_file, 'w', encoding='utf-8') as f:
-                    candidates_data = []
-                    for candidate in unique_candidates:
-                        candidates_data.append({
-                            'post_url': candidate.post_url,
-                            'page_url': candidate.page_url,
-                            'title': candidate.title,
-                            'content_preview': candidate.content[:200] if candidate.content else None,
-                            'author': candidate.author,
-                            'date': candidate.date.isoformat() if candidate.date else None,
-                            'site_id': candidate.site_id
-                        })
-                    json.dump(candidates_data, f, indent=2, default=str)
-                logger.info(f"[POST-MINE] Wrote {len(unique_candidates)} candidates to {candidates_file}")
+                logger.debug(f"[POST-MINE] Found {len(unique_candidates)} candidates (debug file writing disabled)")
             else:
-                # Write why no candidates were found
-                no_candidates_file = debug_dir / f"no_candidates_{site_id}_{safe_url}.json"
-                with open(no_candidates_file, 'w', encoding='utf-8') as f:
-                    json.dump({
-                        'url': base_url,
-                        'site_id': site_id,
-                        'page_type': page_type,
-                        'reason': 'No candidates found - check logs for details'
-                    }, f, indent=2)
+                logger.debug(f"[POST-MINE] No candidates found (debug file writing disabled)")
+                # Removed: logger.info(f"[POST-MINE] Wrote no-candidates info to {no_candidates_file}")
                 logger.info(f"[POST-MINE] Wrote no-candidates info to {no_candidates_file}")
             
             return unique_candidates
@@ -2378,6 +2397,10 @@ class SelectorMiner:
     
     def _extract_from_srcset(self, img_element, base_url: str) -> Optional[str]:
         """Extract best quality image from srcset attribute."""
+        # DEPRECATED: Image extraction disabled for post-focused crawler
+        if not self.config.nc_enable_image_extraction:
+            return None
+        
         srcset = img_element.get('srcset')
         if not srcset:
             return None
@@ -2441,6 +2464,10 @@ class SelectorMiner:
     
     def _extract_background_image(self, img_element, base_url: str) -> Optional[str]:
         """Extract background image URL from style attribute."""
+        # DEPRECATED: Image extraction disabled for post-focused crawler
+        if not self.config.nc_enable_image_extraction:
+            return None
+        
         style = img_element.get('style')
         if not style:
             return None
@@ -3021,6 +3048,10 @@ class SelectorMiner:
 
     def _extract_noscript_images(self, soup: BeautifulSoup, base_url: str, site_id: str) -> List[CandidateImage]:
         """Extract images from noscript blocks."""
+        # DEPRECATED: Image extraction disabled for post-focused crawler
+        if not self.config.nc_enable_image_extraction:
+            return []
+        
         candidates = []
         try:
             noscript_tags = soup.find_all('noscript')
@@ -3038,6 +3069,10 @@ class SelectorMiner:
     
     def _extract_jsonld_images(self, soup: BeautifulSoup, base_url: str, site_id: str) -> List[CandidateImage]:
         """Extract images from JSON-LD structured data."""
+        # DEPRECATED: Image extraction disabled for post-focused crawler
+        if not self.config.nc_enable_image_extraction:
+            return []
+        
         candidates = []
         try:
             import json
@@ -3070,6 +3105,10 @@ class SelectorMiner:
     
     def _extract_script_images(self, soup: BeautifulSoup, base_url: str, site_id: str) -> List[CandidateImage]:
         """Extract images from script blocks (HTML fragments and JSON)."""
+        # DEPRECATED: Image extraction disabled for post-focused crawler
+        if not self.config.nc_enable_image_extraction:
+            return []
+        
         candidates = []
         try:
             script_tags = soup.find_all('script')

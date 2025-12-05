@@ -86,13 +86,17 @@ class DomainConnectionPool:
         self._default_pool: Optional[httpx.AsyncClient] = None
         self._pool_lock = asyncio.Lock()
         
-        # Domain metrics for adaptive behavior
+        # Domain metrics for adaptive behavior (LRU with max 50 domains)
         self._domain_metrics: Dict[str, Dict[str, Any]] = {}  # domain -> metrics
+        self._domain_metrics_access_order: deque = deque(maxlen=50)  # Track access order for LRU
         self._metrics_lock = asyncio.Lock()
+        self._max_domain_metrics = 50
         
-        # Circuit breaker state per domain
+        # Circuit breaker state per domain (LRU with max 50 domains)
         self._circuit_breakers: Dict[str, Dict[str, Any]] = {}  # domain -> {'state': 'open'|'half_open'|'closed', 'failures': int, 'open_until': float}
+        self._circuit_breakers_access_order: deque = deque(maxlen=50)  # Track access order for LRU
         self._circuit_lock = asyncio.Lock()
+        self._max_circuit_breakers = 50
         
         # Base connection limits
         self._base_max_connections = config.nc_extractor_concurrency + 150
@@ -107,6 +111,19 @@ class DomainConnectionPool:
     async def _get_domain_pool(self, domain: str) -> httpx.AsyncClient:
         """Get or create connection pool for domain."""
         async with self._pool_lock:
+            # Limit max pools to prevent unbounded growth (max 20 active domains)
+            max_pools = 20
+            if domain not in self._pools and len(self._pools) >= max_pools:
+                # Remove oldest pool (simple FIFO - first domain in dict)
+                if self._pools:
+                    oldest_domain = next(iter(self._pools))
+                    try:
+                        await self._pools[oldest_domain].aclose()
+                    except Exception as e:
+                        logger.debug(f"Error closing old pool for {oldest_domain}: {e}")
+                    del self._pools[oldest_domain]
+                    logger.debug(f"Removed old connection pool for {oldest_domain} (limit: {max_pools})")
+            
             if domain not in self._pools:
                 # Calculate adaptive connection limits based on domain performance
                 max_connections = await self._calculate_connection_limit(domain)
@@ -166,13 +183,28 @@ class DomainConnectionPool:
         """Record request metrics for adaptive behavior."""
         domain = self._extract_domain(url)
         async with self._metrics_lock:
+            # LRU eviction: remove oldest if at limit
+            if domain not in self._domain_metrics and len(self._domain_metrics) >= self._max_domain_metrics:
+                # Remove least recently used (oldest in access order)
+                if self._domain_metrics_access_order:
+                    oldest_domain = self._domain_metrics_access_order[0]
+                    del self._domain_metrics[oldest_domain]
+                    self._domain_metrics_access_order.popleft()
+            
             if domain not in self._domain_metrics:
                 self._domain_metrics[domain] = {
                     'response_times': deque(maxlen=100),  # Keep last 100 response times
                     'success_count': 0,
                     'failure_count': 0,
-                    'total_requests': 0
+                    'total_requests': 0,
+                    'last_access': time.time()
                 }
+            
+            # Update access order (move to end if exists, append if new)
+            if domain in self._domain_metrics_access_order:
+                self._domain_metrics_access_order.remove(domain)
+            self._domain_metrics_access_order.append(domain)
+            self._domain_metrics[domain]['last_access'] = time.time()
             
             metrics = self._domain_metrics[domain]
             metrics['response_times'].append(response_time)
@@ -198,12 +230,27 @@ class DomainConnectionPool:
     async def _update_circuit_breaker(self, domain: str, failure_rate: float):
         """Update circuit breaker state based on failure rate."""
         async with self._circuit_lock:
+            # LRU eviction: remove oldest if at limit
+            if domain not in self._circuit_breakers and len(self._circuit_breakers) >= self._max_circuit_breakers:
+                # Remove least recently used (oldest in access order)
+                if self._circuit_breakers_access_order:
+                    oldest_domain = self._circuit_breakers_access_order[0]
+                    del self._circuit_breakers[oldest_domain]
+                    self._circuit_breakers_access_order.popleft()
+            
             if domain not in self._circuit_breakers:
                 self._circuit_breakers[domain] = {
                     'state': 'closed',
                     'failures': 0,
-                    'open_until': 0.0
+                    'open_until': 0.0,
+                    'last_access': time.time()
                 }
+            
+            # Update access order (move to end if exists, append if new)
+            if domain in self._circuit_breakers_access_order:
+                self._circuit_breakers_access_order.remove(domain)
+            self._circuit_breakers_access_order.append(domain)
+            self._circuit_breakers[domain]['last_access'] = time.time()
             
             cb = self._circuit_breakers[domain]
             failure_threshold = getattr(self.config, 'nc_circuit_breaker_failure_threshold', 5)
@@ -242,6 +289,14 @@ class DomainConnectionPool:
         async with self._circuit_lock:
             if domain not in self._circuit_breakers:
                 return False
+            
+            # Update access order for LRU
+            if domain in self._circuit_breakers_access_order:
+                self._circuit_breakers_access_order.remove(domain)
+            self._circuit_breakers_access_order.append(domain)
+            if 'last_access' in self._circuit_breakers[domain]:
+                self._circuit_breakers[domain]['last_access'] = time.time()
+            
             cb = self._circuit_breakers[domain]
             if cb['state'] == 'open' and time.time() < cb['open_until']:
                 return True
@@ -262,6 +317,14 @@ class DomainConnectionPool:
                 except Exception:
                     pass
                 self._default_pool = None
+        
+        # Clear metrics and circuit breakers
+        async with self._metrics_lock:
+            self._domain_metrics.clear()
+            self._domain_metrics_access_order.clear()
+        async with self._circuit_lock:
+            self._circuit_breakers.clear()
+            self._circuit_breakers_access_order.clear()
 
 
 class HTTPUtils:
@@ -286,9 +349,12 @@ class HTTPUtils:
         ]
         
         # HTML caching for JavaScript renders
+        # JS cache with LRU eviction (reduced from 1000 to 200 entries)
         self._js_cache: Dict[str, Tuple[float, str, List[str]]] = {}  # url -> (timestamp, html, network_images)
+        self._js_cache_access_order: deque = deque(maxlen=200)  # Track access order for LRU
         self._js_cache_ttl: float = 300.0  # 5 minutes cache TTL
         self._js_cache_lock = asyncio.Lock()  # Thread-safe cache access
+        self._max_js_cache_size = 200
     
     def _get_domain_pool(self) -> DomainConnectionPool:
         """Get or create domain connection pool manager."""
@@ -610,6 +676,10 @@ class HTTPUtils:
                 if url in self._js_cache:
                     cached_time, cached_html, cached_network = self._js_cache[url]
                     if time.time() - cached_time < self._js_cache_ttl:
+                        # Update access order for LRU (move to end)
+                        if url in self._js_cache_access_order:
+                            self._js_cache_access_order.remove(url)
+                        self._js_cache_access_order.append(url)
                         cache_check_time = (time.time() - cache_check_start) * 1000
                         logger.debug(f"[JS-FETCH] Cache hit: {url}, cache_check={cache_check_time:.1f}ms")
                         return cached_html, "CACHED"
@@ -641,13 +711,19 @@ class HTTPUtils:
             cache_store_start = time.time()
             if html:
                 async with self._js_cache_lock:
+                    # LRU eviction: remove oldest if at limit
+                    if url not in self._js_cache and len(self._js_cache) >= self._max_js_cache_size:
+                        # Remove least recently used (oldest in access order)
+                        if self._js_cache_access_order:
+                            oldest_url = self._js_cache_access_order[0]
+                            del self._js_cache[oldest_url]
+                            self._js_cache_access_order.popleft()
+                    
                     self._js_cache[url] = (time.time(), html, network_images)
-                    # Clean old entries if cache gets too large (keep last 1000)
-                    if len(self._js_cache) > 1000:
-                        # Remove oldest 20% of entries
-                        sorted_items = sorted(self._js_cache.items(), key=lambda x: x[1][0])
-                        for key, _ in sorted_items[:200]:
-                            del self._js_cache[key]
+                    # Update access order (move to end if exists, append if new)
+                    if url in self._js_cache_access_order:
+                        self._js_cache_access_order.remove(url)
+                    self._js_cache_access_order.append(url)
             cache_store_time = (time.time() - cache_store_start) * 1000
             
             total_time = (time.time() - js_fetch_start) * 1000
@@ -816,14 +892,14 @@ class HTTPUtils:
                 if not any(img_type in content_type for img_type in ['image/', 'jpeg', 'jpg', 'png', 'gif', 'webp']):
                     return None, {'error': f'Not an image: {content_type}'}
                 
-                # Check file size
-                content_length = len(response.content)
+                # Check content length from headers (avoid loading into memory)
+                content_length = int(response.headers.get('content-length', 0))
                 if content_length > 10 * 1024 * 1024:  # 10MB limit
                     return None, {'error': f'File too large: {content_length / (1024*1024):.1f}MB'}
                 
-                # Create temporary file (async, non-blocking)
-                def write_temp_file(content, directory):
-                    """Write content to temporary file (runs in thread pool)."""
+                # Stream response directly to file to avoid loading entire file into memory
+                def write_temp_file_streamed(response_stream, directory):
+                    """Stream response to temporary file (runs in thread pool)."""
                     if directory:
                         os.makedirs(directory, exist_ok=True)
                     
@@ -832,11 +908,23 @@ class HTTPUtils:
                         suffix='.jpg',
                         delete=False
                     ) as temp_file:
-                        temp_file.write(content)
-                        return temp_file.name
+                        total_bytes = 0
+                        max_size = 10 * 1024 * 1024  # 10MB limit
+                        for chunk in response_stream:
+                            total_bytes += len(chunk)
+                            if total_bytes > max_size:
+                                os.unlink(temp_file.name)  # Delete partial file
+                                raise ValueError(f'File too large: {total_bytes / (1024*1024):.1f}MB')
+                            temp_file.write(chunk)
+                        return temp_file.name, total_bytes
                 
-                # Write file in thread pool to avoid blocking event loop
-                temp_path = await asyncio.to_thread(write_temp_file, response.content, temp_dir)
+                # Stream file in thread pool to avoid blocking event loop and memory issues
+                temp_path, actual_length = await asyncio.to_thread(
+                    write_temp_file_streamed, 
+                    response.iter_bytes(chunk_size=8192),  # Stream in 8KB chunks
+                    temp_dir
+                )
+                content_length = actual_length  # Use actual length from streaming
                 
                 info = {
                     'content_type': content_type,
@@ -895,6 +983,11 @@ class HTTPUtils:
             if self._browser_pool:
                 await self._browser_pool.__aexit__(None, None, None)
                 self._browser_pool = None
+            
+            # Clear JS cache
+            async with self._js_cache_lock:
+                self._js_cache.clear()
+                self._js_cache_access_order.clear()
             
             logger.info("HTTP client and browser pool closed")
         except Exception as e:

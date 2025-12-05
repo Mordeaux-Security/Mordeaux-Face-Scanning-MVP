@@ -31,25 +31,29 @@ class TimingLogger:
             return
         
         self._file_lock = threading.Lock()
-        self._timing_file = "timings04.txt"
+        self._timing_file = "timings.txt"
         self._initialized = True
         
+        # DISABLED: Debug file writing to reduce memory usage
         # Ensure timing file exists and is empty
-        with self._file_lock:
-            with open(self._timing_file, 'w') as f:
-                f.write("")  # Clear file
+        # with self._file_lock:
+        #     with open(self._timing_file, 'w') as f:
+        #         f.write("")  # Clear file
+        pass
     
     def _log(self, event_type: str, *args):
         """Internal method to write timing log entry."""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        args_str = " | ".join(str(arg) for arg in args) if args else ""
-        log_line = f"[{timestamp}] {event_type}"
-        if args_str:
-            log_line += f" | {args_str}"
-        
-        with self._file_lock:
-            with open(self._timing_file, 'a') as f:
-                f.write(log_line + "\n")
+        # DISABLED: Debug file writing to reduce memory usage
+        # timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        # args_str = " | ".join(str(arg) for arg in args) if args else ""
+        # log_line = f"[{timestamp}] {event_type}"
+        # if args_str:
+        #     log_line += f" | {args_str}"
+        # 
+        # with self._file_lock:
+        #     with open(self._timing_file, 'a') as f:
+        #         f.write(log_line + "\n")
+        pass
     
     def log_system_start(self):
         """Log application launch."""

@@ -756,13 +756,16 @@ class GPUProcessorWorker:
                 # Crop the face
                 face_crop = img.crop((x1, y1, x2, y2))
                 
-                # Convert to bytes with higher quality
-                output = io.BytesIO()
-                face_crop.save(output, format='JPEG', quality=95)
-                crop_size = len(output.getvalue())
+                # Convert to bytes with higher quality - use context manager to prevent memory leaks
+                with io.BytesIO() as output:
+                    face_crop.save(output, format='JPEG', quality=95)
+                    crop_bytes = output.getvalue()
+                    crop_size = len(crop_bytes)
+                # Explicitly delete face_crop to free memory immediately
+                del face_crop
                 logger.debug(f"[GPU Processor {self.worker_id}] DIAG: Successfully cropped face {face_index}: "
                            f"size={final_size}, crop_bytes={crop_size}, bbox={original_bbox}")
-                return output.getvalue(), None
+                return crop_bytes, None
                 
         except Exception as e:
             logger.warning(f"[GPU Processor {self.worker_id}] DIAG: Exception cropping face {face_index} from "
