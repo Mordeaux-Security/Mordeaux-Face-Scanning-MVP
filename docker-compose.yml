@@ -1,6 +1,19 @@
-version: "3.9"
-
 services:
+  frontend-dev:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "cd /app && npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    networks: [mordeaux]
+    environment:
+      - VITE_API_BASE=/api
+      - VITE_DEV_API_PROXY=http://api:8000
+      - VITE_DEV_PIPELINE_PROXY=http://face-pipeline:8001
+
   nginx:
     image: nginx:1.25-alpine
     depends_on:
@@ -22,26 +35,43 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        ENABLE_GPU: 0
     environment:
       PIPELINE_URL: http://face-pipeline:8001
       REDIS_URL: redis://redis:6379/0
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_SECURE: "false"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mordeaux123}
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_USE_SSL: "false"
       QDRANT_URL: http://qdrant:6333
       QDRANT_API_KEY: ""
-    expose: ["8000"]
+      # GPU Worker Configuration
+      GPU_WORKER_ENABLED: ${GPU_WORKER_ENABLED:-true}
+      GPU_WORKER_URL: ${GPU_WORKER_URL:-http://host.docker.internal:8765}
+      GPU_WORKER_TIMEOUT: ${GPU_WORKER_TIMEOUT:-60}
+      GPU_WORKER_MAX_RETRIES: ${GPU_WORKER_MAX_RETRIES:-5}
+      GPU_WORKER_BATCH_SIZE: ${GPU_WORKER_BATCH_SIZE:-32}
+      GPU_WORKER_HEALTH_CHECK_INTERVAL: ${GPU_WORKER_HEALTH_CHECK_INTERVAL:-10}
+    ports:
+      - "8000:8000"
     networks: [mordeaux]
     depends_on:
-      - redis
-      - minio
-      - qdrant
+      redis:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    command: ["/bin/sh", "-c", "python -m app.prestart && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8000/healthz"]
       interval: 10s
       timeout: 3s
       retries: 10
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   face-pipeline:
     build:
@@ -54,6 +84,7 @@ services:
       REDIS_CONSUMER_NAME: pipe-1
       ENABLE_QUEUE_WORKER: "true"
       MINIO_ENDPOINT: minio:9000
+      MINIO_EXTERNAL_ENDPOINT: localhost:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_SECURE: "false"
@@ -66,7 +97,10 @@ services:
       VERIFY_TOP_K: "50"
       VERIFY_HNSW_EF: "128"
       LOG_LEVEL: INFO
-    expose: ["8001"]
+    volumes:
+      - insightface-models:/root/.insightface  # Persist InsightFace models across rebuilds
+    ports:
+      - "8001:8001"
     networks: [mordeaux]
     depends_on:
       - redis
@@ -92,14 +126,15 @@ services:
     volumes:
       - minio-data:/data
     ports:
+      - "9000:9000"
       - "9001:9001"
-    expose: ["9000"]
     networks: [mordeaux]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "mc alias set myminio http://localhost:9000 minioadmin minioadmin >/dev/null 2>&1 && mc ready myminio"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 5s
 
   qdrant:
     image: qdrant/qdrant:v1.12.4
@@ -109,20 +144,48 @@ services:
       - qdrant-data:/qdrant/storage
     networks: [mordeaux]
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:6333/readyz"]
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/localhost/6333' || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 20
+      start_period: 10s
 
-  frontend-dev:
-    image: python:3.11-alpine
-    working_dir: /app
-    command: python -m http.server 3000
+  new-crawler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        ENABLE_GPU: 0
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_USE_SSL: "false"
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ""
+      # GPU Worker Configuration
+      GPU_WORKER_ENABLED: ${GPU_WORKER_ENABLED:-true}
+      GPU_WORKER_URL: ${GPU_WORKER_URL:-http://host.docker.internal:8765}
+      GPU_WORKER_TIMEOUT: ${GPU_WORKER_TIMEOUT:-60}
+      GPU_WORKER_MAX_RETRIES: ${GPU_WORKER_MAX_RETRIES:-5}
+      GPU_WORKER_BATCH_SIZE: ${GPU_WORKER_BATCH_SIZE:-32}
+      GPU_WORKER_HEALTH_CHECK_INTERVAL: ${GPU_WORKER_HEALTH_CHECK_INTERVAL:-10}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+      - minio
+      - qdrant
     volumes:
-      - ./frontend:/app:ro
-    ports:
-      - "3000:3000"
+      - ./backend:/app
+      - ./backend/sites.txt:/app/sites.txt:ro
+      - ./crawl_output:/app/crawl_output
     networks: [mordeaux]
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    command: ["/bin/sh", "-c", "cd /app && PYTHONPATH=/app python -m new_crawler.main --sites-file sites.txt"]
 
 networks:
   mordeaux: {}
@@ -130,3 +193,4 @@ networks:
 volumes:
   minio-data: {}
   qdrant-data: {}
+  insightface-models: {}  # Persist InsightFace models

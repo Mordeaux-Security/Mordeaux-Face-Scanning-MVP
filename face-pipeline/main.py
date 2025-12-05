@@ -1,12 +1,15 @@
 import os
 import logging
 from typing import List, Optional, Dict, Any
+from urllib.parse import urlparse
 import hashlib
 import uuid
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, UploadFile, File, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import numpy as np
+import base64
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import (
@@ -21,12 +24,23 @@ from face_quality import (
     SEARCH_QUALITY,
 )
 from pipeline.face_helpers import embed_one_b64_strict
+from config.settings import settings
 
 setup_logging()
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="face-pipeline")
+
+# Add CORS middleware to allow frontend access
+cors_origins = os.getenv("CORS_ORIGINS", "*").split(",") if os.getenv("CORS_ORIGINS", "*") != "*" else ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ----- Config -----
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
@@ -48,7 +62,7 @@ class SearchReq(BaseModel):
     vector: Optional[List[float]] = None
     image_b64: Optional[str] = None
     top_k: int = Field(default=50, ge=1, le=200)
-    threshold: float = Field(default=0.70, ge=0.0, le=1.0)
+    threshold: float = Field(default=0.10, ge=0.0, le=1.0)  # Lowered to 0.10 - typical similar faces score 0.16-0.22
     mode: str = Field(default="standard")
 
 class EnrollReq(BaseModel):
@@ -256,7 +270,7 @@ def _search_faces_for_identity(
         query_filter=_tenant_identity_quality_filter(tenant_id, identity_id),  # Filters by tenant_id, identity_id, and quality_is_usable == True
         with_payload=True,  # Same as /search
         with_vectors=False,  # Same as /search
-        search_params=SearchParams(hnsw_ef=128, exact=False),  # Exact same params as /search
+        search_params=SearchParams(exact=True),  # Exact search for maximum accuracy
     )
     return hits
 
@@ -270,6 +284,7 @@ def search(req: SearchReq):
     Picks the best usable face when multiple faces are detected.
     """
     qc = _qc()
+    processing_details = None  # Will be populated for image searches
     
     if req.vector is not None:
         query_vec = np.asarray(req.vector, dtype=np.float32)
@@ -279,11 +294,122 @@ def search(req: SearchReq):
     
     elif req.image_b64 is not None:
         # Allow multiple faces but pick best usable
-        query_vec, fwq = embed_one_b64_strict(
-            req.image_b64,
-            require_single_face=False,
-            quality_cfg=SEARCH_QUALITY,
-        )
+        # First, analyze all faces to get complete processing details
+        from pipeline.face_helpers import analyze_faces_with_quality
+        
+        processing_details = {
+            "num_faces_detected": 0,
+            "num_usable_faces": 0,
+            "selected_face_index": None,
+            "all_faces": [],
+            "quality_config": {
+                "min_size": SEARCH_QUALITY.min_size,
+                "min_blur_var": SEARCH_QUALITY.min_blur_var,
+                "max_yaw_deg": SEARCH_QUALITY.max_yaw_deg,
+                "max_pitch_deg": SEARCH_QUALITY.max_pitch_deg,
+                "min_score": SEARCH_QUALITY.min_score,
+            },
+            "detection_threshold": settings.DET_SCORE_THRESH,
+        }
+        
+        try:
+            # Get all faces with quality evaluation
+            try:
+                img, all_faces_with_quality = analyze_faces_with_quality(
+                    req.image_b64,
+                    quality_cfg=SEARCH_QUALITY,
+                )
+            except ValueError as ve:
+                # Image decode failed
+                processing_details["error"] = f"Image decode failed: {str(ve)}"
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"error": "invalid_image", "message": str(ve), "processing_details": processing_details}
+                )
+            
+            # Add image info
+            if img is not None:
+                processing_details["image"] = {
+                    "height": int(img.shape[0]),
+                    "width": int(img.shape[1]),
+                    "channels": int(img.shape[2]) if len(img.shape) > 2 else 1,
+                }
+            
+            processing_details["num_faces_detected"] = len(all_faces_with_quality)
+            
+            # Collect detailed info for each face
+            for idx, fwq in enumerate(all_faces_with_quality):
+                face = fwq.face
+                quality = fwq.quality
+                
+                # Get detection score
+                det_score = float(getattr(face, "det_score", 0.0))
+                
+                # Get bounding box
+                bbox = face.bbox.tolist() if hasattr(face, "bbox") and face.bbox is not None else []
+                
+                # Check if embedding is available
+                has_embedding = hasattr(face, 'embedding') and face.embedding is not None
+                has_normed_embedding = hasattr(face, 'normed_embedding') and face.normed_embedding is not None
+                
+                face_info = {
+                    "index": idx,
+                    "detection_score": det_score,
+                    "bbox": bbox,
+                    "quality": {
+                        "is_usable": quality.is_usable,
+                        "score": float(quality.score),
+                        "reasons": quality.reasons,
+                        "blur_var": float(quality.blur_var),
+                        "yaw_deg": float(quality.yaw_deg),
+                        "pitch_deg": float(quality.pitch_deg),
+                        "roll_deg": float(quality.roll_deg),
+                    },
+                    "embedding_available": has_embedding,
+                    "normed_embedding_available": has_normed_embedding,
+                }
+                
+                processing_details["all_faces"].append(face_info)
+            
+            # Count usable faces
+            usable_faces = [fwq for fwq in all_faces_with_quality if fwq.quality.is_usable]
+            processing_details["num_usable_faces"] = len(usable_faces)
+            
+            # Now get the embedding using the strict function
+            query_vec, selected_fwq = embed_one_b64_strict(
+                req.image_b64,
+                require_single_face=False,
+                quality_cfg=SEARCH_QUALITY,
+            )
+            
+            # Find which face was selected
+            selected_face = selected_fwq.face
+            for idx, fwq in enumerate(all_faces_with_quality):
+                if fwq.face is selected_face:
+                    processing_details["selected_face_index"] = idx
+                    break
+            
+            # Add embedding info
+            emb_norm = np.linalg.norm(query_vec)
+            processing_details["embedding"] = {
+                "norm": float(emb_norm),
+                "dimension": len(query_vec),
+                "source": "precomputed" if hasattr(selected_face, 'embedding') and selected_face.embedding is not None else "computed",
+            }
+            
+            logger.info(f"Search: Generated embedding, quality_usable={selected_fwq.quality.is_usable}, quality_score={selected_fwq.quality.score:.4f}, norm={emb_norm:.6f}")
+        except HTTPException as e:
+            # Include processing details in error response if available
+            error_detail = e.detail
+            if isinstance(error_detail, dict):
+                error_detail["processing_details"] = processing_details
+            else:
+                error_detail = {"error": str(error_detail), "processing_details": processing_details}
+            logger.error(f"Search: Failed to generate embedding: {error_detail}")
+            raise HTTPException(status_code=e.status_code, detail=error_detail)
+        except Exception as e:
+            logger.error(f"Search: Unexpected error generating embedding: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail={"error": "embedding_generation_failed", "message": str(e), "processing_details": processing_details})
     
     else:
         raise HTTPException(
@@ -291,7 +417,9 @@ def search(req: SearchReq):
             detail={"error": "missing_vector_or_image"},
         )
 
-    # ... existing Qdrant search logic here (unchanged)
+    # Use exact search for maximum accuracy (trades speed for precision)
+    # Exact search ensures accurate cosine similarity scores, especially important
+    # for same-person matches where we expect high similarity (0.75-0.95+)
     hits = qc.search(
         collection_name=FACES_COLLECTION,
         query_vector=query_vec.tolist(),
@@ -300,14 +428,185 @@ def search(req: SearchReq):
         query_filter=_tenant_filter(req.tenant_id),
         with_payload=True,
         with_vectors=False,
-        search_params=SearchParams(hnsw_ef=128, exact=False),
+        search_params=SearchParams(exact=True),  # Exact cosine similarity for maximum accuracy
     )
-    out = [{"id": str(h.id), "score": float(h.score), "payload": h.payload or {}} for h in hits]
-    return {
+    
+    # Generate URLs for thumbnails/crops/original images
+    from pipeline.storage import presign
+    
+    def extract_site_from_payload(payload: dict) -> str:
+        """Extract site/domain information from payload metadata."""
+        # Try site_id first
+        site_id = payload.get("site_id")
+        if site_id:
+            return str(site_id)
+        
+        # Try site field (legacy)
+        site = payload.get("site")
+        if site:
+            return str(site)
+        
+        # Extract domain from source_url or page_url
+        for url_field in ["source_url", "page_url", "url"]:
+            url = payload.get(url_field, "")
+            if url and isinstance(url, str):
+                try:
+                    parsed = urlparse(url)
+                    domain = parsed.netloc or parsed.path.split('/')[0]
+                    if domain and '.' in domain:
+                        # Remove www. prefix if present
+                        domain = domain.replace('www.', '')
+                        return domain
+                except Exception:
+                    continue
+        
+        return "unknown"
+    
+    out = []
+    for h in hits:
+        payload = h.payload or {}
+        
+        # Extract site information for display
+        site = extract_site_from_payload(payload)
+        
+        result = {
+            "id": str(h.id),
+            "face_id": str(h.id),  # For compatibility
+            "score": float(h.score),
+            "similarity_pct": round(float(h.score) * 100, 1),
+            "payload": {
+                **payload,
+                "site": site,  # Add normalized site field for frontend
+            },
+        }
+        
+        # Try to get thumbnail URL (use correct bucket: thumbnails)
+        thumb_key = payload.get("thumb_key")
+        if thumb_key:
+            try:
+                result["thumb_url"] = presign(settings.MINIO_BUCKET_THUMBS, thumb_key)
+            except Exception as e:
+                logger.debug(f"Failed to presign thumbnail {thumb_key}: {e}")
+                result["thumb_url"] = None
+        else:
+            result["thumb_url"] = None
+        
+        # Try to get crop URL (use correct bucket: face-crops)
+        crop_key = payload.get("crop_key")
+        if crop_key:
+            try:
+                result["crop_url"] = presign(settings.MINIO_BUCKET_CROPS, crop_key)
+            except Exception as e:
+                logger.debug(f"Failed to presign crop {crop_key}: {e}")
+                result["crop_url"] = None
+        else:
+            result["crop_url"] = None
+        
+        # Try to get raw image URL from raw_key or url
+        raw_key = payload.get("raw_key")
+        if raw_key:
+            try:
+                result["image_url"] = presign(settings.MINIO_BUCKET_RAW, raw_key)
+            except Exception as e:
+                logger.debug(f"Failed to presign raw image {raw_key}: {e}")
+        
+        # Fallback: try original URL if image_url not set
+        if not result.get("image_url"):
+            original_url = payload.get("url", "") or payload.get("source_url", "")
+            if original_url and isinstance(original_url, str):
+                if original_url.startswith("s3://"):
+                    # Parse s3://bucket/key format
+                    parts = original_url[5:].split("/", 1)
+                    if len(parts) == 2:
+                        bucket, key = parts
+                        try:
+                            result["image_url"] = presign(bucket, key)
+                        except Exception as e:
+                            logger.debug(f"Failed to presign s3 URL {original_url}: {e}")
+                elif original_url.startswith(("http://", "https://")):
+                    # External URL, use directly
+                    result["image_url"] = original_url
+        
+        # Set image_url to thumb_url or crop_url if no raw image available
+        if not result.get("image_url"):
+            result["image_url"] = result.get("thumb_url") or result.get("crop_url")
+        
+        out.append(result)
+    
+    response_data = {
         "query": {"tenant_id": req.tenant_id, "search_mode": "image" if req.image_b64 else "vector",
                   "mode": req.mode, "top_k": req.top_k, "threshold": req.threshold},
-        "hits": out, "count": len(out)
+        "hits": out, 
+        "count": len(out)
     }
+    
+    # Add processing details for image-based searches
+    if processing_details is not None:
+        response_data["processing_details"] = processing_details
+    
+    return response_data
+
+# ----- Public: search by file upload -----
+@app.post("/api/v1/search/file")
+async def search_by_file(
+    file: UploadFile = File(...),
+    tenant_id: str = Query(..., description="Tenant ID for multi-tenant filtering"),
+    top_k: int = Query(default=10, ge=1, le=100, description="Maximum number of results to return"),
+    threshold: float = Query(default=0.10, ge=0.0, le=1.0, description="Minimum similarity score threshold")
+):
+    """
+    Search for similar faces by uploading an image file.
+    
+    This endpoint accepts multipart/form-data file uploads and converts them
+    to base64 for processing by the main search endpoint.
+    """
+    try:
+        # Validate file type
+        if file.content_type and not file.content_type.startswith('image/'):
+            raise HTTPException(
+                status_code=422, 
+                detail={"error": "invalid_file_type", "message": f"Expected image file, got {file.content_type}"}
+            )
+        
+        # Read file bytes
+        file_bytes = await file.read()
+        logger.info(f"File search: Received file '{file.filename}', size={len(file_bytes)} bytes, content_type={file.content_type}")
+        
+        if len(file_bytes) == 0:
+            raise HTTPException(status_code=422, detail={"error": "empty_file", "message": "Uploaded file is empty"})
+        
+        # Basic image format validation (check magic bytes)
+        valid_image_signatures = [
+            b'\xFF\xD8\xFF',  # JPEG
+            b'\x89PNG\r\n\x1a\n',  # PNG
+            b'GIF87a',  # GIF
+            b'GIF89a',  # GIF
+        ]
+        is_valid_image = any(file_bytes.startswith(sig) for sig in valid_image_signatures)
+        if not is_valid_image:
+            logger.warning(f"File search: File doesn't appear to be a valid image (magic bytes: {file_bytes[:10]})")
+            # Don't fail here - let face detection handle it
+        
+        # Convert to base64
+        image_b64 = base64.b64encode(file_bytes).decode('utf-8')
+        logger.info(f"File search: Converted to base64, length={len(image_b64)} chars")
+        
+        # Create SearchReq and call main search function
+        req = SearchReq(
+            tenant_id=tenant_id,
+            image_b64=image_b64,
+            top_k=top_k,
+            threshold=threshold
+        )
+        
+        return search(req)
+        
+    except HTTPException:
+        # Re-raise HTTPException to preserve status code and detail
+        raise
+    except Exception as e:
+        logger.error(f"Error in file search: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail={"error": "file_search_failed", "message": str(e)})
 
 # ----- Public: enroll identity -----
 @app.post("/api/v1/enroll_identity")
@@ -332,14 +631,15 @@ def enroll_identity(req: EnrollReq):
         except HTTPException as e:
             failed[idx] = e.detail
 
-    # Require at least 3 good enrollment images (tunable)
-    if len(embeddings) < 3:
+    # Require at least 2 good enrollment images (lowered from 3 for better UX)
+    # 3-5 images recommended for best results, but 2 is acceptable
+    if len(embeddings) < 2:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
                 "error": "not_enough_high_quality_images",
                 "num_valid": len(embeddings),
-                "min_required": 3,
+                "min_required": 2,
                 "failed_images": failed,
             },
         )
@@ -448,7 +748,7 @@ def verify(req: VerifyReq):
         query_filter=_tenant_identity_filter(req.tenant_id, req.identity_id),
         with_payload=True,
         with_vectors=False,
-        search_params=SearchParams(hnsw_ef=128, exact=False),
+        search_params=SearchParams(exact=True),  # Exact search for maximum accuracy
     )
     faces = [{"id": str(h.id), "score": float(h.score), "payload": h.payload or {}} for h in hits]
 

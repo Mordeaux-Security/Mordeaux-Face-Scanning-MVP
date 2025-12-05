@@ -10,7 +10,8 @@ import numpy as np
 from fastapi import HTTPException, status
 
 from pipeline.image_utils import decode_image_b64
-from pipeline.detector import detect_faces_raw
+from pipeline.detector import detect_faces_raw, align_and_crop
+from pipeline.embedder import embed
 import sys
 from pathlib import Path
 
@@ -114,13 +115,28 @@ def embed_one_b64_strict(
     if not usable_faces:
         # No usable faces -> return a clean error with reasons from all faces
         all_reasons = []
+        quality_details = []
         for fwq in faces_with_quality:
             if fwq.quality.reasons:
                 all_reasons.extend(fwq.quality.reasons)
+            quality_details.append({
+                "is_usable": fwq.quality.is_usable,
+                "score": fwq.quality.score,
+                "reasons": fwq.quality.reasons,
+                "blur_var": fwq.quality.blur_var,
+                "yaw": fwq.quality.yaw_deg,
+                "pitch": fwq.quality.pitch_deg,
+            })
         detail = {
             "error": "no_usable_faces",
             "reasons": list(set(all_reasons)) if all_reasons else ["no_faces_detected"],
+            "num_faces_detected": len(faces_with_quality),
+            "quality_details": quality_details,
         }
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Search: No usable faces found. Detected {len(faces_with_quality)} faces. Reasons: {all_reasons}")
+        logger.warning(f"Search: Quality details: {quality_details}")
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
 
     if require_single_face:
@@ -138,25 +154,38 @@ def embed_one_b64_strict(
 
     face = fwq.face
 
-    # Embed
-    emb = getattr(face, "normed_embedding", None)
-    if emb is None:
-        raw_emb = getattr(face, "embedding", None)
-        if raw_emb is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail={"error": "recognition_model_not_loaded"},
-            )
-        raw_emb = np.array(raw_emb, dtype=np.float32)
-        norm = np.linalg.norm(raw_emb)
-        if norm == 0:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={"error": "zero_norm_embedding"},
-            )
-        emb = raw_emb / norm
-    else:
-        emb = np.array(emb, dtype=np.float32)
+    # CRITICAL: Use InsightFace's pre-computed embedding directly
+    # This ensures search queries produce embeddings IDENTICAL to those stored by:
+    # 1. GPU worker/crawler (uses face_app.get() -> face.embedding)
+    # 2. Face pipeline processor (now also uses face.embedding)
+    # 
+    # Previously, we re-aligned and re-embedded which could produce slightly
+    # different vectors due to alignment/preprocessing differences.
+    try:
+        # Prefer embedding from InsightFace's app.get() (already computed in detect_faces_raw)
+        if hasattr(face, 'embedding') and face.embedding is not None:
+            emb = face.embedding.astype(np.float32)
+        elif hasattr(face, 'normed_embedding') and face.normed_embedding is not None:
+            emb = face.normed_embedding.astype(np.float32)
+        else:
+            # Fallback: compute embedding manually (should rarely happen)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("No pre-computed embedding found, computing manually (may cause mismatch)")
+            landmarks = [[float(x), float(y)] for x, y in face.kps]
+            crop_bgr = align_and_crop(img, landmarks)
+            emb = embed(crop_bgr)
+        
+        # Ensure L2 normalization for cosine similarity
+        emb_norm = np.linalg.norm(emb)
+        if emb_norm > 1e-6 and abs(emb_norm - 1.0) > 0.01:
+            emb = emb / emb_norm
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "embedding_failed", "message": str(e)},
+        )
 
     return emb.astype(np.float32), fwq
 

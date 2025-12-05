@@ -19,8 +19,8 @@ from typing import List, Optional
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from tools.selector_miner import mine_page, emit_recipe_yaml_block, Limits, ATTR_PRIORITY, MAX_IMAGE_BYTES
-from tools.redirect_utils import create_safe_client, fetch_html_with_redirects
+from backend.app.services.selector_mining import SelectorMiningService, emit_recipe_yaml_block, Limits, ATTR_PRIORITY, MAX_IMAGE_BYTES
+from backend.app.services.http_service import create_safe_client, fetch_html_with_redirects
 import httpx
 
 
@@ -118,18 +118,17 @@ async def mine_selectors_for_domain(domain: str, urls: List[str], verbose: bool 
         logging.error("Failed to fetch HTML content from any URL")
         return None
     
-    # Use the new mine_page function
+    # Use the new SelectorMiningService
     try:
-        # Create limits and client
+        # Create limits and mining service
         limits = Limits(max_candidates=10, max_samples_per_candidate=3, max_bytes=max_bytes or MAX_IMAGE_BYTES)
         
-        # Use the new mine_page function
-        async with httpx.AsyncClient() as client:
-            result = await mine_page(
+        # Use the new SelectorMiningService
+        async with SelectorMiningService() as mining_service:
+            result = await mining_service.mine_page(
                 url=urls[0] if urls else f"https://{domain}",
                 html=html_content,  # Use the fetched HTML
                 use_js=js_fallback,
-                client=client,
                 limits=limits
             )
             

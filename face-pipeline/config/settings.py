@@ -11,6 +11,7 @@ Loads configuration from environment variables using simple BaseModel approach.
 class Settings(BaseModel):
     # ----- MinIO -----
     minio_endpoint: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    MINIO_EXTERNAL_ENDPOINT: str = os.getenv("MINIO_EXTERNAL_ENDPOINT", "")  # External URL for browser access
     MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
     MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
     MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
@@ -29,11 +30,18 @@ class Settings(BaseModel):
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "faces_v1")
     IDENTITY_COLLECTION: str = os.getenv("IDENTITY_COLLECTION", "identities_v1")
     VECTOR_DIM: int = int(os.getenv("VECTOR_DIM", "512"))
-    SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.6"))
+    # Increased from 0.6 to 0.75 for better precision in face matching
+    SIMILARITY_THRESHOLD: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.75"))
+    # HNSW search parameter: higher = more accurate but slower (default was 128)
+    HNSW_EF: int = int(os.getenv("HNSW_EF", "256"))
 
     # ----- Face Detection -----
+    # Changed back to 640,640 - larger det_size (1024,1024) fails for smaller images
+    # The 640,640 setting works better for typical web images and user uploads
     DET_SIZE: str = os.getenv("DET_SIZE", "640,640")
-    DET_SCORE_THRESH: float = float(os.getenv("DET_SCORE_THRESH", "0.45"))
+    # Detection threshold: 0.60 balances false positives vs. missing valid faces
+    # Lowered from 0.65 to help detect faces in high-quality enrollment images
+    DET_SCORE_THRESH: float = float(os.getenv("DET_SCORE_THRESH", "0.60"))
     ONNX_PROVIDERS_CSV: str = os.getenv("ONNX_PROVIDERS_CSV", "CPUExecutionProvider")
     IMAGE_SIZE: int = int(os.getenv("IMAGE_SIZE", "112"))
     

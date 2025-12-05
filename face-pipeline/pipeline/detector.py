@@ -11,31 +11,21 @@ from pipeline.models import load_insightface_app
 
 def detect_faces_raw(img_np_bgr: np.ndarray) -> List:
     """
-    Run detector -> return list of raw InsightFace Face objects.
+    Run detector -> return raw InsightFace Face objects.
     
-    These objects contain attributes like:
+    These objects have attributes like:
       - bbox: ndarray [x1,y1,x2,y2]
-      - kps: ndarray (5,2) - 5 facial landmarks
-      - det_score: float - detection confidence
-      - embedding: ndarray - 512-dim face embedding (if recognition model loaded)
-      - normed_embedding: ndarray - L2-normalized embedding
-      - pose: ndarray [pitch, yaw, roll] in radians
-    
-    Used by face_helpers for quality evaluation which needs the raw Face objects.
+      - kps: (5,2) landmarks
+      - det_score: detection confidence
+      - embedding / normed_embedding: face embedding
+      - yaw, pitch, roll: pose angles (may be None)
     """
     app = load_insightface_app()
     # InsightFace expects BGR; we keep that convention throughout.
     faces = app.get(img_np_bgr)
     thresh = settings.DET_SCORE_THRESH
-    
-    # Filter by detection threshold
-    filtered_faces = []
-    for f in faces:
-        score = float(getattr(f, "det_score", 1.0))
-        if score >= thresh:
-            filtered_faces.append(f)
-    
-    return filtered_faces
+    # Filter by detection score threshold
+    return [f for f in faces if float(getattr(f, "det_score", 1.0)) >= thresh]
 
 
 def detect_faces(img_np_bgr: np.ndarray) -> List[Dict]:

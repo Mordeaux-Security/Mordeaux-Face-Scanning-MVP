@@ -10,7 +10,7 @@ import httpx
 import redis
 from minio import Minio
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, model_validator, ValidationError
+from pydantic import BaseModel, Field, model_validator, ValidationError, EmailStr
 
 router = APIRouter()
 
@@ -30,12 +30,6 @@ async def search_passthrough(payload: dict):
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             r = await client.post(url, json=payload)
-        
-        # Check if the face-pipeline returned an error
-        if r.status_code != 200:
-            error_detail = r.json()
-            raise HTTPException(status_code=r.status_code, detail=error_detail)
-        
         return r.json()
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"pipeline_unreachable: {e}")
@@ -66,6 +60,23 @@ class IdentitySafeSearchResp(BaseModel):
     reason: Optional[dict] = None
     results: List[IdentitySafeSearchResult] = []
     count: int = Field(default=0)
+
+
+class SignUpRequest(BaseModel):
+    """Request model for user signup that includes identity enrollment."""
+    tenant_id: str = Field(default="demo-tenant", min_length=1)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    identity_id: str = Field(min_length=1, max_length=128)
+    images_b64: List[str] = Field(..., min_items=3, max_items=10)
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Optional additional user metadata")
+
+    @model_validator(mode="after")
+    def _strip_identity(self):
+        self.identity_id = self.identity_id.strip()
+        if not self.identity_id:
+            raise ValueError("identity_id must not be blank")
+        return self
 
 @router.post("/api/v1/identity_safe_search", response_model=IdentitySafeSearchResp)
 async def identity_safe_search_passthrough(req: IdentitySafeSearchReq) -> IdentitySafeSearchResp:
@@ -116,8 +127,10 @@ def _get_redis() -> redis.Redis:
         raise HTTPException(status_code=500, detail=f"redis_connect_failed: {e}")
 
 def _get_minio() -> Minio:
+    # Clean endpoint (remove http:// or https:// if present)
+    endpoint = MINIO_ENDPOINT.replace("https://", "").replace("http://", "")
     return Minio(
-        MINIO_ENDPOINT,
+        endpoint=endpoint,
         access_key=MINIO_ACCESS_KEY,
         secret_key=MINIO_SECRET_KEY,
         secure=MINIO_SECURE,
@@ -127,7 +140,7 @@ def _compute_hashes_for_bucket_key(bucket: str, key: str) -> tuple[str, str]:
     """Compute image_sha256 and image_phash from MinIO object."""
     try:
         client = _get_minio()
-        obj_data = client.get_object(bucket, key)
+        obj_data = client.get_object(bucket_name=bucket, object_name=key)
         image_bytes = obj_data.read()
         obj_data.close()
         obj_data.release_conn()
@@ -209,6 +222,82 @@ def _build_stream_fields(req: IngestRequest) -> Dict[str, str]:
         "tenant_id": req.tenant_id,
     }
     return fields
+
+
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+@router.post("/api/v1/signup")
+def signup(req: SignUpRequest):
+    """
+    Register a user account and enroll their identity in a single step.
+    """
+    redis_client = _get_redis()
+    email = _normalize_email(req.email)
+    user_key = f"user:{req.tenant_id}:{email}"
+    identity_key = f"user-identity:{req.tenant_id}:{req.identity_id}"
+
+    if redis_client.exists(user_key):
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "user_exists", "message": "Email is already registered"},
+        )
+    if redis_client.exists(identity_key):
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "identity_exists", "message": "Identity ID already taken"},
+        )
+
+    enroll_payload = {
+        "tenant_id": req.tenant_id,
+        "identity_id": req.identity_id,
+        "images_b64": req.images_b64,
+        "overwrite": True,
+    }
+    try:
+        resp = httpx.post(
+            f"{PIPELINE_URL}/api/v1/enroll_identity",
+            json=enroll_payload,
+            timeout=120.0,
+        )
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "pipeline_unreachable", "message": str(e)},
+        )
+
+    if resp.status_code != 200:
+        try:
+            detail = resp.json()
+        except Exception:
+            detail = {"error": "enroll_failed", "message": resp.text}
+        raise HTTPException(status_code=resp.status_code, detail=detail)
+
+    user_record = {
+        "tenant_id": req.tenant_id,
+        "email": email,
+        "identity_id": req.identity_id,
+        "password_hash": _hash_password(req.password),
+        "metadata": req.metadata or {},
+        "created_at": int(time.time()),
+    }
+    redis_client.set(user_key, json.dumps(user_record))
+    redis_client.set(identity_key, email)
+
+    return {
+        "ok": True,
+        "user": {
+            "tenant_id": req.tenant_id,
+            "email": email,
+            "identity_id": req.identity_id,
+        },
+        "enrollment": resp.json(),
+    }
 
 @router.post("/api/v1/ingest")
 def ingest_now(req: IngestRequest):
